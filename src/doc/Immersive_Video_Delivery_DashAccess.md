@@ -1,0 +1,23 @@
+# Immersive Video Delivery Dash Access Library
+
+## Introduction 
+Dash Access library is a client library for accessing the tiled-based viewport-dependent media content, reconstruct video stream based on OMAF specification. The function of the library includes:
+- OMAF-Compliant MPD file parser
+- Tile-based MP4 segmentation downloading and parsing
+- Viewport-based Tile-set Selection
+- OMAF-Compliant Metadata parsing
+
+<IMG src="img/OMAF_Compliant-Video-Delivery-DashAccess.png" height="380">
+
+So far, the library is Linux-based version, but it can be ported to Android and relative client platform.
+
+## API Call Sequence
+
+Dash Access Library provides C APIs for user; the call sequence is as follows:
+<IMG src="img/OMAF_Compliant-Video-Delivery-DashAccess_CallSeq.png" height="450">
+
+Before calling any other APIs in the library, you should call OmafAccess_Init to get the Handler for common use. 
+- OmafAccess_OpenMedia is used to open a url which is compliant to OMAF DASH specification, and the MPD file will be downloaded and parsed. Then you can use OmafAccess_GetMediaInfo to get relative A/V information in the stream.
+- OmafAccess_SetupHeadSetInfo is used to set the initial head position of the user, and it will be used to select the initial viewport information and relative tile-set; 
+- OmafAccess_GetPacket is the function used to get well-aggregated video stream based on viewport and can be decoded by general decoder for rendering; with the API, you can also get the tile RWPK (Regin-Wised Packing) information for current viewport tile set. With/without the same thread, you can call OmafAccess_ChangeViewport to change viewport, the function will re-choose the Tile Set based on input pose Information, and it will decide what packing will be get in next segment.
+- After all media is played out, you can call OmafAccess_CloseMedia and OmafAccess_Close to end the using of the library.

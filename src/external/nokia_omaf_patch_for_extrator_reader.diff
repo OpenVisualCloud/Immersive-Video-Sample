@@ -1,0 +1,508 @@
+diff --git a/Mp4/srcs/CMakeLists.txt b/Mp4/srcs/CMakeLists.txt
+index d277175..050fcc0 100644
+--- a/Mp4/srcs/CMakeLists.txt
++++ b/Mp4/srcs/CMakeLists.txt
+@@ -60,6 +60,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Cl
+   # -Wstrict-overflow=5
+   # -Wswitch-default
+   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
++  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
+ 
+   if(NOT NO_DEBUG_STL)
+     SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG")
+diff --git a/Mp4/srcs/api/reader/mp4vrfilereaderinterface.h b/Mp4/srcs/api/reader/mp4vrfilereaderinterface.h
+index eadee2d..5484fb8 100644
+--- a/Mp4/srcs/api/reader/mp4vrfilereaderinterface.h
++++ b/Mp4/srcs/api/reader/mp4vrfilereaderinterface.h
+@@ -221,7 +221,13 @@ namespace MP4VR
+          *  @param [out] trackSampleBoxType   Media track sample description entry type (box type) is returned.
+          *  @return ErrorCode: NO_ERROR, INVALID_CONTEXT_ID or UNINITIALIZED */
+         virtual int32_t getTrackSampleType(uint32_t trackId, uint32_t sampleId, FourCC& trackSampleBoxType) const = 0;
++ 
+ 
++        virtual int32_t getExtractorTrackSampleData(uint32_t trackId,
++                                                    uint32_t itemIdApi,
++                                                    char* memoryBuffer,
++                                                    uint32_t& memoryBufferSize,
++                                                    bool videoByteStreamHeaders = true) = 0;
+         /** Get track sample data for given {trackId, sampleId} pair.
+          *  Sample Data does not contain initialization or configuration data (i.e. decoder configuration records),
+          *  it is pure sample data - except for samples where bytestream headers are inserted and 'hvc1'/'avc1' type s.
+diff --git a/Mp4/srcs/reader/mp4vrfiledatatypesinternal.hpp b/Mp4/srcs/reader/mp4vrfiledatatypesinternal.hpp
+index ff04584..42b8941 100644
+--- a/Mp4/srcs/reader/mp4vrfiledatatypesinternal.hpp
++++ b/Mp4/srcs/reader/mp4vrfiledatatypesinternal.hpp
+@@ -538,6 +538,8 @@ namespace MP4VR
+         SequenceToSegmentMap sequenceToSegment;
+ 
+         SegmentIndex segmentIndex;
++
++        ContextId    correspondTrackId;  ///< index of the track corrresponding to the init segment
+     };
+ }  // namespace MP4VR
+ 
+diff --git a/Mp4/srcs/reader/mp4vrfilereaderaccessors.cpp b/Mp4/srcs/reader/mp4vrfilereaderaccessors.cpp
+index 3719e9a..cedb30c 100644
+--- a/Mp4/srcs/reader/mp4vrfilereaderaccessors.cpp
++++ b/Mp4/srcs/reader/mp4vrfilereaderaccessors.cpp
+@@ -860,6 +860,46 @@ namespace MP4VR
+         return segmentIdOf(id.first, id.second, segmentId);
+     }
+ 
++    int32_t MP4VRFileReaderImpl::getSampleDataInfo(uint32_t trackId,
++                                                   uint32_t itemIdApi,
++                                                   const InitSegmentId& initSegmentId,
++                                                   uint64_t& refSampleLength,
++                                                   uint64_t& refDataOffset)
++    {
++        //auto trackContextId = ofTrackId(trackId).second;
++        auto trackContextId = ContextId(trackId);
++        if (!(mInitSegmentPropertiesMap[initSegmentId].trackProperties[trackContextId].referenceTrackIds["scal"].empty()))
++        {
++            return ErrorCode::INVALID_PROPERTY_INDEX;
++        }
++        //auto refTrackContextId =
++            //mInitSegmentPropertiesMap[initSegmentId].trackProperties[trackContextId].referenceTrackIds["scal"].at(
++                //trackReference);
++
++        // Create a new pair: init segment from the extractor but track context id from the referred media track where
++        // data is extracted from.
++        //InitSegmentTrackId refInitSegTrackId = std::make_pair(initSegmentId, refTrackContextId);
++        InitSegmentTrackId neededInitSegTrackId = std::make_pair(initSegmentId, trackContextId);
++
++        //SegmentId refSegmentId;
++        SegmentId segmentId;
++        //int32_t result = segmentIdOf(refInitSegTrackId, itemIdApi, refSegmentId);
++        int32_t result = segmentIdOf(neededInitSegTrackId, itemIdApi, segmentId);
++        if (result != ErrorCode::OK)
++        {
++            return result;
++        }
++        //SegmentTrackId refSegTrackId = std::make_pair(refSegmentId, refInitSegTrackId.second);
++        SegmentTrackId segTrackId = std::make_pair(segmentId, neededInitSegTrackId.second);
++        //ItemId refItemId             = ItemId(itemIdApi) - getTrackInfo(initSegmentId, refSegTrackId).itemIdBase;
++        ItemId itemId             = ItemId(itemIdApi) - getTrackInfo(initSegmentId, segTrackId).itemIdBase;
++
++        refDataOffset   = getTrackInfo(initSegmentId, segTrackId).samples.at(itemId.get()).dataOffset;
++        refSampleLength = getTrackInfo(initSegmentId, segTrackId).samples.at(itemId.get()).dataLength;
++
++        return ErrorCode::OK;
++    }
++
+     int32_t MP4VRFileReaderImpl::getRefSampleDataInfo(uint32_t trackId,
+                                                       uint32_t itemIdApi,
+                                                       const InitSegmentId& initSegmentId,
+@@ -895,6 +935,336 @@ namespace MP4VR
+         return ErrorCode::OK;
+     }
+ 
++    int32_t MP4VRFileReaderImpl::getExtractorTrackSampleData(uint32_t trackId,
++                                                             uint32_t itemIdApi,
++                                                             char* memoryBuffer,
++                                                             uint32_t& memoryBufferSize,
++                                                             bool videoByteStreamHeaders)
++    {
++        uint32_t spaceAvailable = memoryBufferSize;
++        if (isInitializedError())
++        {
++            return ErrorCode::UNINITIALIZED;
++        }
++
++        InitSegmentTrackId initSegTrackId = ofTrackId(trackId);
++        InitSegmentId initSegmentId       = initSegTrackId.first;
++        SegmentId segmentId;
++        int32_t result = segmentIdOf(initSegTrackId, itemIdApi, segmentId);
++        if (result != ErrorCode::OK)
++        {
++            return result;
++        }
++        SegmentTrackId segTrackId = std::make_pair(segmentId, initSegTrackId.second);
++        ItemId itemId             = ItemId(itemIdApi) - getTrackInfo(initSegmentId, segTrackId).itemIdBase;
++
++        SegmentIO& io = mInitSegmentPropertiesMap.at(initSegmentId).segmentPropertiesMap.at(segmentId).io;
++        // read NAL data to bitstream object
++        ContextType contextType;
++        int error = getContextTypeError(initSegTrackId, contextType);
++        if (error)
++        {
++            return error;
++        }
++        switch (contextType)
++        {
++        case ContextType::TRACK:
++        {
++            // The requested frame should be one that is available
++            if (itemId.get() >= getTrackInfo(initSegmentId, segTrackId).samples.size())
++            {
++                return ErrorCode::INVALID_ITEM_ID;
++            }
++
++            const uint32_t sampleLength = getTrackInfo(initSegmentId, segTrackId).samples.at(itemId.get()).dataLength;
++            if (memoryBufferSize < sampleLength)
++            {
++                memoryBufferSize = sampleLength;
++                return ErrorCode::MEMORY_TOO_SMALL_BUFFER;
++            }
++
++            std::int64_t neededDataOffset = (std::int64_t) getTrackInfo(initSegmentId, segTrackId).samples.at(itemId.get()).dataOffset;
++            //seekInput(io, (std::int64_t) getTrackInfo(initSegmentId, segTrackId).samples.at(itemId.get()).dataOffset);
++            seekInput(io, neededDataOffset);
++            io.stream->read(memoryBuffer, sampleLength);
++            memoryBufferSize = sampleLength;
++
++            if (!io.stream->good())
++            {
++                return ErrorCode::FILE_READ_ERROR;
++            }
++            break;
++        }
++        default:
++            return ErrorCode::INVALID_CONTEXT_ID;
++        }
++
++        // Process bitstream by codec
++        FourCC codeType;
++        error = getDecoderCodeType(toTrackId(initSegTrackId), itemIdApi, codeType);
++        if (error)
++        {
++            return error;
++        }
++
++        if (codeType == "avc1" || codeType == "avc3")
++        {
++            // Get item data from AVC bitstream
++            if (videoByteStreamHeaders)
++            {
++                return processAvcItemData(memoryBuffer, memoryBufferSize);
++            }
++            else
++            {
++                return ErrorCode::OK;
++            }
++        }
++        else if (codeType == "hvc1" || codeType == "hev1")
++        {
++            // Get item data from HEVC bitstream
++            if (videoByteStreamHeaders)
++            {
++                return processHevcItemData(memoryBuffer, memoryBufferSize);
++            }
++            else
++            {
++                return ErrorCode::OK;
++            }
++        }
++        // If the codeType is found to be of hvc2 type
++        else if (codeType == "hvc2")
++        {
++            // Load the extrator NAL into memory buffer, which is copied into
++            // extractorSampleBuffer for further processing
++            Vector<std::uint8_t> extractorSampleBuffer(memoryBuffer, memoryBuffer + memoryBufferSize);
++
++            std::uint8_t nalLengthSizeMinus1 = 3;
++            ItemId sampleBase;
++            auto& sampleInfo             = getSampleInfo(initSegmentId, segTrackId, sampleBase);
++            SampleDescriptionIndex index = sampleInfo.at((ItemId(itemIdApi) - sampleBase).get()).sampleDescriptionIndex;
++            if (getInitTrackInfo(initSegTrackId).nalLengthSizeMinus1.count(index.get()) != 0)
++            {
++                nalLengthSizeMinus1 = getInitTrackInfo(initSegTrackId).nalLengthSizeMinus1.at(index);
++                assert(nalLengthSizeMinus1 == 3);   // NAL length can be 1, 2 or 4 bytes, but the whole parsing process assumes it is 4 bytes
++            }
++
++            Hvc2Extractor::ExtractorSample extractorSample;
++            uint64_t extractionSize = 0;
++            uint64_t tolerance      = 0;
++
++            // If the current NAL is affirmed to be an extractor NAL, parse it to extNalDat
++
++            if (Hvc2Extractor::parseExtractorNal(extractorSampleBuffer, extractorSample, nalLengthSizeMinus1, extractionSize))
++            {
++                if (extractionSize == 0)
++                {
++                    // the size from extractors is not reliable. Make an estimate based on sample lengths of the
++                    // referred tracks
++                    extractionSize = 0;
++                    for (auto& extractor : extractorSample.extractors)
++                    {
++                        for (std::vector<Hvc2Extractor::ExtractorSample::SampleConstruct>::iterator sampleConstruct =
++                            extractor.sampleConstruct.begin();
++                            sampleConstruct != extractor.sampleConstruct.end(); ++sampleConstruct)
++                        {
++                            uint64_t refSampleLength = 0;
++                            uint64_t refDataOffset = 0;
++                            result =
++                                getRefSampleDataInfo(trackId, itemIdApi, initSegmentId, (*sampleConstruct).track_ref_index,
++                                    refSampleLength, refDataOffset);
++                            if (result != ErrorCode::OK)
++                            {
++                                return result;
++                            }
++                            extractionSize += refSampleLength;
++                        }
++                    }
++                    // + add 10% tolerance (inline constructors can result in more data in the extracted samples than
++                    // the original samples, but should be less than 10%)
++                    tolerance = (uint64_t)(extractionSize / 10);
++                    extractionSize += tolerance;
++                }
++                if (extractionSize > (uint64_t) spaceAvailable)
++                {
++                    // add an additional tolerance to requested size; this could save some useless realloc's in client
++                    // side in the next runs (assuming the client reuses the buffers)
++                    memoryBufferSize = (uint32_t)(extractionSize + tolerance);
++                    return ErrorCode::MEMORY_TOO_SMALL_BUFFER;
++                }
++
++                // Extract bytes from the inline and sample constructs
++                uint32_t extractedBytes            = 0;
++                char* buffer                       = memoryBuffer;
++                char* inlineNalLengthPlaceHolder = nullptr;
++                size_t inlineLength                = 0;
++                std::vector<Hvc2Extractor::ExtractorSample::SampleConstruct>::iterator sampleConstruct;
++                std::vector<Hvc2Extractor::ExtractorSample::InlineConstruct>::iterator inlineConstruct;
++                uint64_t refSampleLength = 0;
++                uint64_t refSampleOffset = 0;
++                uint8_t trackRefIndex = UINT8_MAX;
++
++                for (auto& extractor : extractorSample.extractors)
++                {
++                    // We loop through both constructors, until both of them are empty. They are often interleaved, but not
++                    // always through the whole sequence.
++                    for (sampleConstruct = extractor.sampleConstruct.begin(),
++                        inlineConstruct = extractor.inlineConstruct.begin();
++                        sampleConstruct != extractor.sampleConstruct.end() ||
++                        inlineConstruct != extractor.inlineConstruct.end();)
++                    {
++                        if (inlineConstruct != extractor.inlineConstruct.end() &&
++                            (sampleConstruct == extractor.sampleConstruct.end() ||
++                            (*inlineConstruct).order_idx < (*sampleConstruct).order_idx))
++                        {
++                            inlineNalLengthPlaceHolder = buffer;
++                            // the inline constructor is expected to contain a placeholder for the NAL unit length field too
++
++                            // copy the inline part - note: std::copy with iterators give warning in Visual Studio, so the
++                            // good old memcpy is used instead
++                            memcpy(buffer, (*inlineConstruct).inline_data.data(), (*inlineConstruct).inline_data.size());
++                            inlineLength = (*inlineConstruct).inline_data.size() - (nalLengthSizeMinus1 + 1);   // exclude the length 
++                            buffer += (*inlineConstruct).data_length;
++                            extractedBytes += (*inlineConstruct).data_length;
++                            ++inlineConstruct;
++                        }
++                        else if (sampleConstruct != extractor.sampleConstruct.end())
++                        {
++                            /////Andrew modify io since it might from different segement 
++                            //InitSegmentTrackId ref_initSegTrackId = ofTrackId((*sampleConstruct).track_ref_index + 1);
++                            //InitSegmentId ref_initSegmentId       = ref_initSegTrackId.first;
++                            auto referredTrack = ContextId((*sampleConstruct).track_ref_index + 1);
++                            InitSegmentId ref_initSegmentId;
++                            for (const auto& loopInitSegment : mInitSegmentPropertiesMap)
++                            {
++                                if (loopInitSegment.second.correspondTrackId == referredTrack)
++                                {
++                                    ref_initSegmentId = loopInitSegment.first;
++                                    break;
++                                }
++                            }
++                            InitSegmentTrackId ref_initSegTrackId = std::make_pair(ref_initSegmentId, referredTrack);    
++                            SegmentId ref_segmentId;
++                            int32_t result = segmentIdOf(ref_initSegTrackId, itemIdApi, ref_segmentId);
++                            SegmentIO& ref_io = mInitSegmentPropertiesMap.at(ref_initSegmentId).segmentPropertiesMap.at(ref_segmentId).io;
++
++                            // read the sample from the referenced track
++                            if ((*sampleConstruct).track_ref_index != trackRefIndex || trackRefIndex == UINT8_MAX)
++                            {
++                                //result =
++                                    //getRefSampleDataInfo(trackId, itemIdApi, initSegmentId, (*sampleConstruct).track_ref_index,
++                                        //refSampleLength, refSampleOffset);
++                                result =
++                                    getSampleDataInfo(((*sampleConstruct).track_ref_index + 1), itemIdApi, ref_initSegmentId,
++                                        refSampleLength, refSampleOffset);
++                                if (result != ErrorCode::OK)
++                                {
++                                    return result;
++                                }
++                                trackRefIndex = (*sampleConstruct).track_ref_index;
++                                seekInput(ref_io, refSampleOffset);
++                            }
++                            // let's read the length to the buffer (use it as a temp storage, don't update the ptr)
++                            ref_io.stream->read(buffer, (nalLengthSizeMinus1 + 1));
++                            // todo nalLengthSizeMinus1-based reading
++                            uint64_t refNalLength = readNalLength(buffer);
++
++                            // sc.data_offset is from the beginning of sample
++                            uint64_t inputReadOffset = refSampleOffset + (*sampleConstruct).data_offset;
++
++                            // Extract the referenced sample into memoryBuffer from io stream
++                            uint64_t bytesToCopy = refNalLength;
++                            if ((*sampleConstruct).data_length == 0)
++                            {
++                                // bytes to copy is taken from the bitstream (length field referenced by data_offset)
++                                // there should be no inline constructor / replacement header (see 14496-15 A.7.4.1.2)
++                                bytesToCopy = refNalLength;
++                                refSampleLength = 0;
++                            }
++                            else
++                            {
++                                if ((uint64_t)((*sampleConstruct).data_offset) + (uint64_t)((*sampleConstruct).data_length) > refSampleLength)
++                                {
++                                    // the sampleConstruct gives too large data_length, clip the length of copied data block to the length of the actual sample
++                                    if ((*sampleConstruct).data_offset > refSampleLength)
++                                    {
++                                        // something is wrong, the offset and sample lengths do not match at all
++                                        return ErrorCode::INVALID_SEGMENT;
++                                    }
++                                    bytesToCopy = refSampleLength - (*sampleConstruct).data_offset;
++                                }
++                                else
++                                {
++                                    // follow the values given in the sampleConstruct
++                                    bytesToCopy = (*sampleConstruct).data_length;
++                                }
++
++                                if (inlineNalLengthPlaceHolder != nullptr)
++                                {
++                                    // need to rewrite the NAL length field as the value from inline constructor is no
++                                    // longer valid
++                                    uint64_t actualNalLength = bytesToCopy + inlineLength;
++                                    writeNalLength(actualNalLength, inlineNalLengthPlaceHolder);
++                                    inlineNalLengthPlaceHolder = nullptr;
++                                }
++                                else
++                                {
++                                    // there was no inline constructor. (*sampleConstruct).data_offset should now point to
++                                    // the length field of the NAL to be copied, and we already have the length in the buffer. 
++                                    // Just update the ptr & counter
++                                    inputReadOffset += (nalLengthSizeMinus1 + 1);
++                                    if (bytesToCopy == refSampleLength - (*sampleConstruct).data_offset)
++                                    {
++                                        bytesToCopy -= (nalLengthSizeMinus1 + 1);
++                                    }
++                                    buffer += (nalLengthSizeMinus1 + 1);
++                                    extractedBytes += (nalLengthSizeMinus1 + 1);
++                                }
++                            }
++
++                            if (extractedBytes + (uint32_t)bytesToCopy > spaceAvailable)
++                            {
++                                memoryBufferSize = extractedBytes + (uint32_t)bytesToCopy;
++                                return ErrorCode::MEMORY_TOO_SMALL_BUFFER;
++                            }
++                            // Add NAL payload
++                            if (inputReadOffset > 0)
++                            {
++                                seekInput(ref_io, (std::int64_t) inputReadOffset);
++                            }
++                            ref_io.stream->read(buffer, bytesToCopy);
++                            buffer += bytesToCopy;
++                            extractedBytes += (uint32_t)bytesToCopy;
++                            ++sampleConstruct;
++                            inlineNalLengthPlaceHolder = nullptr;
++                            inlineLength = 0;
++
++                            refSampleLength -= (refNalLength + (nalLengthSizeMinus1 + 1));
++                        }
++                    }
++                }
++                memoryBufferSize = extractedBytes;
++                if (videoByteStreamHeaders)
++                {
++                    // Process the extracted NAL sample (replace NAL lengths with start codes)
++                    return processHevcItemData(memoryBuffer, memoryBufferSize);
++                }
++
++                return ErrorCode::OK;
++            }
++            return ErrorCode::UNSUPPORTED_CODE_TYPE;  // hvc2 but unknown extractor?
++        }
++        else if ((codeType == "mp4a") || (codeType == "invo") || (codeType == "urim") || (codeType == "mp4v"))
++        {
++            // already valid data - do nothing.
++            return ErrorCode::OK;
++        }
++        else
++        {
++            // Code type not supported
++            return ErrorCode::UNSUPPORTED_CODE_TYPE;
++        }
++    }
++
+     int32_t MP4VRFileReaderImpl::getTrackSampleData(uint32_t trackId,
+                                                     uint32_t itemIdApi,
+                                                     char* memoryBuffer,
+diff --git a/Mp4/srcs/reader/mp4vrfilereaderimpl.cpp b/Mp4/srcs/reader/mp4vrfilereaderimpl.cpp
+index 3778720..c4d479e 100644
+--- a/Mp4/srcs/reader/mp4vrfilereaderimpl.cpp
++++ b/Mp4/srcs/reader/mp4vrfilereaderimpl.cpp
+@@ -840,6 +840,9 @@ namespace MP4VR
+                 {
+                     sequenceToSegment.erase(sequence);
+                 }
++                SegmentProperties& segmentProperties = mInitSegmentPropertiesMap.at(initSegmentId).segmentPropertiesMap[segmentId];
++                SegmentIO& io = segmentProperties.io;
++                io.stream.reset(nullptr);
+                 mInitSegmentPropertiesMap.at(initSegmentId).segmentPropertiesMap.erase(segmentId);
+             }
+             else
+@@ -1665,6 +1668,17 @@ namespace MP4VR
+                         trackPropertiesMap[associatedTrack].trackFeature.setFeature(
+                             TrackFeatureEnum::Feature::HasAssociatedDepthTrack);
+                     }
++
++                }
++   
++                if (trackProperties.second.referenceTrackIds["vdep"].empty())
++                {
++                    mInitSegmentPropertiesMap.at(initSegmentId).correspondTrackId = trackProperties.first;
++                }
++
++                if (!(trackProperties.second.referenceTrackIds["scal"].empty()))
++                {
++                    mInitSegmentPropertiesMap.at(initSegmentId).correspondTrackId = trackProperties.first;
+                 }
+             }
+         }
+diff --git a/Mp4/srcs/reader/mp4vrfilereaderimpl.hpp b/Mp4/srcs/reader/mp4vrfilereaderimpl.hpp
+index 17aa650..c7fc916 100644
+--- a/Mp4/srcs/reader/mp4vrfilereaderimpl.hpp
++++ b/Mp4/srcs/reader/mp4vrfilereaderimpl.hpp
+@@ -173,6 +173,13 @@ namespace MP4VR
+         /// @see MP4VRFileReaderInterface::getItemType()
+         int32_t getTrackSampleType(uint32_t trackId, uint32_t itemId, FourCC& trackItemType) const;
+ 
++
++        int32_t getExtractorTrackSampleData(uint32_t trackId,
++                                            uint32_t itemIdApi,
++                                            char* memoryBuffer,
++                                            uint32_t& memoryBufferSize,
++                                            bool videoByteStreamHeaders = true);
++
+         /// @see MP4VRFileReaderInterface::getItemData()
+         int32_t getTrackSampleData(uint32_t trackId,
+                                    uint32_t itemId,
+@@ -723,6 +730,13 @@ namespace MP4VR
+         int32_t segmentIdOf(InitSegmentTrackId initSegTrackId, ItemId itemId, SegmentId& segmentId) const;
+         int32_t segmentIdOf(Id id, SegmentId& segmentId) const;
+ 
++
++        int32_t getSampleDataInfo(uint32_t trackId,
++                                  uint32_t itemIdApi,
++                                  const InitSegmentId& initSegmentId,
++                                  uint64_t& refSampleLength,
++                                  uint64_t& refDataOffset);
++
+         int32_t getRefSampleDataInfo(uint32_t trackId,
+                                      uint32_t itemIdApi,
+                                      const InitSegmentId& initSegmentId,
+diff --git a/Mp4/srcs/reader/mp4vrfilestreaminternal.cpp b/Mp4/srcs/reader/mp4vrfilestreaminternal.cpp
+index afd1156..cf1d548 100644
+--- a/Mp4/srcs/reader/mp4vrfilestreaminternal.cpp
++++ b/Mp4/srcs/reader/mp4vrfilestreaminternal.cpp
+@@ -35,6 +35,8 @@ namespace MP4VR
+ 
+     InternalStream::~InternalStream()
+     {
++        if(m_stream)
++            delete m_stream;
+         // nothing
+     }
+ 

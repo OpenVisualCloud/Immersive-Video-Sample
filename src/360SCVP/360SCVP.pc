@@ -1,0 +1,10 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${exec_prefix}/include
+
+Name:360SCVP
+Description: provide some functions about bitstream and viewport
+Version:0.0.1-DEV
+Cflags: -I${prefix}/include
+Libs: -L${libdir} -l360SCVP

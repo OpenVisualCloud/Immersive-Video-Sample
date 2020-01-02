@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<info>
+    <!-- windowWidth/windowHeight is for width and height of window -->
+    <windowWidth>960</windowWidth>
+    <windowHeight>960</windowHeight>
+    <!-- Resource URL, can be remote and local file  -->
+    <url>http://10.67.119.41:8080/testOMAFstatic_8k_6000frames/Test.mpd</url>
+    <!-- <url>5760x3840_musician_360_h265.265</url> -->
+    <!-- <url>packet_MultiBS.265</url> -->
+    <!-- sourceType 0 is for DashSource 1 is for LocalSource -->
+    <sourceType>0</sourceType>
+    <!-- decoderType 0 is for software decode 1 is for hardware decode -->
+    <decoderType>0</decoderType>
+    <!-- contextType 0 is for glfw and 1 is for egl -->
+    <contextType>0</contextType>
+    <!-- useDMABuffer 0 is false and 1 is true -->
+    <useDMABuffer>0</useDMABuffer>
+    <!-- viewport settings -->
+    <viewportHFOV>80</viewportHFOV>
+    <viewportVFOV>80</viewportVFOV>
+    <viewportWidth>960</viewportWidth>
+    <viewportHeight>960</viewportHeight>
+    <!-- cache path -->
+    <cachePath>/home/media/cache</cachePath>
+    <!-- for WebRTC parameters -->
+    <resolution>8k</resolution>
+    <server_url>http://10.67.112.207:3001</server_url>
+    <ProjectionType>ERP</ProjectionType>
+    <frameRate>30</frameRate>
+    <frameNum>100</frameNum>
+    <!-- attention! in R1 version, test case of sourceType/decoderType/contextType/useDMABuffer are 0/0/0/0 -->
+</info>

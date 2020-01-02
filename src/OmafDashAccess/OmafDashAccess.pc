@@ -1,0 +1,10 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${exec_prefix}/include
+
+Name:OmafDashAccess
+Description: OMAF DASH Access library
+Version:0.0.1-DEV
+Cflags: -I${prefix}/include
+Libs: -L${libdir} -lOmafDashAccess -lstdc++ -l360SCVP -lmp4vr_static -lmp4vr_static_fpic -lstreamsegmenter_static -lstreamsegmenter_static_fpic -lglog -lpthread -lcurl -L/usr/lib64 -L/usr/local/lib64
