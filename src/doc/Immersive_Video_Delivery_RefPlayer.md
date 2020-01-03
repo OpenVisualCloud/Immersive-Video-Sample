@@ -2,14 +2,17 @@
 
 ## Introduction
 The reference 360 player is used to play the mixed-resolution stream video transmitted from the server. Based on the current viewport, corresponding regions are rendered on the window. The workflow is as follows:
+
 <IMG src="img/OMAF_Compliant-Video-Delivery-RefPlayer_workflow.png" height="450">
  
 The 360 player supports streams in ERP format for now, and soon Cubemap format will be supported as well. After getting encoded packet from Dash Access Library, FFmpeg software decoder is used to decode frames. Decoded frame is bind to a 2D texture and the texture would be updated every frame. And then according to Region-wise Packing information, there exists tiles copy between packed frame buffer and output frame buffer. The last step is to render the output frame buffer to sphere.
 
 The key technical step in render is how to correctly remap the mixed-resolution decoded frame to the sphere texture in space. Region-wise Packing (RWPK) information would be obtained from Omaf Dash Access library together with an encoded packet, which represents the mapping space relationship between decoded frame and sphere texture. The RWPK schematic diagram is shown as follows:
+
 <IMG src="img/OMAF_Compliant-Video-Delivery-rwpk.png" height="350">
 
 In the specific implementation process, the texture that decoded frame is bind and full texture both are attached to the corresponding frame buffer object. The following figure shows the remapping operation. It is a tile copy process which can be implemented in GPU memory using OpenGL APIs.
+
  <IMG src="img/OMAF_Compliant-Video-Delivery-RefPlayer_FBO_Rendering.png" height="450">
 
 ## Configuration

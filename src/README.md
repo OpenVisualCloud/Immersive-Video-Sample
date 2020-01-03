@@ -13,8 +13,8 @@ MP4 base library is from Nokia/OMAF in OMAF Packing Library and OMAF Dash Access
 See [CONTRIBUTING](CONTRIBUTING.md) for details. Thank you!
 
 # Documents
--  [Immersive Video Getting Started Guide](doc/Immersive_Video_Getting_Started_Guide.md)
--  [Immersive Video Reference Architecture](doc/Immersive_Video_Delivery_Architecture.md)
+-  How to build and run, refer to [Immersive Video Getting Started Guide](doc/Immersive_Video_Getting_Started_Guide.md)
+-  Solution architecure, refer to [Immersive Video Reference Architecture](doc/Immersive_Video_Delivery_Architecture.md)
 
 # What's in this project
 The Immersive Video Delivery Reference solution contains below components:
@@ -31,5 +31,4 @@ The Immersive Video Delivery Reference solution may run on Linux* 64 bit operati
 - Client: CentOS7.6 or Ubuntu* 18.04 
 - Server: CentOS* 7.6
 
-# How to report bugs
-Use the [Issues](https://github.com/OpenVisualCloud/Immersive_Video/issues) tab on GitHub.
+
