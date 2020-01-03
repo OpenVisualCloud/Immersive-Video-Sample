@@ -3,10 +3,8 @@
     <!-- windowWidth/windowHeight is for width and height of window -->
     <windowWidth>960</windowWidth>
     <windowHeight>960</windowHeight>
-    <!-- Resource URL, can be remote and local file  -->
-    <url>http://10.67.119.41:8080/testOMAFstatic_8k_6000frames/Test.mpd</url>
-    <!-- <url>5760x3840_musician_360_h265.265</url> -->
-    <!-- <url>packet_MultiBS.265</url> -->
+    <!-- Resource URL, can be remote or local -->
+    <url>http://10.67.119.41:8080/OMAF_Live/Test.mpd</url>
     <!-- sourceType 0 is for DashSource 1 is for LocalSource -->
     <sourceType>0</sourceType>
     <!-- decoderType 0 is for software decode 1 is for hardware decode -->
@@ -28,5 +26,5 @@
     <ProjectionType>ERP</ProjectionType>
     <frameRate>30</frameRate>
     <frameNum>100</frameNum>
-    <!-- attention! in R1 version, test case of sourceType/decoderType/contextType/useDMABuffer are 0/0/0/0 -->
+    <!-- attention! in R1 version, supported case of sourceType/decoderType/contextType/useDMABuffer is 0/0/0/0 -->
 </info>

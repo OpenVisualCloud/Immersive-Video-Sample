@@ -92,7 +92,7 @@ int main(int32_t argc, char *argv[])
     renderConfig.contextType = atoi(info->FirstChildElement("contextType")->GetText());// EGL_CONTEXT=1 or GLFW_CONTEXT=0
     if (renderConfig.contextType != 0)
     {
-        LOG(ERROR)<<"---INVALID decoder type input (0:GLFW context)---"<<std::endl;
+        LOG(ERROR)<<"---INVALID context type input (0:GLFW context)---"<<std::endl;
         return RENDER_ERROR;
     }
     renderConfig.useDMABuffer = atoi(info->FirstChildElement("useDMABuffer")->GetText());// It is only valid for hardware decoding + EGL_CONTEXT if it is set as 1
