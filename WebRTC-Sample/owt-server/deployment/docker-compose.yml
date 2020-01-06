@@ -1,0 +1,12 @@
+version: '3.1'
+
+services:
+    owt-immersive-4k:
+        image: xeon-centos76-service-owt-immersive
+        command: sh -c "/home/init.sh && /home/start.sh && /home/restApi.sh -s 4k && /home/restart.sh && /home/sleep.sh"
+        network_mode: host
+
+    owt-immersive-8k:
+        image: xeon-centos76-service-owt-immersive
+        command: sh -c "/home/init.sh && /home/start.sh && /home/restApi.sh -s 8k && /home/restart.sh && /home/sleep.sh"
+        network_mode: host
