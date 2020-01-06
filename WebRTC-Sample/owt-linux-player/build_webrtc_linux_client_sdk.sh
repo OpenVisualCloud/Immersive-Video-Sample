@@ -1,0 +1,114 @@
+#!/bin/bash -ex
+
+ROOT=`pwd`/webrtc_linux_client_sdk
+BUILD=${ROOT}/Build
+PREFIX=${ROOT}/release
+DEPS=${BUILD}/deps
+
+install_dependencies() {
+    sudo -E apt-get update
+    sudo -E apt install -y git build-essential wget python cmake pkg-config libglib2.0-dev libgtk-3-dev libasound2-dev libpulse-dev
+}
+
+install_openssl() {
+    cd ${DEPS}
+
+    rm -rf openssl-1.1.0l.tar.gz openssl-1.1.0l
+
+    wget https://www.openssl.org/source/openssl-1.1.0l.tar.gz
+    tar -zxvf openssl-1.1.0l.tar.gz
+    cd openssl-1.1.0l
+
+    ./config no-shared -m64 --prefix=${PREFIX} --openssldir=${PREFIX}
+    make -j
+    make install
+}
+
+install_boost() {
+    cd ${DEPS}
+
+    rm -rf boost_1_67_0.tar.gz boost_1_67_0
+
+    wget https://dl.bintray.com/boostorg/release/1.67.0/source/boost_1_67_0.tar.gz
+    tar -zxvf boost_1_67_0.tar.gz
+    cd boost_1_67_0
+
+    ./bootstrap.sh
+    ./b2 -j`nproc` variant=release link=static runtime-link=shared --with-system --with-random --with-date_time --with-regex --with-thread --with-filesystem --with-chrono --with-atomic
+}
+
+install_socket_io_client() {
+    cd ${DEPS}
+
+    rm -rf socket.io-client-cpp
+
+    git clone --recurse-submodules https://github.com/socketio/socket.io-client-cpp.git
+    cd socket.io-client-cpp/lib/websocketpp
+    git pull origin master
+    cd ../..
+
+    mkdir -p build
+    cd build
+    cmake -DBOOST_ROOT:STRING=${DEPS}/boost_1_67_0 -DOPENSSL_ROOT_DIR:STRING=${PREFIX} ../
+    make -j
+    make install
+
+    cp -v lib/Release/* ${PREFIX}/lib
+    cp -v include/* ${PREFIX}/include
+}
+
+install_depot_tools() {
+    cd ${DEPS}
+
+    rm -rf depot_tools
+
+    git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+}
+
+gen_gclient () {
+    echo 'solutions = [
+    {
+        "managed": False,
+        "name": "src",
+        "url": "https://github.com/open-webrtc-toolkit/owt-client-native",
+        "custom_deps": {},
+        "deps_file": "DEPS",
+        "safesync_url": "",
+    },
+]
+target_os = []' > .gclient
+}
+
+install_owt_client_native () {
+    install_depot_tools
+    export PATH=${DEPS}/depot_tools:$PATH
+
+    cd ${BUILD}
+
+    mkdir -p owt-client-native
+    cd owt-client-native
+    gen_gclient
+
+    git clone https://github.com/open-webrtc-toolkit/owt-client-native.git src
+    cd src
+    git checkout 2a9d948b59502559843d63775a395affb10cb128
+
+    gclient sync --no-history
+
+    sed -i 's/rtc_use_h264=true/rtc_use_h264=false/g' scripts/build_linux.py
+
+    python scripts/build_linux.py --gn_gen --sdk --arch x64 --ssl_root ${PREFIX} --scheme release --output_path "out"
+
+    cp -rfv out/include/* ${PREFIX}/include/
+    cp -v out/libowt-release.a ${PREFIX}/lib/libowt.a
+}
+
+mkdir -p ${BUILD}
+mkdir -p ${DEPS}
+
+install_dependencies
+install_openssl
+install_boost
+install_socket_io_client
+install_owt_client_native
+
