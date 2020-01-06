@@ -100,13 +100,13 @@ download_dependencies()
 {
 	cd $path
 	if [ $1 == "server" ];then
-            mkdir -p ../build/external/ffmpeg
+            mkdir -p ../build/external/FFmpeg
 	    ./build_glog.sh
             ./build_Nokia_omaf.sh
 	    ./install_openHEVC.sh
 	    ./install_SVT.sh
 	    ./install_thrift.sh
-	    ./install_ffmpeg.sh
+	    ./install_FFmpeg.sh server
 
 	elif [ $1 == "client" ];then
 	    ./build_glog.sh

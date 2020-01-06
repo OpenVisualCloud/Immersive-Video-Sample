@@ -4,7 +4,7 @@ os=$(awk -F= '/^NAME/{print $2}' /etc/os-release)
 if [ "$os" == \""Ubuntu"\" ];then
 	sudo apt-get install lsb-core libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libgles2-mesa-dev libglm-dev libegl1-mesa-dev -y
 elif [ "$os" == \""CentOS Linux"\" ];then
-	sudo yum install -y redhat-lsb libXrandr libXrandr-devel libXinerama libXinerama-devel libXcursor libXcursor-devel libXi libXi-devel mesa-libGL mesa-libGL-devel mesa-libGLU mesa-libGLU-devel mesa-libGLES-devel glm-devel mesa-libEGL-devel SDL2 SDL2-devel xz-devel
+	sudo yum install -y redhat-lsb libXrandr libXrandr-devel libXinerama libXinerama-devel libXcursor libXcursor-devel libXi libXi-devel mesa-libGL mesa-libGL-devel mesa-libGLU mesa-libGLU-devel mesa-libGLES-devel glm-devel mesa-libEGL-devel SDL2 SDL2-devel
 fi
 check_mkdir()
 {
@@ -45,16 +45,7 @@ if [ ! -d "./build" ];then
 fi  
 cd build && cmake .. && make -j8 && sudo make install
 
-check_mkdir $path/../build/external/
-if [ ! -f "./ffmpeg-4.2.1.tar.gz" ] ; then
-    wget -q https://ffmpeg.org/releases/ffmpeg-4.2.1.tar.gz
-fi
-tar xf ffmpeg-4.2.1.tar.gz
-cd ./ffmpeg-4.2.1
-patch -p1 < ../../../external/0001-Add-avcodec_receive_frame2-for-vaapi-hardware-decodi.patch
-./configure
-make -j`nproc`
-sudo make install
+cd ${path} && ./install_FFmpeg.sh client
 
 if [ "$os" == \""CentOS Linux"\" ];then
     sed -i '15s/v2/v2\ lzma/' ${path}/../player/CMakeLists.txt

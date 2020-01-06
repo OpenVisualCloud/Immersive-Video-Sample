@@ -4,8 +4,8 @@ ORIPATH=$(pwd)
 ITEM=$1
 VERSION=$2
 PACKAGE=package
-LIBDIR=${ORIPATH}/../build/${PACKAGE}/${ITEM}/usr/lib64/immersive-${ITEM}/
-BINDIR=${ORIPATH}/../build/${PACKAGE}/${ITEM}/usr/bin/immersive-${ITEM}/
+LIBDIR=${ORIPATH}/../../OMAF_Sample/${PACKAGE}/${ITEM}/usr/lib64/immersive-${ITEM}/
+LIBDIR=${ORIPATH}/../../OMAF_Sample/${PACKAGE}/${ITEM}/usr/bin/immersive-${ITEM}/
 NAME=$(echo "immersive-${item}")
 
 parameters_usage(){
@@ -14,7 +14,11 @@ parameters_usage(){
 }
 
 package(){
-    echo 'sudo ldconfig && sudo cp /usr/bin/immersive-server/WorkerServer /root' > post
+    if [ ${ITEM} = "server" ] ; then
+        echo 'sudo ldconfig && sudo cp /usr/bin/immersive-server/WorkerServer /root' > post
+    elif [ ${ITEM} = "client" ] ; then
+        echo 'sudo ldconfig' > post
+    fi
     fpm \
         -f \
         -s dir \
@@ -59,6 +63,7 @@ if [ ${ITEM} = "server" ] ; then
     mv ../external/git_info                                             ${BINDIR}
     strip ${LIBDIR}/*
     strip ${BINDIR}/WorkerServer ${BINDIR}/ffmpeg
+    cd ../../OMAF-Sample
     package rpm ${ITEM}
     package deb ${ITEM}
 fi
@@ -75,6 +80,7 @@ if [ ${ITEM} = "client" ] ; then
     cp client/player/render                                             ${BINDIR}
     cp ../player/config.xml                                             ${BINDIR}
     mv ../external/git_info                                             ${BINDIR}
+    cd ../../OMAF-Sample
     strip ${LIBDIR}/*
     strip ${BINDIR}/render
     package rpm ${ITEM}

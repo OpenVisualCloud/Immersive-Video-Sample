@@ -8,7 +8,7 @@ ENV no_proxy 127.0.0.1,*.intel.com
 RUN yum install -y -q openssl centos-release-scl scl-utils gmp gmp-devel mpfr mpfr-devel libmpc libmpc-devel patch autoconf libtool automake libcurl-devel wget git -y && \
     rm -rf /var/cache/yum/*
 
-RUN yum install -y yum install devtoolset-7-gcc* libevent-devel.x86_64 openssl-devel bc -y && \
+RUN yum install -y yum install devtoolset-7-gcc* libevent-devel.x86_64 openssl-devel bc numactl -y && \
     rm -rf /var/cache/yum/*
 
 WORKDIR /home/immersive
@@ -189,8 +189,6 @@ RUN wget -O - ${NGINX_REPO} | tar xz && \
     cd ${WORKDIR} && rm -rf ./nginx*
 EXPOSE 443
 EXPOSE 8080
-EXPOSE 9089
-EXPOSE 9090
 
 # Configure And Run Nginx
 COPY nginx_conf /usr/local/nginx/conf
@@ -211,4 +209,7 @@ RUN sed -i "s/\-Werror//g" `grep "Werror" -rl ./` && \
     cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET=server .. && \
     make -j `nproc` && \
     make install && \
-    cd .. && ls
+    mv ffmpeg/ffmpeg ../Sample-Videos && \
+    cd .. && rm -rf `ls | grep -v Sample-Videos` && ls
+
+COPY run.sh ${WORKDIR}/Sample-Videos
