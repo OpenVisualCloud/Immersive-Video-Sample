@@ -1069,6 +1069,7 @@ static bool hevc_parse_vps_extension(HEVC_VPS *vps, GTS_BitStream *bs)
 
 
         nb_output_layers_in_output_layer_set[i] = 0;
+        ols_highest_output_layer_id[i] = 0;
         for (j = 0; j < vps->num_layers_in_id_list[ols_ids_to_ls_idx]; j++) {
             nb_output_layers_in_output_layer_set[i] += OutputLayerFlag[i][j];
             if (OutputLayerFlag[i][j]) {
@@ -1234,7 +1235,8 @@ static int32_t gts_media_hevc_read_vps_bs(GTS_BitStream *bs, HEVCState *hevc, bo
         n = 0;
         for (m = 0; m <= vps->max_layer_id; m++)
             if (layer_id_included_flag[i][m]) {
-                vps->LayerSetLayerIdList[i][n++] = m;
+                if(n < MAX_LHVC_LAYERS)
+                    vps->LayerSetLayerIdList[i][n++] = m;
                 if (vps->LayerSetLayerIdListMax[i] < m)
                     vps->LayerSetLayerIdListMax[i] = m;
             }
@@ -1927,6 +1929,7 @@ int32_t hevc_read_RwpkSEI(int8_t *pRWPKBits, uint32_t RWPKBitsSize, RegionWisePa
     {
         RectangularRegionWisePacking region;
         uint8_t packed8Bits = gts_bs_read_int(bs, 8);
+        memset(&region, 0, sizeof(RectangularRegionWisePacking));
         region.guardBandFlag = (packed8Bits >> 4) & 0x01;
         // read RectRegionPacking
         region.projRegWidth = gts_bs_read_int(bs, 32);

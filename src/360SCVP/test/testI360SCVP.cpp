@@ -99,6 +99,8 @@ public:
     int                     bufferlenlow;
     FILE*                   pInputFile;
     FILE*                   pInputFileLow;
+	param_oneStream_info*   pTiledBitstreamTotal;
+
 };
 
 TEST_F(I360SCVPTest, I360SCVPCreate_type0)
@@ -450,7 +452,7 @@ TEST_F(I360SCVPTest, SetViewportSEI)
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    EXPECT_TRUE(ret == 0);
     EXPECT_TRUE(ret == 0);
 
-    param_oneStream_info *pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
+    pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
     memset(pTiledBitstreamTotal, 0, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info));
     EXPECT_TRUE(pTiledBitstreamTotal != NULL);
 
@@ -538,7 +540,7 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    EXPECT_TRUE(ret == 0);
     EXPECT_TRUE(ret == 0);
 
-    param_oneStream_info *pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
+    pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
     memset(pTiledBitstreamTotal, 0, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info));
     EXPECT_TRUE(pTiledBitstreamTotal != NULL);
 
@@ -609,7 +611,7 @@ TEST_F(I360SCVPTest, SetRotationSEI)
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    EXPECT_TRUE(ret == 0);
     EXPECT_TRUE(ret == 0);
 
-    param_oneStream_info *pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
+   pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
     memset(pTiledBitstreamTotal, 0, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info));
     EXPECT_TRUE(pTiledBitstreamTotal != NULL);
 
@@ -678,7 +680,7 @@ TEST_F(I360SCVPTest, SetFramePackingSEI)
     paramViewPorInfo.tileNumRow = 3;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    EXPECT_TRUE(ret == 0);
     EXPECT_TRUE(ret == 0);
-    param_oneStream_info *pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
+    pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
     memset(pTiledBitstreamTotal, 0, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info));
     EXPECT_TRUE(pTiledBitstreamTotal != NULL);
 

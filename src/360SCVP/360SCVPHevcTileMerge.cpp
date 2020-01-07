@@ -57,7 +57,8 @@ int32_t init_one_bitstream(oneStream_info **pBs)
         return -1;
     oneStream_info *pTiledBitstreams = *pBs;
     pTiledBitstreams = (oneStream_info *)malloc(sizeof(oneStream_info));
-    memset(pTiledBitstreams, 0, sizeof(oneStream_info));
+    if (pTiledBitstreams)
+        memset(pTiledBitstreams, 0, sizeof(oneStream_info));
     pTiledBitstreams->hevcSlice = (HEVCState*)malloc(sizeof(HEVCState));
     if(pTiledBitstreams->hevcSlice)
     {

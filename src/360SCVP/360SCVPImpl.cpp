@@ -490,6 +490,8 @@ int32_t TstitchStream::parseNals(param_360SCVP* pParamStitchStream, int32_t pars
     {
         //save/restore the hevcState
         hevc_gen_tiledstream* pGenTilesStream = (hevc_gen_tiledstream*)pGenStream;
+        if (!pGenTilesStream->pTiledBitstreams)
+           return -1;
         oneStream_info * pSlice = pGenTilesStream->pTiledBitstreams[0];
         if (((pGenTilesStream->parseType == E_PARSER_ONENAL)) && m_bSPSReady && m_bPPSReady)
         {
