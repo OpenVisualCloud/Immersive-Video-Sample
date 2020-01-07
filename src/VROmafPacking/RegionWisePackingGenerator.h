@@ -94,6 +94,7 @@ public:
     {
         m_packedPicWidth  = 0;
         m_packedPicHeight = 0;
+        m_mergedTilesArrange = NULL;
     };
 
     //!

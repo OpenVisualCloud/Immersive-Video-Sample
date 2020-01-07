@@ -125,6 +125,14 @@ public:
     ~ExtractorTrack();
 
     //!
+    //! \brief  Initialize resources for extractor track 
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t Initialize();
+
+    //!
     //! \brief  Construct all extractors belong to this extractor track
     //!
     //! \return int32_t

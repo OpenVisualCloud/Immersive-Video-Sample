@@ -44,52 +44,75 @@ ExtractorTrack::ExtractorTrack()
     m_viewportIdx = 0;
     m_projType = 0;
 
+    m_dstRwpk = NULL;
+    m_dstCovi = NULL;
+    m_tilesMergeDir = NULL;
+    m_vps = NULL;
+    m_sps = NULL;
+    m_pps = NULL;
+    m_projSEI = NULL;
+    m_rwpkSEI = NULL;
+
+    m_processedFrmNum = 0;
+    m_isFramesReady = false;
+    //pthread_mutex_init(&m_mutex, NULL);
+    m_360scvpParam = NULL;
+    m_dstWidth = 0;
+    m_dstHeight = 0;
+}
+
+int32_t ExtractorTrack::Initialize()
+{
     m_dstRwpk = new RegionWisePacking;
     if (!m_dstRwpk)
-        return;
+        return OMAF_ERROR_NULL_PTR;
 
     m_dstCovi = new ContentCoverage;
     if (!m_dstCovi)
-        return;
+        return OMAF_ERROR_NULL_PTR;
 
     m_tilesMergeDir = new TilesMergeDirectionInCol;
     if (!m_tilesMergeDir)
-        return;
+        return OMAF_ERROR_NULL_PTR;
 
     m_vps = new Nalu;
     if (!m_vps)
-        return;
+        return OMAF_ERROR_NULL_PTR;
     memset(m_vps, 0, sizeof(Nalu));
 
     m_sps = new Nalu;
     if (!m_sps)
-        return;
+        return OMAF_ERROR_NULL_PTR;
     memset(m_sps, 0, sizeof(Nalu));
 
     m_pps = new Nalu;
     if (!m_pps)
-        return;
+        return OMAF_ERROR_NULL_PTR;
     memset(m_pps, 0, sizeof(Nalu));
 
     m_projSEI = new Nalu;
     if (!m_projSEI)
-        return;
+        return OMAF_ERROR_NULL_PTR;
     memset(m_projSEI, 0, sizeof(Nalu));
 
     m_rwpkSEI = new Nalu;
     if (!m_rwpkSEI)
-        return;
+        return OMAF_ERROR_NULL_PTR;
     memset(m_rwpkSEI, 0, sizeof(Nalu));
 
-    m_processedFrmNum = 0;
-    m_isFramesReady = false;
-    pthread_mutex_init(&m_mutex, NULL);
     m_360scvpParam = new param_360SCVP;
     if (!m_360scvpParam)
-        return;
+        return OMAF_ERROR_NULL_PTR;
     memset(m_360scvpParam, 0, sizeof(param_360SCVP));
-    m_dstWidth = 0;
-    m_dstHeight = 0;
+
+    int32_t ret = pthread_mutex_init(&m_mutex, NULL);
+    if (ret)
+    {
+        LOG(ERROR) << "Failed to initialize mutex for extractor track !" << std::endl;
+        return ret;
+    }
+
+    return ERROR_NONE;
 }
 
 ExtractorTrack::ExtractorTrack(uint8_t viewportIdx, std::map<uint8_t, MediaStream*> *streams, uint16_t projType)
@@ -98,50 +121,19 @@ ExtractorTrack::ExtractorTrack(uint8_t viewportIdx, std::map<uint8_t, MediaStrea
     m_viewportIdx = viewportIdx;
     m_projType = projType;
 
-    m_dstRwpk = new RegionWisePacking;
-    if (!m_dstRwpk)
-        return;
-
-    m_dstCovi = new ContentCoverage;
-    if (!m_dstCovi)
-        return;
-
-    m_tilesMergeDir = new TilesMergeDirectionInCol;
-    if (!m_tilesMergeDir)
-        return;
-
-    m_vps = new Nalu;
-    if (!m_vps)
-        return;
-    memset(m_vps, 0, sizeof(Nalu));
-
-    m_sps = new Nalu;
-    if (!m_sps)
-        return;
-    memset(m_sps, 0, sizeof(Nalu));
-
-    m_pps = new Nalu;
-    if (!m_pps)
-        return;
-    memset(m_pps, 0, sizeof(Nalu));
-
-    m_projSEI = new Nalu;
-    if (!m_projSEI)
-        return;
-    memset(m_projSEI, 0, sizeof(Nalu));
-
-    m_rwpkSEI = new Nalu;
-    if (!m_rwpkSEI)
-        return;
-    memset(m_rwpkSEI, 0, sizeof(Nalu));
+    m_dstRwpk = NULL;
+    m_dstCovi = NULL;
+    m_tilesMergeDir = NULL;
+    m_vps = NULL;
+    m_sps = NULL;
+    m_pps = NULL;
+    m_projSEI = NULL;
+    m_rwpkSEI = NULL;
 
     m_processedFrmNum = 0;
     m_isFramesReady = false;
-    pthread_mutex_init(&m_mutex, NULL);
-    m_360scvpParam = new param_360SCVP;
-    if (!m_360scvpParam)
-        return;
-    memset(m_360scvpParam, 0, sizeof(param_360SCVP));
+    //pthread_mutex_init(&m_mutex, NULL);
+    m_360scvpParam = NULL;
     m_dstWidth = 0;
     m_dstHeight = 0;
 }

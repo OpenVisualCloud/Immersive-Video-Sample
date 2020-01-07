@@ -51,13 +51,8 @@ VideoStream::VideoStream()
     m_frameRate.den = 0;
     m_bitRate = 0;
 
-    m_srcRwpk = new RegionWisePacking;
-    if (!m_srcRwpk)
-        return;
-
-    m_srcCovi = new ContentCoverage;
-    if (!m_srcCovi)
-        return;
+    m_srcRwpk = NULL;
+    m_srcCovi = NULL;
 
     m_videoSegInfoGen = NULL;
     m_currFrameInfo = NULL;
@@ -270,6 +265,14 @@ int32_t VideoStream::Initialize(
     if (!bs || !initInfo)
         return OMAF_ERROR_NULL_PTR;
 
+    m_srcRwpk = new RegionWisePacking;
+    if (!m_srcRwpk)
+        return OMAF_ERROR_NULL_PTR;
+
+    m_srcCovi = new ContentCoverage;
+    if (!m_srcCovi)
+        return OMAF_ERROR_NULL_PTR;
+
     m_streamIdx = streamIdx;
 
     m_codecId = bs->codecId;
@@ -393,11 +396,6 @@ TileInfo* VideoStream::GetAllTilesInfo()
 {
     return m_tilesInfo;
 }
-
-//TrackSegmentCtx* VideoStream::GetAllTrackSegCtxs()
-//{
-    //return m_trackSegCtxs;
-//}
 
 FrameBSInfo* VideoStream::GetCurrFrameInfo()
 {

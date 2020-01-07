@@ -402,6 +402,13 @@ int32_t TwoResExtractorTrackGenerator::GenerateExtractorTracks(std::map<uint8_t,
         if (!extractorTrack)
             return OMAF_ERROR_NULL_PTR;
 
+        int32_t retInit = extractorTrack->Initialize();
+        if (retInit)
+        {
+            LOG(ERROR) << "Failed to initialize extractor track !" << std::endl;
+            return retInit;
+        }
+
         FillDstRegionWisePacking(i, extractorTrack->GetRwpk());
 
         FillTilesMergeDirection(i, extractorTrack->GetTilesMergeDir());

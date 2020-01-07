@@ -83,11 +83,10 @@ public:
         m_projNalu      = NULL;
         m_picInfo       = NULL;
 
-        if (!scvpHandle || !scvpParam)
-            return;
-
         m_360scvpHandle = scvpHandle;
         m_360scvpParam  = scvpParam;
+        if (!m_360scvpHandle || !m_360scvpParam)
+            return;
     };
 
     //!
