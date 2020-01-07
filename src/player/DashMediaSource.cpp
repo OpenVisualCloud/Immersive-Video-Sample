@@ -404,6 +404,10 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig)
     //7. start thread
     StartThread();
     m_status = STATUS_CREATED;
+    free(pCtxDashStreaming);
+    pCtxDashStreaming = NULL;
+    free(clientInfo.pose);
+    clientInfo.pose = NULL;
     return RENDER_STATUS_OK;
 }
 

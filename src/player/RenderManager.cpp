@@ -101,14 +101,14 @@ RenderManager::RenderManager(struct RenderConfig config)
     case SW_DECODER: //sw decoder
         m_renderSource = new SWRenderSource(m_renderBackend);
         break;
-    case VAAPI_DECODER: //hw decoder
 #ifdef USE_DMA_BUFFER
+    case VAAPI_DECODER: //hw decoder
         if(m_renderConfig.useDMABuffer == 1)
             m_renderSource = new DMABufferRenderSource(m_renderBackend);
         else
             m_renderSource = new HWRenderSource(m_renderBackend);
-#endif
         break;
+#endif
     default:
         m_renderSource = new SWRenderSource(m_renderBackend);
         break;
