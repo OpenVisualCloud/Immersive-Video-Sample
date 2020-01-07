@@ -19,7 +19,7 @@
     <viewportWidth>960</viewportWidth>
     <viewportHeight>960</viewportHeight>
     <!-- cache path -->
-    <cachePath>/home/media/cache</cachePath>
+    <cachePath>/tmp/cache</cachePath>
     <!-- for WebRTC parameters -->
     <resolution>8k</resolution>
     <server_url>http://10.67.112.207:3001</server_url>
