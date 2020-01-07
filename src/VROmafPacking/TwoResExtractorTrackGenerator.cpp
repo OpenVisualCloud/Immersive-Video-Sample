@@ -400,12 +400,31 @@ int32_t TwoResExtractorTrackGenerator::GenerateExtractorTracks(std::map<uint8_t,
     {
         ExtractorTrack *extractorTrack = new ExtractorTrack(i, streams, (m_initInfo->viewportInfo)->inGeoType);
         if (!extractorTrack)
+        {
+            std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+            for ( ; itET != extractorTrackMap.end(); )
+            {
+                ExtractorTrack *extractorTrack1 = itET->second;
+                DELETE_MEMORY(extractorTrack1);
+                extractorTrackMap.erase(itET++);
+            }
+            extractorTrackMap.clear();
             return OMAF_ERROR_NULL_PTR;
+        }
 
         int32_t retInit = extractorTrack->Initialize();
         if (retInit)
         {
             LOG(ERROR) << "Failed to initialize extractor track !" << std::endl;
+
+            std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+            for ( ; itET != extractorTrackMap.end(); )
+            {
+                ExtractorTrack *extractorTrack1 = itET->second;
+                DELETE_MEMORY(extractorTrack1);
+                extractorTrackMap.erase(itET++);
+            }
+            extractorTrackMap.clear();
             DELETE_MEMORY(extractorTrack);
             return retInit;
         }
