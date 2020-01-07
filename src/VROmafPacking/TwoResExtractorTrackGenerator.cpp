@@ -406,6 +406,7 @@ int32_t TwoResExtractorTrackGenerator::GenerateExtractorTracks(std::map<uint8_t,
         if (retInit)
         {
             LOG(ERROR) << "Failed to initialize extractor track !" << std::endl;
+            DELETE_MEMORY(extractorTrack);
             return retInit;
         }
 

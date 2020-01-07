@@ -365,6 +365,7 @@ int32_t OneVideoExtractorTrackGenerator::GenerateExtractorTracks(std::map<uint8_
         if (retInit)
         {
             LOG(ERROR) << "Failed to initialize extractor track !" << std::endl;
+            DELETE_MEMORY(extractorTrack);
             return retInit;
         }
 

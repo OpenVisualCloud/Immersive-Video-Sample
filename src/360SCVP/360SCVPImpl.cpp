@@ -88,6 +88,7 @@ TstitchStream::TstitchStream()
     m_data = nullptr;
     m_startCodesSize = 0;
     m_nalType = 0;
+    m_projType = 0;
     memset(&m_sliceType, 0, sizeof(SliceType));
     m_usedType = 0;
     m_xTopLeftNet = 0;
@@ -1174,16 +1175,32 @@ int32_t  TstitchStream::GeneratePPS(param_360SCVP* pParamStitchStream, TileArran
         ret = hevc_import_ffextradata(&specialInfo, m_hevcState, nalsize, &spsCnt, 0);
         if (ret < 0)
         {
-            if (bs) gts_bs_del(bs);
-            if (bsWrite) gts_bs_del(bsWrite);
+            if (bs)
+            {
+                gts_bs_del(bs);
+                bs = NULL;
+            }
+            if (bsWrite) 
+            {
+                gts_bs_del(bsWrite);
+                bsWrite = NULL;
+            }
             return ret;
         }
         memcpy(&hevcTmp, m_hevcState, sizeof(HEVCState));
         HEVC_PPS *pps = &hevcTmp.pps[hevcTmp.last_parsed_pps_id];
         if (!pps)
         {
-            if (bs) gts_bs_del(bs);
-            if (bsWrite) gts_bs_del(bsWrite);
+            if (bs) 
+            {
+                gts_bs_del(bs);
+                bs = NULL;
+            }
+            if (bsWrite) 
+            {
+                gts_bs_del(bsWrite);
+                bsWrite = NULL;
+            }
             return -1;
         }
 
@@ -1202,9 +1219,28 @@ int32_t  TstitchStream::GeneratePPS(param_360SCVP* pParamStitchStream, TileArran
         // write the new pps
         hevc_write_pps(bsWrite, &hevcTmp);
         pParamStitchStream->outputBitstreamLen = gts_bs_get_position(bsWrite);
-        if (bs) gts_bs_del(bs);
-        if (bsWrite) gts_bs_del(bsWrite);
+        if (bs)
+        {
+            gts_bs_del(bs);
+            bs = NULL;
+        }
+        if (bsWrite) 
+        {
+            gts_bs_del(bsWrite);
+            bsWrite = NULL;
+        }
         ret = 0;
+    }
+
+    if (bs)
+    {
+        gts_bs_del(bs);
+        bs = NULL;
+    }
+    if (bsWrite) 
+    {
+        gts_bs_del(bsWrite);
+        bsWrite = NULL;
     }
     return ret;
 }
@@ -1238,25 +1274,65 @@ int32_t  TstitchStream::GenerateSPS(param_360SCVP* pParamStitchStream)
         {
             if(bs)
             {
-                gts_bs_del(bsWrite);
+                //gts_bs_del(bsWrite);
                 gts_bs_del(bs);
+                bs = NULL;
             }
+            if (bsWrite)
+            {
+                gts_bs_del(bsWrite);
+                bsWrite = NULL;
+            }
+
             return ret;
         }
         // modify the sps
         memcpy(&hevcTmp, m_hevcState, sizeof(HEVCState));
         HEVC_SPS *sps = &hevcTmp.sps[0];
         if (!sps)
+        {
+            if (bs)
+            {
+                gts_bs_del(bs);
+                bs = NULL;
+            }
+
+            if (bsWrite)
+            {
+                gts_bs_del(bsWrite);
+                bsWrite = NULL;
+            }
+
             return -1;
+        }
+
         sps->width = pParamStitchStream->destWidth;
         sps->height = pParamStitchStream->destHeight;
 
         // write the new sps
         hevc_write_sps(bsWrite, &hevcTmp);
         pParamStitchStream->outputBitstreamLen = gts_bs_get_position(bsWrite);
-        gts_bs_del(bsWrite);
-        gts_bs_del(bs);
+        if (bsWrite)
+        {
+            gts_bs_del(bsWrite);
+            bsWrite = NULL;
+        }
+        if (bs)
+        {
+            gts_bs_del(bs);
+            bs = NULL;
+        }
         ret = 0;
+    }
+    if (bsWrite)
+    {
+        gts_bs_del(bsWrite);
+        bsWrite = NULL;
+    }
+    if (bs)
+    {
+        gts_bs_del(bs);
+        bs = NULL;
     }
     return ret;
 }

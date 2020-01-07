@@ -61,7 +61,11 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
     cTAppConvCfg->m_iInputWidth = pParamGenViewport->m_iInputWidth;
     cTAppConvCfg->m_iInputHeight = pParamGenViewport->m_iInputHeight;
     if (cTAppConvCfg->create(pParamGenViewport->m_tileNumRow, pParamGenViewport->m_tileNumCol) < 0)
+    {
+        delete cTAppConvCfg;
+        cTAppConvCfg = NULL;
         return NULL;
+    }
 
     //calculate the max tile num if the source project is cube map
     cTAppConvCfg->m_maxTileNum = 0;
@@ -229,7 +233,7 @@ int32_t genViewport_getContentCoverage(void* pGenHandle, CCDef* pOutCC)
 
     // pOutCC should be allocated before this func called, or we new it here
     if(!pOutCC)
-        pOutCC = new CCDef;
+        return -1;
 
     SPos *pUpLeft = cTAppConvCfg->m_pUpLeft;
     SPos *pDownRight = cTAppConvCfg->m_pDownRight;
@@ -434,6 +438,8 @@ TgenViewport::TgenViewport()
     m_iFrameRate = 0;
     m_iInputWidth = 0;
     m_iInputHeight = 0;
+    m_maxTileNum = 0;
+    m_numFaces = 0;
     m_srd = new ITileInfo;
 }
 

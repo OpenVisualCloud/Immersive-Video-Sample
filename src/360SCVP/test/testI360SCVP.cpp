@@ -107,8 +107,10 @@ TEST_F(I360SCVPTest, I360SCVPCreate_type0)
 {
     param.usedType = E_STREAM_STITCH_ONLY;
     void* pI360SCVP = I360SCVP_Init(&param);
-    EXPECT_TRUE(pI360SCVP != NULL);
+    bool notnull = (pI360SCVP != NULL);
+    //EXPECT_TRUE(pI360SCVP != NULL);
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(notnull == true);
 }
 
 TEST_F(I360SCVPTest, I360SCVPCreate_type1)
@@ -125,16 +127,21 @@ TEST_F(I360SCVPTest, I360SCVPCreate_type1)
     param.paramViewPort.viewPortFOVH = 80;
     param.paramViewPort.viewPortFOVV = 80;
     void* pI360SCVP = I360SCVP_Init(&param);
-    EXPECT_TRUE(pI360SCVP != NULL);
+    bool notnull = (pI360SCVP != NULL);
+    //EXPECT_TRUE(pI360SCVP != NULL);
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(notnull == true);
 }
 
 TEST_F(I360SCVPTest, I360SCVPCreate_type2)
 {
     param.usedType = E_PARSER_ONENAL;
     void* pI360SCVP = I360SCVP_Init(&param);
-    EXPECT_TRUE(pI360SCVP != NULL);
+    bool notnull = (pI360SCVP != NULL);
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(notnull == true);
+
+    //I360SCVP_unInit(pI360SCVP);
 }
 
 TEST_F(I360SCVPTest, ParseNAL_type0)
@@ -148,8 +155,7 @@ TEST_F(I360SCVPTest, ParseNAL_type0)
     nal.dataSize = bufferlen;
     ret = I360SCVP_ParseNAL(&nal, pI360SCVP);
     EXPECT_TRUE(ret == 0);
-    if(pI360SCVP)
-      I360SCVP_unInit(pI360SCVP);
+    I360SCVP_unInit(pI360SCVP);
 }
 
 TEST_F(I360SCVPTest, ParseNAL_type1)
@@ -171,12 +177,19 @@ TEST_F(I360SCVPTest, ParseNAL_type1)
     param.usedType = E_MERGE_AND_VIEWPORT;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     Nalu nal;
     nal.data = pInputBuffer;
     nal.dataSize = bufferlen;
     ret = I360SCVP_ParseNAL(&nal, pI360SCVP);
-    EXPECT_TRUE(ret == 0);
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(ret == 0);
+    //I360SCVP_unInit(pI360SCVP);
 }
 
 TEST_F(I360SCVPTest, ParseNAL_type2)
@@ -185,12 +198,19 @@ TEST_F(I360SCVPTest, ParseNAL_type2)
     param.usedType = E_PARSER_ONENAL;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     Nalu nal;
     nal.data = pInputBuffer;
     nal.dataSize = bufferlen;
     ret = I360SCVP_ParseNAL(&nal, pI360SCVP);
-    EXPECT_TRUE(ret == 0);
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(ret == 0);
+    //I360SCVP_unInit(pI360SCVP);
 }
 
 TEST_F(I360SCVPTest, GenerateSPS_PPS_SliceHdr)
@@ -198,6 +218,12 @@ TEST_F(I360SCVPTest, GenerateSPS_PPS_SliceHdr)
     param.usedType = E_PARSER_ONENAL;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     Nalu nal;
     int ret = 0;
     int loop = 6;
@@ -248,8 +274,9 @@ TEST_F(I360SCVPTest, GenerateSPS_PPS_SliceHdr)
         loop--;
     }
 
-    EXPECT_TRUE(ret == 0);
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(ret == 0);
+    //I360SCVP_unInit(pI360SCVP);
 }
 
 TEST_F(I360SCVPTest, GetParameter_PicInfo_type0)
@@ -258,17 +285,29 @@ TEST_F(I360SCVPTest, GetParameter_PicInfo_type0)
     param.usedType = E_STREAM_STITCH_ONLY;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     Nalu nal;
     nal.data = pInputBuffer;
     nal.dataSize = bufferlen;
     ret = I360SCVP_ParseNAL(&nal, pI360SCVP);
     EXPECT_TRUE(ret == 0);
+    if (ret)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
     Param_PicInfo* pPicInfo,pic;
     pPicInfo = &pic;
     ret = I360SCVP_GetParameter(pI360SCVP, ID_SCVP_PARAM_PICINFO, (void**)&pPicInfo);
+    I360SCVP_unInit(pI360SCVP);
     EXPECT_TRUE(ret == 0);
     EXPECT_TRUE(pPicInfo->picWidth !=0);
-    I360SCVP_unInit(pI360SCVP);
+    //I360SCVP_unInit(pI360SCVP);
 }
 
 TEST_F(I360SCVPTest, GetParameter_PicInfo_type1)
@@ -289,17 +328,28 @@ TEST_F(I360SCVPTest, GetParameter_PicInfo_type1)
     param.usedType = E_MERGE_AND_VIEWPORT;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     Nalu nal;
     nal.data = pInputBuffer;
     nal.dataSize = bufferlen;
     ret = I360SCVP_ParseNAL(&nal, pI360SCVP);
     EXPECT_TRUE(ret == 0);
+    if (ret)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
     Param_PicInfo* pPicInfo,pic;
     pPicInfo = &pic;
     ret = I360SCVP_GetParameter(pI360SCVP, ID_SCVP_PARAM_PICINFO, (void**)&pPicInfo);
+    I360SCVP_unInit(pI360SCVP);
     EXPECT_TRUE(ret == 0);
     EXPECT_TRUE(pPicInfo->picWidth !=0);
-    I360SCVP_unInit(pI360SCVP);
 }
 
 TEST_F(I360SCVPTest, GetParameter_PicInfo_type2)
@@ -308,6 +358,11 @@ TEST_F(I360SCVPTest, GetParameter_PicInfo_type2)
     param.usedType = E_PARSER_ONENAL;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
     int loop = 5;
     Nalu nal;
     unsigned char* pInputBufferTemp = pInputBuffer;
@@ -317,7 +372,11 @@ TEST_F(I360SCVPTest, GetParameter_PicInfo_type2)
         nal.dataSize = bufferlen;
         ret = I360SCVP_ParseNAL(&nal, pI360SCVP);
         EXPECT_TRUE(ret == 0);
-
+        if (ret)
+        {
+            I360SCVP_unInit(pI360SCVP);
+            return;
+        }
         pInputBufferTemp += (nal.dataSize);
         bufferlen -= (nal.dataSize);
         loop--;
@@ -326,9 +385,10 @@ TEST_F(I360SCVPTest, GetParameter_PicInfo_type2)
     Param_PicInfo* pPicInfo,pic;
     pPicInfo = &pic;
     ret = I360SCVP_GetParameter(pI360SCVP, ID_SCVP_PARAM_PICINFO, (void**)&pPicInfo);
+    I360SCVP_unInit(pI360SCVP);
     EXPECT_TRUE(ret == 0);
     EXPECT_TRUE(pPicInfo->picWidth !=0);
-    I360SCVP_unInit(pI360SCVP);
+    //I360SCVP_unInit(pI360SCVP);
 }
 
 TEST_F(I360SCVPTest, SetParameter_SetViewport)
@@ -337,6 +397,12 @@ TEST_F(I360SCVPTest, SetParameter_SetViewport)
     param.usedType = E_PARSER_ONENAL;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     Param_ViewPortInfo paramViewPorInfo;
     paramViewPorInfo.faceWidth = 7680;
     paramViewPorInfo.faceHeight = 3840;
@@ -350,9 +416,9 @@ TEST_F(I360SCVPTest, SetParameter_SetViewport)
     paramViewPorInfo.viewPortFOVV = 80;
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
-    ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    EXPECT_TRUE(ret == 0);
-    EXPECT_TRUE(ret ==0);
+    ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(ret ==0);
 }
 
 TEST_F(I360SCVPTest, GenerateProj)
@@ -361,15 +427,32 @@ TEST_F(I360SCVPTest, GenerateProj)
     param.usedType = E_PARSER_ONENAL;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     ret = I360SCVP_GenerateProj(pI360SCVP, E_EQUIRECT_PROJECTION, param.pOutputBitstream, (int32_t*)&param.outputBitstreamLen);
     EXPECT_TRUE(ret ==0);
+    if (ret)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
     EXPECT_TRUE(param.outputBitstreamLen > 0);
+    if (param.outputBitstreamLen <= 0)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
 
     ret = I360SCVP_GenerateProj(pI360SCVP, E_CUBEMAP_PROJECTION, param.pOutputBitstream, (int32_t*)&param.outputBitstreamLen);
+    I360SCVP_unInit(pI360SCVP);
     EXPECT_TRUE(ret ==0);
     EXPECT_TRUE(param.outputBitstreamLen > 0);
 
-    I360SCVP_unInit(pI360SCVP);
+    //I360SCVP_unInit(pI360SCVP);
 }
 
 TEST_F(I360SCVPTest, GenerateRWPK)
@@ -378,6 +461,11 @@ TEST_F(I360SCVPTest, GenerateRWPK)
     param.usedType = E_PARSER_ONENAL;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
 
     RegionWisePacking reginWisePack;
     reginWisePack.constituentPicMatching = 0;
@@ -404,9 +492,8 @@ TEST_F(I360SCVPTest, GenerateRWPK)
     if (reginWisePack.rectRegionPacking)
         delete[]reginWisePack.rectRegionPacking;
     reginWisePack.rectRegionPacking = NULL;
-    EXPECT_TRUE(param.outputBitstreamLen > 0);
-
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(param.outputBitstreamLen > 0);
 }
 
 TEST_F(I360SCVPTest, SetViewportSEI)
@@ -417,7 +504,11 @@ TEST_F(I360SCVPTest, SetViewportSEI)
     param.paramPicInfo.tileWidthNum = 2;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
-
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
     OMNIViewPort viewport;
     viewport.viewportsSize = 2;
     viewport.vpId = 64;
@@ -434,7 +525,14 @@ TEST_F(I360SCVPTest, SetViewportSEI)
         pTemp++;
     }
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_SEI_VIEWPORT, &viewport);
+    delete [] viewport.pViewports;
+    viewport.pViewports = NULL;
     EXPECT_TRUE(ret == 0);
+    if (ret)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
 
     Param_ViewPortInfo paramViewPorInfo;
     paramViewPorInfo.faceWidth = 7680;
@@ -450,7 +548,11 @@ TEST_F(I360SCVPTest, SetViewportSEI)
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    EXPECT_TRUE(ret == 0);
-    EXPECT_TRUE(ret == 0);
+    if (ret)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
 
     pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
     memset(pTiledBitstreamTotal, 0, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info));
@@ -472,7 +574,6 @@ TEST_F(I360SCVPTest, SetViewportSEI)
 
     param.paramStitchInfo.pTiledBitstream = &pTiledBitstreamTotal;
     ret = I360SCVP_process(&param, pI360SCVP);
-    EXPECT_TRUE(ret == 0);
 
     ptemp = pTiledBitstreamTotal;
     for (int i = 0; i < param.paramPicInfo.tileHeightNum; i++)
@@ -491,6 +592,7 @@ TEST_F(I360SCVPTest, SetViewportSEI)
         delete[]viewport.pViewports;
 
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(ret == 0);
 }
 
 TEST_F(I360SCVPTest, SetRWPKSEI)
@@ -501,6 +603,12 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
     param.paramPicInfo.tileWidthNum = 2;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     RegionWisePacking reginWisePack;
     reginWisePack.constituentPicMatching = 0;
     reginWisePack.numRegions = 2;
@@ -510,6 +618,12 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
     reginWisePack.projPicWidth = 640;
     reginWisePack.rectRegionPacking = new RectangularRegionWisePacking[reginWisePack.numRegions];
     EXPECT_TRUE(reginWisePack.rectRegionPacking != NULL);
+    if (!(reginWisePack.rectRegionPacking))
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     RectangularRegionWisePacking* pRectRegionPackTmp = reginWisePack.rectRegionPacking;
     int num = reginWisePack.numRegions;
     if (reginWisePack.rectRegionPacking)
@@ -523,6 +637,8 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
         ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_SEI_RWPK, &reginWisePack);
         EXPECT_TRUE(ret == 0);
     }
+    delete[] reginWisePack.rectRegionPacking;
+    reginWisePack.rectRegionPacking = NULL;
 
     Param_ViewPortInfo paramViewPorInfo;
     paramViewPorInfo.faceWidth = 7680;
@@ -537,8 +653,13 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
     paramViewPorInfo.viewPortFOVV = 80;
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
-    ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    EXPECT_TRUE(ret == 0);
+    ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    
     EXPECT_TRUE(ret == 0);
+    if (ret)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
 
     pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
     memset(pTiledBitstreamTotal, 0, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info));
@@ -560,7 +681,7 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
 
     param.paramStitchInfo.pTiledBitstream = &pTiledBitstreamTotal;
     ret = I360SCVP_process(&param, pI360SCVP);
-    EXPECT_TRUE(ret == 0);
+    //EXPECT_TRUE(ret == 0);
 
     ptemp = pTiledBitstreamTotal;
     for (int i = 0; i < param.paramPicInfo.tileHeightNum; i++)
@@ -575,10 +696,11 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
 
     if (pTiledBitstreamTotal)
         delete[]pTiledBitstreamTotal;
-    if (reginWisePack.rectRegionPacking)
-        delete[]reginWisePack.rectRegionPacking;
-    reginWisePack.rectRegionPacking = NULL;
+    //if (reginWisePack.rectRegionPacking)
+        //delete[]reginWisePack.rectRegionPacking;
+    //reginWisePack.rectRegionPacking = NULL;
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(ret == 0);
 }
 
 TEST_F(I360SCVPTest, SetRotationSEI)
@@ -589,12 +711,22 @@ TEST_F(I360SCVPTest, SetRotationSEI)
     param.paramPicInfo.tileWidthNum = 2;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
     SphereRotation sphereRot;
     sphereRot.yawRotation = 0;
     sphereRot.pitchRotation = 2;
     sphereRot.rollRotation = 100;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_SEI_ROTATION, &sphereRot);
     EXPECT_TRUE(ret == 0);
+    if (ret)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
     Param_ViewPortInfo paramViewPorInfo;
     paramViewPorInfo.faceWidth = 7680;
     paramViewPorInfo.faceHeight = 3840;
@@ -608,8 +740,13 @@ TEST_F(I360SCVPTest, SetRotationSEI)
     paramViewPorInfo.viewPortFOVV = 80;
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
-    ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    EXPECT_TRUE(ret == 0);
+    ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);
     EXPECT_TRUE(ret == 0);
+    if (ret)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
 
    pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
     memset(pTiledBitstreamTotal, 0, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info));
@@ -631,7 +768,7 @@ TEST_F(I360SCVPTest, SetRotationSEI)
 
     param.paramStitchInfo.pTiledBitstream = &pTiledBitstreamTotal;
     ret = I360SCVP_process(&param, pI360SCVP);
-    EXPECT_TRUE(ret == 0);
+    //EXPECT_TRUE(ret == 0);
 
     ptemp = pTiledBitstreamTotal;
     for (int i = 0; i < param.paramPicInfo.tileHeightNum; i++)
@@ -647,6 +784,7 @@ TEST_F(I360SCVPTest, SetRotationSEI)
     if (pTiledBitstreamTotal)
         delete[]pTiledBitstreamTotal;
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(ret == 0);
 }
 
 TEST_F(I360SCVPTest, SetFramePackingSEI)
@@ -657,6 +795,12 @@ TEST_F(I360SCVPTest, SetFramePackingSEI)
     param.paramPicInfo.tileWidthNum = 2;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     FramePacking framepack;
     memset(&framepack, 0, sizeof(FramePacking));
     framepack.frame0GridX = 10;
@@ -665,6 +809,11 @@ TEST_F(I360SCVPTest, SetFramePackingSEI)
     framepack.frame1GridY = 100;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_SEI_FRAMEPACKING, &framepack);
     EXPECT_TRUE(ret == 0);
+    if (ret)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
     Param_ViewPortInfo paramViewPorInfo;
     paramViewPorInfo.faceWidth = 7680;
     paramViewPorInfo.faceHeight = 3840;
@@ -678,8 +827,14 @@ TEST_F(I360SCVPTest, SetFramePackingSEI)
     paramViewPorInfo.viewPortFOVV = 80;
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
-    ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    EXPECT_TRUE(ret == 0);
+    ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);
     EXPECT_TRUE(ret == 0);
+    if (ret)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
     memset(pTiledBitstreamTotal, 0, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info));
     EXPECT_TRUE(pTiledBitstreamTotal != NULL);
@@ -700,7 +855,6 @@ TEST_F(I360SCVPTest, SetFramePackingSEI)
 
     param.paramStitchInfo.pTiledBitstream = &pTiledBitstreamTotal;
     ret = I360SCVP_process(&param, pI360SCVP);
-    EXPECT_TRUE(ret == 0);
 
     ptemp = pTiledBitstreamTotal;
     for (int i = 0; i < param.paramPicInfo.tileHeightNum; i++)
@@ -716,6 +870,7 @@ TEST_F(I360SCVPTest, SetFramePackingSEI)
     if (pTiledBitstreamTotal)
         delete[]pTiledBitstreamTotal;
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(ret == 0);
 }
 
 TEST_F(I360SCVPTest, webrtcUsage)
@@ -734,10 +889,16 @@ TEST_F(I360SCVPTest, webrtcUsage)
     param.usedType = E_MERGE_AND_VIEWPORT;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     ret = I360SCVP_process(&param, pI360SCVP);
+    I360SCVP_unInit(pI360SCVP);
     EXPECT_TRUE(ret == 0);
     EXPECT_TRUE(param.outputBitstreamLen > 0);
-    I360SCVP_unInit(pI360SCVP);
 }
 
 TEST_F(I360SCVPTest, parseRWPK)
@@ -745,10 +906,20 @@ TEST_F(I360SCVPTest, parseRWPK)
     RegionWisePacking RWPK;
     RWPK.rectRegionPacking = new RectangularRegionWisePacking[DEFAULT_REGION_NUM];
     EXPECT_TRUE( RWPK.rectRegionPacking != NULL);
+    if (!(RWPK.rectRegionPacking))
+    {
+        return;
+    }
 
     RegionWisePacking* pOriRWPK = NULL;
     pOriRWPK = new RegionWisePacking;
     EXPECT_TRUE( pOriRWPK != NULL);
+    if (!pOriRWPK )
+    {
+        delete [] RWPK.rectRegionPacking;
+        RWPK.rectRegionPacking = NULL;
+        return;
+    }
 		
     int ret = 0;
     param.paramViewPort.faceWidth = 3840;
@@ -764,14 +935,59 @@ TEST_F(I360SCVPTest, parseRWPK)
     param.usedType = E_MERGE_AND_VIEWPORT;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        delete [] RWPK.rectRegionPacking;
+        RWPK.rectRegionPacking = NULL;
+        delete pOriRWPK;
+        pOriRWPK = NULL;
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+
     ret = I360SCVP_process(&param, pI360SCVP);
     EXPECT_TRUE(ret == 0);
+    if (ret)
+    {
+        delete [] RWPK.rectRegionPacking;
+        RWPK.rectRegionPacking = NULL;
+        delete pOriRWPK;
+        pOriRWPK = NULL;
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
     EXPECT_TRUE(param.outputBitstreamLen > 0);
+    if (param.outputBitstreamLen <= 0)
+    {
+        delete [] RWPK.rectRegionPacking;
+        RWPK.rectRegionPacking = NULL;
+        delete pOriRWPK;
+        pOriRWPK = NULL;
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
     ret = I360SCVP_ParseRWPK(pI360SCVP, &RWPK, param.pOutputSEI, param.outputSEILen);
     EXPECT_TRUE(ret == 0);
-
+    if (ret)
+    {
+        delete [] RWPK.rectRegionPacking;
+        RWPK.rectRegionPacking = NULL;
+        delete pOriRWPK;
+        pOriRWPK = NULL;
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
     ret = I360SCVP_GetParameter(pI360SCVP, ID_SCVP_RWPK_INFO, (void**)&pOriRWPK);
     EXPECT_TRUE(ret == 0);
+    if (ret)
+    {
+        delete [] RWPK.rectRegionPacking;
+        RWPK.rectRegionPacking = NULL;
+        delete pOriRWPK;
+        pOriRWPK = NULL;
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
 
     if ((RWPK.numRegions != pOriRWPK->numRegions) ||
         (RWPK.packedPicHeight != pOriRWPK->packedPicHeight) ||
@@ -781,11 +997,11 @@ TEST_F(I360SCVPTest, parseRWPK)
         (RWPK.rectRegionPacking->projRegHeight != pOriRWPK->rectRegionPacking->projRegHeight) ||
         (RWPK.rectRegionPacking->projRegWidth != pOriRWPK->rectRegionPacking->projRegWidth))
         ret = 1;
-    EXPECT_TRUE(ret == 0);
 
     delete[] RWPK.rectRegionPacking;
     delete pOriRWPK;
     I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(ret == 0);
 }
 
 }
