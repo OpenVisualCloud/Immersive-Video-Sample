@@ -42,7 +42,7 @@
 #include "ExtractorTrackManager.h"
 #include "DashSegmenter.h"
 #include "../utils/OmafStructure.h"
-#include "tinyxml2.h"
+#include "../utils/tinyxml2.h"
 
 VCD_NS_BEGIN
 

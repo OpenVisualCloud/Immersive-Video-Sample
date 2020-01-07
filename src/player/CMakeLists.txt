@@ -20,7 +20,7 @@ if(USE_WEBRTC)
 ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -fpermissive -DLOW_LATENCY_USAGE")
 endif()
 
-INCLUDE_DIRECTORIES(/usr/local/include)
+INCLUDE_DIRECTORIES(/usr/local/include ../utils)
 
 LINK_DIRECTORIES(/usr/local/lib)
 
@@ -35,6 +35,12 @@ if(USE_WEBRTC)
 endif()
 
 AUX_SOURCE_DIRECTORY(. DIR_SRC)
+AUX_SOURCE_DIRECTORY(../utils/ UTIL_SRC)
+
+set(DIR_SRC
+    ${DIR_SRC}
+    ${UTIL_SRC}
+    )
 
 ADD_EXECUTABLE(render ${DIR_SRC})
 
