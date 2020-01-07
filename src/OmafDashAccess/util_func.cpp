@@ -77,7 +77,7 @@ uint64_t net_parse_date(const char *val)
 {
     uint64_t current_time;
     char szDay[50], szMonth[50];
-    uint32_t year, month, day, h, m, s, ms;
+    int32_t year, month, day, h, m, s, ms;
     int32_t oh, om;
     float secs;
     bool neg_time_zone = false;
@@ -227,13 +227,17 @@ int32_t net_get_timezone()
     //		return val;
     /*FIXME - avoid errors at midnight when estimating timezone this does not work !!*/
     int32_t t_timezone;
-    struct tm t_gmt, t_local;
+    tm *t_gmt = nullptr, *t_local = nullptr;
     time_t t_time;
     t_time = time(NULL);
-    t_gmt = *gmtime(&t_time);
-    t_local = *localtime(&t_time);
+    t_gmt = gmtime(&t_time);
+    if(!t_gmt)
+        return 0;
+    t_local = localtime(&t_time);
+    if(!t_local)
+        return 0;
 
-    t_timezone = (t_gmt.tm_hour - t_local.tm_hour) * 3600 + (t_gmt.tm_min - t_local.tm_min) * 60;
+    t_timezone = (t_gmt->tm_hour - t_local->tm_hour) * 3600 + (t_gmt->tm_min - t_local->tm_min) * 60;
     return t_timezone;
 
 }

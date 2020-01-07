@@ -47,7 +47,14 @@ public:
     //!
     //! \brief  construct
     //!
-    OmafMediaSource(){};
+    OmafMediaSource()
+    {
+        mViewPortChanged    = false;
+        memset(&mHeadSetInfo, 0, sizeof(mHeadSetInfo));
+        memset(&mPose, 0, sizeof(mPose));
+        mLoop = false;
+        mEOS = false;
+    };
 
     //!
     //! \brief  de-construct

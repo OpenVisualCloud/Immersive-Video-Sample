@@ -97,7 +97,8 @@ int OmafMPDParser::ParseMPD( std::string mpd_file, OMAFSTREAMS& listStream )
 int OmafMPDParser::ParseMPDInfo()
 {
     mMPDInfo = new MPDInfo;
-    //memset(mMPDInfo, 0, sizeof(MPDInfo));
+    if(!mMPDInfo)
+        return ERROR_NULL_PTR;
 
     auto baseUrl = mMpd->GetBaseUrls().back();
     mMPDInfo->mpdPathBaseUrl               = baseUrl->GetPath();
@@ -143,6 +144,8 @@ int OmafMPDParser::ParseStreams( OMAFSTREAMS& listStream )
     int ret = ERROR_NONE;
 
     std::vector<PeriodElement *> Periods = mMpd->GetPeriods();
+    if(Periods.size() == 0)
+        return ERROR_NO_VALUE;
 
     //processing only the first period;
     PeriodElement *pPeroid = Periods[0];

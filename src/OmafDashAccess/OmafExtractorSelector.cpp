@@ -213,7 +213,8 @@ OmafExtractor* OmafExtractorSelector::GetExtractorByPose( OmafMediaStream* pStre
 
     // to select extractor;
     OmafExtractor *selectedExtractor = SelectExtractor(pStream, mPose);
-    LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") ! extractor id is: "<<selectedExtractor->GetID()<<endl;
+    if(selectedExtractor && previousPose)
+        LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") ! extractor id is: "<<selectedExtractor->GetID()<<endl;
 
     if(previousPose != mPose)
         SAFE_DELETE(previousPose);

@@ -180,27 +180,6 @@ TEST_F(OmafReaderManagerTest, ReaderTrackSegments)
                         continue;
                     }
                 }
-                else if (extractorTrackID == 1001 || extractorTrackID == 1005)
-                {
-                    if ((itAS->first == 1) || (itAS->first == 5))
-                    {
-                        continue;
-                    }
-                }
-                else if (extractorTrackID == 1002 || extractorTrackID == 1006)
-                {
-                    if ((itAS->first == 2) || (itAS->first == 6))
-                    {
-                        continue;
-                    }
-                }
-                else if (extractorTrackID == 1003 || extractorTrackID == 1007)
-                {
-                    if ((itAS->first == 3) || (itAS->first == 7))
-                    {
-                        continue;
-                    }
-                }
 
                 pAS->Enable(true);
 

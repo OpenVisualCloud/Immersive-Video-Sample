@@ -259,7 +259,7 @@ int DownloadManager::enum_directory( const char *dir,
         {
             char ext[30];
             char *separate = strrchr(currentFile->d_name, '.');
-            if (!separate) goto end;
+            if (!separate || strlen(separate) > 30) goto end;
             strcpy(ext, separate+1);
             strlwr(ext);
             if (!strstr(filter, separate+1)) goto end;

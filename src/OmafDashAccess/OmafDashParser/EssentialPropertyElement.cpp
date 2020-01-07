@@ -77,7 +77,7 @@ ODStatus EssentialPropertyElement::ParseSchemeIdUriAndValue()
     else if(GetSchemeIdUri() == SCHEMEIDURI_RWPK)
     {
         RwpkType rwpkPackingType = (RwpkType)StringToInt(GetRwpkPackingType());
-        if(rwpkPackingType < RWPK_UNKNOWN || rwpkPackingType > RWPK_RESERVED)
+        if(rwpkPackingType <= RWPK_UNKNOWN || rwpkPackingType >= RWPK_RESERVED)
         {
             LOG(WARNING)<<"the RWPK type is invalid."<<endl;
             return OD_STATUS_INVALID;

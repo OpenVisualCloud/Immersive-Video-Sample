@@ -428,12 +428,15 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
 
         char *origData = pPacket->Payload();
         char *newData  = newPacket->Payload();
+        if(!origData || !newData) return OMAF_ERROR_NULL_PTR;
         memcpy(newData, mVPS, mVPSLen);
         memcpy(newData + mVPSLen, mSPS, mSPSLen);
         memcpy(newData + mVPSLen + mSPSLen, mPPS, mPPSLen);
         memcpy(newData + mVPSLen + mSPSLen + mPPSLen, origData, pPacket->Size());
+
         RegionWisePacking *newRwpk = new RegionWisePacking;
         RegionWisePacking *pRwpk = pPacket->GetRwpk();
+        if(!newRwpk || !pRwpk) return OMAF_ERROR_NULL_PTR;
         *newRwpk = *pRwpk;
         newRwpk->rectRegionPacking = new RectangularRegionWisePacking[newRwpk->numRegions];
         memcpy(newRwpk->rectRegionPacking, pRwpk->rectRegionPacking, pRwpk->numRegions * sizeof(RectangularRegionWisePacking));
@@ -640,7 +643,7 @@ int OmafReaderManager::ReadNextSegment(
             }
         }
 
-        removeSegment(refTrackInfo->initSegId, sampleIdx->mCurrentReadSegment - 1);
+        if(refTrackInfo) removeSegment(refTrackInfo->initSegId, sampleIdx->mCurrentReadSegment - 1);
 
     }
 
@@ -670,11 +673,15 @@ void OmafReaderManager::Run()
 
     while(go_on && mStatus != STATUS_STOPPED){
         mLock.lock();
-        while (!mInitSegParsed)
+
+        // exit the waiting if segment is parsed or wait time is more than 10 mins
+        int64_t waitTime = 0;
+        while (!mInitSegParsed && waitTime < 600000)
         {
             mLock.unlock();
             ::usleep(1000);
             mLock.lock();
+            waitTime++;
         }
         mLock.unlock();
 
@@ -724,13 +731,16 @@ void OmafReaderManager::Run()
                         }
                     }
 
+                    // exit the waiting if segment downloaded or wait time is more than 10 mins
+                    int64_t waitTime = 0;
                     mLock.lock();
-                    while (st->sampleIndex.mCurrentReadSegment > st->sampleIndex.mCurrentAddSegment && mStatus!=STATUS_STOPPING)
+                    while (st->sampleIndex.mCurrentReadSegment > st->sampleIndex.mCurrentAddSegment && mStatus!=STATUS_STOPPING && waitTime < 600000)
                     {
                         LOG(INFO) << "New segment " << st->sampleIndex.mCurrentReadSegment << " hasn't come, then wait !" << endl;
                         mLock.unlock();
                         ::usleep(1000);
                         mLock.lock();
+                        waitTime++;
                     }
                     mLock.unlock();
 
@@ -813,13 +823,16 @@ void OmafReaderManager::Run()
                         }
                     }
 
+                    // exit the waiting if segment downloaded or wait time is more than 10 mins
+                    int64_t waitTime = 0;
                     mLock.lock();
-                    while (st->sampleIndex.mCurrentReadSegment > st->sampleIndex.mCurrentAddSegment && mStatus!=STATUS_STOPPING)
+                    while (st->sampleIndex.mCurrentReadSegment > st->sampleIndex.mCurrentAddSegment && mStatus!=STATUS_STOPPING && waitTime < 600000)
                     {
                         LOG(INFO) << "New segment " << st->sampleIndex.mCurrentReadSegment << " hasn't come, then wait !" << endl;
                         mLock.unlock();
                         ::usleep(1000);
                         mLock.lock();
+                        waitTime++;
                     }
                     mLock.unlock();
 

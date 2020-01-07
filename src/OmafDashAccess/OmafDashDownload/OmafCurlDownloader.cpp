@@ -195,10 +195,12 @@ ODStatus OmafCurlDownloader::NotifyDownloadedData()
 
 ODStatus OmafCurlDownloader::CleanUp()
 {
-    // make sure downloader is stopped
-    while(m_status != STOPPED)
+    // make sure downloader is stopped or wait time is more than 10 mins
+    int64_t waitTime = 0;
+    while(m_status != STOPPED && waitTime < 6000000)
     {
         usleep(100);
+        waitTime++;
     }
 
     return OD_STATUS_SUCCESS;

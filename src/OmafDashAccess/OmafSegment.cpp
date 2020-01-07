@@ -104,13 +104,17 @@ int OmafSegment::WaitComplete()
 {
     if( mStatus == SegDownloaded ) return ERROR_NONE;
 
+    int64_t waitTime = 0;
+
     //printf("wait download =======\n");
     /*pthread_mutex_lock(&m_mutex);
     pthread_cond_wait(&m_cond, &m_mutex);
 
     pthread_mutex_unlock(&m_mutex);*/
-    while(mStatus != SegDownloaded){
+    // exit the waiting if segment downloaded or wait time is more than 10 mins
+    while(mStatus != SegDownloaded && waitTime < 60000){
         ::usleep(10000);
+        waitTime++;
     }
 
     return ERROR_NONE;

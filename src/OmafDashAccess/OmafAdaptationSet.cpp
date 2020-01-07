@@ -192,12 +192,6 @@ int OmafAdaptationSet::LoadLocalInitSegment()
 
     auto repID = mRepresentation->GetId();
 
-    if( ERROR_NONE != ret ){
-        SAFE_DELETE(seg);
-        LOG(ERROR) << "Fail to Init OmafSegment Download for AdaptationSet:" << this->mID
-                   << endl;
-    }
-
     mInitSegment = new OmafSegment(seg, mSegNum, true);
 
     if(NULL == mInitSegment ) {
@@ -229,12 +223,6 @@ int OmafAdaptationSet::LoadLocalSegment()
     }
 
     auto repID = mRepresentation->GetId();
-
-    if( ERROR_NONE != ret ){
-        SAFE_DELETE(seg);
-        LOG(ERROR) << "Fail to Init OmafSegment Download for AdaptationSet:" << this->mID
-                   << endl;
-    }
 
     OmafSegment* pSegment = new OmafSegment(seg, mSegNum, false);
 
