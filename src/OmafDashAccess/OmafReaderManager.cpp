@@ -428,7 +428,11 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
 
         char *origData = pPacket->Payload();
         char *newData  = newPacket->Payload();
-        if(!origData || !newData) return OMAF_ERROR_NULL_PTR;
+        if(!origData || !newData)
+        {
+            SAFE_DELETE(newPacket);
+            return OMAF_ERROR_NULL_PTR;
+        }
         memcpy(newData, mVPS, mVPSLen);
         memcpy(newData + mVPSLen, mSPS, mSPSLen);
         memcpy(newData + mVPSLen + mSPSLen, mPPS, mPPSLen);
@@ -436,7 +440,12 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
 
         RegionWisePacking *newRwpk = new RegionWisePacking;
         RegionWisePacking *pRwpk = pPacket->GetRwpk();
-        if(!newRwpk || !pRwpk) return OMAF_ERROR_NULL_PTR;
+        if(!newRwpk || !pRwpk)
+        {
+            SAFE_DELETE(newPacket);
+            SAFE_DELETE(newRwpk);
+            return OMAF_ERROR_NULL_PTR;
+        }
         *newRwpk = *pRwpk;
         newRwpk->rectRegionPacking = new RectangularRegionWisePacking[newRwpk->numRegions];
         memcpy(newRwpk->rectRegionPacking, pRwpk->rectRegionPacking, pRwpk->numRegions * sizeof(RectangularRegionWisePacking));

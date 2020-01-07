@@ -205,7 +205,7 @@ OmafExtractor* OmafExtractorSelector::GetExtractorByPose( OmafMediaStream* pStre
     pthread_mutex_unlock(&mMutex);
 
     // won't get viewport if pose hasn't changed
-    if( !IsDifferentPose( previousPose, mPose ) && historySize > 1)
+    if( previousPose && mPose && !IsDifferentPose( previousPose, mPose ) && historySize > 1)
     {
         LOG(INFO)<<"pose hasn't changed!"<<endl;
         return NULL;
