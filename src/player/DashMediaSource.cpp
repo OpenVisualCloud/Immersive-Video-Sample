@@ -316,6 +316,7 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig)
     m_handler = OmafAccess_Init(pCtxDashStreaming);
     if (NULL == m_handler)
     {
+        LOG(ERROR)<<"handler init failed!"<<std::endl;
         free(pCtxDashStreaming);
         pCtxDashStreaming = NULL;
         return RENDER_ERROR;
@@ -327,6 +328,7 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig)
     clientInfo.pose = (HeadPose*)malloc(sizeof(HeadPose));
     if (NULL == clientInfo.pose)
     {
+        LOG(ERROR)<<"client info malloc failed!"<<std::endl;
         free(pCtxDashStreaming);
         pCtxDashStreaming = NULL;
         return RENDER_ERROR;
@@ -341,6 +343,7 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig)
     //3.load media source
     if (ERROR_NONE != OmafAccess_OpenMedia(m_handler, pCtxDashStreaming, false))
     {
+        LOG(ERROR)<<"Open media failed!"<<std::endl;
         free(pCtxDashStreaming);
         pCtxDashStreaming = NULL;
         free(clientInfo.pose);
@@ -366,11 +369,21 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig)
     m_dashSourceData.decoder = avcodec_find_decoder(AV_CODEC_ID_HEVC);
     if (NULL == m_dashSourceData.decoder)
     {
+        LOG(ERROR)<<"decoder find error!"<<std::endl;
+        free(pCtxDashStreaming);
+        pCtxDashStreaming = NULL;
+        free(clientInfo.pose);
+        clientInfo.pose = NULL;
         return RENDER_ERROR;
     }
     m_dashSourceData.codec_ctx = avcodec_alloc_context3(m_dashSourceData.decoder);
     if (NULL == m_dashSourceData.codec_ctx)
     {
+        LOG(ERROR)<<"avcodec alloc context failed!"<<std::endl;
+        free(pCtxDashStreaming);
+        pCtxDashStreaming = NULL;
+        free(clientInfo.pose);
+        clientInfo.pose = NULL;
         return RENDER_ERROR;
     }
     m_dashSourceData.av_frame = av_frame_alloc();
@@ -379,6 +392,11 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig)
     // m_dashSourceData.codec_ctx->height = mediaInfo->stream_info[0].height;
     if (avcodec_open2(m_dashSourceData.codec_ctx, m_dashSourceData.decoder, NULL) < 0)
     {
+        LOG(ERROR)<<"avcodec open failed!"<<std::endl;
+        free(pCtxDashStreaming);
+        pCtxDashStreaming = NULL;
+        free(clientInfo.pose);
+        clientInfo.pose = NULL;
         return RENDER_ERROR;
     }
     //6. set source type
@@ -404,6 +422,8 @@ RenderStatus DashMediaSource::SetMediaSourceInfo(void *mediaInfo)
     int32_t sourceNumber = dashMediaInfo->stream_info[0].source_number;
     m_mediaSourceInfo.sourceWH->width  = new uint32_t[sourceNumber];
     m_mediaSourceInfo.sourceWH->height = new uint32_t[sourceNumber];
+    memset(m_mediaSourceInfo.sourceWH->width, 0, sizeof(uint32_t) * sourceNumber);
+    memset(m_mediaSourceInfo.sourceWH->height, 0, sizeof(uint32_t) * sourceNumber);
     for (int i=0;i<sourceNumber;i++)
     {
         int32_t qualityRanking = dashMediaInfo->stream_info[0].source_resolution[i].qualityRanking;
@@ -561,12 +581,30 @@ void DashMediaSource::Run()
         SetRegionInfo(regionInfo);
 
         struct FrameInfo *frameInfo = new struct FrameInfo;
+        if (NULL == frameInfo)
+        {
+            DeleteBuffer(buffer);
+            if (regionInfo != NULL)
+            {
+                ClearRWPK(regionInfo->regionWisePacking);
+                delete regionInfo;
+                regionInfo = NULL;
+            }
+            return;
+        }
         frameInfo->mBuffer = buffer;
         frameInfo->mRegionInfo = regionInfo;
         //vod && not full
         int32_t res = pthread_mutex_lock(&m_frameMutex);
         if (res != 0)
         {
+            DeleteBuffer(buffer);
+            if (regionInfo != NULL)
+            {
+                ClearRWPK(regionInfo->regionWisePacking);
+                delete regionInfo;
+                regionInfo = NULL;
+            }
             delete frameInfo;
             frameInfo = NULL;
             return;
@@ -595,13 +633,7 @@ void DashMediaSource::Run()
             }
         }
         LOG(INFO)<<"======push_back frameBuffer size:=============:"<<m_frameBuffer.size()<<std::endl;
-        int32_t Res = pthread_mutex_unlock(&m_frameMutex);
-        if (Res != 0)
-        {
-            delete frameInfo;
-            frameInfo = NULL;
-            return;
-        }
+        pthread_mutex_unlock(&m_frameMutex);
     }
 }
 

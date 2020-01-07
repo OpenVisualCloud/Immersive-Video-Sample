@@ -91,6 +91,8 @@ RenderManager::RenderManager(struct RenderConfig config)
         break;
 #endif   
  default:
+        m_mediaSource = NULL;
+        LOG(ERROR)<<"initial media source error!"<<std::endl;
         break;
     }
     //7.initial RenderSource
@@ -108,6 +110,7 @@ RenderManager::RenderManager(struct RenderConfig config)
 #endif
         break;
     default:
+        m_renderSource = new SWRenderSource(m_renderBackend);
         break;
     }
     //8.initial RenderTarget
