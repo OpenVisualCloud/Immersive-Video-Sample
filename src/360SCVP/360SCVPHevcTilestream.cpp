@@ -309,7 +309,7 @@ int32_t parse_tiles_info(hevc_gen_tiledstream* pGenTilesStream)
                         pSliceCur->columnWidth[i] = totalLCUinWidth * (i+1) / pSliceCur->tilesWidthCount - totalLCUinWidth * i / pSliceCur->tilesWidthCount;
                         tmpSum += pSliceCur->columnWidth[i];
                     }
-                    if (pSliceCur->tilesWidthCount < 1 &&  pSliceCur->tilesWidthCount >= 23)
+                    if (pSliceCur->tilesWidthCount < 1 ||  pSliceCur->tilesWidthCount >= 23)
                         return GTS_BAD_PARAM;
                     pSliceCur->columnWidth[pSliceCur->tilesWidthCount-1] = totalLCUinWidth - tmpSum;
 
@@ -319,7 +319,7 @@ int32_t parse_tiles_info(hevc_gen_tiledstream* pGenTilesStream)
                         pSliceCur->rowHeight[i] = totalLCUinHeight * (i+1) / pSliceCur->tilesHeightCount - totalLCUinHeight * i / pSliceCur->tilesHeightCount;
                         tmpSum += pSliceCur->rowHeight[i];
                     }
-                    if (pSliceCur->tilesHeightCount < 1 && pSliceCur->tilesHeightCount >= 21)
+                    if (pSliceCur->tilesHeightCount < 1 || pSliceCur->tilesHeightCount >= 21)
                         return GTS_BAD_PARAM;
                     pSliceCur->rowHeight[pSliceCur->tilesHeightCount-1] = totalLCUinHeight - tmpSum;
                 }
