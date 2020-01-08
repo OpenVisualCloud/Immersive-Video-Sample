@@ -15,6 +15,7 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details. Thank you!
 # Documents
 -  How to build and run, refer to [Immersive Video Getting Started Guide](doc/Immersive_Video_Getting_Started_Guide.md)
 -  Solution architecure, refer to [Immersive Video Reference Architecture](doc/Immersive_Video_Delivery_Architecture.md)
+-  [CHANGELOG](CHANGELOG.md) 
 
 # What's in this project
 The Immersive Video Delivery Reference solution contains below components:
@@ -31,4 +32,10 @@ The Immersive Video Delivery Reference solution may run on Linux* 64 bit operati
 - Client: CentOS7.6 or Ubuntu* 18.04 
 - Server: CentOS* 7.6
 
+## Typical Hardware Configuration
+- **Server**: 
+    + Intel Xeon 6xxx for 4K video; Intel Xeon 8xxx for 8K video
+	+ Memory >= 128GB
+- **Client**:
+    + i7-6770 + 8G Memory
 

@@ -16,7 +16,7 @@ So far, the library is Linux-based version, but it can be ported to Android and 
 Dash Access Library provides C APIs for user; the call sequence is as follows:
 <IMG src="img/OMAF_Compliant-Video-Delivery-DashAccess_CallSeq.png" height="450">
 
-Before calling any other APIs in the library, you should call OmafAccess_Init to get the Handler for common use. 
+Before calling any other APIs in the library, you should call OmafAccess_Init to get the Handler for further usage. 
 - OmafAccess_OpenMedia is used to open a url which is compliant to OMAF DASH specification, and the MPD file will be downloaded and parsed. Then you can use OmafAccess_GetMediaInfo to get relative A/V information in the stream.
 - OmafAccess_SetupHeadSetInfo is used to set the initial head position of the user, and it will be used to select the initial viewport information and relative tile-set; 
 - OmafAccess_GetPacket is the function used to get well-aggregated video stream based on viewport and can be decoded by general decoder for rendering; with the API, you can also get the tile RWPK (Regin-Wised Packing) information for current viewport tile set. With/without the same thread, you can call OmafAccess_ChangeViewport to change viewport, the function will re-choose the Tile Set based on input pose Information, and it will decide what packing will be get in next segment.

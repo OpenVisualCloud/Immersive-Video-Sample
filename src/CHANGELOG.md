@@ -1,15 +1,4 @@
 # **Changelog**
-
-## System Requirement:
--  Typical Hardware Configuration
-   Server: 
-        Intel Xeon 6xxx for 4K video; Intel Xeon 8xxx for 8K video
-		memory >= 128GB
-   Client: i7-6770 + 8G Memory
-   
--  OS Requirement:
-   Server: CentOS 7.4/7.6
-   Client: CentOS7.4/CentOS7.6/Ubuntu18.04
 ---
 ## [1.0.0] - 2020-01-13   
 **Features:** 
