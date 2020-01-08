@@ -370,7 +370,7 @@ int32_t TstitchStream::init(param_360SCVP* pParamStitchStream)
 int32_t TstitchStream::uninit()
 {
     int32_t HR_ntile = m_tileHeightCountSel[0] * m_tileWidthCountSel[0];// m_mergeStreamParam.highRes.selectedTilesCount;
-    int32_t LR_ntile = 0;// m_mergeStreamParam.lowRes.selectedTilesCount;
+    int32_t LR_ntile = m_mergeStreamParam.lowRes.selectedTilesCount;
     int32_t ret = 0;
 
     if (m_pMergeStream)
@@ -492,7 +492,10 @@ int32_t TstitchStream::parseNals(param_360SCVP* pParamStitchStream, int32_t pars
         //save/restore the hevcState
         hevc_gen_tiledstream* pGenTilesStream = (hevc_gen_tiledstream*)pGenStream;
         if (!pGenTilesStream->pTiledBitstreams)
-           return -1;
+        {
+            ret = genTiledStream_unInit(pGenStream);
+            return -1;
+        }
         oneStream_info * pSlice = pGenTilesStream->pTiledBitstreams[0];
         if (((pGenTilesStream->parseType == E_PARSER_ONENAL)) && m_bSPSReady && m_bPPSReady)
         {
