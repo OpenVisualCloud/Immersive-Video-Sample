@@ -384,9 +384,9 @@ void OmafReaderManager::RemoveTrackFromPacketQueue(list<int>& trackIDs)
     for(auto &it : trackIDs)
     {
         PacketQueue pPackQ = mPacketQueues[it];
-        for (auto iter : pPackQ)
+        for (std::list<MediaPacket*>::iterator iter = pPackQ.begin() ; iter != pPackQ.end(); iter++)
         {
-            MediaPacket *mediaPacket = iter;
+            MediaPacket *mediaPacket = *iter;
             delete mediaPacket;
             mediaPacket = NULL;
         }
@@ -658,9 +658,10 @@ int OmafReaderManager::ReadNextSegment(
 
     for(auto &it : readTrackInfos)
     {
-        for(auto &is : it->samplePropertyArrays)
+        for(uint32_t i = 0; i < it->samplePropertyArrays.size(); i++)
         {
-            SAFE_DELETE(is);
+            SampleInformation* sampInfo = it->samplePropertyArrays[i];
+            SAFE_DELETE(sampInfo);
         }
         it->samplePropertyArrays.clear();
         SAFE_DELETE(it);

@@ -200,6 +200,12 @@ OmafExtractor* OmafExtractorSelector::GetExtractorByPose( OmafMediaStream* pStre
     mPose = mPoseHistory.front().pose;
     mPoseHistory.pop_front();
 
+    if(!mPose)
+    {
+        pthread_mutex_unlock(&mMutex);
+        return nullptr;
+    }
+
     historySize = mPoseHistory.size();
 
     pthread_mutex_unlock(&mMutex);

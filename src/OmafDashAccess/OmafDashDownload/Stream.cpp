@@ -44,8 +44,9 @@ Stream::~Stream()
 {
     if(m_listDownloadedStreams.size())
     {
-        for(auto ds : m_listDownloadedStreams)
+        for(std::list<StreamInfo*>::iterator it = m_listDownloadedStreams.begin() ; it != m_listDownloadedStreams.end(); it++)
         {
+            StreamInfo * ds = *it;
             SAFE_DELETE(ds);
         }
         m_listDownloadedStreams.clear();

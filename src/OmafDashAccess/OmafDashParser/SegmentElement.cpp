@@ -150,8 +150,9 @@ string SegmentElement::GenerateCompleteURL(vector<BaseUrlElement*>& baseURL, str
     vector<string> subNames;
     SplitString(fileName, subNames, "$");
     fileName.clear();
-    for(auto sn : subNames)
+    for( uint32_t i = 0; i < subNames.size();i++)
     {
+        string sn = subNames[i];
         if(sn == SEGMENT_NUMBER)
         {
             sn = to_string(number);

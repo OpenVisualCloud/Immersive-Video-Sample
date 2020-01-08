@@ -272,6 +272,7 @@ void OmafMP4VRReader::SelectedTrackInfos(std::vector<VCD::OMAF::TrackInformation
         for (auto itTrack = middleTrackInfos.begin(); itTrack != middleTrackInfos.end(); itTrack++)
         {
             TrackInformation *track = *itTrack;
+            if(!track) continue;
             auto itRefTrack = track->referenceTrackIdArrays.begin();
             TypeToTrackIDs *refTrackIds = &(*itRefTrack);
 
@@ -288,6 +289,7 @@ void OmafMP4VRReader::SelectedTrackInfos(std::vector<VCD::OMAF::TrackInformation
                 auto itTrack2 = middleTrackInfos.begin();
                 for ( ; itTrack2 != middleTrackInfos.end(); itTrack2++)
                 {
+                    if(!(*itTrack2)) continue;
                     if (((*itTrack2)->initSegId == initSegIndex) &&
                         ((*itTrack2)->trackId != combinedTrackId))
                     {
