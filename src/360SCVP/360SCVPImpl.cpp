@@ -1178,35 +1178,32 @@ int32_t  TstitchStream::GeneratePPS(param_360SCVP* pParamStitchStream, TileArran
         ret = hevc_import_ffextradata(&specialInfo, m_hevcState, nalsize, &spsCnt, 0);
         if (ret < 0)
         {
-            if (bs)
-            {
-                gts_bs_del(bs);
-                bs = NULL;
-            }
-            if (bsWrite) 
-            {
-                gts_bs_del(bsWrite);
-                bsWrite = NULL;
-            }
+            gts_bs_del(bs);
+            bs = NULL;
+            gts_bs_del(bsWrite);
+            bsWrite = NULL;
             return ret;
         }
         memcpy(&hevcTmp, m_hevcState, sizeof(HEVCState));
-        HEVC_PPS *pps = &hevcTmp.pps[hevcTmp.last_parsed_pps_id];
-        if (!pps)
+        if (hevcTmp.last_parsed_pps_id > 63)
         {
-            if (bs) 
-            {
-                gts_bs_del(bs);
-                bs = NULL;
-            }
-            if (bsWrite) 
-            {
-                gts_bs_del(bsWrite);
-                bsWrite = NULL;
-            }
+            gts_bs_del(bs);
+            bs = NULL;
+            gts_bs_del(bsWrite);
+            bsWrite = NULL;
             return -1;
         }
-
+        HEVC_PPS *pps = &hevcTmp.pps[hevcTmp.last_parsed_pps_id];
+        /*
+        if (!pps)
+        {
+            gts_bs_del(bs);
+            bs = NULL;
+            gts_bs_del(bsWrite);
+            bsWrite = NULL;
+            return -1;
+        }
+        */
         // modify the pps
         pps->uniform_spacing_flag = (bool)false;
         pps->num_tile_columns = pTileArrange->tileColsNum;
@@ -1292,6 +1289,7 @@ int32_t  TstitchStream::GenerateSPS(param_360SCVP* pParamStitchStream)
         // modify the sps
         memcpy(&hevcTmp, m_hevcState, sizeof(HEVCState));
         HEVC_SPS *sps = &hevcTmp.sps[0];
+        /*
         if (!sps)
         {
             if (bs)
@@ -1308,7 +1306,7 @@ int32_t  TstitchStream::GenerateSPS(param_360SCVP* pParamStitchStream)
 
             return -1;
         }
-
+        */
         sps->width = pParamStitchStream->destWidth;
         sps->height = pParamStitchStream->destHeight;
 

@@ -195,7 +195,7 @@ public:
 public:
     void SetInfo(char* value)
     {
-        uint32_t id, w, h, res;
+        int32_t id, w, h, res;
         w = h = 0;
         res = sscanf( value, "%d,%d,%d,%d,%d,%d,%d", &id, &this->left, &this->top, &this->width, &this->height, &w, &h);
         if (res != 7) {
