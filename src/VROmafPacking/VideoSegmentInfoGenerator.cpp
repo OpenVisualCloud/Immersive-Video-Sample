@@ -98,10 +98,10 @@ void VideoSegmentInfoGenerator::InitFirstTrackInfo(TrackSegmentInfo *trackSegInf
     trackSegInfo->sampleCount = 0;
     trackSegInfo->isoCreated = 0;
 
-    snprintf(trackSegInfo->repId, sizeof(trackSegInfo->repId), "%d", m_streamIdx);
-    snprintf(trackSegInfo->segInitName, sizeof(trackSegInfo->segInitName), "%s_set1_init.mp4", m_videoSegInfo->outName);
-    snprintf(trackSegInfo->segMediaNameTmpl, sizeof(trackSegInfo->segMediaNameTmpl), "%s_track1_$Number$.m4s", m_videoSegInfo->outName);
-    snprintf(trackSegInfo->segMediaName, sizeof(trackSegInfo->segMediaName), "%s%s_track1_%d.m4s", m_videoSegInfo->dirName, m_videoSegInfo->outName, trackSegInfo->segmentIndex + 1);
+    //snprintf(trackSegInfo->repId, sizeof(trackSegInfo->repId), "%d", m_streamIdx);
+    //snprintf(trackSegInfo->segInitName, sizeof(trackSegInfo->segInitName), "%s_set1_init.mp4", m_videoSegInfo->outName);
+    //snprintf(trackSegInfo->segMediaNameTmpl, sizeof(trackSegInfo->segMediaNameTmpl), "%s_track1_$Number$.m4s", m_videoSegInfo->outName);
+    //snprintf(trackSegInfo->segMediaName, sizeof(trackSegInfo->segMediaName), "%s%s_track1_%d.m4s", m_videoSegInfo->dirName, m_videoSegInfo->outName, trackSegInfo->segmentIndex + 1);
 
 }
 
@@ -125,16 +125,16 @@ void VideoSegmentInfoGenerator::InitTileTrackSegInfo(
 
     trackSegInfo->dependencyId = m_streamIdx;
 
-    snprintf(trackSegInfo->repId, sizeof(trackSegInfo->repId),
-            "%d_%d", m_streamIdx, trackSegInfo->tileIdx+1);
-    snprintf(trackSegInfo->segInitName, sizeof(trackSegInfo->segInitName),
-            "%s_track%d_init.mp4", m_videoSegInfo->outName, trackSegInfo->dashTrackId);
-    snprintf(trackSegInfo->segMediaNameTmpl, sizeof(trackSegInfo->segMediaNameTmpl),
-            "%s_track%d_$Number$.m4s", m_videoSegInfo->outName, trackSegInfo->dashTrackId);
-    snprintf(trackSegInfo->segMediaName, sizeof(trackSegInfo->segMediaName),
-            "%s%s_track%d_%d.m4s", m_videoSegInfo->dirName,
-            m_videoSegInfo->outName, trackSegInfo->dashTrackId,
-            trackSegInfo->segmentIndex + 1);
+    //snprintf(trackSegInfo->repId, sizeof(trackSegInfo->repId),
+    //        "%d_%d", m_streamIdx, trackSegInfo->tileIdx+1);
+    //snprintf(trackSegInfo->segInitName, sizeof(trackSegInfo->segInitName),
+    //        "%s_track%d_init.mp4", m_videoSegInfo->outName, trackSegInfo->dashTrackId);
+    //snprintf(trackSegInfo->segMediaNameTmpl, sizeof(trackSegInfo->segMediaNameTmpl),
+    //        "%s_track%d_$Number$.m4s", m_videoSegInfo->outName, trackSegInfo->dashTrackId);
+    //snprintf(trackSegInfo->segMediaName, sizeof(trackSegInfo->segMediaName),
+    //        "%s%s_track%d_%d.m4s", m_videoSegInfo->dirName,
+    //        m_videoSegInfo->outName, trackSegInfo->dashTrackId,
+    //        trackSegInfo->segmentIndex + 1);
 }
 
 int32_t VideoSegmentInfoGenerator::Initialize(TileInfo *tilesInfo)
