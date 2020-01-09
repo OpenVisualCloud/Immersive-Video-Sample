@@ -53,6 +53,7 @@
     ./render        # Press 's' button to start
 ```
 **Config.xml**
+
 | Parameters | Descriptions | Examples |
 | :----:| :----: | :----: |
 |  windowWidth  | The width of render window | 960 for 4k, 1920 for 8k |
