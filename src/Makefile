@@ -29,8 +29,6 @@ server :
 	@ # Install VROMAFPACKING
 	@ export PKG_CONFIG_PATH=${PKG_CONFIG_PATH} && \
 	  cd external && \
-	  cp ../utils/tinyxml2.h ../VROmafPacking && \
-	  cp ../utils/tinyxml2.cpp ../VROmafPacking && \
 	  cd ../build/server/VROmafPacking && \
 	  cmake ../../../VROmafPacking && \
 	  make -j `nproc` && \

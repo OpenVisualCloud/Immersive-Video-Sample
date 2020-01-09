@@ -1,92 +1,68 @@
-#!/bin/bash -ex
+#!/bin/bash -x
 
 ORIPATH=$(pwd)
-ITEM=$1
-VERSION=$2
+VERSION=$1
 PACKAGE=package
-LIBDIR=${ORIPATH}/../../OMAF_Sample/${PACKAGE}/${ITEM}/usr/lib64/immersive-${ITEM}/
-LIBDIR=${ORIPATH}/../../OMAF_Sample/${PACKAGE}/${ITEM}/usr/bin/immersive-${ITEM}/
-NAME=$(echo "immersive-${item}")
+LIBDIR=${ORIPATH}/../../OMAF-Sample/client/${PACKAGE}/usr/lib64/immersive-client/
+BINDIR=${ORIPATH}/../../OMAF-Sample/client/${PACKAGE}/usr/bin/immersive-client/
 
 parameters_usage(){
-    echo 'Usage: 1. <item>:           [ server, client ]'
-    echo '       2. <version>:        Version of current package.'
+    echo 'Usage: 1. <version>:        Version of current package.'
+}
+
+program_exists() {
+    local RET='0'
+    command -v $1  >/dev/null 2>&1 || { local RET='1'; }
+    # fail on non-zero return value
+    if [ ${RET} -ne 0 ]; then
+        return 1
+    fi
+
+    return 0
 }
 
 package(){
-    if [ ${ITEM} = "server" ] ; then
-        echo 'sudo ldconfig && sudo cp /usr/bin/immersive-server/WorkerServer /root' > post
-    elif [ ${ITEM} = "client" ] ; then
-        echo 'sudo ldconfig' > post
-    fi
+    echo 'sudo ldconfig' > post
     fpm \
         -f \
         -s dir \
         -t $1 \
-        -n immersive-$2$3 \
-        -v 1-${VERSION} \
+        -n immersive-client \
+        -v ${VERSION} \
         --iteration 1.el7 \
-        -C ${PACKAGE}/$2 \
+        -C ${PACKAGE} \
         -p ${PACKAGE} \
         --after-install post
     rm -rf ./post
 }
 
-if [ "${ITEM}" = "-h" ] || [ $# != 2 ] ; then
+if [ "${VERSION}" = "-h" ] || [ $# != 1 ] ; then
     parameters_usage
     exit 0
 fi
-if [ "${ITEM}" != "server" ] && [ "${ITEM}" != "client" ] ; then
-    parameters_usage
-    exit 0
+
+program_exists fpm
+if [ $? != 0 ];then
+    sudo apt-get -y install ruby rubygems ruby-dev
+    sudo gem install fpm 
 fi
 
 mkdir -p ${LIBDIR}
 mkdir -p ${BINDIR}
 
-if [ ${ITEM} = "server" ] ; then
-    echo `fgrep -rn "checkout" install_SVT.sh` | awk '{ print $3 }' > SVT_version
-    git log | head -n 3 > git_info
-    cd ../build
-    cp external/SVT-HEVC/Bin/Release/libSvtHevcEnc.so.1                 ${LIBDIR}
-    cp external/glog/.libs/libglog.so.0                                 ${LIBDIR}
-    cp external/openHEVC/libopenhevc/libopenhevc.so.1                   ${LIBDIR}
-    cp external/thrift-0.12.0/lib/cpp/.libs/libthrift-0.12.0.so         ${LIBDIR}
-    cp external/thrift-0.12.0/lib/cpp/.libs/libthriftnb-0.12.0.so       ${LIBDIR}
-    cp server/360SCVP/lib360SCVP.so                                     ${LIBDIR}
-    cp server/VROmafPacking/libVROmafPacking.so                         ${LIBDIR}
-    cp server/distributed_encoder/worker/libEncoder.so                  ${LIBDIR}
-    cp server/distributed_encoder/main_encoder/libDistributedEncoder.so ${LIBDIR}
-    cp server/distributed_encoder/worker/WorkerServer                   ${BINDIR}
-    cp server/ffmpeg/ffmpeg                                             ${BINDIR}
-    mv ../external/SVT_version                                          ${BINDIR}
-    mv ../external/git_info                                             ${BINDIR}
-    strip ${LIBDIR}/*
-    strip ${BINDIR}/WorkerServer ${BINDIR}/ffmpeg
-    cd ../../OMAF-Sample
-    package rpm ${ITEM}
-    package deb ${ITEM}
-fi
-
-if [ ${ITEM} = "client" ] ; then
-    git log | head -n 3 > git_info
-    cd ../build
-    cp external/MediaServerStudioEssentialsKBL2019R1HF1_10010/intel-linux-media-kbl-10010/opt/intel/mediasdk/lib64/libva-drm.so.2 ${LIBDIR}
-    cp external/MediaServerStudioEssentialsKBL2019R1HF1_10010/intel-linux-media-kbl-10010/opt/intel/mediasdk/lib64/libva-x11.so.2 ${LIBDIR}
-    cp external/MediaServerStudioEssentialsKBL2019R1HF1_10010/intel-linux-media-kbl-10010/opt/intel/mediasdk/lib64/libva.so.2     ${LIBDIR}
-    cp external/glog/.libs/libglog.so.0                                 ${LIBDIR}
-    cp client/360SCVP/lib360SCVP.so                                     ${LIBDIR}
-    cp client/OmafDashAccess/libOmafDashAccess.so                       ${LIBDIR}
-    cp client/player/render                                             ${BINDIR}
-    cp ../player/config.xml                                             ${BINDIR}
-    mv ../external/git_info                                             ${BINDIR}
-    cd ../../OMAF-Sample
-    strip ${LIBDIR}/*
-    strip ${BINDIR}/render
-    package rpm ${ITEM}
-    package deb ${ITEM}
-    cp client/ffmpeg/ffplay                                             ${BINDIR}
-    strip ${BINDIR}/ffplay
-    package rpm ${ITEM} debug
-    package deb ${ITEM} debug
-fi
+git log | head -n 3 > git_info
+cd ../build
+cp external/MediaServerStudioEssentialsKBL2019R1HF1_10010/intel-linux-media-kbl-10010/opt/intel/mediasdk/lib64/libva-drm.so.2 ${LIBDIR}
+cp external/MediaServerStudioEssentialsKBL2019R1HF1_10010/intel-linux-media-kbl-10010/opt/intel/mediasdk/lib64/libva-x11.so.2 ${LIBDIR}
+cp external/MediaServerStudioEssentialsKBL2019R1HF1_10010/intel-linux-media-kbl-10010/opt/intel/mediasdk/lib64/libva.so.2     ${LIBDIR}
+cp external/glog/.libs/libglog.so.0                                 ${LIBDIR}
+cp client/360SCVP/lib360SCVP.so                                     ${LIBDIR}
+cp client/OmafDashAccess/libOmafDashAccess.so                       ${LIBDIR}
+cp client/player/render                                             ${BINDIR}
+cp ../player/config.xml                                             ${BINDIR}
+mv ../external/git_info                                             ${BINDIR}
+cd ../../OMAF-Sample/client
+strip ${LIBDIR}/*
+strip ${BINDIR}/render
+package rpm 
+package deb

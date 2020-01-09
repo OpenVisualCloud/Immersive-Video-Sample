@@ -7,14 +7,6 @@ PLAYER_BUILD=${ROOT}/player/
 # configure
 IMMERSIVE_ROOT=${ROOT}/../../src
 
-if [ ! -f ${IMMERSIVE_ROOT}/player/tinyxml2.h ]; then
-    cp -v ${IMMERSIVE_ROOT}/utils/tinyxml2.h ${IMMERSIVE_ROOT}/player/
-fi
-
-if [ ! -f ${IMMERSIVE_ROOT}/player/tinyxml2.cpp ]; then
-    cp -v ${IMMERSIVE_ROOT}/utils/tinyxml2.cpp ${IMMERSIVE_ROOT}/player/
-fi
-
 mkdir -p ${PLAYER_BUILD}/Build
 cd ${PLAYER_BUILD}/Build
 

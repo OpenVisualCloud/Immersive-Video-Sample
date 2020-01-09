@@ -47,9 +47,9 @@ download_tools()
     fi
 
     if [ "$os" == \""Ubuntu"\" ];then
-	   sudo apt-get install libgmp-dev libmpfr-dev mpc libmpc-dev patch autoconf libtool automake -y
+        sudo apt-get install libgmp-dev libmpfr-dev mpc libmpc-dev patch autoconf libtool automake libssl-dev -y
     elif [ "$os" == \""CentOS Linux"\" ];then
-	   sudo yum install gmp gmp-devel mpfr mpfr-devel libmpc libmpc-devel patch autoconf libtool automake libcurl-devel -y
+	sudo yum install gmp gmp-devel mpfr mpfr-devel libmpc libmpc-devel patch autoconf libtool automake libssl-devel -y
     fi
 
     mkdir -p ../build/external && cd ../build/external
@@ -100,9 +100,9 @@ download_dependencies()
 {
 	cd $path
 	if [ $1 == "server" ];then
-            mkdir -p ../build/external/FFmpeg
+        mkdir -p ../build/external/FFmpeg
 	    ./build_glog.sh
-            ./build_Nokia_omaf.sh
+        ./build_Nokia_omaf.sh
 	    ./install_openHEVC.sh
 	    ./install_SVT.sh
 	    ./install_thrift.sh
@@ -114,15 +114,15 @@ download_dependencies()
 	    ./prebuild_player.sh
 
 	elif [ $1 == "test" ];then
-            mkdir -p ../build/test && cd ../build/test
-            cp -r ../../google_test/gtest/ .
-            git clone https://github.com/google/googletest.git
-            cd googletest && git checkout -b v1.8.x origin/v1.8.x
-            cd googletest && mkdir build && cd build
-            cmake -DBUILD_SHARED_LIBS=ON .. && make
-            g++ -I../include/ -I.. -c ../src/gtest-all.cc -D_GLIBCXX_USE_CXX11_ABI=0
-            g++ -I../include/ -I.. -c ../src/gtest_main.cc -D_GLIBCXX_USE_CXX11_ABI=0
-            ar -rv libgtest.a gtest-all.o gtest_main.o
+        mkdir -p ../build/test && cd ../build/test
+        cp -r ../../google_test/gtest/ .
+        git clone https://github.com/google/googletest.git
+        cd googletest && git checkout -b v1.8.x origin/v1.8.x
+        cd googletest && mkdir build && cd build
+        cmake -DBUILD_SHARED_LIBS=ON .. && make
+        g++ -I../include/ -I.. -c ../src/gtest-all.cc -D_GLIBCXX_USE_CXX11_ABI=0
+        g++ -I../include/ -I.. -c ../src/gtest_main.cc -D_GLIBCXX_USE_CXX11_ABI=0
+        ar -rv libgtest.a gtest-all.o gtest_main.o
 	fi
 }
 

@@ -1,12 +1,17 @@
 FROM centos:7.6.1810
-# FROM centos:7.4.1708
 
-ENV http_proxy http://child-prc.intel.com:913
-ENV https_proxy http://child-prc.intel.com:913
-ENV no_proxy 127.0.0.1,*.intel.com
+RUN if [ -n "${HTTP_PROXY}" ] ; then \
+    echo "proxy=${HTTP_PROXY}" >> /etc/yum.conf && \
+    echo "http_proxy=${HTTP_PROXY}" >> /etc/wgetrc && \
+    echo "https_proxy=${HTTP_PROXY}" >> /etc/wgetrc ; \
+    fi
 
 RUN yum install -y -q openssl centos-release-scl scl-utils gmp gmp-devel mpfr mpfr-devel libmpc libmpc-devel patch autoconf libtool automake libcurl-devel wget git -y && \
-    rm -rf /var/cache/yum/*
+    rm -rf /var/cache/yum/* && \
+    if [ -n "${HTTP_PROXY}" ]; then \
+    git config --global http.proxy ${HTTP_PROXY} && \
+    git config --global https.proxy ${HTTP_PROXY} ; \
+    fi
 
 RUN yum install -y yum install devtoolset-7-gcc* libevent-devel.x86_64 openssl-devel bc numactl -y && \
     rm -rf /var/cache/yum/*
@@ -35,11 +40,6 @@ RUN wget -O - ${CMAKE_REPO}/v${CMAKE_VER%.*}/cmake-${CMAKE_VER}.tar.gz | tar xz 
     make -j$(nproc) && \
     make install && \
     cd ${WORKDIR} && rm -rf ./*
-
-# # Install automake, use version 1.14 on CentOS
-# ARG AUTOMAKE_VER=1.14
-# ARG AUTOMAKE_REPO=https://ftp.gnu.org/pub/gnu/automake/automake-${AUTOMAKE_VER}.tar.xz
-#     RUN yum install -y -q automake
 
 # Build YASM
 ARG YASM_VER=1.3.0
@@ -113,12 +113,6 @@ RUN git clone https://github.com/google/glog.git && \
     make install && \
     cd ${WORKDIR} && rm -rf ./glog
 
-# # Clone git repo
-# RUN echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
-# RUN git clone ssh://git@gitlab.devtools.intel.com:29418/vcdp/tids.git && \
-# 	cd tids && \
-#     git checkout OMAF_Compliance
-
 # Copy source
 COPY ./src ${WORKDIR}
 
@@ -164,7 +158,6 @@ RUN git clone https://github.com/nokiatech/omaf.git && \
     cp lib/libmp4vr_static.a /usr/local/lib/
 
 # Install Server FFmpeg Dependency
-# COPY FFmpeg_OMAF.patch ${WORKDIR}/tids/external
 RUN git clone https://github.com/FFmpeg/FFmpeg.git && \
     cd FFmpeg && \
     source /opt/rh/devtoolset-7/enable && \
@@ -196,20 +189,15 @@ COPY src/ffmpeg/dependency/*.so /usr/local/lib/
 COPY src/ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
 COPY src/ffmpeg/dependency/*.h /usr/local/include/
 COPY src/ffmpeg/dependency/WorkerServer /root
-COPY src/utils/tinyxml2.cpp ${WORKDIR}/VROmafPacking
-COPY src/utils/tinyxml2.h ${WORKDIR}/VROmafPacking
-# RUN /usr/local/nginx/sbin/nginx && \
-#     systemctl stop firewalld.service
 
 # Build Server
-RUN sed -i "s/\-Werror//g" `grep "Werror" -rl ./` && \
-    mkdir build && cd build && \
+RUN mkdir build && cd build && \
     source /opt/rh/devtoolset-7/enable && \
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH && \
     cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET=server .. && \
     make -j `nproc` && \
     make install && \
     mv ffmpeg/ffmpeg ../Sample-Videos && \
-    cd .. && rm -rf `ls | grep -v Sample-Videos` && ls
+    cd .. && rm -rf `ls | grep -v Sample-Videos`
 
 COPY run.sh ${WORKDIR}/Sample-Videos
