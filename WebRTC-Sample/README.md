@@ -1,13 +1,13 @@
 
 # Introduction
 
-The Immersive Video Delivery WebRTC samples provides a low latency end-to-end 360 video streaming service, based on the WebRTC technology and Open WebRTC Toolkit (OWT) media server. It supports 4K and 8K tile based transcoding powered by SVT-HEVC, and bandwidth efficient FoV based adaptive streaming.
+The Immersive Video WebRTC sample provides a low latency end-to-end 360 video streaming service, based on the WebRTC technology and Open WebRTC Toolkit (OWT) media server. It supports 4K and 8K tile based transcoding powered by SVT-HEVC, and bandwidth efficient FoV based adaptive streaming.
 
 <img src="doc/intro.png">
 
 # OWT-SERVER
 
-The Open WebRTC Toolkit (OWT) media server for ultra-high resolution immersive video provides a low latency streaming service. The media server supports streaming protocals (RTSP/RTMP) from camera source，or various media format from local file source. The input video stream is transcoded with SVT-HEVC into two streams, high resolutino tile stream and low resolution tile stream. These tow tile streams are merged into single FoV based mix-resolution stream， and streaming out to client by WebRTC.
+The Open WebRTC Toolkit (OWT) media server for ultra-high resolution immersive video provides a low latency streaming service. The media server supports streaming protocals (RTSP/RTMP) from camera source，or various media formats from local file source. The input video stream is transcoded with SVT-HEVC into two streams, high resolutino tile stream and low resolution tile stream. These two tile streams are merged into single FoV based mix-resolution stream，and streaming out to client by WebRTC.
 
 ## System Requirements
 
@@ -15,9 +15,12 @@ The Open WebRTC Toolkit (OWT) media server for ultra-high resolution immersive v
 
 The OWT-SERVER is provided as CentOS 7.6 dockerfile in this sample.
 
-### Hardware
+### Hardware Tested
 
-The OWT-SERVER supports x86 architecture. In order to achieve the 4K or 8K transcoding performance, any 5th Generation Intel Core™ Processors (formerly Broadwell) CPUs (Xeon E5-v4) or newer would need to be used.
+| Platform | Server | Client |
+|:----:|:----:|:----:|
+| CPU SKU | Intel® Xeon® Platinum<br>8280M CPU @ 2.70GHz | Intel® Core™ i7-6770HQ<br>CPU @ 2.60GHz x 8 |
+| Memory | 128G | 16G |
 
 ### Supported Video Projections
 
@@ -74,8 +77,8 @@ make start_owt_immersive_8k
 make start
 ```
 
-# OWT-LINUX-PLAY
-The OWT-LINIX-PLAYER is an immersive 360 video player on linux, with WebRTC backend. It supports HEVC tile decoder, ERP video rendering, and FoV feedback.
+# OWT-LINUX-PLAYER
+The OWT-LINIX-PLAYER is an immersive 360 video player on linux, with WebRTC backend. It supports HEVC tile decoding, ERP video rendering, and FoV feedback.
 
 ## Operating System
 
