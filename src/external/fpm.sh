@@ -3,8 +3,8 @@
 ORIPATH=$(pwd)
 VERSION=$1
 PACKAGE=package
-LIBDIR=${ORIPATH}/../../OMAF-Sample/client/${PACKAGE}/usr/lib64/immersive-client/
-BINDIR=${ORIPATH}/../../OMAF-Sample/client/${PACKAGE}/usr/bin/immersive-client/
+LIBDIR=${ORIPATH}/../../OMAF-Sample/client/${PACKAGE}/files/usr/lib64/immersive-client/
+BINDIR=${ORIPATH}/../../OMAF-Sample/client/${PACKAGE}/files/usr/bin/immersive-client/
 
 parameters_usage(){
     echo 'Usage: 1. <version>:        Version of current package.'
@@ -30,7 +30,7 @@ package(){
         -n immersive-client \
         -v ${VERSION} \
         --iteration 1.el7 \
-        -C ${PACKAGE} \
+        -C ${PACKAGE}/files \
         -p ${PACKAGE} \
         --after-install post
     rm -rf ./post
@@ -44,7 +44,7 @@ fi
 program_exists fpm
 if [ $? != 0 ];then
     sudo apt-get -y install ruby rubygems ruby-dev
-    sudo gem install fpm 
+    sudo gem install fpm
 fi
 
 mkdir -p ${LIBDIR}
@@ -64,5 +64,5 @@ mv ../external/git_info                                             ${BINDIR}
 cd ../../OMAF-Sample/client
 strip ${LIBDIR}/*
 strip ${BINDIR}/render
-package rpm 
+package rpm
 package deb
