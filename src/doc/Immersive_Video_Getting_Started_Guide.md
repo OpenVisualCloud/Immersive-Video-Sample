@@ -23,7 +23,7 @@ To build the whole solution, there are some prerequistes must be ready.
 ```bash
 gcc >= 6.3.1
 g++ >= 6.3.1
-cmake > 3.12.4
+cmake >= 3.12.4
 ```
 
 You can use the following command to install relative dependency in server/client side:
@@ -35,28 +35,36 @@ sudo yum install devtoolset-6-gcc devtoolset-6-gcc-c++
 # Build
 ## Build Server Components
 ```bash
+# Make sure using gcc >= 6.3.1
 git clone https://github.com/OpenVisualCloud/ImmersiveVideo
-cd ImmersiveVideo/src
-mkdir build
-cd build 
-cmake .. -DSERVER
+cd ImmersiveVideo/src/external
+mkdir -p ../build/server
+cd ../build/server
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
+cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server ..
+make -j `nproc`
+sudo make install
 ```
 
 ## Build Client Components
 ```bash
-- git clone https://github.com/OpenVisualCloud/ImmersiveVideo
-- cd ImmersiveVideo/src
-- mkdir build
-- cd build 
-- cmake .. -DCLIENT
+# Make sure using gcc >= 6.3.1
+git clone https://github.com/OpenVisualCloud/ImmersiveVideo
+cd ImmersiveVideo/src/external
+mkdir -p ../build/client
+cd ../build/client
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
+cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=client ..
+make -j `nproc`
+sudo make install
 ```
 
 # Quick Run
-To run sample test, Ngnix server should be installed in server side. please refer to [ngnix setup](ngnix_setup.md)
+To run sample test, Ngnix server should be installed in server side. please refer to [ngnix setup](ngnix_setup.md).
 
 ## Server Side 
 
-Set up RSA if HTTPS is used
+Set up RSA if HTTPS is used.
 ```bash
 sudo ssh-keygen -t rsa
 sudo ssh-copy-id root@<server ip>
