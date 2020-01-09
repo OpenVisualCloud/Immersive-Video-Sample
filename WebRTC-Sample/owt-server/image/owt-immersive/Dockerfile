@@ -2,10 +2,6 @@
 FROM centos:7.6.1810 AS build
 WORKDIR /home
 
-RUN yum install -y -q patch centos-release-scl && \
-    yum install -y -q devtoolset-7 && \
-    source /opt/rh/devtoolset-7/enable
-
 # COMMON BUILD TOOLS
 RUN yum install -y -q bzip2 make autoconf libtool git wget ca-certificates pkg-config gcc gcc-c++ bison flex patch epel-release yum-devel libcurl-devel zlib-devel;
 
@@ -182,8 +178,8 @@ ARG LICODE_REPO=https://github.com/lynckia/licode.git
 ARG LICODE_PATCH_REPO=https://github.com/open-webrtc-toolkit/owt-server/tree/master/scripts/patches/licode/
 ARG NICE_VER="0.1.4"
 ARG NICE_REPO=http://nice.freedesktop.org/releases/libnice-${NICE_VER}.tar.gz
-ARG SCVP_VER=f440b398b469e96c7cc93c90caa341b4e113abf2
-ARG SCVP_REPO=/home/vcd_immersive-tids
+ARG SCVP_VER="v1.0.0"
+ARG SCVP_REPO=https://github.com/OpenVisualCloud/Immersive-Video-Sample.git
 ARG WEBRTC_REPO=https://github.com/open-webrtc-toolkit/owt-deps-webrtc.git
 ARG SERVER_PATH=/home/owt-server
 ARG OWT_SDK_REPO=https://github.com/open-webrtc-toolkit/owt-client-javascript.git
@@ -194,34 +190,32 @@ ARG WEBRTC_COMMIT="c2aa290cfe4f63d5bfbb6540122a5e6bf2783187"
 
 ARG FDKAAC_LIB=/home/build/usr/local/lib64
 RUN yum install -y -q python-devel glib2-devel boost-devel log4cxx-devel
+RUN yum install -y -q patch centos-release-scl devtoolset-7
 
-COPY vcd_immersive-tids ${SCVP_REPO}
+# Install 360scvp
+RUN cd /home && \
+    git clone ${SCVP_REPO} && \
+    cd Immersive-Video-Sample/src/360SCVP && \
+    git checkout ${SCVP_VER} && \
+    mkdir build && \
+    cd build && \
+    source /opt/rh/devtoolset-7/enable && \
+    cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_INSTALL_LIBDIR=lib64 ../ && \
+    make -j && \
+    make install DESTDIR=/home/build && \
+    make install
 
 # 1. Clone OWT server source code
 # 2. Clone licode source code and patch
 # 3. Clone webrtc source code and patch
-RUN git config --global user.email "you@example.com" && \
-    git config --global user.name "Your Name" && \
-    git clone -b ${OWT_BRANCH} ${OWTSERVER_REPO} && \
+RUN git clone -b ${OWT_BRANCH} ${OWTSERVER_REPO} && \
+    source /opt/rh/devtoolset-7/enable && \
 
     # Install node modules for owt
     npm config set proxy=${http_proxy} && \
     npm config set https-proxy=${http_proxy} && \
     npm install -g --loglevel error node-gyp grunt-cli underscore jsdoc && \
     cd ${SERVER_PATH} && npm install nan && \
-
-    # Install libnice for owt
-    cd ${SERVER_PATH}/third_party && \
-    wget -O - ${NICE_REPO} | tar xz && \
-    cd libnice-${NICE_VER} && \
-    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-agentlock.patch && \
-    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-agentlock-plus.patch && \
-    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-removecandidate.patch && \
-    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-keepalive.patch && \
-    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-startcheck.patch && \
-    ./configure --prefix="/usr/local" --libdir=/usr/local/lib64 && \
-    make -s V= && \
-    make install && \
 
     # Get openh264 for owt
     cd ${SERVER_PATH}/third_party && \
@@ -241,11 +235,24 @@ RUN git config --global user.email "you@example.com" && \
     cd licode && \
     git reset --hard ${LICODE_COMMIT} && \
     wget -r -nH --cut-dirs=5 --no-parent ${LICODE_PATCH_REPO} && \
-    git am ${SERVER_PATH}/scripts/patches/licode/*.patch && \
+    git apply ${SERVER_PATH}/scripts/patches/licode/*.patch && \
+    mkdir -p ${SERVER_PATH}/build/libdeps/build/include && \
+    cp erizoAPI/lib/json.hpp ${SERVER_PATH}/build/libdeps/build/include && \
+
+    # Install libnice for owt
+    cd ${SERVER_PATH}/third_party && \
+    wget -O - ${NICE_REPO} | tar xz && \
+    cd libnice-${NICE_VER} && \
+    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-agentlock.patch && \
+    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-agentlock-plus.patch && \
+    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-removecandidate.patch && \
+    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-keepalive.patch && \
+    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-startcheck.patch && \
+    ./configure --prefix="/usr/local" --libdir=/usr/local/lib64 && \
+    make -s V= && \
+    make install && \
 
     # Install webrtc for owt
-    mkdir -p ${SERVER_PATH}/build/libdeps/build/include && \
-    cd ${SERVER_PATH}/build/libdeps/build/include && wget https://github.com/nlohmann/json/releases/download/v3.6.1/json.hpp && \
     cd ${SERVER_PATH}/third_party && mkdir webrtc  && cd webrtc &&\
     export GIT_SSL_NO_VERIFY=1 && \
     git clone -b 59-server ${WEBRTC_REPO} src && cd src && \
@@ -253,25 +260,9 @@ RUN git config --global user.email "you@example.com" && \
     ./tools-woogeen/install.sh && \
     ./tools-woogeen/build.sh && \
 
-    # Install 360scvp
-    cd ${SERVER_PATH}/third_party && \
-    git clone ${SCVP_REPO} && \
-    cd vcd_immersive-tids/360SCVP && \
-    git checkout ${SCVP_VER} && \
-    mkdir build && \
-    cd build && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_INSTALL_LIBDIR=lib64 ../ && \
-    make -j && \
-    make install DESTDIR=/home/build && \
-    make install && \
-    cp lib360SCVP.so /home/build/usr/local/lib64 && \
-    cp lib360SCVP.so /usr/local/lib64 && \
-
     # Get js client sdk for owt
     cd /home && git clone -b ${OWT_BRANCH_JS} ${OWT_SDK_REPO} && cd owt-client-javascript/scripts && git reset --hard ${OWT_BRANCH_JS_COMMIT}  && npm install && grunt  && \
-    mkdir ${SERVER_PATH}/third_party/quic-lib && \
     export LD_LIBRARY_PATH=/usr/local/lib64 && \
-    cd ${SERVER_PATH}/third_party/quic-lib && wget https://github.com/open-webrtc-toolkit/owt-deps-quic/releases/download/v0.1/dist.tgz && tar xzf dist.tgz && \
     #Build and pack owt
     cd ${SERVER_PATH} && export CPLUS_INCLUDE_PATH=/usr/local/include/svt-hevc && export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig && ./scripts/build.js -t mcu -r -c && \
     ./scripts/pack.js -t all --install-module --no-pseudo --sample-path /home/owt-client-javascript/dist/samples/conference
@@ -299,7 +290,6 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib64
 RUN yum install epel-release boost-system boost-thread log4cxx glib2 freetype-devel -y && \	
     yum install rabbitmq-server mongodb mongodb-server -y && \
     yum remove -y -q epel-release && \
-    export PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig" && \
     rm -rf /var/cache/yum/*;
 
 COPY scripts/init.sh scripts/restApi.sh scripts/restart.sh scripts/sleep.sh scripts/start.sh /home/
@@ -308,3 +298,4 @@ RUN cd /home/scripts &&\
     npm config set proxy=${http_proxy} && \
     npm config set https-proxy=${http_proxy} && \
     npm install
+
