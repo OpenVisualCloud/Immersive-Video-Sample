@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash
 
 ROOT=`pwd`/webrtc_linux_client_sdk
 BUILD=${ROOT}/Build
@@ -8,6 +8,9 @@ DEPS=${BUILD}/deps
 install_dependencies() {
     sudo -E apt-get update
     sudo -E apt install -y git build-essential wget python cmake pkg-config libglib2.0-dev libgtk-3-dev libasound2-dev libpulse-dev
+
+    # player
+    sudo -E apt install -y libgoogle-glog-dev libva-dev
 }
 
 install_openssl() {
@@ -103,6 +106,35 @@ install_owt_client_native () {
     cp -v out/libowt-release.a ${PREFIX}/lib/libowt.a
 }
 
+install_ffmpeg(){
+  local VERSION="4.1.3"
+  local DIR="ffmpeg-${VERSION}"
+  local SRC="${DIR}.tar.bz2"
+  local SRC_URL="http://ffmpeg.org/releases/${SRC}"
+
+  cd ${BUILD}
+
+  wget ${SRC_URL}
+  rm -fr ${DIR}
+  tar xf ${SRC}
+  cd ${DIR}
+  ./configure --prefix=${PREFIX} --disable-shared --enable-static --disable-vaapi
+  make -j
+  make install
+}
+
+install_360scvp(){
+  cd ${BUILD}
+
+  rm -rf 360scvp
+
+  mkdir 360scvp
+  cd 360scvp
+  cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ${BUILD}/../../../../src/360SCVP/
+  make -j
+  make install
+}
+
 mkdir -p ${BUILD}
 mkdir -p ${DEPS}
 
@@ -112,3 +144,6 @@ install_boost
 install_socket_io_client
 install_owt_client_native
 
+# player
+install_ffmpeg
+install_360scvp
