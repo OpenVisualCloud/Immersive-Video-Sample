@@ -10,7 +10,7 @@ install_dependencies() {
     sudo -E apt install -y git build-essential wget python cmake pkg-config libglib2.0-dev libgtk-3-dev libasound2-dev libpulse-dev
 
     # player
-    sudo -E apt install -y libgoogle-glog-dev libva-dev
+    sudo -E apt install -y yasm libgoogle-glog-dev libva-dev libglm-dev libglfw3-dev libgles2-mesa-dev libglu1-mesa-dev liblzma-dev
 }
 
 install_openssl() {
