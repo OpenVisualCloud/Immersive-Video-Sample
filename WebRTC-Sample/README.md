@@ -114,12 +114,15 @@ vi config.xml
     >*2 is WebRTC source type*
 - "resolution": 4k
     >*Supported 4k or 8k resolution*
-- "server_url": http://owt-server-ip:3001
+- "server_url": ht<span>tp://</span>owt-server-ip:3001
 
 ### Start player
 
 ```bash
 cd WebRTC-Sample/owt-linux-player/player
 
-./render # Press "s" key to start playing
+# Press "s" key to start playing
+# Press "arrow" keys to change viewport
+# Press "q" key to exit
+./render
 ```
