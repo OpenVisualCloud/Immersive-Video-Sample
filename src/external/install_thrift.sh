@@ -31,9 +31,3 @@ if [ ! "${THRIFT_VERSION}" == "0.12.0" ];then
     sudo make install
     cd ..
 fi
-
-# generate gen-cpp files
-cd ../../distributed_encoder/util
-thrift -r --gen cpp shared.thrift
-patch gen-cpp/shared_types.h Implement_operator_RegionInformation.patch
-cd -
