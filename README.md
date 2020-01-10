@@ -3,13 +3,10 @@
 [![Stable release](https://img.shields.io/badge/latest_release-v1.0-green.svg)](https://github.com/OpenVisualCloud/Immersive-Video-Sample/releases/tag/v1.0.0)
 [![Contributions](https://img.shields.io/badge/contributions-welcome-blue.svg)](https://github.com/OpenVisualCloud/Immersive-Video-Sample/wiki)
 
-This Immersive Video project includes 2 samples which are based on different streaming frameworks. 
-
-OMAF sample is based on OMAF standard, uses MPEG DASH as the protocol to deliver tiled 360 video stream, and it can support both VOD and live streaming mode.
-
- WebRTC sample enables tiled 360 video streaming based on WebRTC protocol and Open WebRTC Toolkit media server framework for low-latency streaming.
- 
- Both of the samples use SVT-HEVC with MCTS supported to do 360 video tiled encoding and achieve real-time performance for 4K and 8K contents.  
+This Immersive Video project includes 2 samples which are based on different streaming frameworks.  
+OMAF sample is based on OMAF standard, uses MPEG DASH as the protocol to deliver tiled 360 video stream, and it can support both VOD and live streaming mode.  
+WebRTC sample enables tiled 360 video streaming based on WebRTC protocol and Open WebRTC Toolkit media server framework for low-latency streaming.  
+Both of the samples use SVT-HEVC with MCTS supported to do 360 video tiled encoding and achieve real-time performance for 4K and 8K contents.  
 
 # What's in this project
 The Immersive Video project contains below components:

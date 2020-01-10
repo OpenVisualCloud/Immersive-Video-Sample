@@ -5,7 +5,7 @@
 
 ## Software Requirements
 
- - Server OS : CentOS Linux release<br>7.6.1810 (Core)
+ - Server OS : CentOS Linux release 7.6.1810 (Core)
  - Client OS : Ubuntu 18.04 LTS
  - Docker version : 1.13.1
 
