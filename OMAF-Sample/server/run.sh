@@ -56,7 +56,7 @@ if [ "${RES}" = "4K" ] ; then
 
 else
 
-    VIDEO="test1_h265_8k_25fps_60M_100frames.mp4"
+    VIDEO="test1_h264_8k_25fps_30M_250frames.mp4"
     echo "ip 127.0.0.1 port 9089 numa 1" > config_high.txt
     echo "ip 127.0.0.1 port 9090 numa 2" > config_low.txt
 
