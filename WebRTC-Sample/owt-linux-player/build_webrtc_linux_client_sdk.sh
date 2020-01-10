@@ -6,6 +6,13 @@ PREFIX=${ROOT}/release
 DEPS=${BUILD}/deps
 
 install_dependencies() {
+    sudo -E apt-get update
+    sudo -E apt install -y git build-essential wget python cmake pkg-config libglib2.0-dev libgtk-3-dev libasound2-dev libpulse-dev
+
+    # player
+    sudo -E apt install -y yasm libgoogle-glog-dev libva-dev libglm-dev libglfw3-dev libgles2-mesa-dev libglu1-mesa-dev liblzma-dev
+
+    # set git user
     if [ -z "`git config --get user.email`" ]; then
         git config --global user.email "you@example.com"
     fi
@@ -13,12 +20,6 @@ install_dependencies() {
     if [ -z "`git config --get user.name`" ]; then
         git config --global user.name "Your Name"
     fi
-
-    sudo -E apt-get update
-    sudo -E apt install -y git build-essential wget python cmake pkg-config libglib2.0-dev libgtk-3-dev libasound2-dev libpulse-dev
-
-    # player
-    sudo -E apt install -y yasm libgoogle-glog-dev libva-dev libglm-dev libglfw3-dev libgles2-mesa-dev libglu1-mesa-dev liblzma-dev
 }
 
 install_openssl() {

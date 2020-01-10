@@ -1,4 +1,4 @@
-# Immersive Video Delivery 360SCVP (Stream Concatenation Video Processing) Library
+# Immersive Video Delivery 360SCVP (Stream Concatenation and Viewport Processing) Library
 
 ## Introduction
 360SCVP is a common library, which provides some basic functions for stream and view port. So, the 360SCVP is the abbreviation of stream concatenation and view port about 360 videos.
