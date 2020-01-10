@@ -30,7 +30,7 @@
 ```bash
     cd OMAF-Sample/client && ./deploy.sh
     cd package  # Copy the packages to any client machine to install.
-    sudo dpkg -i immersive-client-1.0.0-1.el7_amd64.deb
+    sudo dpkg -i immersive-client_1.0.0-1.el7_amd64.deb
 ```
 
 ## How To Run (HTTPS)
@@ -43,6 +43,7 @@
     ./configure.sh CN Shanghai A B C D E@F.com                          # './configure.sh -h' for details.
     /usr/local/nginx/sbin/nginx                                         # Start nginx.
     cd /home/immersive/Sample-Videos && ./run.sh <RES> <TYPE>           # <RES>:[4K,8K] <TYPE>:[LIVE,VOD]
+                                                                        # Press 'q' button to quit.
 ```
 
 - Client :
@@ -51,14 +52,14 @@
     sudo su
     cd /usr/bin/immersive/
     export LD_LIBRARY_PATH=/usr/lib64/immersive-client:$LD_LIBRARY_PATH
-    vim config.xml  # Set up configuration, details as following table
-    ./render        # Press 's' button to start
+    vim config.xml  # Set up configuration, details as following table.
+    ./render        # Press 's' button to start.
 ```
 **Config.xml**
 
 | Parameters | Descriptions | Examples |
 | :----:| :----: | :----: |
-|  windowWidth  | The width of render window | 960 for 4k, 1920 for 8k |
+| windowWidth  | The width of render window | 960 for 4k, 1920 for 8k |
 | windowHeight | The height of render window  | 960 for 4k, 1920 for 8k  |
 | url | The resource URL path | Remote URL |
 | sourceType | Source type | 0 is for Dash Source |
@@ -72,4 +73,4 @@
 | cachePath | Cache path | /tmp/cache |
 
 
-   - **Note** : So far, some parameters settings are limited. URL need to be a remote dash source URL, example : `https://172.18.0.2:5000`. The parameter sourceType must set to 0, which represents dash source. The parameter decoderType must set to 0, which stands for FFmpeg software decoder. The parameter contextType need to be 0, which represents glfw context. And useDMABuffer flag should be set to 0. 
+   - **Note** : So far, some parameters settings are limited. URL need to be a remote dash source URL, choose `./run.sh 8K LIVE` for example : `https://xxx.xxx.xxx.xxx:5000/LIVE8K/Test.mpd`. The parameter sourceType must set to 0, which represents dash source. The parameter decoderType must set to 0, which stands for FFmpeg software decoder. The parameter contextType need to be 0, which represents glfw context. And useDMABuffer flag should be set to 0. 
