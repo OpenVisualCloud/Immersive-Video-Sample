@@ -62,7 +62,7 @@ sudo make install
 # Quick Run
 To run sample test, Ngnix server should be installed in server side. please refer to [ngnix setup](ngnix_setup.md).
 
-## Server Side 
+## Server Side
 
 Set up RSA if HTTPS is used.
 ```bash
@@ -79,19 +79,19 @@ sudo ssh-copy-id root@<server ip>
 
 - Test Command for 8K Video:
 ```bash
-  numactl -c 1 ffmpeg -re -i [rtmp://192.168.1.10:1935/live/video] -input_type 1 -rc 1 -c:v:0 distributed_encoder -s:0 7680x3840 -g:0 25 -tile_row:0 6 -tile_column:0 12 -la_depth:0 0 -config_file:0 config_high.txt -b:0 50M -map 0:v -c:v:1 distributed_encoder -s:1 1280x1280 -sws_flags neighbor -g:1 25 -tile_row:1 2 -tile_column:1 2 -la_depth:1 0 -config_file:1 config_low.txt -b:1 2M -map 0:v -f omaf_packing -is_live 1 -split_tile 1 -seg_duration 1 -extractors_per_thread 4 -base_url http://[ServerIP]/OMAFLive_8k/ -out_name Test /usr/local/nginx/html/OMAFLive_8k/ 
+  numactl -c 1 ffmpeg -re -i [rtmp://192.168.1.10:1935/live/video] -input_type 1 -rc 1 -c:v:0 distributed_encoder -s:0 7680x3840 -g:0 25 -tile_row:0 6 -tile_column:0 12 -la_depth:0 0 -config_file:0 config_high.txt -b:0 50M -map 0:v -c:v:1 distributed_encoder -s:1 1280x1280 -sws_flags neighbor -g:1 25 -tile_row:1 2 -tile_column:1 2 -la_depth:1 0 -config_file:1 config_low.txt -b:1 2M -map 0:v -f omaf_packing -is_live 1 -split_tile 1 -seg_duration 1 -extractors_per_thread 4 -base_url http://[ServerIP]/OMAFLive_8k/ -out_name Test /usr/local/nginx/html/OMAFLive_8k/
 ```
 
 ### Tiled Content Generation for VOD
 
 - Test Command for 4K Video:
-```bash  
+```bash
   ffmpeg -i [file] -input_type 1 -c:v:0 distributed_encoder -s:0 3840x1920 -tile_row:0 6 -tile_column:0 10 -config_file:0 config_high.txt -g:0 15 -b:0 30M -map 0:v -c:v:1 distributed_encoder -s:1 1024x640 -tile_row:1 2 -tile_column:1 4 -config_file:1 config_low.txt -g:1 15 -b:1 5M -map 0:v -f omaf_packing -is_live 0 -split_tile 1 -seg_duration 1 -window_size 20 -extra_window_size 30 -base_url http://[server ip]]/OMAFStatic_4k/ -out_name Test /usr/local/nginx/html/OMAFStatic_4k/
 ```
 
 - Test Command for 8K Video:
 ```bash
-  numactl -c 1 ffmpeg -re -i [rtmp://192.168.1.10:1935/live/video] -input_type 1 -rc 1 -c:v:0 distributed_encoder -s:0 7680x3840 -g:0 25 -tile_row:0 6 -tile_column:0 12 -la_depth:0 0 -config_file:0 config_high.txt -b:0 50M -map 0:v -c:v:1 distributed_encoder -s:1 1280x1280 -sws_flags neighbor -g:1 25 -tile_row:1 2 -tile_column:1 2 -la_depth:1 0 -config_file:1 config_low.txt -b:1 2M -map 0:v -f omaf_packing -is_live 1 -split_tile 1 -seg_duration 1 -extractors_per_thread 4 -base_url http://[ServerIP]/OMAFStatic_8k/ -out_name Test /usr/local/nginx/html/OMAFStatic_8k/ 
+  numactl -c 1 ffmpeg -re -i [file] -input_type 1 -rc 1 -c:v:0 distributed_encoder -s:0 7680x3840 -g:0 25 -tile_row:0 6 -tile_column:0 12 -la_depth:0 0 -config_file:0 config_high.txt -b:0 50M -map 0:v -c:v:1 distributed_encoder -s:1 1280x1280 -sws_flags neighbor -g:1 25 -tile_row:1 2 -tile_column:1 2 -la_depth:1 0 -config_file:1 config_low.txt -b:1 2M -map 0:v -f omaf_packing -is_live 0 -split_tile 1 -seg_duration 1 -extractors_per_thread 4 -base_url http://[ServerIP]/OMAFStatic_8k/ -out_name Test /usr/local/nginx/html/OMAFStatic_8k/
 ```
 
 ## Client Side

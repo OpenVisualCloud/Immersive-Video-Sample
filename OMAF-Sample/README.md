@@ -3,7 +3,7 @@
 ## Introduction
    The Immersive Video Delivery OMAF Sample provides a quick trial to setup E2E OMAF-Compliant 360 video streaming. OMAF 360 Video streaming sample can support both VOD and Live streaming for 4K and 8K contents. 
 
-## Software Requirements 
+## Software Requirements
 
  - Server OS : CentOS Linux release<br>7.6.1810 (Core)
  - Client OS : Ubuntu 18.04 LTS
@@ -24,9 +24,9 @@
     cd OMAF-Sample/server && ./deploy.sh <proxy>  # Proxy config is optional.
     docker image ls                               # Created an image. [REPOSITORY:immersive_server, TAG:v0.1]
 ```
-    
+
 - Client :
-  
+
 ```bash
     cd OMAF-Sample/client && ./deploy.sh
     cd package  # Copy the packages to any client machine to install.
@@ -39,8 +39,10 @@
 
 ```bash
     docker run -p 5000:443 -p 5001:8080 -it immersive_server:v0.1 bash  # Map the port.
+    cd /usr/local/nginx/conf/
+    ./configure.sh CN Shanghai A B C D E@F.com                          # './configure.sh -h' for details.
     /usr/local/nginx/sbin/nginx                                         # Start nginx.
-    cd Sample-Videos && ./run.sh <RES> <TYPE>                           # <RES>:[4k,8k] <TYPE>:[LIVE,VOD]
+    cd /home/immersive/Sample-Videos && ./run.sh <RES> <TYPE>           # <RES>:[4K,8K] <TYPE>:[LIVE,VOD]
 ```
 
 - Client :
@@ -68,6 +70,6 @@
 | viewportWidth | Viewport width | 960 for 4k, 1920 for 8k |
 | viewportHeight | Viewport height | 960 for 4k, 1920 for 8k |
 | cachePath | Cache path | /tmp/cache |
-   
+
 
    - **Note** : So far, some parameters settings are limited. URL need to be a remote dash source URL, example : `https://172.18.0.2:5000`. The parameter sourceType must set to 0, which represents dash source. The parameter decoderType must set to 0, which stands for FFmpeg software decoder. The parameter contextType need to be 0, which represents glfw context. And useDMABuffer flag should be set to 0. 
