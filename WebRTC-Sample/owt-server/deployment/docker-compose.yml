@@ -21,7 +21,7 @@ services:
             && /home/start.sh
             && /home/restApi.sh -s 8k
             && /home/restart.sh
-            && /home/restApi.sh -c /home/Sample-Videos/test1_h265_8k_25fps_60M_100frames.mp4
+            && /home/restApi.sh -c /home/Sample-Videos/test1_h265_8k_30fps_60M_100frames.mp4
             && /home/sleep.sh"
         network_mode: host
         volumes:

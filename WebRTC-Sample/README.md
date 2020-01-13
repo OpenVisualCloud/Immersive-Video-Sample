@@ -123,6 +123,6 @@ cd WebRTC-Sample/owt-linux-player/player
 
 # Press "s" key to start playing
 # Press "arrow" keys to change viewport
-# Press "q" key to exit
+# Press "Esc" key to exit
 ./render
 ```
