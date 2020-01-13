@@ -6,7 +6,7 @@
 The Immersive Video Delivery solution provides basic components for OMAF-Compliant Tiled 360 Video Delivery, including MCTS-based HEVC transcoding, OMAF-compliant streaming packing, client OMAF dash access library; and FFMPEG plugins for quick trial for these components to setup E2E OMAF-Compliant 360 video streaming. The project is a reference solution for those want to build up tiled-based 360 video delivery based on Intel Platform 
 
 # License
-The Immersive Video Delivery solution is licensed under the OSI-approved BSD 3-Clause license and LGPLv2. See [LICENSE](LICENSE) for details. 
+The Immersive Video Delivery solution is licensed under the BSD 3-Clause "New" or "Revised" License, except that "FFMPEG Plugins" is under the LGPLv2.0 license. See [LICENSE](LICENSE) for details. 
 MP4 base library is from Nokia/OMAF in OMAF Packing Library and OMAF Dash Access Library, so the license should compliant with Nokia/OMAF license.
 
 # How to contribute
