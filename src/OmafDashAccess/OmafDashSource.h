@@ -180,6 +180,7 @@ private:
     MPDInfo                    *mMPDinfo;                  //<! MPD information
     int                        dcount;
     GlogWrapper                *m_glogWrapper;
+    int                        mPreExtractorID;
 };
 
 VCD_OMAF_END;
