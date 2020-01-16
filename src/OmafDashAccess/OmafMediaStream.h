@@ -160,7 +160,13 @@ public:
         return enabledExtractor;
     };
 
-    int32_t GetExtractorSize() {return mCurrentExtractors.size(); };
+    int32_t GetExtractorSize()
+    {
+        pthread_mutex_lock(&mCurrentMutex);
+        int32_t size = mCurrentExtractors.size();
+        pthread_mutex_unlock(&mCurrentMutex);
+        return size;
+    };
 
     int32_t GetTotalExtractorSize() {return mExtractors.size(); };
 

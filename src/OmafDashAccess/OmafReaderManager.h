@@ -98,6 +98,10 @@ public:
     //!
     int GetNextFrame( int trackID, MediaPacket*& pPacket, bool needParams );
 
+    //!  \brief Get mPacketQueue[trackID] size
+    //!
+    int GetPacketQueueSize(int trackID, int& size);
+
     //!  \brief Get initial segments parse status.
     //!
     bool isAllInitSegParsed()

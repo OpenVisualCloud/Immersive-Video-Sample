@@ -456,6 +456,14 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
     return ERROR_NONE;
 }
 
+int OmafReaderManager::GetPacketQueueSize(int trackID, int& size)
+{
+    mPacketLock.lock();
+    size = mPacketQueues[trackID].size();
+    mPacketLock.unlock();
+    return ERROR_NONE;
+}
+
 int OmafReaderManager::ReadNextSegment(
     int trackID,
     uint16_t initSegID,
