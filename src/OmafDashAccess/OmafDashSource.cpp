@@ -50,6 +50,7 @@ OmafDashSource::OmafDashSource()
     mMPDinfo = nullptr;
     dcount = 1;
     m_glogWrapper = new GlogWrapper((char*)"glogAccess");
+    mPreExtractorID = 0;
 }
 
 OmafDashSource::~OmafDashSource()
@@ -241,11 +242,34 @@ int OmafDashSource::GetPacket(
 
     MediaPacket* pkt = NULL;
 
+    int currentExtractorID = 0;
+
     if(pStream->HasExtractor()){
         std::list<OmafExtractor*> extractors = pStream->GetEnabledExtractor();
+        int enabledSize = pStream->GetExtractorSize();
+        int totalSize = pStream->GetTotalExtractorSize();
         for(auto it=extractors.begin(); it!=extractors.end(); it++){
             OmafExtractor* pExt = (OmafExtractor*)(*it);
-            int ret = READERMANAGER::GetInstance()->GetNextFrame(pExt->GetTrackNumber(), pkt, needParams);
+            int trackNumber = pExt->GetTrackNumber();
+            if (enabledSize < totalSize) // normal track
+            {
+                int remainSize = 0;
+                currentExtractorID = pExt->GetTrackNumber();
+                READERMANAGER::GetInstance()->GetPacketQueueSize(mPreExtractorID, remainSize);
+                if (mPreExtractorID != currentExtractorID)
+                {
+                    if (remainSize > 0) //if there exit remaining data in previous Extractor, then need to pop up them all.
+                    {
+                        trackNumber = mPreExtractorID;
+                        LOG(INFO)<<"Remaining data in previous track id have to be got! remainSize is "<<remainSize<<std::endl;
+                    }
+                    else //if there is no data in previous track, then fetch data in current track.
+                    {
+                        mPreExtractorID = currentExtractorID;
+                    }
+                }
+            }
+            int ret = READERMANAGER::GetInstance()->GetNextFrame(trackNumber, pkt, needParams);
             if(ret == ERROR_NONE)
             {
                 pkts->push_back(pkt);
