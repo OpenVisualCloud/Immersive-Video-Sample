@@ -89,6 +89,13 @@ int OmafExtractorSelector::SelectExtractors(OmafMediaStream* pStream)
     if(NULL == pSelectedExtrator && !mCurrentExtractor)
         return ERROR_NULL_PTR;
 
+    bool isExtractorChanged = false;
+    //not first time and changed and change to different extractor
+    if (mCurrentExtractor && pSelectedExtrator && mCurrentExtractor != pSelectedExtrator)
+    {
+        isExtractorChanged = true;
+    }
+
     mCurrentExtractor = pSelectedExtrator ? pSelectedExtrator : mCurrentExtractor;
 
     ListExtractor extractors;
@@ -100,7 +107,7 @@ int OmafExtractorSelector::SelectExtractors(OmafMediaStream* pStream)
 
     extractors.push_front(mCurrentExtractor);
 
-    if(pSelectedExtrator || extractors.size() > 1)
+    if( isExtractorChanged || extractors.size() > 1)
     {
         list<int> trackIDs;
         for(auto &it: extractors)
@@ -179,9 +186,11 @@ int OmafExtractorSelector::SetInitialViewport( std::vector<Viewport*>& pView, He
 bool OmafExtractorSelector::IsDifferentPose(HeadPose* pose1, HeadPose* pose2)
 {
     // return false if two pose is same
-    if(pose1->yaw == pose2->yaw && pose1->pitch == pose2->pitch)
+    if(abs(pose1->yaw - pose2->yaw)<1e-3 && abs(pose1->pitch - pose2->pitch)<1e-3)
+    {
+        LOG(INFO)<<"pose has not changed!"<<std::endl;
         return false;
-
+    }
     return true;
 }
 
