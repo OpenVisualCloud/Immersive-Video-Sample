@@ -65,7 +65,7 @@ make
 Use the following commands to start or stop services via docker compose:
 
 ```bash
-cd WebRTC-Sample/owt-server
+cd WebRTC-Sample/owt-server/build
 
 # start 4k service
 make start_owt_immersive_4k
