@@ -74,7 +74,7 @@ make start_owt_immersive_4k
 make start_owt_immersive_8k
 
 # stop service
-make start
+make stop
 ```
 
 # OWT-LINUX-PLAYER
