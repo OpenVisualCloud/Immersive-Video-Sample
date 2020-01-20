@@ -90,7 +90,7 @@ void CubeMap::map2DTo3D(SPos& IPosIn, SPos *pSPosOut)
         pSPosOut->z = -1.0;
         break;
     default:
-        assert(!"Error CubeMap::map2DTo3D()");
+        assert(0 && "Error CubeMap::map2DTo3D()");
         break;
     }
 }
