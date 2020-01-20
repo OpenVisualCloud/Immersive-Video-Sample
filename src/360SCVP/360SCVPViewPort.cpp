@@ -112,6 +112,6 @@ void ViewPort::matInv(POSType K[3][3])
 }
 void ViewPort::map3DTo2D(SPos *,SPos *)
 {
-    assert(!"Viewport 3D to 2D is not supported ");
+    assert(0 && "Viewport 3D to 2D is not supported ");
 }
 
