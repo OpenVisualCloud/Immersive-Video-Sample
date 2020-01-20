@@ -1,0 +1,39 @@
+# for owt-client-android. Tested with Android arm64 device only
+
+config("my_config") {
+    # compare with CMakeLists.txt
+    cflags = [
+      "-fstack-protector-strong",
+      "-D_FORTIFY_SOURCE=2",
+      "-g",
+      "-c",
+      "-fPIC",
+      "-fPIE",
+      "-O2",
+      "-Wformat",
+      "-Wformat-security",
+      "-Wall",
+      "-Werror",
+      "-std=c++11",
+    ]
+}
+
+static_library("lib360SCVP") {
+    configs += [ ":my_config" ]
+
+    sources = [
+      "360SCVPAPIImpl.cpp",
+      "360SCVPBitstream.cpp",
+      "360SCVPCubeMap.cpp",
+      "360SCVPEquiRect.cpp",
+      "360SCVPGeometry.cpp",
+      "360SCVPHevcEncHdr.cpp",
+      "360SCVPHevcParser.cpp",
+      "360SCVPHevcTileMerge.cpp",
+      "360SCVPHevcTilestream.cpp",
+      "360SCVPImpl.cpp",
+      "360SCVPViewPort.cpp",
+      "360SCVPViewportImpl.cpp",
+    ]
+}
+
