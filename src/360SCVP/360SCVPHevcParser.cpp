@@ -1920,6 +1920,13 @@ int32_t hevc_read_RwpkSEI(int8_t *pRWPKBits, uint32_t RWPKBitsSize, RegionWisePa
     if (numRegions > DEFAULT_REGION_NUM)
        goto exit;
     pRWPK->numRegions = numRegions;
+    //if caller set pRWPK->rectRegionPacking as null and didn't allocate memory
+    //due to they don't know how many tiles there are,
+    //the following code will malloc() for caller, finally the caller must free() memory after use
+    if (!pRWPK->rectRegionPacking) {
+        pRWPK->rectRegionPacking =
+            (RectangularRegionWisePacking*)malloc(numRegions * sizeof(RectangularRegionWisePacking));
+    }
     pRWPK->projPicWidth = gts_bs_read_int(bs, 32);
     pRWPK->projPicHeight = gts_bs_read_int(bs, 32);
     pRWPK->packedPicWidth = gts_bs_read_int(bs, 16); //bitstr.read16Bits();
