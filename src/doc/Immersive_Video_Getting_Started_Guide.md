@@ -38,6 +38,7 @@ sudo yum install devtoolset-6-gcc devtoolset-6-gcc-c++
 # Make sure using gcc >= 6.3.1
 git clone https://github.com/OpenVisualCloud/ImmersiveVideo
 cd ImmersiveVideo/src/external
+./prebuild.sh server
 mkdir -p ../build/server
 cd ../build/server
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
@@ -51,6 +52,7 @@ sudo make install
 # Make sure using gcc >= 6.3.1
 git clone https://github.com/OpenVisualCloud/ImmersiveVideo
 cd ImmersiveVideo/src/external
+./prebuild.sh client
 mkdir -p ../build/client
 cd ../build/client
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
