@@ -55,6 +55,13 @@
 VCD_NS_BEGIN
 using namespace tinyxml2;
 
+static inline int64_t currentTimeMs()
+{
+    timeval time;
+    gettimeofday(&time, nullptr);
+    return ((time.tv_sec * 1000) + (time.tv_usec / 1000));
+}
+
 static int isValidStartCode(uint8_t *data, int length)
 {
     if (length < 3)
@@ -604,6 +611,8 @@ WebRTCFFmpegVideoDecoder::WebRTCFFmpegVideoDecoder(WebRTCVideoRenderer *renderer
     , m_decFrame(NULL)
     , m_needKeyFrame(true)
     , m_renderer(renderer)
+    , m_statistics_frames(0)
+    , m_statistics_last_timestamp(0)
 {
     LOG(INFO) << "avcodec version: "
         << ((avcodec_version() >> 16) & 0xff) << "."
@@ -643,6 +652,25 @@ bool WebRTCFFmpegVideoDecoder::Release()
 bool WebRTCFFmpegVideoDecoder::OnEncodedFrame(unique_ptr<owt::base::VideoEncodedFrame> frame)
 {
     int ret;
+
+    {
+        //statistics
+        if (m_statistics_last_timestamp == 0) {
+            m_statistics_last_timestamp = currentTimeMs();
+        }
+        m_statistics_frames++;
+
+        if (m_statistics_frames == 300) {
+            uint64_t cur_time = currentTimeMs();
+
+            LOG(INFO) << "Decoding fps "
+                << (double)(1000 * m_statistics_frames) / (cur_time - m_statistics_last_timestamp)
+                << std::endl;
+
+            m_statistics_last_timestamp = cur_time;
+            m_statistics_frames = 0;
+        }
+    }
 
     if (m_needKeyFrame) {
         if (!frame->is_key_frame)
