@@ -244,6 +244,9 @@ private:
 
     char m_errbuff[500];
     char *ff_err2str(int errRet);
+
+    uint32_t m_statistics_frames;
+    uint64_t m_statistics_last_timestamp;
 };
 
 VCD_NS_END;
