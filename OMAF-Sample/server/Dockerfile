@@ -195,7 +195,7 @@ RUN mkdir build && cd build && \
     source /opt/rh/devtoolset-7/enable && \
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH && \
     cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET=server .. && \
-    make -j `nproc` && \
+    make -j100 && \
     make install && \
     mv ffmpeg/ffmpeg ../Sample-Videos && \
     cd .. && rm -rf `ls | grep -v Sample-Videos`
