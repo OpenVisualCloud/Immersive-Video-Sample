@@ -29,7 +29,7 @@ ffmpeg_4K_LIVE(){
 }
 
 ffmpeg_4K_VOD(){
-    numactl -c 1 ./ffmpeg -stream_loop -1 -i $1 -input_type 1 -rc 1 -r 30 -c:v:0 distributed_encoder -s:0 3840x1920 -g:0 15 -tile_row:0 6 -tile_column:0 10 -la_depth:0 0 -config_file:0 config_high.txt -b:0 30M -map 0:v -c:v:1 distributed_encoder -s:1 1024x640 -sws_flags neighbor -g:1 15 -tile_row:1 1 -tile_column:1 4 -la_depth:1 0 -config_file:1 config_low.txt -b:1 2M -map 0:v -vframes 500 -f omaf_packing -is_live 0 -split_tile 1 -seg_duration 1 -base_url https://$2:443/VOD4K/ -out_name Test /usr/local/nginx/html/VOD4K/
+    ./ffmpeg -stream_loop -1 -i $1 -input_type 1 -rc 1 -r 30 -c:v:0 distributed_encoder -s:0 3840x1920 -g:0 15 -tile_row:0 6 -tile_column:0 10 -la_depth:0 0 -config_file:0 config_high.txt -b:0 30M -map 0:v -c:v:1 distributed_encoder -s:1 1024x640 -sws_flags neighbor -g:1 15 -tile_row:1 1 -tile_column:1 4 -la_depth:1 0 -config_file:1 config_low.txt -b:1 2M -map 0:v -vframes 500 -f omaf_packing -is_live 0 -split_tile 1 -seg_duration 1 -base_url https://$2:443/VOD4K/ -out_name Test /usr/local/nginx/html/VOD4K/
 }
 
 ffmpeg_8K_LIVE(){
