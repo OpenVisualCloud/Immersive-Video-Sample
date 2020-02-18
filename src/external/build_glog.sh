@@ -8,5 +8,5 @@ fi
 cd glog
 ./autogen.sh
 ./configure
-make -j8
+make -j `nproc`
 sudo make install
