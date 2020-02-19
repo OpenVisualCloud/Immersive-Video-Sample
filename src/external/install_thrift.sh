@@ -10,7 +10,7 @@ fi
 tar zxf boost_1_63_0.tar.gz
 cd boost_1_63_0
 ./bootstrap.sh --without-libraries=python
-./b2 -a cxxflags="-D_GLIBCXX_USE_CXX11_ABI=0" -j8
+./b2 -a cxxflags="-D_GLIBCXX_USE_CXX11_ABI=0" -j `nproc`
 sudo ./b2 cxxflags="-D_GLIBCXX_USE_CXX11_ABI=0" install
 cd ..
 
@@ -23,7 +23,7 @@ cd thrift-0.12.0
 patch configure ../../../external/Disable_cxx11_abi_for_thrift.patch
 sed -i '21 a #  include <unistd.h>' ./lib/cpp/src/thrift/transport/PlatformSocket.h
 ./configure --with-boost=/usr/local --with-boost-libdir=/usr/local/lib --with-libevent=/usr --with-java=0
-make -j8
+make -j `nproc` 
 sudo make install
 cd ..
 
