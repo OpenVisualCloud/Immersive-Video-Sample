@@ -19,7 +19,7 @@ fi
 cd build
 
 cmake ..
-make -j`nproc`
+make -j `nproc`
 
 cp -r ../api/streamsegmenter ../../../../../../VROmafPacking/
 sudo cp lib/libstreamsegmenter_static_fpic.a /usr/local/lib/
