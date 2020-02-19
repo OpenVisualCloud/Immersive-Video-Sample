@@ -13,8 +13,9 @@ if [ ${TARGET} == "server" ] ; then
     git checkout release/4.1
     git checkout c2ac3b8e6a040e33d53fa13548848c8ba981a8e4
     cd -
-    patch -p1 < external/FFmpeg_OMAF.patch
+    patch -p1 < ffmpeg/patches/FFmpeg_OMAF.patch
     
+    mkdir -p build/external/ffmpeg
     cd build/external/ffmpeg
     ../../../FFmpeg/configure --prefix=/usr --libdir=/usr/local/lib --enable-static --enable-shared --enable-gpl --enable-nonfree --disable-optimizations --disable-vaapi
     make -j `nproc`
