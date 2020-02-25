@@ -1,16 +1,16 @@
 FROM centos:7.6.1810
 
-RUN if [ -n "${HTTP_PROXY}" ] ; then \
-    echo "proxy=${HTTP_PROXY}" >> /etc/yum.conf && \
-    echo "http_proxy=${HTTP_PROXY}" >> /etc/wgetrc && \
-    echo "https_proxy=${HTTP_PROXY}" >> /etc/wgetrc ; \
+RUN if [ -n "${http_proxy}" ] ; then \
+    echo "proxy=${http_proxy}" >> /etc/yum.conf && \
+    echo "http_proxy=${http_proxy}" >> /etc/wgetrc && \
+    echo "https_proxy=${https_proxy}" >> /etc/wgetrc ; \
     fi
 
 RUN yum install -y -q openssl centos-release-scl scl-utils gmp gmp-devel mpfr mpfr-devel libmpc libmpc-devel patch autoconf libtool automake libcurl-devel wget git -y && \
     rm -rf /var/cache/yum/* && \
-    if [ -n "${HTTP_PROXY}" ]; then \
-    git config --global http.proxy ${HTTP_PROXY} && \
-    git config --global https.proxy ${HTTP_PROXY} ; \
+    if [ -n "${http_proxy}" ]; then \
+    git config --global http.proxy ${http_proxy} && \
+    git config --global https.proxy ${https_proxy} ; \
     fi
 
 RUN yum install -y yum install devtoolset-7-gcc* libevent-devel.x86_64 openssl-devel bc numactl -y && \
