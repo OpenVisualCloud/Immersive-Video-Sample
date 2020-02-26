@@ -1,0 +1,11 @@
+language: shell
+os: linux
+dist: bionic
+
+install:
+    - sudo apt-get -y install docker.io
+
+script:
+    - sudo systemctl unmask docker.service && sudo systemctl unmask docker.socket && sudo systemctl start docker.service && sudo docker version
+    - sudo docker build -t immersive:ci -f src/external/dockerfile src/external
+    - sudo docker run -it immersive:ci bash -c 'cd src/external && ./build.sh ci && ./build.sh test && ./run_test.sh'
