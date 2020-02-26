@@ -27,7 +27,7 @@ build_server(){
     cd ../build/server
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
     cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server ../..
-    make -j `nproc`
+    make -j $(nproc)
     sudo make install
 }
 
@@ -37,7 +37,7 @@ build_client(){
     cd ../build/client
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
     cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=client ../../
-    make -j `nproc`
+    make -j $(nproc)
     sudo make install
 }
 
@@ -55,10 +55,10 @@ build_ci(){
     git checkout c2ac3b8e6a040e33d53fa13548848c8ba981a8e4
     cd ..
     patch -p1 < ffmpeg/patches/FFmpeg_OMAF.patch
-    mkdir -p build/external/ffmpeg
-    cd build/external/ffmpeg
+    mkdir -p build/external/ffmpeg_server
+    cd build/external/ffmpeg_server
     ../../../FFmpeg/configure --prefix=/usr --libdir=/usr/local/lib --enable-static --enable-shared --enable-gpl --enable-nonfree --disable-optimizations --disable-vaapi
-    make -j `nproc`
+    make -j $(nproc)
     sudo make install
     cd ${EX_PATH}
 
@@ -72,7 +72,7 @@ build_ci(){
     cd ../build/server
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
     cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server ../..
-    make -j `nproc`
+    make -j $(nproc)
     sudo make install
     cd ${EX_PATH} && ./fpm.sh server ${GIT_SHORT_HEAD} && rm -rf ../FFmpeg
 
@@ -81,14 +81,18 @@ build_ci(){
     cp -r ${FFMPEG_PATH}/FFmpeg ../FFmpeg
     cd ../FFmpeg
     patch -p1 < ../ffmpeg/patches/0001-Add-avcodec_receive_frame2-for-vaapi-hardware-decodi.patch
-    mkdir -p build/external/ffmpeg
+    mkdir -p ../build/external/ffmpeg_client
+    cd ../build/external/ffmpeg_client
+    ../../../FFmpeg/configure --enable-shared
+    make -j $(nproc)
+    sudo make install
     cd ${EX_PATH}
 
     mkdir -p ../build/client
     cd ../build/client
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
     cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=client ../../
-    make -j `nproc`
+    make -j $(nproc)
     sudo make install
     cd ${EX_PATH} && ./fpm.sh client ${GIT_SHORT_HEAD} && rm -rf ../FFmpeg
 }
@@ -103,7 +107,7 @@ build_test(){
         git clone https://github.com/google/googletest.git
         cd googletest && git checkout -b v1.8.x origin/v1.8.x
         cd googletest && mkdir build && cd build
-        cmake -DBUILD_SHARED_LIBS=ON .. && make -j `nproc`
+        cmake -DBUILD_SHARED_LIBS=ON .. && make -j $(nproc)
         g++ -I../include/ -I.. -c ../src/gtest-all.cc -D_GLIBCXX_USE_CXX11_ABI=0
         g++ -I../include/ -I.. -c ../src/gtest_main.cc -D_GLIBCXX_USE_CXX11_ABI=0
         ar -rv libgtest.a gtest-all.o gtest_main.o

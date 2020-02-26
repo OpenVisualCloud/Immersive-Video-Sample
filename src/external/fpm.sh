@@ -70,9 +70,9 @@ fi
 if [ ${ITEM} = "client" ] ; then
     git log | head -n 3 > git_info
     cd ../build
-    cp /usr/lib64/libva-drm.so.2                                      ${LIBDIR}
-    cp /usr/lib64/libva-x11.so.2                                      ${LIBDIR}
-    cp /usr/lib64/libva.so.2                                          ${LIBDIR}
+    cp /usr/local/lib/libva-drm.so.2                                  ${LIBDIR}
+    cp /usr/local/lib/libva-x11.so.2                                  ${LIBDIR}
+    cp /usr/local/lib/libva.so.2                                      ${LIBDIR}
     cp /usr/local/lib/libglog.so.0                                    ${LIBDIR}
     cp client/360SCVP/lib360SCVP.so                                   ${LIBDIR}
     cp client/OmafDashAccess/libOmafDashAccess.so                     ${LIBDIR}
