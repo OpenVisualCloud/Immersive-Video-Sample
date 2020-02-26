@@ -23,7 +23,7 @@ if [ ${TARGET} == "server" ] ; then
 
 elif [ ${TARGET} == "client" ] ; then
 
-    patch -p1 < ../external/0001-Add-avcodec_receive_frame2-for-vaapi-hardware-decodi.patch
+    patch -p1 < ../ffmpeg/patches/0001-Add-avcodec_receive_frame2-for-vaapi-hardware-decodi.patch
     ./configure
     make -j `nproc`
     sudo make install

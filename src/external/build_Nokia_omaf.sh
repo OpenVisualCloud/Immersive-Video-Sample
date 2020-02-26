@@ -1,13 +1,14 @@
 #!/bin/sh -e
+if [ -L ${PWD}/../OmafDashAccess/mp4lib ] ; then
+    exit 0
+fi
+
 cd ../build/external
 
 if [ ! -d "./omaf" ] ; then
    git clone https://github.com/nokiatech/omaf.git
 fi
 
-if [ -L ${PWD}/../../OmafDashAccess/mp4lib ] ; then
-    rm -rf ${PWD}/../../OmafDashAccess/mp4lib
-fi
 ln -s ${PWD}/omaf/Mp4/srcs ${PWD}/../../OmafDashAccess/mp4lib
 cd omaf
 patch -p1 < ../../../external/nokia_omaf_patch_for_extrator_reader.diff
