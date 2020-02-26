@@ -27,8 +27,7 @@ elif [ $# = 1 ] ; then
         parameters_usage
     else
         PROXY=$1
-        docker build -t immersive_server:v0.1 --build-arg HTTP_PROXY=${PROXY} --build-arg HTTPS_PROXY=${PROXY} .
-        echo 'case 1'
+        docker build -t immersive_server:v0.1 --build-arg http_proxy=${PROXY} --build-arg https_proxy=${PROXY} .
         echo "PROXY:${PROXY}"
     fi
 else
