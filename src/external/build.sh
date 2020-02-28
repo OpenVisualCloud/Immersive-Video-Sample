@@ -1,27 +1,24 @@
 #!/bin/bash -ex
 
 TARGET=$1
+PREBUILD_FLAG=$2
 EX_PATH=${PWD}
 FFMPEG_PATH=${PWD}/../../..
 GIT_SHORT_HEAD=`git rev-parse --short HEAD`
 
-
-if [ $# != 1 ] ; then
-    echo "Please choose server, client or test to build."
-    exit 1
-fi
-
-if [ "${TARGET}" != "server" ] && [ "${TARGET}" != "client" ] && [ "${TARGET}" != "test" ] && [ "${TARGET}" != "ci" ] ; then
-    echo "Please choose server, client or test to build."
-    exit 1
-fi
+parameters_usage(){
+    echo 'Usage: 1. <target>:           [ server, client, test ]'
+    echo '       2. <prebuild_flag>:    [ y, n ]'
+}
 
 build_server(){
-    ./prebuild.sh server
-    sudo cp ../ffmpeg/dependency/*.so /usr/local/lib/
-    sudo cp ../ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
-    sudo cp ../ffmpeg/dependency/*.h /usr/local/include/
-    sudo cp ../ffmpeg/dependency/WorkerServer /root
+    if [ "${PREBUILD_FLAG}" == "y" ] ; then
+        ./prebuild.sh server
+        sudo cp ../ffmpeg/dependency/*.so /usr/local/lib/
+        sudo cp ../ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
+        sudo cp ../ffmpeg/dependency/*.h /usr/local/include/
+        sudo cp ../ffmpeg/dependency/WorkerServer /root
+    fi
 
     mkdir -p ../build/server
     cd ../build/server
@@ -32,68 +29,38 @@ build_server(){
 }
 
 build_client(){
-    ./prebuild.sh client
+    if [ "${PREBUILD_FLAG}" == "y" ] ; then
+        ./prebuild.sh client
+    fi
+
     mkdir -p ../build/client
     cd ../build/client
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
     cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=client ../../
     make -j $(nproc)
     sudo make install
+    cp ../../player/config.xml ./player
 }
 
 build_ci(){
     source /opt/rh/devtoolset-7/enable
+    PREBUILD_FLAG="n"
 
     # Build server
-    cd ${FFMPEG_PATH}
-    if [ ! -d "./FFmpeg" ];then
-        git clone https://github.com/FFmpeg/FFmpeg.git
-    fi
-    cd ${EX_PATH}
-    cp -r ${FFMPEG_PATH}/FFmpeg ../FFmpeg && cd ../FFmpeg
-    git checkout release/4.1
-    git checkout c2ac3b8e6a040e33d53fa13548848c8ba981a8e4
-    cd ..
-    patch -p1 < ffmpeg/patches/FFmpeg_OMAF.patch
-    mkdir -p build/external/ffmpeg_server
-    cd build/external/ffmpeg_server
-    ../../../FFmpeg/configure --prefix=/usr --libdir=/usr/local/lib --enable-static --enable-shared --enable-gpl --enable-nonfree --disable-optimizations --disable-vaapi
-    make -j $(nproc)
-    sudo make install
-    cd ${EX_PATH}
-
     ./build_Nokia_omaf.sh
-    sudo cp ../ffmpeg/dependency/*.so /usr/local/lib/
-    sudo cp ../ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
-    sudo cp ../ffmpeg/dependency/*.h /usr/local/include/
-    sudo cp ../ffmpeg/dependency/WorkerServer /root
+    ./install_FFmpeg.sh server
+    cd ${EX_PATH}
 
-    mkdir -p ../build/server
-    cd ../build/server
-    export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
-    cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server ../..
-    make -j $(nproc)
-    sudo make install
+    build_server
+
     cd ${EX_PATH} && ./fpm.sh server ${GIT_SHORT_HEAD} && rm -rf ../FFmpeg
 
     # Build client
-    cd ${EX_PATH}
-    cp -r ${FFMPEG_PATH}/FFmpeg ../FFmpeg
-    cd ../FFmpeg
-    patch -p1 < ../ffmpeg/patches/0001-Add-avcodec_receive_frame2-for-vaapi-hardware-decodi.patch
-    mkdir -p ../build/external/ffmpeg_client
-    cd ../build/external/ffmpeg_client
-    ../../../FFmpeg/configure --enable-shared
-    make -j $(nproc)
-    sudo make install
+    ./install_FFmpeg.sh client
     cd ${EX_PATH}
 
-    mkdir -p ../build/client
-    cd ../build/client
-    export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
-    cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=client ../../
-    make -j $(nproc)
-    sudo make install
+    build_client 
+
     cd ${EX_PATH} && ./fpm.sh client ${GIT_SHORT_HEAD} && rm -rf ../FFmpeg
 }
 
@@ -192,13 +159,36 @@ build_test(){
          -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib
 }
 
-if [ ${TARGET} == "server" ] ; then
-    build_server
-elif [ ${TARGET} == "client" ] ; then
-    build_client
-elif [ ${TARGET} == "ci" ] ; then
-    build_ci
-elif [ ${TARGET} == "test" ] ; then
-    build_test
-fi
+if [ $# == 2 ] ; then
 
+    if [ "${TARGET}" == "server" ] ; then
+        if [ "${PREBUILD_FLAG}" != "y" ] && [ "${PREBUILD_FLAG}" != "n" ] ; then
+            parameters_usage
+            exit 1
+        else
+            build_server
+        fi
+    elif [ "${TARGET}" == "client" ] ; then
+        if [ "${PREBUILD_FLAG}" != "y" ] && [ "${PREBUILD_FLAG}" != "n" ] ; then
+            parameters_usage
+            exit 1
+        else
+            build_client
+        fi
+    else
+	parameters_usage
+    fi
+
+elif [ $# == 1 ] ; then
+
+    if [ "${TARGET}" == "ci" ] ; then
+        build_ci
+    elif [ "${TARGET}" == "test" ] ; then
+        build_test
+    else
+        parameters_usage
+    fi
+
+else
+    parameters_usage
+fi

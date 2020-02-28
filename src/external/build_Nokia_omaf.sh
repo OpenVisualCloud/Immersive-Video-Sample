@@ -3,6 +3,7 @@ if [ -L ${PWD}/../OmafDashAccess/mp4lib ] ; then
     exit 0
 fi
 
+mkdir -p ../build/external
 cd ../build/external
 
 if [ ! -d "./omaf" ] ; then

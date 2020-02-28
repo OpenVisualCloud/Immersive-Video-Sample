@@ -100,7 +100,6 @@ download_dependencies()
 {
 	cd $path
 	if [ $1 == "server" ];then
-        mkdir -p ../build/external/FFmpeg
 	    ./build_glog.sh
             ./build_Nokia_omaf.sh
 	    ./install_openHEVC.sh
@@ -112,6 +111,7 @@ download_dependencies()
 	    ./build_glog.sh
 	    ./build_Nokia_omaf.sh
 	    ./prebuild_player.sh
+	    ./install_FFmpeg.sh client
 
 	elif [ $1 == "test" ];then
             mkdir -p ../build/test && cd ../build/test
