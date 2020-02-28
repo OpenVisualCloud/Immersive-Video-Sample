@@ -1,11 +1,41 @@
-language: shell
+language: generic
 os: linux
 dist: bionic
 
+env:
+  global:
+    - DOCKER_CACHE_FILE=/home/travis/docker/cache.tar.gz
+    - DOCKER_REPOSITORY=immersive
+    - DOCKER_TAG=ci
+
+cache:
+  directories:
+    - /home/travis/docker/
+
+before_install:
+  - |
+    if [ -f ${DOCKER_CACHE_FILE} ]; then
+        gunzip -c ${DOCKER_CACHE_FILE} | sudo docker load || true
+    fi
+  - sudo docker images
+
 install:
-    - sudo apt-get -y install docker.io
+  - |
+    if [ -f ${DOCKER_CACHE_FILE} ]; then
+        sudo docker build --cache-from ${DOCKER_REPOSITORY}:${DOCKER_TAG} -t ${DOCKER_REPOSITORY}:${DOCKER_TAG} -f src/external/dockerfile src/external
+    else
+        sudo docker build -t ${DOCKER_REPOSITORY}:${DOCKER_TAG} -f src/external/dockerfile src/external
+    fi
 
 script:
-    - sudo systemctl unmask docker.service && sudo systemctl unmask docker.socket && sudo systemctl start docker.service && sudo docker version
-    - sudo docker build -t immersive:ci -f src/external/dockerfile src/external
-    - sudo docker run -it immersive:ci bash -c 'cd src/external && ./build.sh ci && ./build.sh test && ./run_test.sh'
+  - sudo  docker run -it -v `pwd`:`pwd` -w `pwd` ${DOCKER_REPOSITORY}:${DOCKER_TAG} bash -c 'cd src/external && ./build.sh ci && ./build.sh test && ./run_test.sh'
+  - echo "${TRAVIS_BRANCH}"
+  - echo "${TRAVIS_PULL_REQUEST}"
+  - pwd
+  # Save built images to Travis cache directory only if not a pull request.
+  - |
+    if [ ${TRAVIS_PULL_REQUEST} == "false" ]; then
+        mkdir -p $(dirname ${DOCKER_CACHE_FILE})
+        sudo docker save $(docker history -q ${DOCKER_REPOSITORY}:${DOCKER_TAG} | grep -v '<missing>') ${DOCKER_REPOSITORY}:${DOCKER_TAG} | gzip > ${DOCKER_CACHE_FILE}
+        echo "Saved cache successfuly"
+    fi
