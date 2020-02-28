@@ -1,5 +1,6 @@
 FROM centos:7.6.1810
 
+# Set proxy if necessary
 RUN if [ -n "${http_proxy}" ] ; then \
     echo "proxy=${http_proxy}" >> /etc/yum.conf && \
     echo "http_proxy=${http_proxy}" >> /etc/wgetrc && \
@@ -21,7 +22,11 @@ RUN yum install -y yum install devtoolset-7-gcc* libevent-devel.x86_64 openssl-d
     rm -rf /var/cache/yum/*
 
 Run yum -y install ruby rubygems ruby-devel rpm-build && \
-    gem install -p ${http_proxy} fpm && \
+    if [ -n "${http_proxy}" ]; then \
+    gem install -p ${http_proxy} fpm ; \
+    else \
+    gem install fpm ; \
+    fi && \
     wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-12.noarch.rpm && \
     rpm -Uvh epel-release*rpm && \
     yum install glfw glfw-devel xz-devel lzma -y && \
@@ -34,7 +39,7 @@ RUN wget -O - ${ZILB_REPO} | tar xz && \
     cd zlib-${ZLIB_VER} && \
     source /opt/rh/devtoolset-7/enable && \
     ./configure && \
-    make -j$(nproc) && \
+    make -j $(nproc) && \
     make install && \
     cd ${WORKDIR} && rm -rf ./*
 
@@ -45,7 +50,7 @@ RUN wget -O - ${CMAKE_REPO}/v${CMAKE_VER%.*}/cmake-${CMAKE_VER}.tar.gz | tar xz 
     cd cmake-${CMAKE_VER} && \
     source /opt/rh/devtoolset-7/enable && \
     ./bootstrap --prefix="/usr" --system-curl && \
-    make -j$(nproc) && \
+    make -j $(nproc) && \
     make install && \
     cd ${WORKDIR} && rm -rf ./*
 
@@ -57,7 +62,7 @@ RUN  wget -O - ${YASM_REPO} | tar xz && \
      sed -i "s/) ytasm.*/)/" Makefile.in && \
      source /opt/rh/devtoolset-7/enable && \
      ./configure --prefix="/usr" --libdir=/usr/lib/x86_64-linux-gnu && \
-     make -j$(nproc) && \
+     make -j $(nproc) && \
      make install && \
      cd ${WORKDIR} && rm -rf ./*
 
@@ -68,7 +73,7 @@ RUN wget -O - ${LIBXML2_REPO} | tar xz && \
     cd libxml2-${LIBXML2_VER} && \
     source /opt/rh/devtoolset-7/enable && \
     ././configure --with-python=no && \
-    make -j$(nproc) && \
+    make -j $(nproc) && \
     make install && \
     cd ${WORKDIR} && rm -rf ./*
 
@@ -81,7 +86,7 @@ RUN wget ${CURL_REPO} && \
     cd curl-${CURL_VER} && \
     source /opt/rh/devtoolset-7/enable && \
     ./configure --with-darwinssl && \
-    make -j$(nproc) && \
+    make -j $(nproc) && \
     make install && \
     cd /usr/local/include/libxml2 && \
     mv libxml ../ && \
@@ -93,7 +98,7 @@ RUN wget -O - ${BOOST_REPO} | tar xz && \
     cd boost_1_63_0 && \
     source /opt/rh/devtoolset-7/enable && \
     ./bootstrap.sh --without-libraries=python && \
-    ./b2 -a cxxflags="-D_GLIBCXX_USE_CXX11_ABI=0" -j`nproc` && \
+    ./b2 -a cxxflags="-D_GLIBCXX_USE_CXX11_ABI=0" -j $(nproc) && \
     ./b2 cxxflags="-D_GLIBCXX_USE_CXX11_ABI=0" install && \
     cd ${WORKDIR} && rm -rf ./boost_1_63_0*
 
@@ -110,7 +115,7 @@ RUN wget -O - ${THRIFT_REPO} | tar xz && \
     patch configure ../save/Disable_cxx11_abi_for_thrift.patch && \
     sed -i '21 a #  include <unistd.h>' ./lib/cpp/src/thrift/transport/PlatformSocket.h && \
     ./configure --with-boost=/usr/local --with-boost-libdir=/usr/local/lib --with-libevent=/usr --with-java=0 && \
-    make -j`nproc` && \
+    make -j $(nproc) && \
     make install && \
     cd ${WORKDIR} && rm -rf ./thrift-${THRIFT_VER}*
 
@@ -133,7 +138,7 @@ RUN git clone https://github.com/OpenHEVC/openHEVC.git && \
     git checkout ffmpeg_update && \
     patch -p1 < ../save/ffmpeg_update_add_circle_list_for_to_free_frame.patch && \
     ./configure --libdir=/usr/lib64 --disable-sdl2 && \
-    make -j `nproc` && \
+    make -j $(nproc) && \
     make install && \
     cd ${WORKDIR} && rm -rf ./openHEVC
 
@@ -143,26 +148,23 @@ RUN git clone https://github.com/google/glog.git && \
     source /opt/rh/devtoolset-7/enable && \
     ./autogen.sh && \
     ./configure && \
-    make -j8 && \
+    make -j $(nproc) && \
     make install && \
-    cp ${WORKDIR}/glog/.libs/libglog.so.0 ${WORKDIR}/save && \
     cd ${WORKDIR} && rm -rf *
 
 # Install LIBVA
-RUN curl -O -k -x '' -H 'X-JFrog-Art-Api: AKCp5dL3Kxmp2PhDfYhT2oFk4SDxJji5H8S38oAqmMSkiD46Ho8uCA282aJJhM9ZqCKLb64bw' https://ubit-artifactory-sh.intel.com/artifactory/DCG_Media_Driver-local/PV5-Build-After-Branch-Out/build_prod_mss_kblg/10013/MediaServerStudioEssentialsKBL2019R1HF1_10010.tar.gz && \
-    tar -xzf MediaServerStudioEssentialsKBL2019R1HF1_10010.tar.gz && \
-    cd MediaServerStudioEssentialsKBL2019R1HF1_10010 && \
-    tar -xzf intel-linux-media-kbl-10010.tar.gz && \
-    cd intel-linux-media-kbl-10010 && \
-    sed -i '108s/lib\/x86_64-linux-gnu/usr\/lib64/' ./install_media.sh && \
-    ( echo 'n' ) | ./install_media.sh && \
-    cd opt/intel/mediasdk/opensource/libva/2.3.0-10010 && \
-    tar xjf libva-2.3.0.tar.bz2 && \
-    cd libva-2.3.0 && \
+RUN git clone https://github.com/intel/libva.git && \
+    cd libva && \
+    source /opt/rh/devtoolset-7/enable && \
     ./autogen.sh && \
-    make -j${nproc} && \
+    make -j $(nproc) && \
     make install && \
-    cp ${WORKDIR}/MediaServerStudioEssentialsKBL2019R1HF1_10010/intel-linux-media-kbl-10010/opt/intel/mediasdk/lib64/libva-drm.so.2 ${WORKDIR}/save && \
-    cp ${WORKDIR}/MediaServerStudioEssentialsKBL2019R1HF1_10010/intel-linux-media-kbl-10010/opt/intel/mediasdk/lib64/libva-x11.so.2 ${WORKDIR}/save && \
-    cp ${WORKDIR}/MediaServerStudioEssentialsKBL2019R1HF1_10010/intel-linux-media-kbl-10010/opt/intel/mediasdk/lib64/libva.so.2 ${WORKDIR}/save && \
     cd ${WORKDIR} && rm -rf *
+
+# Unset proxy if necessary
+RUN if [ -n "${http_proxy}" ]; then \
+    sed -i '$d' /etc/yum.conf && \
+    sed -i '1,$d' /etc/wgetrc && \
+    git config --global --unset http.proxy && \
+    git config --global --unset https.proxy ; \
+    fi
