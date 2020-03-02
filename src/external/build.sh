@@ -45,6 +45,10 @@ build_client(){
 build_ci(){
     source /opt/rh/devtoolset-7/enable
     PREBUILD_FLAG="n"
+    sudo cp ../ffmpeg/dependency/*.so /usr/local/lib/
+    sudo cp ../ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
+    sudo cp ../ffmpeg/dependency/*.h /usr/local/include/
+    sudo cp ../ffmpeg/dependency/WorkerServer /root
 
     # Build server
     ./build_Nokia_omaf.sh
