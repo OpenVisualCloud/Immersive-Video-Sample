@@ -15,8 +15,8 @@ if [ ${TARGET} == "server" ] ; then
     cd -
     patch -p1 < ffmpeg/patches/FFmpeg_OMAF.patch
     
-    mkdir -p build/external/ffmpeg
-    cd build/external/ffmpeg
+    mkdir -p build/external/ffmpeg_server
+    cd build/external/ffmpeg_server
     ../../../FFmpeg/configure --prefix=/usr --libdir=/usr/local/lib --enable-static --enable-shared --enable-gpl --enable-nonfree --disable-optimizations --disable-vaapi
     make -j `nproc`
     sudo make install
@@ -24,7 +24,9 @@ if [ ${TARGET} == "server" ] ; then
 elif [ ${TARGET} == "client" ] ; then
 
     patch -p1 < ../ffmpeg/patches/0001-Add-avcodec_receive_frame2-for-vaapi-hardware-decodi.patch
-    ./configure
+    mkdir -p build/external/ffmpeg_client
+    cd build/external/ffmpeg_client
+    ../../../FFmpeg/configure --enable-shared
     make -j `nproc`
     sudo make install
     

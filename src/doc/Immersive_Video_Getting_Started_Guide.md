@@ -38,7 +38,8 @@ sudo yum install devtoolset-6-gcc devtoolset-6-gcc-c++
 # Make sure using gcc >= 6.3.1
 git clone https://github.com/OpenVisualCloud/ImmersiveVideo
 cd ImmersiveVideo/src/external
-./build.sh server
+./build.sh server y # Install dependency before the first build.
+# ./build.sh server n # Build without dependency installation.
 ```
 
 ## Build Client Components
@@ -46,7 +47,8 @@ cd ImmersiveVideo/src/external
 # Make sure using gcc >= 6.3.1
 git clone https://github.com/OpenVisualCloud/ImmersiveVideo
 cd ImmersiveVideo/src/external
-./build.sh client
+./build.sh client y # Install dependency before the first build.
+# ./build.sh client n # Build without dependency installation.
 ```
 
 # Quick Run
@@ -86,9 +88,15 @@ sudo ssh-copy-id root@<server ip>
 
 ## Client Side
 
-- modify the config.xml; please refer to [Reference Player Configuration](Immersive_Video_Delivery_RefPlayer.md) for detail information
+```bash
+- cd ImmersiveVideo/src/build/client/player
+```
+
+- modify the config.xml; please refer to [Reference Player Configuration](Immersive_Video_Delivery_RefPlayer.md) for detailed information
+
 
 ```bash
-- run ./render
+- cd ImmersiveVideo/src/build/client/player
+- ./render
 - type 's' to start playing.
 ```
