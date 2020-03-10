@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 ROOT=`pwd`/webrtc_linux_client_sdk
 BUILD=${ROOT}/Build
@@ -101,6 +101,7 @@ install_owt_client_native () {
     cd owt-client-native
     gen_gclient
 
+    rm -fr src
     git clone https://github.com/open-webrtc-toolkit/owt-client-native.git src
     cd src
     git checkout 2a9d948b59502559843d63775a395affb10cb128
