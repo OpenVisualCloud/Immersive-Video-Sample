@@ -1,4 +1,6 @@
 #!/bin/sh -e
+
+mkdir -p ../build/external
 cd ../build/external
 
 if [ ! -d "./SVT-HEVC" ] ; then
@@ -12,5 +14,3 @@ cd Build/linux/
 ./build.sh
 cd Release
 sudo make install
-cd ../../../../../../external
-
