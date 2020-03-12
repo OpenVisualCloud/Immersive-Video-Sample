@@ -1,7 +1,6 @@
 #!/bin/bash -x
 
 TARGET=$1
-ORIGIN_PATH=${PWD}
 cd ..
 if [ ! -d "./FFmpeg" ];then 
     git clone https://github.com/FFmpeg/FFmpeg.git
@@ -18,7 +17,7 @@ if [ ${TARGET} == "server" ] ; then
     mkdir -p build/external/ffmpeg_server
     cd build/external/ffmpeg_server
     ../../../FFmpeg/configure --prefix=/usr --libdir=/usr/local/lib --enable-static --enable-shared --enable-gpl --enable-nonfree --disable-optimizations --disable-vaapi
-    make -j `nproc`
+    make -j $(nproc)
     sudo make install
 
 elif [ ${TARGET} == "client" ] ; then
@@ -28,7 +27,7 @@ elif [ ${TARGET} == "client" ] ; then
     mkdir -p build/external/ffmpeg_client
     cd build/external/ffmpeg_client
     ../../../FFmpeg/configure --enable-shared
-    make -j `nproc`
+    make -j $(nproc)
     sudo make install
     
 fi

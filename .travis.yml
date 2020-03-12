@@ -13,14 +13,13 @@ cache:
     - /home/travis/docker/
 
 before_install:
-  - |
+  - | # Load docker image.
     if [ -f ${DOCKER_CACHE_FILE} ]; then
         gunzip -c ${DOCKER_CACHE_FILE} | sudo docker load || true
     fi
-  - sudo docker images
 
 install:
-  - |
+  - | # Build docker image from cache or from scratch.
     if [ -f ${DOCKER_CACHE_FILE} ]; then
         sudo docker build --cache-from ${DOCKER_REPOSITORY}:${DOCKER_TAG} -t ${DOCKER_REPOSITORY}:${DOCKER_TAG} -f src/external/dockerfile src/external
     else
@@ -29,11 +28,7 @@ install:
 
 script:
   - sudo  docker run -it -v `pwd`:`pwd` -w `pwd` ${DOCKER_REPOSITORY}:${DOCKER_TAG} bash -c 'cd src/external && ./build.sh ci && ./build.sh test && ./run_test.sh'
-  - echo "${TRAVIS_BRANCH}"
-  - echo "${TRAVIS_PULL_REQUEST}"
-  - pwd
-  # Save built images to Travis cache directory only if not a pull request.
-  - |
+  - | # Save built image to Travis cache directory only if not a pull request.
     if [ ${TRAVIS_PULL_REQUEST} == "false" ]; then
         mkdir -p $(dirname ${DOCKER_CACHE_FILE})
         sudo docker save $(docker history -q ${DOCKER_REPOSITORY}:${DOCKER_TAG} | grep -v '<missing>') ${DOCKER_REPOSITORY}:${DOCKER_TAG} | gzip > ${DOCKER_CACHE_FILE}
