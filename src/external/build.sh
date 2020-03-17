@@ -14,11 +14,11 @@ parameters_usage(){
 build_server(){
     if [ "${PREBUILD_FLAG}" == "y" ] ; then
         ./prebuild.sh server
-        sudo cp ../ffmpeg/dependency/*.so /usr/local/lib/
-        sudo cp ../ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
-        sudo cp ../ffmpeg/dependency/*.h /usr/local/include/
-        sudo cp ../ffmpeg/dependency/WorkerServer /root
     fi
+    sudo cp ../ffmpeg/dependency/*.so /usr/local/lib/
+    sudo cp ../ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
+    sudo cp ../ffmpeg/dependency/*.h /usr/local/include/
+    sudo cp ../ffmpeg/dependency/WorkerServer /root
 
     mkdir -p ../build/server
     cd ../build/server
@@ -45,10 +45,6 @@ build_client(){
 build_ci(){
     source /opt/rh/devtoolset-7/enable
     PREBUILD_FLAG="n"
-    sudo cp ../ffmpeg/dependency/*.so /usr/local/lib/
-    sudo cp ../ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
-    sudo cp ../ffmpeg/dependency/*.h /usr/local/include/
-    sudo cp ../ffmpeg/dependency/WorkerServer /root
 
     # Build server
     ./build_Nokia_omaf.sh

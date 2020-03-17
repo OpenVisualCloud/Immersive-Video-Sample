@@ -1,4 +1,6 @@
 #!/bin/sh -e
+
+mkdir -p ../build/external
 cd ../build/external
 
 if [ ! -d "./openHEVC" ] ; then
@@ -11,4 +13,3 @@ patch -p1 < ../../../ffmpeg/patches/ffmpeg_update_add_circle_list_for_to_free_fr
 ./configure --libdir=/usr/lib64 --disable-sdl2
 make -j `nproc`
 sudo make install
-cd ../../../
