@@ -52,7 +52,7 @@ cd ImmersiveVideo/src/external
 ```
 
 # Quick Run
-To run sample test, Ngnix server should be installed in server side. please refer to [ngnix setup](ngnix_setup.md).
+To run sample test, Ngnix server should be installed in server side. please refer to the example in [ngnix setup](ngnix_setup.md).
 
 ## Server Side
 
