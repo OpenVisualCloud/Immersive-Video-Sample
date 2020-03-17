@@ -163,6 +163,7 @@ typedef struct RECTANGUALAR_REGION_WIZE_PACKING
 //! \brief:  define the overall region wise packing information
 //!          of each video stream, including regions number, detailed
 //!          region wise packing information for each region, and so on
+//! add three variables(high resolution region number, low resolution stream width and height) to support WeRTC sample player
 //!
 typedef struct REGION_WIZE_PACKING
 {
@@ -173,6 +174,9 @@ typedef struct REGION_WIZE_PACKING
     uint16_t packedPicWidth;
     uint16_t packedPicHeight;
     RectangularRegionWisePacking *rectRegionPacking;
+    uint8_t  numHiRegions;
+    uint32_t lowResPicWidth;
+    uint32_t lowResPicHeight;
 }RegionWisePacking;
 
 typedef struct VIEW_PORT
