@@ -184,6 +184,9 @@ struct RegionWisePackingSEI
     uint16_t packedPictureHeight;
     uint16_t regionsSize;
     RegionStruct* pRegions;
+    uint8_t  numHiRegions;
+    uint32_t lowResPicWidth;
+    uint32_t lowResPicHeight;
 };
 
 struct ViewportStruct
