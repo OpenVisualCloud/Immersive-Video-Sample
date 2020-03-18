@@ -1965,6 +1965,10 @@ int32_t hevc_read_RwpkSEI(int8_t *pRWPKBits, uint32_t RWPKBitsSize, RegionWisePa
         }
         memcpy(&pRWPK->rectRegionPacking[i], &region, sizeof(RectangularRegionWisePacking));
     }
+    pRWPK->numHiRegions = gts_bs_read_int(bs, 8);
+    pRWPK->lowResPicWidth = gts_bs_read_int(bs, 32);
+    pRWPK->lowResPicHeight = gts_bs_read_int(bs, 32);
+
 exit:
     if (bs) gts_bs_del(bs);
     if (data_without_emulation_bytes) gts_free(data_without_emulation_bytes);
