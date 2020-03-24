@@ -758,6 +758,7 @@ uint32_t writeCubeProjectionSEINal(GTS_BitStream *bs, CubemapProjectionSEI& proj
          gts_bs_write_int(bs, packing.numHiRegions, 8);
          gts_bs_write_int(bs, packing.lowResPicWidth, 32);
          gts_bs_write_int(bs, packing.lowResPicHeight, 32);
+         gts_bs_write_int(bs, packing.timeStamp, 32);
      }
 
      hevc_bitstream_add_rbsp_trailing_bits(bs);
@@ -859,6 +860,7 @@ uint32_t writeCubeProjectionSEINal(GTS_BitStream *bs, CubemapProjectionSEI& proj
      packing.numHiRegions = pRegion->numHiRegions;
      packing.lowResPicWidth = pRegion->lowResPicWidth;
      packing.lowResPicHeight = pRegion->lowResPicHeight;
+     packing.timeStamp = pRegion->timeStamp;
      RectangularRegionWisePacking* inputRegion = pRegion->rectRegionPacking;
      packing.regionsSize = pRegion->numRegions;
      packing.pRegions = new RegionStruct[pRegion->numRegions];
