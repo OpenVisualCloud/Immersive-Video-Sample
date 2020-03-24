@@ -187,6 +187,7 @@ struct RegionWisePackingSEI
     uint8_t  numHiRegions;
     uint32_t lowResPicWidth;
     uint32_t lowResPicHeight;
+    uint32_t timeStamp;
 };
 
 struct ViewportStruct

@@ -666,6 +666,7 @@ int32_t TstitchStream::doMerge(param_360SCVP* pParamStitchStream)
     m_dstRwpk.numHiRegions = m_tileWidthCountSel[0] * m_tileHeightCountSel[0];
     m_dstRwpk.lowResPicWidth = mergeStream->lowRes.width;
     m_dstRwpk.lowResPicHeight = mergeStream->lowRes.height;
+    m_dstRwpk.timeStamp = pParamStitchStream->timeStamp;
 
     if (!m_dstRwpk.rectRegionPacking)
     {
