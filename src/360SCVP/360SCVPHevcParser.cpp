@@ -1968,6 +1968,7 @@ int32_t hevc_read_RwpkSEI(int8_t *pRWPKBits, uint32_t RWPKBitsSize, RegionWisePa
     pRWPK->numHiRegions = gts_bs_read_int(bs, 8);
     pRWPK->lowResPicWidth = gts_bs_read_int(bs, 32);
     pRWPK->lowResPicHeight = gts_bs_read_int(bs, 32);
+    pRWPK->timeStamp = gts_bs_read_int(bs, 32);
 
 exit:
     if (bs) gts_bs_del(bs);
