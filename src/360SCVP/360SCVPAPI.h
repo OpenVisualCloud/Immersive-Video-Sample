@@ -164,6 +164,7 @@ typedef struct RECTANGUALAR_REGION_WIZE_PACKING
 //!          of each video stream, including regions number, detailed
 //!          region wise packing information for each region, and so on
 //! add three variables(high resolution region number, low resolution stream width and height) to support WeRTC sample player
+//! add timestamp in SEI to track frame
 //!
 typedef struct REGION_WIZE_PACKING
 {
@@ -177,6 +178,7 @@ typedef struct REGION_WIZE_PACKING
     uint8_t  numHiRegions;
     uint32_t lowResPicWidth;
     uint32_t lowResPicHeight;
+    uint32_t timeStamp;
 }RegionWisePacking;
 
 typedef struct VIEW_PORT
@@ -380,6 +382,7 @@ typedef struct PARAM_STREAMSTITCHINFO
 //! \param    inputLowBistreamLen,input,    the length of the low resolution input bistream, just used in the usedType=E_MERGE_AND_VIEWPORT
 //! \param    pOutputSEI,         output,   the buffer for the output SEI bistream, mainly RWPK, just used in the usedType=E_MERGE_AND_VIEWPORT
 //! \param    outputSEILen,       output,   the length of the output SEI bistream, just used in the usedType=E_MERGE_AND_VIEWPORT
+//! \param    timeStamp,          input,    using timestamp to track frame, especially used in the E_MERGE_AND_VIEWPORT use case
 //!
 typedef struct PARAM_360SCVP
 {
@@ -401,6 +404,7 @@ typedef struct PARAM_360SCVP
     unsigned int           inputLowBistreamLen;
     unsigned char         *pOutputSEI;
     unsigned int           outputSEILen;
+    uint32_t               timeStamp;
 }param_360SCVP;
 
 //!
