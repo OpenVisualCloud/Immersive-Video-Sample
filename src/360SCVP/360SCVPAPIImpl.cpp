@@ -112,6 +112,8 @@ int32_t   I360SCVP_unInit(void* p360SCVPHandle)
     if (!pStitch)
         return -1;
     ret = pStitch->uninit();
+    delete pStitch;
+    pStitch = NULL;
     return ret;
 }
 
