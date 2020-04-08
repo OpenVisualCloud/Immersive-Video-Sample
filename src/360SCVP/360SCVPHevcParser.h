@@ -324,45 +324,46 @@ typedef struct RepFormat
 
 
 #define MAX_LHVC_LAYERS    4
-#define MAX_NUM_LAYER_SETS 1024
+#define NUM_LAYER_SETS_MAX 1024
 typedef struct
 {
     int32_t id;
-    /*used to discard repeated SPSs - 0: not parsed, 1 parsed, 2 stored*/
-    uint32_t state;
-    int32_t bit_pos_vps_extensions;
-    uint32_t crc;
     bool vps_extension_found;
-    uint32_t max_layers, max_sub_layers, max_layer_id, num_layer_sets;
     bool temporal_id_nesting;
-    HEVC_ProfileTierLevel ptl;
-
-    HEVC_SublayerPTL sub_ptl[8];
-
-
+    bool base_layer_internal_flag;
+    bool base_layer_available_flag;
+    uint8_t num_profile_tier_level;
+    uint8_t num_output_layer_sets;
+    int32_t bit_pos_vps_extensions;
+    uint32_t max_layers;
+    uint32_t max_sub_layers;
+    uint32_t max_layer_id;
+    uint32_t num_layer_sets;
+    uint32_t vps_max_dec_pic_buffering_minus1;
+    uint32_t vps_max_num_reorder_pics;
+    uint32_t vps_max_latency_increase_plus1;
+    uint32_t num_rep_formats;
+    uint32_t state;
+    uint32_t crc;
+    uint32_t rep_format_idx[16];
     uint32_t scalability_mask[16];
     uint32_t dimension_id[MAX_LHVC_LAYERS][16];
     uint32_t layer_id_in_nuh[MAX_LHVC_LAYERS];
     uint32_t layer_id_in_vps[MAX_LHVC_LAYERS];
-
-    uint8_t num_profile_tier_level, num_output_layer_sets;
+    HEVC_ProfileTierLevel ptl;
+    bool output_layer_flag[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
+    bool alt_output_layer_flag[MAX_LHVC_LAYERS];
+    bool necessary_layers_flag[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
+    uint8_t num_layers_in_id_list[NUM_LAYER_SETS_MAX];
+    uint8_t direct_dependency_flag[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
+    uint8_t profile_tier_level_idx[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
+    uint8_t num_necessary_layers[MAX_LHVC_LAYERS];
+    uint8_t LayerSetLayerIdList[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
+    uint8_t LayerSetLayerIdListMax[MAX_LHVC_LAYERS];
     uint32_t profile_level_tier_idx[MAX_LHVC_LAYERS];
     HEVC_ProfileTierLevel ext_ptl[MAX_LHVC_LAYERS];
-
-    uint32_t num_rep_formats;
+    HEVC_SublayerPTL sub_ptl[8];
     HEVC_RepFormat rep_formats[16];
-    uint32_t rep_format_idx[16];
-    bool base_layer_internal_flag, base_layer_available_flag;
-    uint8_t num_layers_in_id_list[MAX_NUM_LAYER_SETS];
-    uint8_t direct_dependency_flag[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
-    bool output_layer_flag[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
-    uint8_t profile_tier_level_idx[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
-    bool alt_output_layer_flag[MAX_LHVC_LAYERS];
-    uint8_t num_necessary_layers[MAX_LHVC_LAYERS];
-    bool necessary_layers_flag[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
-    uint8_t LayerSetLayerIdList[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
-    uint8_t LayerSetLayerIdListMax[MAX_LHVC_LAYERS]; //the highest value in LayerSetLayerIdList[i]
-    uint32_t vps_max_dec_pic_buffering_minus1, vps_max_num_reorder_pics, vps_max_latency_increase_plus1;
 } HEVC_VPS;
 
 
