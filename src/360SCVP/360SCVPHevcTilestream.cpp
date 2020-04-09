@@ -241,7 +241,7 @@ int32_t parse_tiles_info(hevc_gen_tiledstream* pGenTilesStream)
             pSpecialInfo->ptr = pBufferSliceCur;
             pSpecialInfo->ptr_size = lenSlice;
 
-            int32_t spsCnt;
+            int32_t spsCnt = 0;
             int32_t nalCnt = parse_hevc_specialinfo(pSpecialInfo, pSliceCur->hevcSlice, nalsize, &specialLen, &spsCnt, pGenTilesStream->parseType);
             if (spsCnt > 1)
                 pBufferSliceCur = pBufferSliceCur + (spsCnt - 1) * specialLen;
