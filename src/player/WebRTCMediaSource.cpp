@@ -729,9 +729,8 @@ bool WebRTCFFmpegVideoDecoder::createDecoder(const owt::base::VideoCodec video_c
         return false;
     }
 
-    m_decCtx->active_thread_type = FF_THREAD_FRAME;
     m_decCtx->thread_type = FF_THREAD_FRAME;
-    m_decCtx->thread_count = 16;
+    m_decCtx->thread_count = 3;
     ret = avcodec_open2(m_decCtx, dec , NULL);
     if (ret < 0) {
         LOG(ERROR) << "Could not open ffmpeg decoder context" << std::endl;
