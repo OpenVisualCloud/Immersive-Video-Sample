@@ -19,7 +19,7 @@ ARG AUTOMAKE_VER=1.14
 ARG AUTOMAKE_REPO=https://ftp.gnu.org/pub/gnu/automake/automake-${AUTOMAKE_VER}.tar.xz
 RUN wget -O - ${AUTOMAKE_REPO} | tar xJ && \
     cd automake-${AUTOMAKE_VER} && \
-    ./configure --prefix=/usr --libdir=/usr/local/lib64 --disable-doc && \ 
+    ./configure --prefix=/usr --libdir=/usr/local/lib64 --disable-doc && \
     make -j8 && \
     make install
 
@@ -45,11 +45,12 @@ RUN  wget -O - ${YASM_REPO} | tar xz && \
      make install
 
 # Build open ssl
-ARG OPENSSL_VER="1.0.2t"
-ARG OPENSSL_REPO=http://www.openssl.org/source/openssl-${OPENSSL_VER}.tar.gz
+ARG OPENSSL_MAJOR_VER="1.0.2"
+ARG OPENSSL_MINOR_VER="t"
+ARG OPENSSL_REPO=http://www.openssl.org/source/old/${OPENSSL_MAJOR_VER}/openssl-${OPENSSL_MAJOR_VER}${OPENSSL_MINOR_VER}.tar.gz
 
 RUN wget -O - ${OPENSSL_REPO} | tar xz && \
-    cd openssl-${OPENSSL_VER} && \
+    cd openssl-${OPENSSL_MAJOR_VER}${OPENSSL_MINOR_VER} && \
     ./config no-ssl3 --prefix="/usr/local" -fPIC && \
     make depend && \
     make -s V=0  && \
@@ -287,7 +288,7 @@ COPY --from=build /home/owt-server/dist /home/owt
 COPY --from=build /home/build /
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib64
-RUN yum install epel-release boost-system boost-thread log4cxx glib2 freetype-devel -y && \	
+RUN yum install epel-release boost-system boost-thread log4cxx glib2 freetype-devel -y && \
     yum install rabbitmq-server mongodb mongodb-server -y && \
     yum remove -y -q epel-release && \
     rm -rf /var/cache/yum/*;
