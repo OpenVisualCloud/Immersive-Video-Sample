@@ -40,6 +40,7 @@
 #include <iomanip>
 #include <malloc.h>
 #include <algorithm>
+#include <assert.h>
 
 #include "owt/base/commontypes.h"
 #include "owt/base/globalconfiguration.h"
@@ -162,13 +163,32 @@ static void filter_RWPK_SEI(std::shared_ptr<SimpleBuffer> bitstream_buf, std::sh
     filterNALs(bitstream_buf, sei_types, sei_buf);
 }
 
-WebRTCVideoFrame::WebRTCVideoFrame(AVFrame *frame, uint8_t *extra_data, int32_t extra_data_length)
-    : m_rwpk_sei(NULL)
-    , m_rwpk_sei_length(0)
-    , m_frame(NULL) {
+RegionWisePacking *alloc_RegionWisePacking()
+{
+    RegionWisePacking *rwpk = new RegionWisePacking();
+    assert(rwpk != NULL);
+    memset(rwpk, 0, sizeof(RegionWisePacking));
 
-    if (frame == NULL || extra_data == NULL || extra_data <= 0)
-        return;
+    rwpk->rectRegionPacking = new RectangularRegionWisePacking[DEFAULT_REGION_NUM];
+    assert(rwpk->rectRegionPacking != NULL);
+
+    return rwpk;
+}
+
+void free_RegionWisePacking(RegionWisePacking *rwpk)
+{
+    assert(rwpk != NULL);
+    assert(rwpk->rectRegionPacking != NULL);
+
+    delete[] rwpk->rectRegionPacking;
+    delete rwpk;
+}
+
+WebRTCVideoFrame::WebRTCVideoFrame(AVFrame *frame, RegionWisePacking *rwpk)
+    : m_frame(NULL)
+    , m_rwpk(NULL) {
+    assert(frame != NULL);
+    assert(rwpk != NULL);
 
     m_frame = av_frame_clone(frame);
 
@@ -185,9 +205,7 @@ WebRTCVideoFrame::WebRTCVideoFrame(AVFrame *frame, uint8_t *extra_data, int32_t 
     m_buffer[1] = m_frame->data[1];
     m_buffer[2] = m_frame->data[2];
 
-    m_rwpk_sei = (uint8_t *)malloc(extra_data_length);
-    memcpy(m_rwpk_sei, extra_data, extra_data_length);
-    m_rwpk_sei_length = extra_data_length;
+    m_rwpk = rwpk;
 
     return;
 }
@@ -196,8 +214,7 @@ WebRTCVideoFrame::~WebRTCVideoFrame() {
     if (m_frame)
         av_frame_free(&m_frame);
 
-    if (m_rwpk_sei)
-        free(m_rwpk_sei);
+    free_RegionWisePacking(m_rwpk);
 }
 
 WebRTCMediaSource *WebRTCMediaSource::s_CurObj;
@@ -311,8 +328,8 @@ void WebRTCMediaSource::join_on_failure_callback(std::unique_ptr<owt::base::Exce
     exit(1);
 }
 
-int32_t WebRTCMediaSource::RenderFrame(AVFrame *avFrame, uint8_t *extra_data, int32_t extra_data_length) {
-    std::shared_ptr<WebRTCVideoFrame> frame = make_shared<WebRTCVideoFrame>(avFrame, extra_data, extra_data_length);
+int32_t WebRTCMediaSource::RenderFrame(AVFrame *avFrame, RegionWisePacking *rwpk) {
+    std::shared_ptr<WebRTCVideoFrame> frame = make_shared<WebRTCVideoFrame>(avFrame, rwpk);
     if (!frame->isValid())
         return -1;
 
@@ -341,25 +358,12 @@ WebRTCMediaSource::WebRTCMediaSource()
 {
     LOG(INFO) << __FUNCTION__ << std::endl;
 
-    m_parserRWPKParam.usedType = E_PARSER_FOR_CLIENT;
-    m_parserRWPKHandle = I360SCVP_Init(&m_parserRWPKParam);
-
-    m_RWPK.rectRegionPacking = NULL;
     s_CurObj = this;
 }
 
 WebRTCMediaSource::~WebRTCMediaSource()
 {
     LOG(INFO) << __FUNCTION__ << std::endl;
-
-    if(m_RWPK.rectRegionPacking)
-    {
-        delete[] m_RWPK.rectRegionPacking;
-        m_RWPK.rectRegionPacking = NULL;
-    }
-    if(m_parserRWPKHandle)
-        I360SCVP_unInit(m_parserRWPKHandle);
-    m_parserRWPKHandle = NULL;
 }
 
 RenderStatus WebRTCMediaSource::GetFrame(uint8_t **buffer, struct RegionInfo *regionInfo)
@@ -377,16 +381,13 @@ RenderStatus WebRTCMediaSource::GetFrame(uint8_t **buffer, struct RegionInfo *re
         m_free_queue.push_front(frame);
     }
 
-    //dosomething
+    //set video buffer
     buffer[0] = frame->m_buffer[0];
     buffer[1] = frame->m_buffer[1];
     buffer[2] = frame->m_buffer[2];
 
-    //1. get rwpk info
-    I360SCVP_ParseRWPK(m_parserRWPKHandle, &m_RWPK, frame->m_rwpk_sei, frame->m_rwpk_sei_length);
-    regionInfo->regionWisePacking = &m_RWPK;
-
-    //2. set regionInfo
+    //set regionInfo
+    regionInfo->regionWisePacking = frame->m_rwpk;
     SetRegionInfo(regionInfo);
 
     return RENDER_STATUS_OK;
@@ -502,11 +503,6 @@ RenderStatus WebRTCMediaSource::Initialize(struct RenderConfig renderConfig)
     m_mediaSourceInfo.sourceWH->height[0] = fullheight;
     m_mediaSourceInfo.sourceWH->height[1] = this->lowheight;
     isAllValid = true;
-    m_RWPK.rectRegionPacking = new RectangularRegionWisePacking[DEFAULT_REGION_NUM];
-    if(!m_RWPK.rectRegionPacking){
-        LOG(ERROR) << "Can not alloc mem!" << std::endl;
-        return RENDER_ERROR;
-    }
 
     LOG(INFO) << "Initialized!" << std::endl;
     return RENDER_STATUS_OK;
@@ -619,6 +615,9 @@ WebRTCFFmpegVideoDecoder::WebRTCFFmpegVideoDecoder(WebRTCVideoRenderer *renderer
         << ((avcodec_version() >> 8) & 0xff) << "."
         << ((avcodec_version()) & 0xff)
         << std::endl;
+
+    m_parserRWPKParam.usedType = E_PARSER_FOR_CLIENT;
+    m_parserRWPKHandle = I360SCVP_Init(&m_parserRWPKParam);
 }
 
 owt::base::VideoDecoderInterface* WebRTCFFmpegVideoDecoder::Copy()
@@ -630,6 +629,10 @@ owt::base::VideoDecoderInterface* WebRTCFFmpegVideoDecoder::Copy()
 WebRTCFFmpegVideoDecoder::~WebRTCFFmpegVideoDecoder()
 {
     LOG(INFO) << __FUNCTION__ << std::endl;
+
+    if(m_parserRWPKHandle)
+        I360SCVP_unInit(m_parserRWPKHandle);
+    m_parserRWPKHandle = NULL;
 }
 
 bool WebRTCFFmpegVideoDecoder::InitDecodeContext(owt::base::VideoCodec video_codec)
@@ -689,6 +692,11 @@ bool WebRTCFFmpegVideoDecoder::OnEncodedFrame(unique_ptr<owt::base::VideoEncoded
         return true;
     }
 
+    RegionWisePacking *rwpk = alloc_RegionWisePacking();
+    assert(rwpk != NULL);
+
+    I360SCVP_ParseRWPK(m_parserRWPKHandle, rwpk, sei_buf->data(), sei_buf->size());
+
     av_init_packet(&m_packet);
     m_packet.data = const_cast<uint8_t *>(m_bitstream_buf->data());
     m_packet.size = m_bitstream_buf->size();
@@ -698,10 +706,12 @@ bool WebRTCFFmpegVideoDecoder::OnEncodedFrame(unique_ptr<owt::base::VideoEncoded
     ret = avcodec_send_packet(m_decCtx, &m_packet);
     if (ret < 0) {
         LOG(ERROR) << "Error while send packet" << std::endl;
+
+        free_RegionWisePacking(rwpk);
         return false;
     }
 
-    m_sei_queue.push_back(sei_buf);
+    m_rwpk_queue.push_back(rwpk);
 
     while(true) {
         ret = avcodec_receive_frame(m_decCtx, m_decFrame);
@@ -712,17 +722,16 @@ bool WebRTCFFmpegVideoDecoder::OnEncodedFrame(unique_ptr<owt::base::VideoEncoded
             return false;
         }
 
-        std::shared_ptr<SimpleBuffer> sei_buf_out;
-        if (m_sei_queue.empty()) {
-            LOG(ERROR) << "Empty rwpk sei queue!" << std::endl;
+        if (m_rwpk_queue.empty()) {
+            LOG(ERROR) << "Empty rwpk queue!" << std::endl;
             continue;
         }
 
-        sei_buf = m_sei_queue.front();
-        m_sei_queue.pop_front();
+        rwpk = m_rwpk_queue.front();
+        m_rwpk_queue.pop_front();
 
         if (m_renderer)
-            m_renderer->RenderFrame(m_decFrame, sei_buf->data(), sei_buf->size());
+            m_renderer->RenderFrame(m_decFrame, rwpk);
     }
 
     return true;
