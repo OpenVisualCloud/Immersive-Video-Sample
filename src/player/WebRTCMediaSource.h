@@ -58,15 +58,14 @@ VCD_NS_BEGIN
 class WebRTCVideoFrame
 {
 public:
-    WebRTCVideoFrame(AVFrame *frame, uint8_t *extra_data, int32_t extra_data_length);
+    WebRTCVideoFrame(AVFrame *frame, RegionWisePacking *rwpk);
 
     virtual ~WebRTCVideoFrame();
 
     bool isValid() {return m_frame != NULL;};
 
     uint8_t *m_buffer[3];
-    uint8_t *m_rwpk_sei;
-    size_t m_rwpk_sei_length;
+    RegionWisePacking *m_rwpk;
 
 private:
     AVFrame *m_frame;
@@ -77,7 +76,7 @@ class WebRTCVideoRenderer
 public:
     virtual ~WebRTCVideoRenderer() {}
 
-    virtual int32_t RenderFrame(AVFrame *avFrame, uint8_t *extra_data, int32_t extra_data_length) = 0;
+    virtual int32_t RenderFrame(AVFrame *avFrame, RegionWisePacking *rwpk) = 0;
 };
 
 class WebRTCMediaSource : public MediaSource, public WebRTCVideoRenderer
@@ -173,7 +172,7 @@ public:
 
     int getParam(int *flag, int* projType);
 
-    int32_t RenderFrame(AVFrame *frame, uint8_t *extra_data, int32_t extra_data_length) override;
+    int32_t RenderFrame(AVFrame *frame, RegionWisePacking *rwpk) override;
 
 private:
     std::string m_serverAddress;
@@ -188,10 +187,6 @@ private:
 
     std::deque<std::shared_ptr<WebRTCVideoFrame>> m_webrtc_render_frame_queue;
     std::deque<std::shared_ptr<WebRTCVideoFrame>> m_free_queue;
-
-    param_360SCVP m_parserRWPKParam;
-    void*         m_parserRWPKHandle;
-    RegionWisePacking  m_RWPK;
 
     bool m_ready;
     static uint32_t fullwidth,fullheight;
@@ -238,9 +233,13 @@ private:
     bool m_needKeyFrame;
 
     std::shared_ptr<SimpleBuffer> m_bitstream_buf;
-    std::deque<std::shared_ptr<SimpleBuffer>> m_sei_queue;
+    std::deque<RegionWisePacking *> m_rwpk_queue;
 
     WebRTCVideoRenderer *m_renderer;
+
+    // 360scvp
+    param_360SCVP m_parserRWPKParam;
+    void*         m_parserRWPKHandle;
 
     char m_errbuff[500];
     char *ff_err2str(int errRet);
