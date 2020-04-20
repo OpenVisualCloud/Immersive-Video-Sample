@@ -99,6 +99,11 @@ void WriteMoof(ostream& outStr,
     moof.GetMovieFragmentHeaderAtom().SetSequenceNumber(oneSeg.sequenceId.GetIndex());
     for (auto trackId : trackIndex)
     {
+        if (moofInfos.find(trackId) == moofInfos.end())
+        {
+            LOG(ERROR) << "Failed to find moof info for designated track !" << std::endl;
+            throw exception();
+        }
         const auto& segmentMoofInfo = moofInfos.find(trackId)->second;
         const auto& trackMeta       = segmentMoofInfo.trackInfo.trackMeta;
         auto traf                   = MakeUnique<TrackFragmentAtom, TrackFragmentAtom>(sampleDefaults);
@@ -119,6 +124,12 @@ void WriteMoof(ostream& outStr,
         trun->SetDataOffset(segmentMoofInfo.moofToDataOffset);
 
         FrameTime time = segmentMoofInfo.trackInfo.tBegin;
+
+        if (framesMap.find(trackId) == framesMap.end())
+        {
+            LOG(ERROR) << "Can't find frame with designated trackId !" << std::endl;
+            throw exception();
+        }
 
         for (const auto& frame : framesMap.find(trackId)->second)
         {
@@ -311,6 +322,11 @@ void WriteSampleData(ostream& outStr, const Segment& oneSeg)
         Mp4MoofInfo moofInfo  = {oneSeg.tracks.find(*iter2)->second.trackInfo,
                                     int32_t(outStr.tellp() - streamoff(moofOffset))};
         segMoofInfos[*iter2] = move(moofInfo);
+        if (frameMap.find(*iter2) == frameMap.end())
+        {
+            LOG(ERROR) << "Failed to find frame with designated track Id !" << std::endl;
+            throw exception();
+        }
         for (const auto& frame : frameMap.find(*iter2)->second)
         {
             const auto& frameData = *frame;
@@ -1205,6 +1221,11 @@ list<SegmentList> SegmentWriter::ExtractSubSegments()
                     subSegGroup.push_back({});
                     iter3 = subSegGroup.end();
                     --iter3;
+                }
+                if (iter3 == subSegGroup.end())
+                {
+                    LOG(ERROR) << "Failed to get sub segment group !" << std::endl;
+                    throw exception();
                 }
                 TrackOfSegment& trackOfSegment = (*iter3).tracks[trackId];
                 trackOfSegment.frames                     = move(*iter5);

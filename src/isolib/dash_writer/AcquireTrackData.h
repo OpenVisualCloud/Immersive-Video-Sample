@@ -86,8 +86,8 @@ public:
 
     AcquireTrackData(const AcquireTrackData& other) = delete;
     AcquireTrackData(AcquireTrackData&& other);
-    void operator=(const AcquireTrackData& other) = delete;
-    void operator=(AcquireTrackData&& other) = delete;
+    AcquireTrackData& operator=(const AcquireTrackData& other) = delete;
+    AcquireTrackData& operator=(AcquireTrackData&& other) = delete;
 
     virtual ~AcquireTrackData();
 

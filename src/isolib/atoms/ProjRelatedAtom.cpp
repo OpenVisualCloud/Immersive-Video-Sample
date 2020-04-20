@@ -76,6 +76,8 @@ CoverageInformationAtom::CoverageInformationAtom()
     , m_defaultViewIdc(ViewMode::INVALID)
     , m_sphereRegions()
 {
+    m_coverageShapeMode = CoverageShapeMode::TWO_AZIMUTH_ELEVATION_CIRCLES;
+
 }
 
 CoverageInformationAtom::CoverageInformationAtom(const CoverageInformationAtom& Atom)
@@ -281,8 +283,8 @@ void RegionWisePackingAtom::ToStream(Stream& str)
                 str.Write8(packing->bottomGbHeight);
 
                 std::uint16_t packed16Bits = packing->gbNotUsedForPredFlag ? (0x1 << 15) : 0x0;
-                packed16Bits |= ((packing->gbType0 & 0b111) << 12) | ((packing->gbType1 & 0b111) << 9) |
-                                ((packing->gbType2 & 0b111) << 6) | ((packing->gbType3 & 0b111) << 3);
+                packed16Bits |= (((std::uint16_t)(packing->gbType0) & 0b111) << 12) | (((std::uint16_t)(packing->gbType1) & 0b111) << 9) |
+                                (((std::uint16_t)(packing->gbType2) & 0b111) << 6)  | (((std::uint16_t)(packing->gbType3) & 0b111) << 3);
                 str.Write16(packed16Bits);
             }
         }

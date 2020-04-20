@@ -75,7 +75,7 @@ public:
     //!
     //! \return   void
     //!
-    void ToStream(Stream& str) const;
+    void ToStream(Stream& str);
 
     //!
     //! \brief    Parse atom information from stream

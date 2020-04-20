@@ -156,11 +156,21 @@ void DataReferenceAtom::FromStream(Stream& str)
         if (AtomType == "urn ")
         {
             dataEntryAtom = MakeShared<DataEntryUrnAtom>();
+            if (!dataEntryAtom)
+            {
+                LOG(ERROR) << "NULL pointer !" << std::endl;
+                throw Exception();
+            }
             dataEntryAtom->FromStream(subStream);
         }
         else if (AtomType == "url ")
         {
             dataEntryAtom = MakeShared<DataEntryUrlAtom>();
+            if (!dataEntryAtom)
+            {
+                LOG(ERROR) << "NULL pointer !" << std::endl;
+                throw Exception();
+            }
             dataEntryAtom->FromStream(subStream);
         }
         else

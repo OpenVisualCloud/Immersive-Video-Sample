@@ -63,7 +63,7 @@ void MediaDataAtom::Write(std::ofstream& output) const
     }
 }
 
-void MediaDataAtom::ToStream(Stream& str) const
+void MediaDataAtom::ToStream(Stream& str)
 {
     const std::vector<uint8_t>& data = m_headerData.GetStorage();
     str.WriteArray(data, data.size());

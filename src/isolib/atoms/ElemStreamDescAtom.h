@@ -52,6 +52,8 @@ public:
     ElementaryStreamDescriptorAtom();
     ElementaryStreamDescriptorAtom(const ElementaryStreamDescriptorAtom& Atom);
 
+    ElementaryStreamDescriptorAtom& operator=(const ElementaryStreamDescriptorAtom&) = default;
+
     //!
     //! \brief Destructor
     //!

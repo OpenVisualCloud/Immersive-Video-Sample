@@ -53,6 +53,8 @@ public:
     AudioSampleEntryAtom(FourCCInt codingname);
     AudioSampleEntryAtom(const AudioSampleEntryAtom& Atom);
 
+    AudioSampleEntryAtom& operator=(const AudioSampleEntryAtom&) = default;
+
     //!
     //! \brief Destructor
     //!

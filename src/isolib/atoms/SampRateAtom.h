@@ -51,6 +51,8 @@ public:
     SamplingRateAtom();
     SamplingRateAtom(const SamplingRateAtom& Atom);
 
+    SamplingRateAtom& operator=(const SamplingRateAtom&) = default;
+
     //!
     //! \brief Destructor
     //!

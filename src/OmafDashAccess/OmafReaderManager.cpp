@@ -919,6 +919,12 @@ void OmafReaderManager::setNextSampleId(int trackID, uint32_t id, bool& segmentC
         }
     }
 
+    if (!trackInfo)
+    {
+        LOG(ERROR) << "Failed to get track information !" << std::endl;
+        return;
+    }
+
     for (size_t index = 0; index < trackInfo->sampleProperties.size; index++)
     {
         if (trackInfo->sampleProperties[index].sampleId == id)

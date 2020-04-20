@@ -57,6 +57,7 @@ public:
     MP4VisualSampleEntryAtom();
     MP4VisualSampleEntryAtom(const MP4VisualSampleEntryAtom& Atom);
 
+    MP4VisualSampleEntryAtom& operator=(const MP4VisualSampleEntryAtom&) = default;
     //!
     //! \brief Destructor
     //!

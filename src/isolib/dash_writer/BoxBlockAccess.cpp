@@ -73,10 +73,15 @@ map<FourCCInt, BoxInfo> GenBoxInfos()
 {
     const vector<BoxInfo> boxInfos{{FourCCInt("ftyp"), false}};
     map<FourCCInt, BoxInfo> map;
-    for (auto& boxInfo : boxInfos)
+    vector<BoxInfo>::const_iterator iter;
+    for (iter = boxInfos.begin(); iter != boxInfos.end(); iter++)
     {
-        map.insert(make_pair(boxInfo.fourcc, boxInfo));
+        map.insert(make_pair((*iter).fourcc, (*iter)));
     }
+    //for (auto& boxInfo : boxInfos)
+    //{
+    //    map.insert(make_pair(boxInfo.fourcc, boxInfo));
+    //}
     return map;
 }
 
@@ -171,10 +176,11 @@ BoxBlock BoxBlockAccess::GetBoxBlock(FourCCInt aFourcc) const
             LOG(ERROR) << "Undefined Box !" << endl;
             throw exception();
         }
-        else
-        {
-            return *at->second.begin();
-        }
+        //else
+        //{
+            //return *at->second.begin();
+        //}
+        return *at->second.begin();
     }
 }
 

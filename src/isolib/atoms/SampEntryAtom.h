@@ -53,6 +53,8 @@ public:
     SampleEntryAtom(FourCCInt codingname);
     SampleEntryAtom(const SampleEntryAtom& Atom);
 
+    SampleEntryAtom& operator=(const SampleEntryAtom&) = default;
+
     //!
     //! \brief Destructor
     //!

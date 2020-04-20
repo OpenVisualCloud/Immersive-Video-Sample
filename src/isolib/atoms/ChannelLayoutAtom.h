@@ -55,6 +55,8 @@ public:
     ChannelLayoutAtom();
     ChannelLayoutAtom(const ChannelLayoutAtom& Atom);
 
+    ChannelLayoutAtom& operator=(const ChannelLayoutAtom&) = default;
+
     //!
     //! \brief Destructor
     //!

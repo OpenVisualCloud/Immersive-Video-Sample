@@ -306,6 +306,7 @@ struct TrackDescription
                      unique_ptr<MediaHeaderBoxWrapper>&&,
                      unique_ptr<HandlerBoxWrapper>&&,
                      unique_ptr<TrackHeaderBoxWrapper>&&);
+    TrackDescription& operator=(const TrackDescription&) = default;
     ~TrackDescription();
 
     TrackMeta trackMeta;

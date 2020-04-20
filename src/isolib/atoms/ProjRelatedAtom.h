@@ -116,6 +116,8 @@ public:
     CoverageInformationAtom();
     CoverageInformationAtom(const CoverageInformationAtom&);
 
+    CoverageInformationAtom& operator=(const CoverageInformationAtom&) = default;
+
     //!
     //! \brief Destructor
     //!
@@ -241,6 +243,8 @@ public:
     RegionWisePackingAtom();
     RegionWisePackingAtom(const RegionWisePackingAtom&);
 
+    RegionWisePackingAtom& operator=(const RegionWisePackingAtom&) = default;
+
     //!
     //! \brief Destructor
     //!
@@ -359,8 +363,13 @@ public:
 
     struct Region   //!< region information
     {
-        Region(){};
+        Region()
+        {
+            guardBandFlag = 0;
+            packingType = PackingType::RECTANGULAR;
+        };
         Region(const Region&);
+        Region& operator=(const Region&) = default;
         bool guardBandFlag;
         PackingType packingType;
         UniquePtr<RectangularRegionWisePacking> rectangularPacking;
@@ -428,6 +437,7 @@ public:
     RotationAtom();
     RotationAtom(const RotationAtom&);
 
+    RotationAtom& operator=(const RotationAtom&) = default;
     //!
     //! \brief Destructor
     //!

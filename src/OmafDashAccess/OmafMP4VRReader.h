@@ -41,6 +41,8 @@ VCD_OMAF_BEGIN
 class OmafMP4VRReader : public OmafReader{
 public:
     OmafMP4VRReader();
+    OmafMP4VRReader(OmafMP4VRReader&& other);
+    OmafMP4VRReader& operator=(OmafMP4VRReader&& other);
     virtual ~OmafMP4VRReader();
 
 public:

@@ -162,9 +162,19 @@ public:
 
     int32_t GetExtractorSize()
     {
-        pthread_mutex_lock(&mCurrentMutex);
+        int32_t ret = pthread_mutex_lock(&mCurrentMutex);
+        if (ret)
+        {
+            LOG(ERROR) << "Failed to lock mutex in getting Extractor size !" << std::endl;
+            return 0;
+        }
         int32_t size = mCurrentExtractors.size();
-        pthread_mutex_unlock(&mCurrentMutex);
+        ret = pthread_mutex_unlock(&mCurrentMutex);
+        if (ret)
+        {
+            LOG(ERROR) << "Failed to unlock mutex in getting Extractor size !" << std::endl;
+            return 0;
+        }
         return size;
     };
 

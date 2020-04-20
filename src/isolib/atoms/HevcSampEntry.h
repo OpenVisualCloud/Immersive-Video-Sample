@@ -53,6 +53,8 @@ public:
     HevcSampleEntry();
     HevcSampleEntry(const HevcSampleEntry& other);
 
+    HevcSampleEntry& operator=(const HevcSampleEntry&) = default;
+
     //!
     //! \brief Destructor
     //!
