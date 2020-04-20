@@ -42,7 +42,7 @@ class OmafMP4VRReader : public OmafReader{
 public:
     OmafMP4VRReader();
     OmafMP4VRReader(OmafMP4VRReader&& other);
-    OmafMP4VRReader& operator=(OmafMP4VRReader&& other);
+    OmafMP4VRReader& operator=(const OmafMP4VRReader&) = default;
     virtual ~OmafMP4VRReader();
 
 public:

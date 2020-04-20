@@ -71,18 +71,11 @@ Stream DataBlock::GetStream(istream& aStream) const
 
 map<FourCCInt, BoxInfo> GenBoxInfos()
 {
-    const vector<BoxInfo> boxInfos{{FourCCInt("ftyp"), false}};
-    map<FourCCInt, BoxInfo> map;
-    vector<BoxInfo>::const_iterator iter;
-    for (iter = boxInfos.begin(); iter != boxInfos.end(); iter++)
-    {
-        map.insert(make_pair((*iter).fourcc, (*iter)));
-    }
-    //for (auto& boxInfo : boxInfos)
-    //{
-    //    map.insert(make_pair(boxInfo.fourcc, boxInfo));
-    //}
-    return map;
+    //const vector<BoxInfo> boxInfos{{FourCCInt("ftyp"), false}};
+    const BoxInfo boxInfo = {FourCCInt("ftyp"), false};
+    map<FourCCInt, BoxInfo> constructedMap;
+    constructedMap.insert(make_pair(FourCCInt("ftyp"), boxInfo));
+    return constructedMap;
 }
 
 const map<FourCCInt, BoxInfo> boxInfos = GenBoxInfos();
@@ -171,17 +164,8 @@ BoxBlock BoxBlockAccess::GetBoxBlock(FourCCInt aFourcc) const
             LOG(ERROR) << "Couldn't find Box !" << endl;
             throw exception();
         }
-        else if (els.size() > 1)
-        {
-            LOG(ERROR) << "Undefined Box !" << endl;
-            throw exception();
-        }
-        //else
-        //{
-            //return *at->second.begin();
-        //}
-        return *at->second.begin();
     }
+    return *at->second.begin();
 }
 
 std::vector<uint8_t> BoxBlockAccess::GetData(const DataBlock& aBlock) const

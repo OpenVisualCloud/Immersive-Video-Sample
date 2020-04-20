@@ -132,12 +132,6 @@ OmafMP4VRReader::OmafMP4VRReader(OmafMP4VRReader&& other)
     mMP4ReaderImpl = std::move(other.mMP4ReaderImpl);
 }
 
-OmafMP4VRReader& OmafMP4VRReader::operator=(OmafMP4VRReader&& other)
-{
-    mMP4ReaderImpl = std::move(other.mMP4ReaderImpl);
-    return *this;
-}
-
 OmafMP4VRReader::~OmafMP4VRReader()
 {
     if(mMP4ReaderImpl)
