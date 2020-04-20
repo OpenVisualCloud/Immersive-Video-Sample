@@ -35,6 +35,8 @@
 #include "VideoStream.h"
 #include "OneVideoRegionWisePackingGenerator.h"
 
+#include "../trace/Bandwidth_tp.h"
+
 VCD_NS_BEGIN
 
 OneVideoExtractorTrackGenerator::~OneVideoExtractorTrackGenerator()
@@ -329,6 +331,11 @@ int32_t OneVideoExtractorTrackGenerator::Initialize()
 
     m_finalViewportWidth = paramViewportOutput.dstWidthAlignTile;
     m_finalViewportHeight = paramViewportOutput.dstHeightAlignTile;
+
+    //trace
+    tracepoint(bandwidth_tp_provider, tiles_selection_redundancy,
+                paramViewportOutput.dstWidthNet, paramViewportOutput.dstHeightNet,
+                paramViewportOutput.dstWidthAlignTile, paramViewportOutput.dstHeightAlignTile);
 
     if (!m_tilesNumInViewport || m_tilesNumInViewport > 1024)
         return OMAF_ERROR_SCVP_INCORRECT_RESULT;

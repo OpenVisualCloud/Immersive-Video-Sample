@@ -429,6 +429,14 @@ public:
         TrackSegmentCtx *trackSegCtx,
         std::map<VCD::MP4::TrackId, TrackSegmentCtx*> trackSegCtxs);
 
+    //!
+    //! \brief  Get initial segment size
+    //!
+    //! \return uint64_t
+    //!         initial segment size
+    //!
+    uint64_t GetInitSegmentSize() { return m_initSegSize; };
+
 private:
     VCD::MP4::TrackDescriptionsMap                m_trackDescriptions;           //!< track description information
 
@@ -438,6 +446,7 @@ private:
 
     std::string                                   m_omafVideoTrackBrand = "";    //!< video track OMAF brand information
     std::string                                   m_omafAudioTrackBrand = "";    //!< audio track OMAF brand information
+    uint64_t                                      m_initSegSize = 0;
 
 private:
 
@@ -603,7 +612,21 @@ public:
     //!
     int32_t SegmentData(TrackSegmentCtx *trackSegCtx);
 
+    //!
+    //! \brief  Get totally generated segments number
+    //!
+    //! \return uint64_t
+    //!         totally generated segments number
+    //!
     uint64_t GetSegmentsNum() { return m_segNum; };
+
+    //!
+    //! \brief  Get current segment size
+    //!
+    //! \return uint64_t
+    //!         current segment size
+    //!
+    uint64_t GetSegmentSize() { return m_segSize; };
 
 protected:
 
@@ -703,6 +726,7 @@ private:
     uint64_t                                                          m_segNum = 0;            //!< current segments number
     FILE                                                              *m_file = NULL;          //!< file pointer to write segments
     char                                                              m_segName[1024];           //!< segment file name string
+    uint64_t                                                          m_segSize = 0;
 };
 
 VCD_NS_END;

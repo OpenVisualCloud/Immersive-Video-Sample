@@ -93,6 +93,7 @@ install_dependencies() {
         ./install_SVT.sh
         ./install_thrift.sh
         ./install_FFmpeg.sh server
+        ./install_lttng.sh
     elif [ $1 == "client" ] ; then
         ./build_glog.sh
         ./prebuild_player.sh
