@@ -63,7 +63,7 @@ TRACEPOINT_EVENT(
     ),
 
     TP_FIELDS(
-        ctf_string(resolution_field, resolution)
+        ctf_string(frame_resolution_field, resolution)
         ctf_string(tile_split_field, tile_split)
         ctf_integer(int, frame_index_field, frame_index)
         ctf_integer(int, frame_size_field, frame_size)
@@ -76,6 +76,7 @@ TRACEPOINT_EVENT(
     TP_ARGS(
         int,         track_index,
         const char*, track_type,
+        char*,       tile_resolution,
         int,         segment_index,
         int,         segment_size
     ),
@@ -83,6 +84,7 @@ TRACEPOINT_EVENT(
     TP_FIELDS(
         ctf_integer(int, track_index_field, track_index)
         ctf_string(track_type_field, track_type)
+        ctf_string(tile_resolution_field, tile_resolution)
         ctf_integer(int, segment_index_field, segment_index)
         ctf_integer(int, segment_size_field, segment_size)
     )
@@ -95,16 +97,20 @@ TRACEPOINT_EVENT(
         const char*, dash_mode,
         int,         segment_duration,
         float,       frame_rate,
-        int,         total_frames_num,
-        int,         total_segments_num
+        uint32_t,    video_streams_num,
+        uint64_t*,   video_streams_bitrate,
+        int,         total_frames_per_video,
+        int,         total_segments_per_track
     ),
 
     TP_FIELDS(
         ctf_string(dash_mode_field, dash_mode)
         ctf_integer(int, segment_duration_field, segment_duration)
         ctf_float(float, frame_rate_field, frame_rate)
-        ctf_integer(int, total_frames_field, total_frames_num)
-        ctf_integer(int, total_segments_field, total_segments_num)
+        ctf_integer(uint32_t, video_nums_field, video_streams_num)
+        ctf_sequence(uint64_t, video_bitrate_field, video_streams_bitrate, uint32_t, video_streams_num)
+        ctf_integer(int, frames_per_video_field, total_frames_per_video)
+        ctf_integer(int, segments_per_track_field, total_segments_per_track)
     )
 )
 

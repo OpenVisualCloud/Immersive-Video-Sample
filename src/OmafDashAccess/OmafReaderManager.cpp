@@ -130,8 +130,11 @@ int OmafReaderManager::AddInitSegment( OmafSegment* pInitSeg, uint32_t& nInitSeg
     //trace
     const char *trackType = "init_track";
     uint64_t segSize = pInitSeg->GetSegSize();
-    tracepoint(bandwidth_tp_provider, packed_segment_size, 0, trackType, 0, segSize);
+    char tileRes[128] = { 0 };
+    snprintf(tileRes, 128, "%s", "none");
+    tracepoint(bandwidth_tp_provider, packed_segment_size, 0, trackType, tileRes, 0, segSize);
 #endif
+
     nInitSegID = mCurTrkCnt++;
     int32_t result = mReader->parseInitializationSegment(pInitSeg, nInitSegID);
     if (result != 0)
@@ -242,13 +245,17 @@ int OmafReaderManager::AddSegment( OmafSegment* pSeg, uint32_t nInitSegID, uint3
     {
         const char *trackType = "extractor_track";
         uint64_t segSize = pSeg->GetSegSize();
-        tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, nSegID, segSize);
+        char tileRes[128] = { 0 };
+        snprintf(tileRes, 128, "%s", "none");
+        tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, segSize);
     }
     else
     {
         const char *trackType = "tile_track";
         uint64_t segSize = pSeg->GetSegSize();
-        tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, nSegID, segSize);
+        char tileRes[128] = { 0 };
+        snprintf(tileRes, 128, "%s", "none");
+        tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, segSize);
     }
 #endif
     auto it = m_readSegMap.begin();
