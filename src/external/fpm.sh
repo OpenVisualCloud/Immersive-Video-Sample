@@ -84,7 +84,7 @@ if [ ${ITEM} = "client" ] ; then
     cp external/ffmpeg_client_so/libavdevice.so.58                    ${LIBDIR}
     cp external/ffmpeg_client_so/libswscale.so.5                      ${LIBDIR}
     cp external/ffmpeg_client_so/libswresample.so.3                   ${LIBDIR}
-    cp external/ffmpeg_client_so/libpostproc.so.55                    ${LIBDIR}
+    cp external/ffmpeg_server_so/libpostproc.so.55                    ${LIBDIR}
     cp /usr/local/lib/libva-drm.so.2                                  ${LIBDIR}
     cp /usr/local/lib/libva-x11.so.2                                  ${LIBDIR}
     cp /usr/local/lib/libva.so.2                                      ${LIBDIR}
