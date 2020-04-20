@@ -162,11 +162,11 @@ void OmafReaderManager::UpdateSourceTrackID()
             auto as_it = pMediaAS.begin();
             for( ; as_it != pMediaAS.end(); as_it++){
                 OmafAdaptationSet* pAS = (OmafAdaptationSet*) as_it->second;
-                if(pAS->GetInitSegment()->GetSegID() == trackInfo->initSegId){
+                if(pAS->GetInitSegment()->GetSegID() == trackInfo->initSegmentId){
                     uint16_t actualTrackId = GetTrackId(trackInfo->trackId);
                     pAS->SetTrackNumber(actualTrackId);
-                    mMapInitTrk[trackInfo->initSegId] = actualTrackId;//trackInfo->trackId;
-                    mMapSegCnt[trackInfo->initSegId] = 0;
+                    mMapInitTrk[trackInfo->initSegmentId] = actualTrackId;//trackInfo->trackId;
+                    mMapSegCnt[trackInfo->initSegmentId] = 0;
                     mMapSegStatus[actualTrackId].sampleIndex.mCurrentAddSegment = 0;
                     mMapSegStatus[actualTrackId].sampleIndex.mCurrentReadSegment = 1;
                     mMapSegStatus[actualTrackId].sampleIndex.mGlobalSampleIndex = 0;
@@ -185,12 +185,12 @@ void OmafReaderManager::UpdateSourceTrackID()
             std::map<int, OmafExtractor*> pExtratorAS = pStream->GetExtractors();
             for(auto extractor_it = pExtratorAS.begin(); extractor_it != pExtratorAS.end(); extractor_it++){
                 OmafExtractor* pExAS = (OmafExtractor*) extractor_it->second;
-                if(pExAS->GetInitSegment()->GetSegID() == trackInfo->initSegId){
+                if(pExAS->GetInitSegment()->GetSegID() == trackInfo->initSegmentId){
                     uint16_t actualTrackId = GetTrackId(trackInfo->trackId);
                     pExAS->SetTrackNumber(actualTrackId);
-                    mMapInitTrk[trackInfo->initSegId] = actualTrackId;//trackInfo->trackId;
+                    mMapInitTrk[trackInfo->initSegmentId] = actualTrackId;//trackInfo->trackId;
 
-                    mMapSegCnt[trackInfo->initSegId] = 0;
+                    mMapSegCnt[trackInfo->initSegmentId] = 0;
                     mMapSegStatus[actualTrackId].sampleIndex.mCurrentAddSegment = 0;
                     mMapSegStatus[actualTrackId].sampleIndex.mCurrentReadSegment = 1;
                     mMapSegStatus[actualTrackId].sampleIndex.mGlobalSampleIndex = 0;
@@ -437,7 +437,6 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
         memcpy(newData + mVPSLen, mSPS, mSPSLen);
         memcpy(newData + mVPSLen + mSPSLen, mPPS, mPPSLen);
         memcpy(newData + mVPSLen + mSPSLen + mPPSLen, origData, pPacket->Size());
-
         RegionWisePacking *newRwpk = new RegionWisePacking;
         RegionWisePacking *pRwpk = pPacket->GetRwpk();
         if(!newRwpk || !pRwpk)
@@ -500,17 +499,20 @@ int OmafReaderManager::ReadNextSegment(
 
     std::map<uint32_t, uint32_t> segSizeMap;
 
-    for (auto& itSample : trackInfo->samplePropertyArrays)
+    //for (auto& itSample : trackInfo->sampleProperties)
+    for (uint32_t sampIndex = 0; sampIndex < trackInfo->sampleProperties.size; sampIndex++)
     {
-        segSizeMap[itSample->segmentId] = 0;
+        segSizeMap[trackInfo->sampleProperties[sampIndex].segmentId] = 0;
     }
     int32_t beginSampleId = -1;
-    for (auto& itSample : trackInfo->samplePropertyArrays)
+
+    //for (auto& itSample : trackInfo->sampleProperties)
+    for (uint32_t sampIndex = 0; sampIndex < trackInfo->sampleProperties.size; sampIndex++)
     {
-        segSizeMap[itSample->segmentId]++;
-        if (beginSampleId == -1 && itSample->segmentId == sampleIdx->mCurrentReadSegment)
+        segSizeMap[trackInfo->sampleProperties[sampIndex].segmentId]++;
+        if (beginSampleId == -1 && trackInfo->sampleProperties[sampIndex].segmentId == sampleIdx->mCurrentReadSegment)
         {
-            beginSampleId = itSample->id;
+            beginSampleId = trackInfo->sampleProperties[sampIndex].sampleId;
         }
     }
 
@@ -576,31 +578,31 @@ int OmafReaderManager::ReadNextSegment(
 
             for (auto const& parameter : parameterSets)
             {
-                if (parameter.decodeSpecInfoType == VCD::OMAF::HEVC_VPS)
+                if (parameter.codecSpecInfoType == VCD::MP4::HEVC_VPS)
                 {
-                    mVPSLen = parameter.decodeSpecInfoData.size();
-                    for (uint32_t i = 0; i < parameter.decodeSpecInfoData.size(); i++)
+                    mVPSLen = parameter.codecSpecInfoBits.size;
+                    for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
                     {
-                        mVPS[i] = parameter.decodeSpecInfoData[i];
+                        mVPS[i] = parameter.codecSpecInfoBits[i];
                     }
                 }
 
 
-                if (parameter.decodeSpecInfoType == VCD::OMAF::HEVC_SPS)
+                if (parameter.codecSpecInfoType == VCD::MP4::HEVC_SPS)
                 {
-                    mSPSLen = parameter.decodeSpecInfoData.size();
-                    for (uint32_t i = 0; i < parameter.decodeSpecInfoData.size(); i++)
+                    mSPSLen = parameter.codecSpecInfoBits.size;
+                    for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
                     {
-                        mSPS[i] = parameter.decodeSpecInfoData[i];
+                        mSPS[i] = parameter.codecSpecInfoBits[i];
                     }
                 }
 
-                if (parameter.decodeSpecInfoType == VCD::OMAF::HEVC_PPS)
+                if (parameter.codecSpecInfoType == VCD::MP4::HEVC_PPS)
                 {
-                    mPPSLen = parameter.decodeSpecInfoData.size();
-                    for (uint32_t i = 0; i < parameter.decodeSpecInfoData.size(); i++)
+                    mPPSLen = parameter.codecSpecInfoBits.size;
+                    for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
                     {
-                        mPPS[i] = parameter.decodeSpecInfoData[i];
+                        mPPS[i] = parameter.codecSpecInfoBits[i];
                     }
                 }
             }
@@ -637,7 +639,7 @@ int OmafReaderManager::ReadNextSegment(
         mPacketLock.unlock();
     }
 
-    LOG(INFO) << "Segment " << trackInfo->samplePropertyArrays[beginSampleId - 1]->segmentId << " for track " << trackID << " has been read !" << endl;
+    LOG(INFO) << "Segment " << trackInfo->sampleProperties[beginSampleId - 1].segmentId << " for track " << trackID << " has been read !" << endl;
     sampleIdx->mCurrentReadSegment++;
     sampleIdx->mGlobalSampleIndex += beginSampleId;
     LOG(INFO) << "Total read " << sampleIdx->mGlobalSampleIndex << " samples for track " << trackID <<" now !" << endl;
@@ -660,18 +662,12 @@ int OmafReaderManager::ReadNextSegment(
             }
         }
 
-        if(refTrackInfo) removeSegment(refTrackInfo->initSegId, sampleIdx->mCurrentReadSegment - 1);
+        if(refTrackInfo) removeSegment(refTrackInfo->initSegmentId, sampleIdx->mCurrentReadSegment - 1);
 
     }
 
     for(auto &it : readTrackInfos)
     {
-        for(uint32_t i = 0; i < it->samplePropertyArrays.size(); i++)
-        {
-            SampleInformation* sampInfo = it->samplePropertyArrays[i];
-            SAFE_DELETE(sampInfo);
-        }
-        it->samplePropertyArrays.clear();
         SAFE_DELETE(it);
     }
     readTrackInfos.clear();
@@ -923,15 +919,15 @@ void OmafReaderManager::setNextSampleId(int trackID, uint32_t id, bool& segmentC
         }
     }
 
-    for (size_t index = 0; index < trackInfo->samplePropertyArrays.size(); index++)
+    for (size_t index = 0; index < trackInfo->sampleProperties.size; index++)
     {
-        if (trackInfo->samplePropertyArrays[index]->id == id)
+        if (trackInfo->sampleProperties[index].sampleId == id)
         {
             mMapSegStatus[trackID].sampleIndex.mGlobalSampleIndex = static_cast<uint32_t>(index);
             mMapSegStatus[trackID].sampleIndex.mSegmentSampleIndex = static_cast<uint32_t>(indexInSegment);
             break;
         }
-        if (trackInfo->samplePropertyArrays[index]->segmentId == mMapSegStatus[trackID].sampleIndex.mCurrentReadSegment)
+        if (trackInfo->sampleProperties[index].segmentId == mMapSegStatus[trackID].sampleIndex.mCurrentReadSegment)
         {
             indexInSegment++;
         }

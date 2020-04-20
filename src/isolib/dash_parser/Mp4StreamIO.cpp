@@ -1,0 +1,160 @@
+/*
+ * Copyright (c) 2019, Intel Corporation
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+//!
+//! \file:   Mp4StreamIO.cpp
+//! \brief:  StreamIO class implementation
+//!
+
+#include "Mp4StreamIO.h"
+#include <iostream>
+#include "../atoms/FormAllocator.h"
+
+using namespace std;
+
+VCD_MP4_BEGIN
+
+StreamIOInternal::StreamIOInternal(StreamIO* stream)
+    : m_stream(stream)
+    , m_error(false)
+    , m_eof(false)
+{
+    m_error = !stream || !stream->SeekAbsoluteOffset(0);
+}
+
+StreamIOInternal::~StreamIOInternal()
+{
+    if(m_stream)
+        delete m_stream;
+    // nothing
+}
+
+void StreamIOInternal::ReadStream(char* buffer, StreamIO::offset_t size_)
+{
+    //TRACE(logInfo() << "Reading " << size_ << " at " << m_stream->TellOffset() << " ");
+    LOG(INFO) << "Reading " << size_ << " bytes at position " << m_stream->TellOffset() << endl;
+    StreamIO::offset_t got = m_stream->ReadStream(buffer, size_);
+    if (got < size_)
+    {
+        //TRACE(logInfo() << "FAIL!" << endl);
+        LOG(INFO) << "Read Failed!" << endl;
+        m_eof   = true;
+        m_error = true;
+    }
+    else
+    {
+        //TRACE(logInfo() << "OK!" << endl);
+        LOG(INFO) << "Read Success!" << endl;
+    }
+}
+
+int StreamIOInternal::GetOneByte()
+{
+    char ch;
+    //TRACE(logInfo() << "Getting at " << m_stream->TellOffset() << " ");
+    LOG(INFO) << "Getting One Character at position " << m_stream->TellOffset() << endl;
+    StreamIO::offset_t got = m_stream->ReadStream(&ch, sizeof(ch));
+    if (got)
+    {
+        //TRACE(logInfo() << "OK!" << endl);
+        LOG(INFO) << "Get One Character Success!" << endl;
+        return static_cast<unsigned char>(ch);
+    }
+    else
+    {
+        //TRACE(logInfo() << "FAIL!" << endl);
+        LOG(INFO) << "Get One Character Failed!" << endl;
+        m_eof = true;
+        return 0;
+    }
+}
+
+bool StreamIOInternal::PeekEOS()
+{
+    char buffer;
+    //TRACE(logInfo() << "Peek EOF at " << m_stream->TellOffset() << " ");
+    LOG(INFO) << "Peek EOS at position " << m_stream->TellOffset() << endl;
+    auto was = m_stream->TellOffset();
+    if (m_stream->ReadStream(&buffer, sizeof(buffer)) == 0)
+    {
+        //TRACE(logInfo() << "EOF!" << endl);
+        LOG(INFO) << "Get EOS !" << endl;
+        return true;
+    }
+    else
+    {
+        //TRACE(logInfo() << "No EOF!" << endl);
+        LOG(INFO) << "Not EOS !" << endl;
+        m_stream->SeekAbsoluteOffset(was);
+        return false;
+    }
+}
+
+void StreamIOInternal::SeekOffset(StreamIO::offset_t offset)
+{
+    //TRACE(logInfo() << "Seeking to " << offset << " at " << m_stream->TellOffset() << " ");
+    LOG(INFO) << "Seeking to " << offset << " bytes at position " << m_stream->TellOffset() << endl;
+    if (!m_stream->SeekAbsoluteOffset(offset))
+    {
+        //TRACE(logInfo() << "FAIL!" << endl);
+        LOG(INFO) << "Seek Failed !" << endl;
+        m_eof   = true;
+        m_error = true;
+    }
+    else
+    {
+        //TRACE(logInfo() << "OK!" << endl);
+        LOG(INFO) << "Seek Sucess !" << endl;
+    }
+}
+
+StreamIO::offset_t StreamIOInternal::TellOffset()
+{
+    return m_stream->TellOffset();
+}
+
+StreamIO::offset_t StreamIOInternal::GetStreamSize()
+{
+    return m_stream->GetStreamSize();
+}
+
+void StreamIOInternal::ClearStatus()
+{
+    m_eof   = false;
+    m_error = false;
+}
+
+bool StreamIOInternal::IsStreamGood() const
+{
+    return !m_error;
+}
+
+bool StreamIOInternal::IsReachEOS() const
+{
+    return m_eof;
+}
+
+VCD_MP4_END

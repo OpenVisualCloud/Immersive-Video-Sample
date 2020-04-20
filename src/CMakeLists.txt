@@ -25,6 +25,7 @@ IF(${TARGET} STREQUAL "server")
   IF(${DE_FLAG} STREQUAL "true")
     ADD_SUBDIRECTORY(distributed_encoder)
   ENDIF()
+  ADD_SUBDIRECTORY(isolib)
   ADD_SUBDIRECTORY(VROmafPacking)
   ADD_CUSTOM_TARGET(ffmpeg ALL
       COMMAND echo "Target ffmpeg"
@@ -43,6 +44,7 @@ ELSEIF(${TARGET} STREQUAL "client")
   SET(UTILS_DIR "utils")
   SET(PLAYER_DIR "player")
   ADD_SUBDIRECTORY(360SCVP)
+  ADD_SUBDIRECTORY(isolib)
   ADD_SUBDIRECTORY(OmafDashAccess)
 
   ADD_CUSTOM_TARGET(player ALL

@@ -2,10 +2,10 @@
 
 cp ../../google_test/libgtest.a .
 
-g++ -I../ -I../../google_test/ -std=c++11 -g -c testHevcNaluParser.cpp -D_GLIBCXX_USE_CXX11_ABI=0
-g++ -I../ -I../../google_test/ -std=c++11 -g -c testVideoStream.cpp -D_GLIBCXX_USE_CXX11_ABI=0
-g++ -I../ -I../../google_test/ -std=c++11 -g -c testExtractorTrack.cpp -D_GLIBCXX_USE_CXX11_ABI=0
-g++ -I../ -I../../google_test/ -std=c++11 -g -c testDefaultSegmentation.cpp -D_GLIBCXX_USE_CXX11_ABI=0
+g++ -I../ -I../../isolib -I../../google_test/ -std=c++11 -g -c testHevcNaluParser.cpp -D_GLIBCXX_USE_CXX11_ABI=0
+g++ -I../ -I../../isolib -I../../google_test/ -std=c++11 -g -c testVideoStream.cpp -D_GLIBCXX_USE_CXX11_ABI=0
+g++ -I../ -I../../isolib -I../../google_test/ -std=c++11 -g -c testExtractorTrack.cpp -D_GLIBCXX_USE_CXX11_ABI=0
+g++ -I../ -I../../isolib -I../../google_test/ -std=c++11 -g -c testDefaultSegmentation.cpp -D_GLIBCXX_USE_CXX11_ABI=0
 
 LD_FLAGS="-L/usr/local/lib -lVROmafPacking -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib"
 

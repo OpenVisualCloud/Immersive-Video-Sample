@@ -37,6 +37,8 @@
 
 #include "DashSegmenter.h"
 
+using namespace std;
+
 VCD_NS_BEGIN
 
 
@@ -51,111 +53,119 @@ DashInitSegmenter::DashInitSegmenter(InitSegConfig *aConfig)
 
 DashInitSegmenter::~DashInitSegmenter() = default;
 
-StreamSegmenter::Segmenter::InitSegment DashInitSegmenter::MakeInitSegment(bool flagFrag)
+VCD::MP4::InitialSegment DashInitSegmenter::MakeInitSegment(bool isFraged)
 {
-    StreamSegmenter::Segmenter::MovieDescription des_of_mov;
-    des_of_mov.creationTime = 0;
-    des_of_mov.modificationTime = 0;
-    des_of_mov.matrix = { 1, 0, 0, 0,
-                                0, 1, 0, 0,
-                                0, 0, 1, 0,
-                                0, 0, 0, 1 };
-    StreamSegmenter::BrandSpec typeOfFile = { std::string("isom"), 512, { "isom", "iso6" } }; //Should be iso9 ?
+    VCD::MP4::MovieDescription moovDes;
+    moovDes.creationTime = 0;
+    moovDes.modificationTime = 0;
+    vector<int32_t> tempVec(16, 0);
+    moovDes.matrix = tempVec;
+    moovDes.matrix[0]  = 1;
+    moovDes.matrix[5]  = 1;
+    moovDes.matrix[10] = 1;
+    moovDes.matrix[15] = 1;
+
+    VCD::MP4::BrandSpec brandSpec = { string("isom"), 512, { "isom", "iso6" } }; //Should be iso9 ?
     if (!m_omafVideoTrackBrand.empty())
     {
-        typeOfFile.compatibleBrands.push_back(m_omafVideoTrackBrand);
+        brandSpec.compatibleBrands.push_back(m_omafVideoTrackBrand);
     }
     if (!m_omafAudioTrackBrand.empty())
     {
-        typeOfFile.compatibleBrands.push_back(m_omafAudioTrackBrand);
+        brandSpec.compatibleBrands.push_back(m_omafAudioTrackBrand);
     }
-    des_of_mov.fileType = typeOfFile;
-    auto segInit = StreamSegmenter::Segmenter::makeInitSegment(m_trackDescriptions, des_of_mov, flagFrag);
-    return segInit;
+    moovDes.fileType = brandSpec;
+    VCD::MP4::InitialSegment initialSeg = VCD::MP4::GenInitSegment(m_trackDescriptions, moovDes, isFraged);
+    return initialSeg;
 }
 
-void DashInitSegmenter::AddH264VideoTrack(TrackId indexTracked, CodedMeta& metaData)
+void DashInitSegmenter::AddH264VideoTrack(VCD::MP4::TrackId trackId, CodedMeta& inMetaData)
 {
-    std::vector<std::uint8_t> sps = metaData.decoderConfig.at(ConfigType::SPS);
-    std::vector<std::uint8_t> pps = metaData.decoderConfig.at(ConfigType::PPS);
-    StreamSegmenter::TrackMeta trackMeta = m_config.tracks.at(indexTracked).meta;
-    StreamSegmenter::Segmenter::MediaDescription mediaDescription;
-    //memset(&(mediaDescription), 0, sizeof(StreamSegmenter::Segmenter::MediaDescription));
-    mediaDescription.creationTime = 0;
-    mediaDescription.modificationTime = 0;
+    vector<uint8_t> avcSPS = inMetaData.decoderConfig.at(ConfigType::SPS);
+    vector<uint8_t> avcPPS = inMetaData.decoderConfig.at(ConfigType::PPS);
+    VCD::MP4::TrackMeta trackMeta = m_config.tracks.at(trackId).meta;
+    VCD::MP4::FileInfo trackFileInfo;
+    trackFileInfo.creationTime = 0;
+    trackFileInfo.modificationTime = 0;
+    VCD::MP4::AvcVideoSampleEntry avcEntry;
 
-    StreamSegmenter::Segmenter::AvcVideoSampleEntry avcVidEnter;
+    avcEntry.width = inMetaData.width;
+    avcEntry.height = inMetaData.height;
 
-    avcVidEnter.width = metaData.width;
-    avcVidEnter.height = metaData.height;
+    avcEntry.sps = avcSPS;
+    avcEntry.pps = avcPPS;
 
-    avcVidEnter.sps = sps;
-    avcVidEnter.pps = pps;
-
-    m_trackDescriptions.insert(std::make_pair(indexTracked, StreamSegmenter::Segmenter::TrackDescription(trackMeta, mediaDescription, avcVidEnter)));
+    m_trackDescriptions.insert(make_pair(trackId, VCD::MP4::TrackDescription(trackMeta, trackFileInfo, avcEntry)));
 }
 
-void DashInitSegmenter::AddH265VideoTrack(TrackId indexTracked, CodedMeta& metaData)
+void DashInitSegmenter::AddH265VideoTrack(VCD::MP4::TrackId trackId, CodedMeta& inMetaData)
 {
-    std::vector<std::uint8_t> vector_sps = metaData.decoderConfig.at(ConfigType::SPS);
-    std::vector<std::uint8_t> vector_pps = metaData.decoderConfig.at(ConfigType::PPS);
-    std::vector<std::uint8_t> vector_vps = metaData.decoderConfig.at(ConfigType::VPS);
-    StreamSegmenter::TrackMeta metaDataTracked = m_config.tracks.at(indexTracked).meta;
-    StreamSegmenter::Segmenter::MediaDescription mediaDescription;
-    mediaDescription.creationTime = 0;
-    mediaDescription.modificationTime = 0;
-    StreamSegmenter::Segmenter::HevcVideoSampleEntry hevcVidEnter{};
+    vector<uint8_t> hevcSPS = inMetaData.decoderConfig.at(ConfigType::SPS);
+    vector<uint8_t> hevcPPS = inMetaData.decoderConfig.at(ConfigType::PPS);
+    vector<uint8_t> hevcVPS = inMetaData.decoderConfig.at(ConfigType::VPS);
+    VCD::MP4::TrackMeta trackMeta = m_config.tracks.at(trackId).meta;
+    VCD::MP4::FileInfo trackFileInfo;
+    trackFileInfo.creationTime = 0;
+    trackFileInfo.modificationTime = 0;
+    VCD::MP4::HevcVideoSampleEntry hevcEntry{};
 
-    hevcVidEnter.width = metaData.width;
-    hevcVidEnter.height = metaData.height;
-    hevcVidEnter.framerate = metaData.duration.per1().asDouble();
+    hevcEntry.width = inMetaData.width;
+    hevcEntry.height = inMetaData.height;
+    hevcEntry.frameRate = inMetaData.duration.per1().asDouble();
 
-    hevcVidEnter.sps = vector_sps;
-    hevcVidEnter.pps = vector_pps;
-    hevcVidEnter.vps = vector_vps;
+    hevcEntry.sps = hevcSPS;
+    hevcEntry.pps = hevcPPS;
+    hevcEntry.vps = hevcVPS;
 
-    FillOmafStructures(indexTracked, metaData, hevcVidEnter, metaDataTracked);
+    FillOmafStructures(trackId, inMetaData, hevcEntry, trackMeta);
 
-    m_trackDescriptions.insert(std::make_pair(indexTracked, StreamSegmenter::Segmenter::TrackDescription(metaDataTracked, mediaDescription, hevcVidEnter)));
+    m_trackDescriptions.insert(make_pair(trackId, VCD::MP4::TrackDescription(trackMeta, trackFileInfo, hevcEntry)));
 }
 
-void DashInitSegmenter::AddH265ExtractorTrack(TrackId indexTracked, CodedMeta& metaData)
+void DashInitSegmenter::AddH265ExtractorTrack(VCD::MP4::TrackId trackId, CodedMeta& inMetaData)
 {
-    std::vector<std::uint8_t> vector_sps = metaData.decoderConfig.at(ConfigType::SPS);
-    std::vector<std::uint8_t> vector_pps = metaData.decoderConfig.at(ConfigType::PPS);
-    std::vector<std::uint8_t> vector_vps = metaData.decoderConfig.at(ConfigType::VPS);
-    StreamSegmenter::TrackMeta trackMeta = m_config.tracks.at(indexTracked).meta;
-    StreamSegmenter::Segmenter::MediaDescription infoMedia;
-    infoMedia.creationTime = 0;
-    infoMedia.modificationTime = 0;
-    StreamSegmenter::Segmenter::HevcVideoSampleEntry hevcVidEnter{};
+    vector<uint8_t> hevcSPS = inMetaData.decoderConfig.at(ConfigType::SPS);
+    vector<uint8_t> hevcPPS = inMetaData.decoderConfig.at(ConfigType::PPS);
+    vector<uint8_t> hevcVPS = inMetaData.decoderConfig.at(ConfigType::VPS);
+    VCD::MP4::TrackMeta trackMeta = m_config.tracks.at(trackId).meta;
+    VCD::MP4::FileInfo trackFileInfo;
+    trackFileInfo.creationTime = 0;
+    trackFileInfo.modificationTime = 0;
+    VCD::MP4::HevcVideoSampleEntry hevcEntry{};
 
-    hevcVidEnter.width = metaData.width;
-    hevcVidEnter.height = metaData.height;
-    hevcVidEnter.framerate = metaData.duration.per1().asDouble();
-    hevcVidEnter.sampleEntryType = "hvc2";
+    hevcEntry.width = inMetaData.width;
+    hevcEntry.height = inMetaData.height;
+    hevcEntry.frameRate = inMetaData.duration.per1().asDouble();
+    hevcEntry.sampleEntryType = "hvc2";
 
-    hevcVidEnter.sps = vector_sps;
-    hevcVidEnter.pps = vector_pps;
-    hevcVidEnter.vps = vector_vps;
+    hevcEntry.sps = hevcSPS;
+    hevcEntry.pps = hevcPPS;
+    hevcEntry.vps = hevcVPS;
 
-    FillOmafStructures(indexTracked, metaData, hevcVidEnter, trackMeta);
+    FillOmafStructures(trackId, inMetaData, hevcEntry, trackMeta);
 
-    auto& track = m_config.tracks.at(indexTracked);
-    auto trackDescription = StreamSegmenter::Segmenter::TrackDescription(trackMeta, infoMedia, hevcVidEnter);
-    trackDescription.trackReferences = track.trackReferences;
-    m_trackDescriptions.insert(std::make_pair(indexTracked, std::move(trackDescription)));
+    using TrackId = VCD::MP4::TrackId;
+    map<TrackId, TrackConfig>::const_iterator iter = m_config.tracks.find(trackId);
+    if (iter == m_config.tracks.end())
+    {
+        LOG(ERROR) << "Can't find specified track index !" << endl;
+        return;
+    }
+    TrackConfig trackCfg = iter->second;
+    VCD::MP4::TrackDescription trackDes = VCD::MP4::TrackDescription(trackMeta, trackFileInfo, hevcEntry);
+    trackDes.trackReferences = trackCfg.trackReferences;
+    m_trackDescriptions.insert(make_pair(trackId, move(trackDes)));
 }
 
 int32_t DashInitSegmenter::GenerateInitSegment(
     TrackSegmentCtx *trackSegCtx,
-    std::map<TrackId, TrackSegmentCtx*> tileTrackSegCtxs)
+    map<VCD::MP4::TrackId, TrackSegmentCtx*> tileTrackSegCtxs)
 {
-    TrackId trackId = trackSegCtx->trackIdx;
+    VCD::MP4::TrackId trackId = trackSegCtx->trackIdx;
 
     bool hadFirstFramesRemaining = m_firstFrameRemaining.size();
     bool endOfStream = trackSegCtx->isEOS;
-    Optional<CodedMeta> codedMeta;
+    VCD::MP4::DataItem<CodedMeta> codedMeta;
     if (!(trackSegCtx->isExtractorTrack))
     {
         if (!endOfStream && m_firstFrameRemaining.count(trackId))
@@ -187,7 +197,7 @@ int32_t DashInitSegmenter::GenerateInitSegment(
     {
         for (auto& normalTrack : m_config.tracks)
         {
-            std::map<TrackId, TrackSegmentCtx*>::iterator itTrack;
+            map<VCD::MP4::TrackId, TrackSegmentCtx*>::iterator itTrack;
             itTrack = tileTrackSegCtxs.find(normalTrack.first);
             if (itTrack != tileTrackSegCtxs.end())
             {
@@ -222,7 +232,7 @@ int32_t DashInitSegmenter::GenerateInitSegment(
             }
             else
             {
-                if (trackId.get() != normalTrack.first.get())
+                if (trackId.GetIndex() != normalTrack.first.GetIndex())
                     return OMAF_ERROR_INVALID_TRACKSEG_CTX;
 
                 if (!endOfStream && m_firstFrameRemaining.count(trackId))
@@ -262,9 +272,9 @@ int32_t DashInitSegmenter::GenerateInitSegment(
         {
             if (!endOfStream)
             {
-                std::ostringstream frameStream;
-                StreamSegmenter::Segmenter::writeInitSegment(frameStream, MakeInitSegment(m_config.fragmented));
-                std::string frameString(frameStream.str());
+                ostringstream frameStream;
+                VCD::MP4::WriteInitSegment(frameStream, MakeInitSegment(m_config.fragmented));
+                string frameString(frameStream.str());
 
                 FILE *fp = fopen(trackSegCtx->dashInitCfg.initSegName, "wb+");
                 if (!fp)
@@ -280,108 +290,106 @@ int32_t DashInitSegmenter::GenerateInitSegment(
 }
 
 void DashInitSegmenter::FillOmafStructures(
-    TrackId indexTracked,
-    CodedMeta& metaData,
-    StreamSegmenter::Segmenter::HevcVideoSampleEntry& hevcVidEnter,
-    StreamSegmenter::TrackMeta& metaTracked)
+    VCD::MP4::TrackId inTrackId,
+    CodedMeta& inMetaData,
+    VCD::MP4::HevcVideoSampleEntry& hevcEntry,
+    VCD::MP4::TrackMeta& inMeta)
 {
     if (m_config.mode == OperatingMode::OMAF)
     {
-        if (metaData.projection == OmafProjectionType::EQUIRECTANGULAR)
+        if (inMetaData.projection == OmafProjectionType::EQUIRECTANGULAR)
         {
-            hevcVidEnter.projectionFormat = StreamSegmenter::Segmenter::ProjectionFormat::Equirectangular;
+            hevcEntry.projFmt = VCD::MP4::OmniProjFormat::OMNI_ERP;
         }
         else
         {
-            hevcVidEnter.projectionFormat = StreamSegmenter::Segmenter::ProjectionFormat::Cubemap;
+            hevcEntry.projFmt = VCD::MP4::OmniProjFormat::OMNI_Cubemap;
         }
         if (m_config.packedSubPictures)
         {
             // viewport dependent
-            StreamSegmenter::BrandSpec infoBrandSpec = { std::string("hevd"), 0,{ "hevd" } };
-            metaTracked.trackType = infoBrandSpec;
-            hevcVidEnter.compatibleSchemes.push_back({ "podv", 0, "" });
-            hevcVidEnter.compatibleSchemes.push_back({ "ercm", 0, "" });
+            VCD::MP4::BrandSpec trackType = { string("hevd"), 0,{ "hevd" } };
+            inMeta.trackType = trackType;
+            hevcEntry.compatibleSchemes.push_back({ "podv", 0, "" });
+            hevcEntry.compatibleSchemes.push_back({ "ercm", 0, "" });
             m_omafVideoTrackBrand = "hevd";
         }
         else
         {
-            StreamSegmenter::BrandSpec infoBrandSpec = { std::string("hevi"), 0,{ "hevi" } };
-            metaTracked.trackType = infoBrandSpec;
-            hevcVidEnter.compatibleSchemes.push_back({ "podv", 0, "" });
-            hevcVidEnter.compatibleSchemes.push_back({ "erpv", 0, "" });
+            VCD::MP4::BrandSpec trackType = { string("hevi"), 0,{ "hevi" } };
+            inMeta.trackType = trackType;
+            hevcEntry.compatibleSchemes.push_back({ "podv", 0, "" });
+            hevcEntry.compatibleSchemes.push_back({ "erpv", 0, "" });
             m_omafVideoTrackBrand = "hevi";
         }
 
-        if (m_config.tracks.at(indexTracked).pipelineOutput == DataInputFormat::VideoTopBottom)
+        if (m_config.tracks.at(inTrackId).pipelineOutput == DataInputFormat::VideoTopBottom)
         {
-            hevcVidEnter.stvi = StreamSegmenter::Segmenter::PodvStereoVideoInfo::TopBottomPacking;
+            hevcEntry.stvi = VCD::MP4::VideoFramePackingType::OMNI_TOPBOTTOM;
         }
-        else if (m_config.tracks.at(indexTracked).pipelineOutput == DataInputFormat::VideoSideBySide)
+        else if (m_config.tracks.at(inTrackId).pipelineOutput == DataInputFormat::VideoSideBySide)
         {
-            hevcVidEnter.stvi = StreamSegmenter::Segmenter::PodvStereoVideoInfo::SideBySidePacking;
+            hevcEntry.stvi = VCD::MP4::VideoFramePackingType::OMNI_SIDEBYSIDE;
         }
-        // temporal interleaving not supported
 
-
-        if (metaData.sphericalCoverage)
+        if (inMetaData.sphericalCoverage)
         {
-            hevcVidEnter.covi = StreamSegmenter::Segmenter::CoverageInformation();
-            if (metaData.projection == OmafProjectionType::EQUIRECTANGULAR)
+            hevcEntry.covi = VCD::MP4::CoverageInformation();
+            if (inMetaData.projection == OmafProjectionType::EQUIRECTANGULAR)
             {
-                hevcVidEnter.covi->coverageShape = StreamSegmenter::Segmenter::CoverageInformationShapeType::TwoAzimuthAndTwoElevationCircles;
+                hevcEntry.covi->coverageShape = VCD::MP4::COVIShapeType::TWO_AZIMUTH_AND_TWO_ELEVATION_CIRCLES;
             }
             else
             {
-                hevcVidEnter.covi->coverageShape = StreamSegmenter::Segmenter::CoverageInformationShapeType::FourGreatCircles;
+                hevcEntry.covi->coverageShape = VCD::MP4::COVIShapeType::FOUR_GREAT_CIRCLES;
             }
-            if (hevcVidEnter.stvi)
+            if (hevcEntry.stvi)
             {
-                hevcVidEnter.covi->defaultViewIdc = StreamSegmenter::Segmenter::ViewIdc::LEFT_AND_RIGHT;
+                hevcEntry.covi->defaultViewIdc = VCD::MP4::OmniViewIdc::OMNI_LEFT_AND_RIGHT;
             }
             else
             {
-                hevcVidEnter.covi->defaultViewIdc = StreamSegmenter::Segmenter::ViewIdc::MONOSCOPIC;
+                hevcEntry.covi->defaultViewIdc = VCD::MP4::OmniViewIdc::OMNI_MONOSCOPIC;
             }
-            hevcVidEnter.covi->viewIdcPresenceFlag = false;
+            hevcEntry.covi->viewIdcPresenceFlag = false;
 
-            auto outputRegion = std::unique_ptr<StreamSegmenter::Segmenter::CoverageInformationRegion>(new StreamSegmenter::Segmenter::CoverageInformationRegion());
-            auto& covOfSph = metaData.sphericalCoverage.get();
-            outputRegion->centreAzimuth = covOfSph.cAzimuth;
-            outputRegion->centreElevation = covOfSph.cElevation;
-            outputRegion->centreTilt = covOfSph.cTilt;
-            outputRegion->azimuthRange = covOfSph.rAzimuth;
-            outputRegion->elevationRange = covOfSph.rElevation;
-            outputRegion->interpolate = false;
-            hevcVidEnter.covi->regions.push_back(std::move(outputRegion));
+            auto coviReg = unique_ptr<VCD::MP4::COVIRegion>(new VCD::MP4::COVIRegion());
+            auto& sphericalCoverage = inMetaData.sphericalCoverage.get();
+            coviReg->centAzimuth = sphericalCoverage.cAzimuth;
+            coviReg->centElevation = sphericalCoverage.cElevation;
+            coviReg->centTilt = sphericalCoverage.cTilt;
+            coviReg->azimuthRange = sphericalCoverage.rAzimuth;
+            coviReg->elevationRange = sphericalCoverage.rElevation;
+            coviReg->interpolate = false;
+            hevcEntry.covi->sphereRegions.push_back(move(coviReg));
         }
 
-        if (metaData.regionPacking)
+        if (inMetaData.regionPacking)
         {
-            hevcVidEnter.rwpk = StreamSegmenter::Segmenter::RegionWisePacking();
+            hevcEntry.rwpk = VCD::MP4::RegionWisePacking();
 
-            auto& packArea = metaData.regionPacking.get();
-            hevcVidEnter.rwpk->constituenPictureMatchingFlag = packArea.constituentPictMatching;
-            hevcVidEnter.rwpk->projPictureHeight = packArea.projPictureHeight;
-            hevcVidEnter.rwpk->projPictureWidth = packArea.projPictureWidth;
-            hevcVidEnter.rwpk->packedPictureHeight = packArea.packedPictureHeight;
-            hevcVidEnter.rwpk->packedPictureWidth = packArea.packedPictureWidth;
-            for (auto& iutputRegion : packArea.regions)
+            auto& regionPacking = inMetaData.regionPacking.get();
+            hevcEntry.rwpk->constituenPicMatching = regionPacking.constituentPictMatching;
+            hevcEntry.rwpk->projPicHeight = regionPacking.projPictureHeight;
+            hevcEntry.rwpk->projPicWidth = regionPacking.projPictureWidth;
+            hevcEntry.rwpk->packedPicHeight = regionPacking.packedPictureHeight;
+            hevcEntry.rwpk->packedPicWidth = regionPacking.packedPictureWidth;
+            for (auto& regionIn : regionPacking.regions)
             {
-                auto outputRegion = std::unique_ptr<StreamSegmenter::Segmenter::RwpkRectRegion>(new StreamSegmenter::Segmenter::RwpkRectRegion());
-                outputRegion->packedTop = iutputRegion.packedTop;
-                outputRegion->packedLeft = iutputRegion.packedLeft;
-                outputRegion->packedWidth = iutputRegion.packedWidth;
-                outputRegion->packedHeight = iutputRegion.packedHeight;
+                auto rwpkReg = unique_ptr<VCD::MP4::RwpkRectRegion>(new VCD::MP4::RwpkRectRegion());
+                rwpkReg->packedRegTop = regionIn.packedTop;
+                rwpkReg->packedRegLeft = regionIn.packedLeft;
+                rwpkReg->packedRegWidth = regionIn.packedWidth;
+                rwpkReg->packedRegHeight = regionIn.packedHeight;
 
-                outputRegion->projTop = iutputRegion.projTop;
-                outputRegion->projLeft = iutputRegion.projLeft;
-                outputRegion->projWidth = iutputRegion.projWidth;
-                outputRegion->projHeight = iutputRegion.projHeight;
+                rwpkReg->projRegTop = regionIn.projTop;
+                rwpkReg->projRegLeft = regionIn.projLeft;
+                rwpkReg->projRegWidth = regionIn.projWidth;
+                rwpkReg->projRegHeight = regionIn.projHeight;
 
-                outputRegion->transformType = iutputRegion.transform;
+                rwpkReg->transformType = regionIn.transform;
 
-                hevcVidEnter.rwpk->regions.push_back(std::move(outputRegion));
+                hevcEntry.rwpk->regions.push_back(std::move(rwpkReg));
             }
         }
     }

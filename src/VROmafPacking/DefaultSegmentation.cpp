@@ -32,7 +32,7 @@
 //!
 
 #include "DefaultSegmentation.h"
-#include "streamsegmenter/rational.hpp"
+#include "../isolib/dash_writer/Fraction.h"
 
 #include <unistd.h>
 #include <chrono>
@@ -242,7 +242,7 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
             TrackSegmentCtx *trackSegCtxs = new TrackSegmentCtx[tilesNum];
             if (!trackSegCtxs)
                 return OMAF_ERROR_NULL_PTR;
-            std::map<uint32_t, TrackId> tilesTrackIndex;
+            std::map<uint32_t, VCD::MP4::TrackId> tilesTrackIndex;
             for (uint32_t i = 0; i < tilesNum; i++)
             {
                 trackSegCtxs[i].isExtractorTrack = false;
@@ -253,8 +253,8 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                 //set InitSegConfig
                 TrackConfig trackConfig{};
                 trackConfig.meta.trackId = m_trackIdStarter + i;
-                trackConfig.meta.timescale = StreamSegmenter::RatU64(frameRate.den, frameRate.num * 1000); //?
-                trackConfig.meta.type = StreamSegmenter::MediaType::Video;
+                trackConfig.meta.timescale = VCD::MP4::FractU64(frameRate.den, frameRate.num * 1000); //?
+                trackConfig.meta.type = VCD::MP4::TypeOfMedia::Video;
                 trackConfig.pipelineOutput = DataInputFormat::VideoMono;
                 trackSegCtxs[i].dashInitCfg.tracks.insert(std::make_pair(trackSegCtxs[i].trackIdx, trackConfig));
                 m_allTileTracks.insert(std::make_pair(trackSegCtxs[i].trackIdx, trackConfig));
@@ -262,18 +262,18 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                 trackSegCtxs[i].dashInitCfg.writeToBitstream = true;
                 trackSegCtxs[i].dashInitCfg.packedSubPictures = true;
                 trackSegCtxs[i].dashInitCfg.mode = OperatingMode::OMAF;
-                trackSegCtxs[i].dashInitCfg.streamIds.push_back(trackConfig.meta.trackId.get());
+                trackSegCtxs[i].dashInitCfg.streamIds.push_back(trackConfig.meta.trackId.GetIndex());
                 snprintf(trackSegCtxs[i].dashInitCfg.initSegName, 1024, "%s%s_track%ld.init.mp4", m_segInfo->dirName, m_segInfo->outName, m_trackIdStarter + i);
 
                 //set GeneralSegConfig
-                trackSegCtxs[i].dashCfg.sgtDuration = StreamSegmenter::RatU64(m_videoSegInfo->segDur, 1); //?
-                trackSegCtxs[i].dashCfg.subsgtDuration = trackSegCtxs[i].dashCfg.sgtDuration / FrameDuration{ 1, 1}; //?
+                trackSegCtxs[i].dashCfg.sgtDuration = VCD::MP4::FractU64(m_videoSegInfo->segDur, 1); //?
+                trackSegCtxs[i].dashCfg.subsgtDuration = trackSegCtxs[i].dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
                 trackSegCtxs[i].dashCfg.needCheckIDR = true;
 
-                StreamSegmenter::TrackMeta trackMeta{};
+                VCD::MP4::TrackMeta trackMeta{};
                 trackMeta.trackId = trackSegCtxs[i].trackIdx;
-                trackMeta.timescale = StreamSegmenter::RatU64(frameRate.den, frameRate.num * 1000); //?
-                trackMeta.type = StreamSegmenter::MediaType::Video;
+                trackMeta.timescale = VCD::MP4::FractU64(frameRate.den, frameRate.num * 1000); //?
+                trackMeta.type = VCD::MP4::TypeOfMedia::Video;
                 trackSegCtxs[i].dashCfg.tracks.insert(std::make_pair(trackSegCtxs[i].trackIdx, trackMeta));
 
                 trackSegCtxs[i].dashCfg.useSeparatedSidx = false;
@@ -313,9 +313,9 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                 //setup CodedMeta
                 trackSegCtxs[i].codedMeta.presIndex = 0;
                 trackSegCtxs[i].codedMeta.codingIndex = 0;
-                trackSegCtxs[i].codedMeta.codingTime = FrameTime{ 0, 1 };
-                trackSegCtxs[i].codedMeta.presTime = FrameTime{ 0, 1000 };
-                trackSegCtxs[i].codedMeta.duration = FrameDuration{ frameRate.den * 1000, frameRate.num * 1000};
+                trackSegCtxs[i].codedMeta.codingTime = VCD::MP4::FrameTime{ 0, 1 };
+                trackSegCtxs[i].codedMeta.presTime = VCD::MP4::FrameTime{ 0, 1000 };
+                trackSegCtxs[i].codedMeta.duration = VCD::MP4::FrameDuration{ frameRate.den * 1000, frameRate.num * 1000};
                 trackSegCtxs[i].codedMeta.trackId = trackSegCtxs[i].trackIdx;
                 trackSegCtxs[i].codedMeta.inCodingOrder = true;
                 trackSegCtxs[i].codedMeta.format = CodedFormat::H265;
@@ -327,7 +327,7 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                 trackSegCtxs[i].codedMeta.bitrate.avgBitrate = tileBitRate;
                 trackSegCtxs[i].codedMeta.bitrate.maxBitrate = 0;
                 trackSegCtxs[i].codedMeta.type = FrameType::IDR;
-                trackSegCtxs[i].codedMeta.segmenterMeta.segmentDuration = FrameDuration{ 0, 1 }; //?
+                trackSegCtxs[i].codedMeta.segmenterMeta.segmentDuration = VCD::MP4::FrameDuration{ 0, 1 }; //?
 
 
                 RegionWisePacking regionPacking;
@@ -451,7 +451,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
                 uint8_t vsIdx    = tile->streamIdxInMedia;
                 uint8_t origTileIdx  = tile->origTileIdx;
 
-                std::map<uint8_t, std::map<uint32_t, TrackId>>::iterator itTilesIdxs;
+                std::map<uint8_t, std::map<uint32_t, VCD::MP4::TrackId>>::iterator itTilesIdxs;
                 itTilesIdxs = m_tilesTrackIdxs.find(vsIdx);
                 if (itTilesIdxs == m_tilesTrackIdxs.end())
                 {
@@ -459,8 +459,8 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
                     DELETE_MEMORY(trackSegCtx);
                     return OMAF_ERROR_STREAM_NOT_FOUND;
                 }
-                std::map<uint32_t, TrackId> tilesIndex = itTilesIdxs->second;
-                TrackId foundTrackId = tilesIndex[origTileIdx];
+                std::map<uint32_t, VCD::MP4::TrackId> tilesIndex = itTilesIdxs->second;
+                VCD::MP4::TrackId foundTrackId = tilesIndex[origTileIdx];
                 trackSegCtx->refTrackIdxs.push_back(foundTrackId);
             }
         }
@@ -468,8 +468,8 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
         trackSegCtx->trackIdx = DEFAULT_EXTRACTORTRACK_TRACKIDBASE + trackSegCtx->extractorTrackIdx;
 
         //set up InitSegConfig
-        std::set<TrackId> allTrackIds;
-        std::map<TrackId, TrackConfig>::iterator itTrack;
+        std::set<VCD::MP4::TrackId> allTrackIds;
+        std::map<VCD::MP4::TrackId, TrackConfig>::iterator itTrack;
         for (itTrack = m_allTileTracks.begin(); itTrack != m_allTileTracks.end(); itTrack++)
         {
             trackSegCtx->dashInitCfg.tracks.insert(std::make_pair(itTrack->first, itTrack->second));
@@ -478,8 +478,8 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
 
         TrackConfig trackConfig{};
         trackConfig.meta.trackId = trackSegCtx->trackIdx;
-        trackConfig.meta.timescale = StreamSegmenter::RatU64(m_frameRate.den, m_frameRate.num * 1000); //?
-        trackConfig.meta.type = StreamSegmenter::MediaType::Video;
+        trackConfig.meta.timescale = VCD::MP4::FractU64(m_frameRate.den, m_frameRate.num * 1000); //?
+        trackConfig.meta.type = VCD::MP4::TypeOfMedia::Video;
         trackConfig.trackReferences.insert(std::make_pair("scal", allTrackIds));
         trackConfig.pipelineOutput = DataInputFormat::VideoMono;
         trackSegCtx->dashInitCfg.tracks.insert(std::make_pair(trackSegCtx->trackIdx, trackConfig));
@@ -488,28 +488,28 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
         trackSegCtx->dashInitCfg.writeToBitstream = true;
         trackSegCtx->dashInitCfg.packedSubPictures = true;
         trackSegCtx->dashInitCfg.mode = OperatingMode::OMAF;
-        trackSegCtx->dashInitCfg.streamIds.push_back(trackSegCtx->trackIdx.get());
-        std::set<TrackId>::iterator itId;
+        trackSegCtx->dashInitCfg.streamIds.push_back(trackSegCtx->trackIdx.GetIndex());
+        std::set<VCD::MP4::TrackId>::iterator itId;
         for (itId = allTrackIds.begin(); itId != allTrackIds.end(); itId++)
         {
-            trackSegCtx->dashInitCfg.streamIds.push_back((*itId).get());
+            trackSegCtx->dashInitCfg.streamIds.push_back((*itId).GetIndex());
         }
-        snprintf(trackSegCtx->dashInitCfg.initSegName, 1024, "%s%s_track%d.init.mp4", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.get());
+        snprintf(trackSegCtx->dashInitCfg.initSegName, 1024, "%s%s_track%d.init.mp4", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
 
         //set up GeneralSegConfig
-        trackSegCtx->dashCfg.sgtDuration = StreamSegmenter::RatU64(m_videoSegInfo->segDur, 1); //?
-        trackSegCtx->dashCfg.subsgtDuration = trackSegCtx->dashCfg.sgtDuration / FrameDuration{ 1, 1}; //?
+        trackSegCtx->dashCfg.sgtDuration = VCD::MP4::FractU64(m_videoSegInfo->segDur, 1); //?
+        trackSegCtx->dashCfg.subsgtDuration = trackSegCtx->dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
         trackSegCtx->dashCfg.needCheckIDR = true;
 
-        StreamSegmenter::TrackMeta trackMeta{};
+        VCD::MP4::TrackMeta trackMeta{};
         trackMeta.trackId = trackSegCtx->trackIdx;
-        trackMeta.timescale = StreamSegmenter::RatU64(m_frameRate.den, m_frameRate.num * 1000); //?
-        trackMeta.type = StreamSegmenter::MediaType::Video;
+        trackMeta.timescale = VCD::MP4::FractU64(m_frameRate.den, m_frameRate.num * 1000); //?
+        trackMeta.type = VCD::MP4::TypeOfMedia::Video;
         trackSegCtx->dashCfg.tracks.insert(std::make_pair(trackSegCtx->trackIdx, trackMeta));
 
         trackSegCtx->dashCfg.useSeparatedSidx = false;
-        trackSegCtx->dashCfg.streamsIdx.push_back(trackSegCtx->trackIdx.get());
-        snprintf(trackSegCtx->dashCfg.tileSegBaseName, 1024, "%s%s_track%d", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.get());
+        trackSegCtx->dashCfg.streamsIdx.push_back(trackSegCtx->trackIdx.GetIndex());
+        snprintf(trackSegCtx->dashCfg.tileSegBaseName, 1024, "%s%s_track%d", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
 
         //set up DashInitSegmenter
         trackSegCtx->initSegmenter = new DashInitSegmenter(&(trackSegCtx->dashInitCfg));
@@ -533,9 +533,9 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
         //set up CodedMeta
         trackSegCtx->codedMeta.presIndex = 0;
         trackSegCtx->codedMeta.codingIndex = 0;
-        trackSegCtx->codedMeta.codingTime = FrameTime{ 0, 1 };
-        trackSegCtx->codedMeta.presTime = FrameTime{ 0, 1000 };
-        trackSegCtx->codedMeta.duration = FrameDuration{ m_frameRate.den * 1000, m_frameRate.num * 1000};
+        trackSegCtx->codedMeta.codingTime = VCD::MP4::FrameTime{ 0, 1 };
+        trackSegCtx->codedMeta.presTime = VCD::MP4::FrameTime{ 0, 1000 };
+        trackSegCtx->codedMeta.duration = VCD::MP4::FrameDuration{ m_frameRate.den * 1000, m_frameRate.num * 1000};
         trackSegCtx->codedMeta.trackId = trackSegCtx->trackIdx;
         trackSegCtx->codedMeta.inCodingOrder = true;
         trackSegCtx->codedMeta.format = CodedFormat::H265Extractor;
@@ -547,7 +547,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
         trackSegCtx->codedMeta.bitrate.avgBitrate = 0;
         trackSegCtx->codedMeta.bitrate.maxBitrate = 0;
         trackSegCtx->codedMeta.type = FrameType::IDR;
-        trackSegCtx->codedMeta.segmenterMeta.segmentDuration = FrameDuration{ 0, 1 }; //?
+        trackSegCtx->codedMeta.segmenterMeta.segmentDuration = VCD::MP4::FrameDuration{ 0, 1 }; //?
         ConvertRwpk(rwpk, &(trackSegCtx->codedMeta));
         ConvertCovi(covi->sphereRegions, &(trackSegCtx->codedMeta));
 
@@ -629,8 +629,8 @@ int32_t DefaultSegmentation::WriteSegmentForEachVideo(MediaStream *stream, bool 
 
         trackSegCtxs[tileIdx].codedMeta.presIndex++;
         trackSegCtxs[tileIdx].codedMeta.codingIndex++;
-        trackSegCtxs[tileIdx].codedMeta.presTime.num += 1000 / (m_frameRate.num / m_frameRate.den);
-        trackSegCtxs[tileIdx].codedMeta.presTime.den = 1000;
+        trackSegCtxs[tileIdx].codedMeta.presTime.m_num += 1000 / (m_frameRate.num / m_frameRate.den);
+        trackSegCtxs[tileIdx].codedMeta.presTime.m_den = 1000;
 
         m_segNum = dashSegmenter->GetSegmentsNum();
     }
@@ -672,8 +672,8 @@ int32_t DefaultSegmentation::WriteSegmentForEachExtractorTrack(
 
     trackSegCtx->codedMeta.presIndex++;
     trackSegCtx->codedMeta.codingIndex++;
-    trackSegCtx->codedMeta.presTime.num += 1000 / (m_frameRate.num / m_frameRate.den);
-    trackSegCtx->codedMeta.presTime.den = 1000;
+    trackSegCtx->codedMeta.presTime.m_num += 1000 / (m_frameRate.num / m_frameRate.den);
+    trackSegCtx->codedMeta.presTime.m_den = 1000;
 
     return ERROR_NONE;
 }
@@ -1145,14 +1145,14 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 int32_t removeCnt = m_segNum - m_segInfo->windowSize - m_segInfo->extraWindowSize;
                 if (removeCnt > 0)
                 {
-                    std::map<TrackId, TrackConfig>::iterator itOneTrack;
+                    std::map<VCD::MP4::TrackId, TrackConfig>::iterator itOneTrack;
                     for (itOneTrack = m_allTileTracks.begin();
                         itOneTrack != m_allTileTracks.end();
                         itOneTrack++)
                     {
-                        TrackId trackIndex = itOneTrack->first;
+                        VCD::MP4::TrackId trackIndex = itOneTrack->first;
                         char rmFile[1024];
-                        snprintf(rmFile, 1024, "%s%s_track%d.%d.mp4", m_segInfo->dirName, m_segInfo->outName, trackIndex.get(), removeCnt);
+                        snprintf(rmFile, 1024, "%s%s_track%d.%d.mp4", m_segInfo->dirName, m_segInfo->outName, trackIndex.GetIndex(), removeCnt);
                         remove(rmFile);
                     }
                     std::map<ExtractorTrack*, TrackSegmentCtx*>::iterator itOneExtractorTrack;
@@ -1161,9 +1161,9 @@ int32_t DefaultSegmentation::VideoSegmentation()
                         itOneExtractorTrack++)
                     {
                         TrackSegmentCtx *trackSegCtx = itOneExtractorTrack->second;
-                        TrackId trackIndex = trackSegCtx->trackIdx;
+                        VCD::MP4::TrackId trackIndex = trackSegCtx->trackIdx;
                         char rmFile[1024];
-                        snprintf(rmFile, 1024, "%s%s_track%d.%d.mp4", m_segInfo->dirName, m_segInfo->outName, trackIndex.get(), removeCnt);
+                        snprintf(rmFile, 1024, "%s%s_track%d.%d.mp4", m_segInfo->dirName, m_segInfo->outName, trackIndex.GetIndex(), removeCnt);
                         remove(rmFile);
                     }
                 }

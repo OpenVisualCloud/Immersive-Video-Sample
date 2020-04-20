@@ -358,30 +358,30 @@ TEST_F(OmafReaderTest, ParseInitialSegment)
 
                 for (auto const& parameter : parameterSets)
                 {
-                    if (parameter.decodeSpecInfoType == VCD::OMAF::HEVC_VPS)
+                    if (parameter.codecSpecInfoType == VCD::MP4::HEVC_VPS)
                     {
-                        vpsLen = parameter.decodeSpecInfoData.size();
-                        for (uint32_t i = 0; i < parameter.decodeSpecInfoData.size(); i++)
+                        vpsLen = parameter.codecSpecInfoBits.size;
+                        for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
                         {
-                            vps[i] = parameter.decodeSpecInfoData[i];
+                            vps[i] = parameter.codecSpecInfoBits[i];
                         }
                     }
 
-                    if (parameter.decodeSpecInfoType == VCD::OMAF::HEVC_SPS)
+                    if (parameter.codecSpecInfoType == VCD::MP4::HEVC_SPS)
                     {
-                        spsLen = parameter.decodeSpecInfoData.size();
-                        for (uint32_t i = 0; i < parameter.decodeSpecInfoData.size(); i++)
+                        spsLen = parameter.codecSpecInfoBits.size;
+                        for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
                         {
-                            sps[i] = parameter.decodeSpecInfoData[i];
+                            sps[i] = parameter.codecSpecInfoBits[i];
                         }
                     }
 
-                    if (parameter.decodeSpecInfoType == VCD::OMAF::HEVC_PPS)
+                    if (parameter.codecSpecInfoType == VCD::MP4::HEVC_PPS)
                     {
-                        ppsLen = parameter.decodeSpecInfoData.size();
-                        for (uint32_t i = 0; i < parameter.decodeSpecInfoData.size(); i++)
+                        ppsLen = parameter.codecSpecInfoBits.size;
+                        for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
                         {
-                            pps[i] = parameter.decodeSpecInfoData[i];
+                            pps[i] = parameter.codecSpecInfoBits[i];
                         }
                     }
                 }

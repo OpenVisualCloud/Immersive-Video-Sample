@@ -265,13 +265,13 @@ private:
 private:
     std::map<MediaStream*, TrackSegmentCtx*>       m_streamSegCtx;       //!< map of media stream and its track segmentation context
     std::map<ExtractorTrack*, TrackSegmentCtx*>    m_extractorSegCtx;    //!< map of extractor track and its track segmentation context
-    std::map<TrackId, TrackConfig>                 m_allTileTracks;      //!< map of track and its track configuration
+    std::map<VCD::MP4::TrackId, TrackConfig>       m_allTileTracks;      //!< map of track and its track configuration
     std::map<MediaStream*, bool>                   m_framesIsKey;        //!< map of media stream and its current frame status (IDR or not)
     std::map<MediaStream*, bool>                   m_streamsIsEOS;       //!< map of media stream and its current EOS status
     VCD::OMAF::ProjectionFormat                    m_projType;           //!< picture projection type
     VideoSegmentInfo                               *m_videoSegInfo;      //!< pointer to the video segment information
-    std::map<uint8_t, std::map<uint32_t, TrackId>> m_tilesTrackIdxs;     //!< map of tile and its track index
-    std::map<TrackId, TrackSegmentCtx*>            m_trackSegCtx;        //!< map of tile track and its track segmentation context
+    std::map<uint8_t, std::map<uint32_t, VCD::MP4::TrackId>> m_tilesTrackIdxs;     //!< map of tile and its track index
+    std::map<VCD::MP4::TrackId, TrackSegmentCtx*>            m_trackSegCtx;        //!< map of tile track and its track segmentation context
     uint64_t                                       m_segNum;             //!< current written segments number
     uint64_t                                       m_framesNum;          //!< current written frames number
     std::map<pthread_t, ExtractorTrack*>           m_extractorThreadIds; //!< map of thread ID for extractor track segmentation and corresponding extractor track

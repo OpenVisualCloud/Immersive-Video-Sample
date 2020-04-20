@@ -7,4 +7,4 @@ Name:VR OMAF Compliance Packing
 Description: OMAF Compliance packing for muxer
 Version:0.0.1-DEV
 Cflags: -I${prefix}/include
-Libs: -L${libdir} -lVROmafPacking -static-libstdc++ -l360SCVP -lmp4vr_static -lmp4vr_static_fpic -lstreamsegmenter_static -lstreamsegmenter_static_fpic -lpthread -L/usr/local/lib64
+Libs: -L${libdir} -lVROmafPacking -static-libstdc++ -l360SCVP -lpthread -L/usr/local/lib64
