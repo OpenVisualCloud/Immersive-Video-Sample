@@ -7,8 +7,8 @@ AUX_SOURCE_DIRECTORY(../utils/ UTIL_SRC)
 
 ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 -z noexecstack -z relro -z now -fstack-protector-strong -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wl,-S -Wall -Werror")
 
-INCLUDE_DIRECTORIES(/usr/local/include ../utils ../360SCVP ../isolib)
-LINK_DIRECTORIES(/usr/local/lib ../isolib/dash_writer)
+INCLUDE_DIRECTORIES(/usr/local/include ../utils ../360SCVP ../isolib ../trace)
+LINK_DIRECTORIES(/usr/local/lib ../isolib/dash_writer ../trace)
 
 set(DIR_SRC
     ${DIR_SRC}
@@ -18,6 +18,9 @@ set(DIR_SRC
 ADD_LIBRARY(VROmafPacking SHARED  ${DIR_SRC})
 
 TARGET_LINK_LIBRARIES(VROmafPacking dashwriter)
+TARGET_LINK_LIBRARIES(VROmafPacking trace)
+TARGET_LINK_LIBRARIES(VROmafPacking lttng-ust)
+TARGET_LINK_LIBRARIES(VROmafPacking dl)
 TARGET_LINK_LIBRARIES(VROmafPacking glog)
 
 install(TARGETS VROmafPacking

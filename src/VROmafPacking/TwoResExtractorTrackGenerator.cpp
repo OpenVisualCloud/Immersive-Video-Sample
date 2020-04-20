@@ -35,6 +35,8 @@
 #include "VideoStream.h"
 #include "TwoResRegionWisePackingGenerator.h"
 
+#include "../trace/Bandwidth_tp.h"
+
 VCD_NS_BEGIN
 
 TwoResExtractorTrackGenerator::~TwoResExtractorTrackGenerator()
@@ -368,6 +370,11 @@ int32_t TwoResExtractorTrackGenerator::Initialize()
 
     m_finalViewportWidth = paramViewportOutput.dstWidthAlignTile;
     m_finalViewportHeight = paramViewportOutput.dstHeightAlignTile;
+
+    //trace
+    tracepoint(bandwidth_tp_provider, tiles_selection_redundancy,
+                paramViewportOutput.dstWidthNet, paramViewportOutput.dstHeightNet,
+                paramViewportOutput.dstWidthAlignTile, paramViewportOutput.dstHeightAlignTile);
 
     LOG(INFO) << "Calculated Viewport has width " << m_finalViewportWidth << " and height " << m_finalViewportHeight << " ! " << std::endl;
 

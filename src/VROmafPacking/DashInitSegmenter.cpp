@@ -279,6 +279,8 @@ int32_t DashInitSegmenter::GenerateInitSegment(
                 FILE *fp = fopen(trackSegCtx->dashInitCfg.initSegName, "wb+");
                 if (!fp)
                     return OMAF_ERROR_NULL_PTR;
+
+                m_initSegSize = frameString.size();
                 fwrite(frameString.c_str(), 1, frameString.size(), fp);
                 fclose(fp);
                 fp = NULL;

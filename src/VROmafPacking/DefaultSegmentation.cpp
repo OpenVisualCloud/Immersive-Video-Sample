@@ -39,6 +39,8 @@
 #include <cstdint>
 #include <sys/time.h>
 
+#include "../trace/Bandwidth_tp.h"
+
 VCD_NS_BEGIN
 
 DefaultSegmentation::~DefaultSegmentation()
@@ -633,6 +635,17 @@ int32_t DefaultSegmentation::WriteSegmentForEachVideo(MediaStream *stream, bool 
         trackSegCtxs[tileIdx].codedMeta.presTime.m_den = 1000;
 
         m_segNum = dashSegmenter->GetSegmentsNum();
+
+        //trace
+        if (m_segNum == (m_prevSegNum + 1))
+        {
+            uint64_t segSize = dashSegmenter->GetSegmentSize();
+            uint32_t trackIndex = trackSegCtxs[tileIdx].trackIdx.GetIndex();
+            const char *trackType = "tile_track";
+
+            tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, m_segNum, segSize);
+        }
+
     }
 
     return ERROR_NONE;
@@ -674,6 +687,16 @@ int32_t DefaultSegmentation::WriteSegmentForEachExtractorTrack(
     trackSegCtx->codedMeta.codingIndex++;
     trackSegCtx->codedMeta.presTime.m_num += 1000 / (m_frameRate.num / m_frameRate.den);
     trackSegCtx->codedMeta.presTime.m_den = 1000;
+
+    uint64_t currSegNum = dashSegmenter->GetSegmentsNum();
+    if (currSegNum == (m_prevSegNum + 1))
+    {
+        uint64_t segSize = dashSegmenter->GetSegmentSize();
+        uint32_t trackIndex = trackSegCtx->trackIdx.GetIndex();
+        const char *trackType = "extractor_track";
+
+        tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, currSegNum, segSize);
+    }
 
     return ERROR_NONE;
 }
@@ -926,6 +949,12 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 if (ret)
                     return ret;
 
+                //trace
+                uint64_t initSegSize = initSegmenter->GetInitSegmentSize();
+                uint32_t trackIndex  = trackSegCtxs[tileIdx].trackIdx.GetIndex();
+                const char *trackType = "init_track";
+                tracepoint(bandwidth_tp_provider, packed_segment_size,
+                            trackIndex, trackType, 0, initSegSize);
             }
         }
     }
@@ -944,6 +973,13 @@ int32_t DefaultSegmentation::VideoSegmentation()
         ret = initSegmenter->GenerateInitSegment(trackSegCtx, m_trackSegCtx);
         if (ret)
             return ret;
+
+        //trace
+        uint64_t initSegSize = initSegmenter->GetInitSegmentSize();
+        uint32_t trackIndex  = trackSegCtx->trackIdx.GetIndex();
+        const char *trackType = "init_track";
+        tracepoint(bandwidth_tp_provider, packed_segment_size,
+                    trackIndex, trackType, 0, initSegSize);
     }
 
     m_prevSegNum = m_segNum;
@@ -999,6 +1035,14 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 {
                     m_framesIsKey[vs] = currFrame->isKeyFrame;
                     m_streamsIsEOS[vs] = false;
+
+                    //trace
+                    char resolution[1024] = { 0 };
+                    snprintf(resolution, 1024, "%d x %d", vs->GetSrcWidth(), vs->GetSrcHeight());
+                    char tileSplit[1024] = { 0 };
+                    snprintf(tileSplit, 1024, "%d x %d", vs->GetTileInCol(), vs->GetTileInRow());
+                    tracepoint(bandwidth_tp_provider, encoded_frame_size,
+                                &resolution[0], &tileSplit[0], m_framesNum, currFrame->dataSize);
 
                     vs->UpdateTilesNalu();
                     WriteSegmentForEachVideo(vs, currFrame->isKeyFrame, false);
@@ -1126,7 +1170,6 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 vs->AddFrameToSegment();
             }
         }
-        //m_framesNum++;
 
         if (m_segNum == (m_prevSegNum + 1))
         {
@@ -1134,7 +1177,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
             std::chrono::high_resolution_clock clock;
             uint64_t before = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-            LOG(INFO) << "Complete one seg on  " << (before - currentT) << " ms" << std::endl;
+            LOG(INFO) << "Complete one seg in  " << (before - currentT) << " ms" << std::endl;
             currentT = before;
         }
 

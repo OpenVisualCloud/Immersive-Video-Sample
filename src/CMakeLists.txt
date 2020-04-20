@@ -26,6 +26,7 @@ IF(${TARGET} STREQUAL "server")
     ADD_SUBDIRECTORY(distributed_encoder)
   ENDIF()
   ADD_SUBDIRECTORY(isolib)
+  ADD_SUBDIRECTORY(trace)
   ADD_SUBDIRECTORY(VROmafPacking)
   ADD_CUSTOM_TARGET(ffmpeg ALL
       COMMAND echo "Target ffmpeg"

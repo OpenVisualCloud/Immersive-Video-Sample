@@ -251,6 +251,7 @@ int32_t DashSegmenter::WriteSegment(VCD::MP4::SegmentList& aSegment)
     if (!m_file)
         return OMAF_ERROR_NULL_PTR;
 
+    m_segSize = frameString.size();
     fwrite(frameString.c_str(), 1, frameString.size(), m_file);
 
     fclose(m_file);
