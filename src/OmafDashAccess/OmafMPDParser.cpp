@@ -37,6 +37,7 @@ OmafMPDParser::OmafMPDParser()
     mParser = nullptr;
     this->mMpd = NULL;
     this->mMPDURL = "";
+    this->mCacheDir = "";
     this->mLock = new ThreadLock();
     mMPDInfo = nullptr;
     mPF = PF_UNKNOWN;
@@ -60,7 +61,7 @@ int OmafMPDParser::ParseMPD( std::string mpd_file, OMAFSTREAMS& listStream )
 
     mMPDURL = mpd_file;
 
-    ODStatus st = mParser->Generate(const_cast<char *>(mMPDURL.c_str()));
+    ODStatus st = mParser->Generate(const_cast<char *>(mMPDURL.c_str()), mCacheDir);
     if(st != OD_STATUS_SUCCESS)
     {
         mLock->unlock();

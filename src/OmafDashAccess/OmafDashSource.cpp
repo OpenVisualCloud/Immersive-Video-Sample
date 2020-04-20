@@ -142,6 +142,7 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enable
     if( NULL == mMPDParser ) return ERROR_NULL_PTR;
 
     OMAFSTREAMS listStream;
+    mMPDParser->SetCacheDir(cacheDir);
     int ret = mMPDParser->ParseMPD(url, listStream);
     if(ret != ERROR_NONE) return ret;
 
@@ -314,8 +315,6 @@ int OmafDashSource::GetMediaInfo( DashMediaInfo* media_info )
     MPDInfo *mInfo  = this->GetMPDInfo();
     if(!mInfo) return ERROR_NULL_PTR;
 
-    uint32_t pointerLen = sizeof(char*);
-
     media_info->duration = mInfo->media_presentation_duration;
     media_info->stream_count = this->GetStreamCount();
     if(mInfo->type == TYPE_STATIC){
@@ -336,18 +335,16 @@ int OmafDashSource::GetMediaInfo( DashMediaInfo* media_info )
         media_info->stream_info[i].channels      = pStreamInfo->channels;
         media_info->stream_info[i].sample_rate   = pStreamInfo->sample_rate;
         media_info->stream_info[i].mProjFormat   = pStreamInfo->mProjFormat;
-        media_info->stream_info[i].codec = new char;
-        media_info->stream_info[i].mime_type = new char;
+        media_info->stream_info[i].codec = new char[1024];
+        media_info->stream_info[i].mime_type = new char[1024];
         media_info->stream_info[i].source_number = pStreamInfo->source_number;
         media_info->stream_info[i].source_resolution = pStreamInfo->source_resolution;
         memcpy( const_cast<char*>(media_info->stream_info[i].codec),
                 pStreamInfo->codec,
-                //sizeof(pStreamInfo->codec));
-                pointerLen);
+                1024);
         memcpy( const_cast<char*>(media_info->stream_info[i].mime_type),
                 pStreamInfo->mime_type,
-                //sizeof(pStreamInfo->mime_type));
-                pointerLen);
+                1024);
     }
 
     return ERROR_NONE;
