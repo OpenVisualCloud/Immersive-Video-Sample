@@ -84,6 +84,9 @@ DefaultSegmentation::~DefaultSegmentation()
     }
 
     m_extractorSegCtx.clear();
+
+    DELETE_ARRAY(m_videosBitrate);
+
     int32_t ret = pthread_mutex_destroy(&m_mutex);
     if (ret)
     {
@@ -185,10 +188,29 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
         MediaStream *stream = it->second;
         if (stream->GetMediaType() == VIDEOTYPE)
         {
+            m_videosNum++;
             VideoStream *vs = (VideoStream*)stream;
             uint64_t bitRate = vs->GetBitRate();
             bitRateRanking.insert(bitRate);
         }
+    }
+
+    if (m_videosNum != bitRateRanking.size())
+    {
+        LOG(ERROR) << "Invalid video streams number !" << std::endl;
+        return OMAF_ERROR_VIDEO_NUM;
+    }
+    m_videosBitrate = new uint64_t[m_videosNum];
+    if (!m_videosBitrate)
+        return OMAF_ERROR_NULL_PTR;
+
+    memset(m_videosBitrate, 0, m_videosNum * sizeof(uint64_t));
+    std::set<uint64_t>::reverse_iterator rateIter = bitRateRanking.rbegin();
+    uint32_t index = 0;
+    for ( ; rateIter != bitRateRanking.rend(); rateIter++)
+    {
+        m_videosBitrate[index] = *rateIter;
+        index++;
     }
 
     for (it = m_streamMap->begin(); it != m_streamMap->end(); it++)
@@ -642,8 +664,10 @@ int32_t DefaultSegmentation::WriteSegmentForEachVideo(MediaStream *stream, bool 
             uint64_t segSize = dashSegmenter->GetSegmentSize();
             uint32_t trackIndex = trackSegCtxs[tileIdx].trackIdx.GetIndex();
             const char *trackType = "tile_track";
+            char tileRes[128] = { 0 };
+            snprintf(tileRes, 128, "%d x %d", (trackSegCtxs[tileIdx].tileInfo)->tileWidth, (trackSegCtxs[tileIdx].tileInfo)->tileHeight);
 
-            tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, m_segNum, segSize);
+            tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, m_segNum, segSize);
         }
 
     }
@@ -694,8 +718,10 @@ int32_t DefaultSegmentation::WriteSegmentForEachExtractorTrack(
         uint64_t segSize = dashSegmenter->GetSegmentSize();
         uint32_t trackIndex = trackSegCtx->trackIdx.GetIndex();
         const char *trackType = "extractor_track";
+        char tileRes[128] = { 0 };
+        snprintf(tileRes, 128, "%s", "none");
 
-        tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, currSegNum, segSize);
+        tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, currSegNum, segSize);
     }
 
     return ERROR_NONE;
@@ -953,8 +979,11 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 uint64_t initSegSize = initSegmenter->GetInitSegmentSize();
                 uint32_t trackIndex  = trackSegCtxs[tileIdx].trackIdx.GetIndex();
                 const char *trackType = "init_track";
+                char tileRes[128] = { 0 };
+                snprintf(tileRes, 128, "%s", "none");
+
                 tracepoint(bandwidth_tp_provider, packed_segment_size,
-                            trackIndex, trackType, 0, initSegSize);
+                            trackIndex, trackType, tileRes, 0, initSegSize);
             }
         }
     }
@@ -978,8 +1007,11 @@ int32_t DefaultSegmentation::VideoSegmentation()
         uint64_t initSegSize = initSegmenter->GetInitSegmentSize();
         uint32_t trackIndex  = trackSegCtx->trackIdx.GetIndex();
         const char *trackType = "init_track";
+        char tileRes[128] = { 0 };
+        snprintf(tileRes, 128, "%s", "none");
+
         tracepoint(bandwidth_tp_provider, packed_segment_size,
-                    trackIndex, trackType, 0, initSegSize);
+                    trackIndex, trackType, tileRes, 0, initSegSize);
     }
 
     m_prevSegNum = m_segNum;
@@ -1225,7 +1257,9 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 const char *dashMode = "static";
                 float currFrameRate = (float)(m_frameRate.num) / (float)(m_frameRate.den);
                 tracepoint(bandwidth_tp_provider, segmentation_info,
-                    dashMode, m_segInfo->segDuration, currFrameRate, m_framesNum, m_segNum);
+                    dashMode, m_segInfo->segDuration, currFrameRate,
+                    m_videosNum, m_videosBitrate,
+                    m_framesNum, m_segNum);
 
                 int32_t ret = m_mpdGen->WriteMpd(m_framesNum);
                 if (ret)

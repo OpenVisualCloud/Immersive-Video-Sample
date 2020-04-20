@@ -65,6 +65,8 @@ public:
         m_aveETPerSegThread = 0;
         m_lastETPerSegThread = 0;
         m_threadNumForET = 0;
+        m_videosNum = 0;
+        m_videosBitrate = NULL;
     };
 
     //!
@@ -93,6 +95,8 @@ public:
         m_aveETPerSegThread = 0;
         m_lastETPerSegThread = 0;
         m_threadNumForET = 0;
+        m_videosNum = 0;
+        m_videosBitrate = NULL;
     };
 
     //!
@@ -283,6 +287,8 @@ private:
     uint16_t                                       m_aveETPerSegThread;  //!< average extractor tracks number in segmentation thread
     uint16_t                                       m_lastETPerSegThread; //!< extractor tracks number in last segmentation thread
     uint16_t                                       m_threadNumForET;     //!< threads number for extractor track segmentation
+    uint32_t                                        m_videosNum;          //!< video streams number
+    uint64_t                                       *m_videosBitrate;     //!< video stream bitrate array
 };
 
 VCD_NS_END;
