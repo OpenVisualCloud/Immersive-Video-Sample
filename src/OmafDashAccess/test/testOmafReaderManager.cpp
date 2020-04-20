@@ -133,11 +133,26 @@ TEST_F(OmafReaderManagerTest, ReaderTrackSegments)
             snprintf(storedFileName, 1024, "./segs_for_readertest/%s.init.mp4", repId.c_str());
             cacheFileName = storedFileName;
 
+            FILE *fp = fopen(storedFileName, "rb");
+            if (!fp)
+            {
+                fclose(fpGen);
+                fpGen = NULL;
+                return;
+            }
+            fseek(fp, 0L, SEEK_END);
+            uint64_t segSize = ftell(fp);
+            fseek(fp, 0L, SEEK_SET);
+            fclose(fp);
+            fp = NULL;
+
             ret = pAS->LoadAssignedInitSegment(cacheFileName);
             EXPECT_TRUE(ret == ERROR_NONE);
 
             OmafSegment *initSeg = pAS->GetInitSegment();
             EXPECT_TRUE(initSeg != NULL);
+
+            initSeg->SetSegSize(segSize);
 
             uint32_t initSegID = 0;
             ret = READERMANAGER::GetInstance()->AddInitSegment(initSeg, initSegID);
@@ -154,11 +169,26 @@ TEST_F(OmafReaderManagerTest, ReaderTrackSegments)
             snprintf(storedFileName, 1024, "./segs_for_readertest/%s.init.mp4", repId.c_str());
             cacheFileName = storedFileName;
 
+            FILE *fp = fopen(storedFileName, "rb");
+            if (!fp)
+            {
+                fclose(fpGen);
+                fpGen = NULL;
+                return;
+            }
+            fseek(fp, 0L, SEEK_END);
+            uint64_t segSize = ftell(fp);
+            fseek(fp, 0L, SEEK_SET);
+            fclose(fp);
+            fp = NULL;
+
             ret = extractor->LoadAssignedInitSegment(cacheFileName);
             EXPECT_TRUE(ret == ERROR_NONE);
 
             OmafSegment *initSeg = extractor->GetInitSegment();
             EXPECT_TRUE(initSeg != NULL);
+
+            initSeg->SetSegSize(segSize);
 
             uint32_t initSegID = 0;
             ret = READERMANAGER::GetInstance()->AddInitSegment(initSeg, initSegID);
@@ -188,9 +218,24 @@ TEST_F(OmafReaderManagerTest, ReaderTrackSegments)
                 snprintf(storedFileName, 1024, "./segs_for_readertest/%s.%d.mp4", repId.c_str(), segID);
                 cacheFileName = storedFileName;
 
+                FILE *fp = fopen(storedFileName, "rb");
+                if (!fp)
+                {
+                    fclose(fpGen);
+                    fpGen = NULL;
+                    return;
+                }
+                fseek(fp, 0L, SEEK_END);
+                uint64_t segSize = ftell(fp);
+                fseek(fp, 0L, SEEK_SET);
+                fclose(fp);
+                fp = NULL;
+
                 OmafSegment *newSeg = pAS->LoadAssignedSegment(cacheFileName);
                 EXPECT_TRUE(newSeg != NULL);
                 if(!newSeg) break;
+
+                newSeg->SetSegSize(segSize);
 
                 uint32_t newSegID = 0;
                 ret = READERMANAGER::GetInstance()->AddSegment(newSeg, newSeg->GetInitSegID(), newSegID);
@@ -214,9 +259,24 @@ TEST_F(OmafReaderManagerTest, ReaderTrackSegments)
                 snprintf(storedFileName, 1024, "./segs_for_readertest/%s.%d.mp4", repId.c_str(), segID);
                 cacheFileName = storedFileName;
 
+                FILE *fp = fopen(storedFileName, "rb");
+                if (!fp)
+                {
+                    fclose(fpGen);
+                    fpGen = NULL;
+                    return;
+                }
+                fseek(fp, 0L, SEEK_END);
+                uint64_t segSize = ftell(fp);
+                fseek(fp, 0L, SEEK_SET);
+                fclose(fp);
+                fp = NULL;
+
                 OmafSegment *newSeg = extractor->LoadAssignedSegment(cacheFileName);
                 EXPECT_TRUE(newSeg != NULL);
                 if(!newSeg) break;
+
+                newSeg->SetSegSize(segSize);
 
                 uint32_t newSegID = 0;
                 ret = READERMANAGER::GetInstance()->AddSegment(newSeg, newSeg->GetInitSegID(), newSegID);

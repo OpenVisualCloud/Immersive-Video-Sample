@@ -8,12 +8,38 @@
 
 TRACEPOINT_EVENT(
     bandwidth_tp_provider,
+    initial_viewport_info,
+    TP_ARGS(
+        int,         viewport_init_width,
+        int,         viewport_init_height,
+        float,       viewport_init_pitch,
+        float,       viewport_init_yaw,
+        float,       viewport_horizontal_fov,
+        float,       viewport_vertical_fov,
+        const char*, projection_type
+    ),
+
+    TP_FIELDS(
+        ctf_integer(int, viewport_set_width, viewport_init_width)
+        ctf_integer(int, viewport_set_height, viewport_init_height)
+        ctf_float(float, viewport_set_pitch, viewport_init_pitch)
+        ctf_float(float, viewport_set_yaw, viewport_init_yaw)
+        ctf_float(float, horizontal_fov_angle, viewport_horizontal_fov)
+        ctf_float(float, vertical_fov_angle, viewport_vertical_fov)
+        ctf_string(projection_type_field, projection_type)
+    )
+)
+
+TRACEPOINT_EVENT(
+    bandwidth_tp_provider,
     tiles_selection_redundancy,
     TP_ARGS(
         int, viewport_net_width,
         int, viewport_net_height,
         int, viewport_tiled_width,
-        int, viewport_tiled_height
+        int, viewport_tiled_height,
+        int, selected_tile_rows,
+        int, selected_tile_cols
     ),
 
     TP_FIELDS(
@@ -21,6 +47,8 @@ TRACEPOINT_EVENT(
         ctf_integer(int, net_height_field, viewport_net_height)
         ctf_integer(int, tiled_width_field, viewport_tiled_width)
         ctf_integer(int, tiled_height_field, viewport_tiled_height)
+        ctf_integer(int, tile_rows_field, selected_tile_rows)
+        ctf_integer(int, tile_cols_field, selected_tile_cols)
     )
 )
 
@@ -57,6 +85,26 @@ TRACEPOINT_EVENT(
         ctf_string(track_type_field, track_type)
         ctf_integer(int, segment_index_field, segment_index)
         ctf_integer(int, segment_size_field, segment_size)
+    )
+)
+
+TRACEPOINT_EVENT(
+    bandwidth_tp_provider,
+    segmentation_info,
+    TP_ARGS(
+        const char*, dash_mode,
+        int,         segment_duration,
+        float,       frame_rate,
+        int,         total_frames_num,
+        int,         total_segments_num
+    ),
+
+    TP_FIELDS(
+        ctf_string(dash_mode_field, dash_mode)
+        ctf_integer(int, segment_duration_field, segment_duration)
+        ctf_float(float, frame_rate_field, frame_rate)
+        ctf_integer(int, total_frames_field, total_frames_num)
+        ctf_integer(int, total_segments_field, total_segments_num)
     )
 )
 

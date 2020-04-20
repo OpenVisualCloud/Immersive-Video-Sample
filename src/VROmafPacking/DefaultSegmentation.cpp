@@ -1221,6 +1221,12 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 if (ret)
                     return ret;
             } else {
+                //trace
+                const char *dashMode = "static";
+                float currFrameRate = (float)(m_frameRate.num) / (float)(m_frameRate.den);
+                tracepoint(bandwidth_tp_provider, segmentation_info,
+                    dashMode, m_segInfo->segDuration, currFrameRate, m_framesNum, m_segNum);
+
                 int32_t ret = m_mpdGen->WriteMpd(m_framesNum);
                 if (ret)
                     return ret;
