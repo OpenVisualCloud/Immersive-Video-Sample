@@ -192,7 +192,7 @@ int OmafMPDParser::BuildStreams( TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAF
         for(auto as_it = ASs.begin(); as_it != ASs.end(); as_it++){
             OmafAdaptationSet* pOmafAs = (OmafAdaptationSet*)(*as_it);
             pOmafAs->SetBaseURL(mBaseUrls);
-            if( typeid(*(pOmafAs->GetClassType()) ) == typeid( OmafExtractor ) ){
+	        if( typeid(*pOmafAs) == typeid( OmafExtractor ) ){
                 OmafExtractor *tmpOmafAs = (OmafExtractor*)pOmafAs;
                 pStream->AddExtractor(tmpOmafAs);
                 pStream->SetExtratorAdaptationSet(tmpOmafAs);

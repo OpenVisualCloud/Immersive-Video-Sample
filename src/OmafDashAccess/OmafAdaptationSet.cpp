@@ -35,7 +35,7 @@
 
 #include "OmafAdaptationSet.h"
 #include <sys/time.h>
-#include <sys/timeb.h>
+//#include <sys/timeb.h>
 
 VCD_OMAF_BEGIN
 
@@ -411,11 +411,12 @@ int OmafAdaptationSet::UpdateStartNumberByTime(uint64_t nAvailableStartTime)
     time_t gTime;
     struct tm *t;
     struct timeval now;
-    struct timeb timeBuffer;
-    ftime(&timeBuffer);
-    now.tv_sec = (long)(timeBuffer.time);
-    now.tv_usec = timeBuffer.millitm * 1000;
-
+    struct timezone tz;
+    gettimeofday(&now, &tz);
+    //struct timeb timeBuffer;
+    //ftime(&timeBuffer);
+    //now.tv_sec = (long)(timeBuffer.time);
+    //now.tv_usec = timeBuffer.millitm * 1000;
     gTime = now.tv_sec;
     t = gmtime(&gTime);
 
