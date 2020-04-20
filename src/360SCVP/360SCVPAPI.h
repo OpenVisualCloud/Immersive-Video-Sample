@@ -66,7 +66,7 @@ typedef enum EGeometryType
 *  1(merge + viewport), used in webrtc use case
 *  2(parsing one nal), used in the omaf
 *  3(parsing for client), used in the client player
-*
+*  4(only viewport calculation), can be used in OMAF DASH access
 */
 typedef enum UsageType
 {
@@ -74,6 +74,7 @@ typedef enum UsageType
     E_MERGE_AND_VIEWPORT,
     E_PARSER_ONENAL,
     E_PARSER_FOR_CLIENT,
+    E_VIEWPORT_ONLY,
     E_PARSER_TYPE_NUM,
 }UsageType;
 
@@ -297,8 +298,8 @@ typedef struct PARAM_VIEWPORT_OUTPUT
 //!
 //! \param    ViewportWidth,      input,    the width for the viewport
 //! \param    ViewportHeight,     input,    the height for the viewport
-//! \param    viewPortPitch,      input,    the angle rotated aroud z
-//! \param    viewPortYaw,        input,    the angle rotated aroud x
+//! \param    viewPortPitch,      input,    the angle rotated aroud x(-90 ~ 90)
+//! \param    viewPortYaw,        input,    the angle rotated aroud z(-180 ~ 180)
 //! \param    viewPortFOVH,       input,    the horizontal FOV angle
 //! \param    viewPortFOVV,       input,    the vertical FOV angle
 //! \param    geoTypeOutput,      input,    the type for the output projection(viewport)
@@ -321,6 +322,7 @@ typedef struct PARAM_VIEWPORT
     uint32_t               faceHeight;
     uint32_t               tileNumRow;
     uint32_t               tileNumCol;
+    UsageType              usageType;
 }Param_ViewPortInfo;
 
 //!
@@ -567,6 +569,18 @@ int32_t I360SCVP_GenerateProj(void* p360SCVPHandle, int32_t projType, uint8_t *p
 //!          not 0, if fail
 //!
 int32_t I360SCVP_ParseRWPK(void* p360SCVPHandle, RegionWisePacking* pRWPK, uint8_t *pRWPKBits, uint32_t RWPKBitsSize);
+
+//!
+//! \brief This function gets the content coverge for viewport.
+//!
+//! \param    void*              p360SCVPHandle,     input,  which is created by the I360SVCP_Init function
+//! \param    CCDef*             pOutCC,             output, the centre and range of Azimuth and Elevation of 3D sphere
+//!
+//!\return   int32_t, the status of the function.
+//!          0,     if succeed
+//!          not 0, if fail
+//!
+int32_t I360SCVP_getContentCoverage(void* p360SCVPHandle, CCDef* pOutCC);
 
 //!
 //! \brief    This function can get the specified values, for example vps, sps, and pps.

@@ -32,6 +32,8 @@
 #include <limits>
 #include <math.h>
 #include <iomanip>
+#include <cfloat>
+#include <algorithm>
 #include "360SCVPViewPort.h"
 #include "360SCVPViewportImpl.h"
 #include "360SCVPViewportAPI.h"
@@ -48,6 +50,8 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
     TgenViewport*  cTAppConvCfg = new TgenViewport;
     if (!cTAppConvCfg)
         return NULL;
+
+    cTAppConvCfg->m_usageType = pParamGenViewport->m_usageType;
     memset(&cTAppConvCfg->m_sourceSVideoInfo, 0, sizeof(struct SVideoInfo));
     memset(&cTAppConvCfg->m_codingSVideoInfo, 0, sizeof(struct SVideoInfo));
     cTAppConvCfg->m_iCodingFaceWidth = pParamGenViewport->m_iViewportWidth;
@@ -138,12 +142,30 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
             pDownRight++;
         }
 
-        maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 2);
-        if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
-            maxTileNumCol = cTAppConvCfg->m_tileNumCol;
-        maxTileNumRow = (viewPortHeightmax / cTAppConvCfg->m_srd[0].tileheight + 2);
-        if (maxTileNumRow > cTAppConvCfg->m_tileNumRow)
-            maxTileNumRow = cTAppConvCfg->m_tileNumRow;
+        if (pParamGenViewport->m_usageType == E_PARSER_ONENAL
+			|| pParamGenViewport->m_usageType == E_VIEWPORT_ONLY)
+        {
+            viewPortWidth = floor((float)(viewPortWidth) / (float)(cTAppConvCfg->m_srd[0].tilewidth) + 0.499) * cTAppConvCfg->m_srd[0].tilewidth;
+            viewPortHeightmax = floor((float)(viewPortHeightmax) / (float)(cTAppConvCfg->m_srd[0].tileheight) + 0.499) * cTAppConvCfg->m_srd[0].tileheight;
+            printf("viewPortWidthMax = %d viewPortHeightMax = %d, tile_width %d, tile_height %d\n", viewPortWidth, viewPortHeightmax, cTAppConvCfg->m_srd[0].tilewidth, cTAppConvCfg->m_srd[0].tileheight); 
+
+            maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 1);
+            if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
+                maxTileNumCol = cTAppConvCfg->m_tileNumCol;
+
+            maxTileNumRow = (viewPortHeightmax / cTAppConvCfg->m_srd[0].tileheight + 1);
+            if (maxTileNumRow > cTAppConvCfg->m_tileNumRow)
+                maxTileNumRow = cTAppConvCfg->m_tileNumRow;
+        }
+        else
+        {
+            maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 2);
+            if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
+                maxTileNumCol = cTAppConvCfg->m_tileNumCol;
+            maxTileNumRow = (viewPortHeightmax / cTAppConvCfg->m_srd[0].tileheight + 2);
+            if (maxTileNumRow > cTAppConvCfg->m_tileNumRow)
+                maxTileNumRow = cTAppConvCfg->m_tileNumRow;
+        }
 
         maxTileNum = maxTileNumCol * maxTileNumRow;
         cTAppConvCfg->m_maxTileNum = maxTileNum;
@@ -191,6 +213,41 @@ int32_t   genViewport_process(generateViewPortParam* pParamGenViewport, void* pG
 
     return 0;
 
+}
+
+
+int32_t   genViewport_postprocess(generateViewPortParam* pParamGenViewport, void* pGenHandle)
+{
+    TgenViewport* cTAppConvCfg = (TgenViewport*)(pGenHandle);
+    if (!cTAppConvCfg || !pParamGenViewport)
+        return -1;
+
+    cTAppConvCfg->selectregion(pParamGenViewport->m_iInputWidth, pParamGenViewport->m_iInputHeight, pParamGenViewport->m_viewportDestWidth, pParamGenViewport->m_viewportDestHeight);
+
+    pParamGenViewport->m_numFaces = cTAppConvCfg->m_numFaces;
+    point* pTmpUpleftDst = pParamGenViewport->m_pUpLeft;
+    point* pTmpDownRightDst = pParamGenViewport->m_pDownRight;
+    SPos * pTmpUpleftSrc = cTAppConvCfg->m_pUpLeft;
+    SPos * pTmpDownRightSrc = cTAppConvCfg->m_pDownRight;
+
+    for (int32_t i = 0; i < FACE_NUMBER; i++)
+    {
+        if (pTmpUpleftSrc->faceIdx >= 0)
+        {
+            pTmpUpleftDst->faceId = (int32_t)pTmpUpleftSrc->faceIdx;
+            pTmpUpleftDst->x = (int32_t)pTmpUpleftSrc->x;
+            pTmpUpleftDst->y = (int32_t)pTmpUpleftSrc->y;
+            pTmpDownRightDst->faceId = (int32_t)pTmpDownRightSrc->faceIdx;
+            pTmpDownRightDst->x = (int32_t)pTmpDownRightSrc->x;
+            pTmpDownRightDst->y = (int32_t)pTmpDownRightSrc->y;
+            pTmpUpleftDst++;
+            pTmpDownRightDst++;
+        }
+
+        pTmpUpleftSrc++;
+        pTmpDownRightSrc++;
+    }
+    return 0;
 }
 
 
@@ -247,11 +304,11 @@ int32_t genViewport_getContentCoverage(void* pGenHandle, CCDef* pOutCC)
     {
         int32_t w = 0, h = 0, x = 0, y = 0;
         bool coverBoundary = pUpLeft[1].faceIdx == 0 ? true : false;
-        x = pUpLeft[0].x;
+        x = coverBoundary ?  max(pUpLeft[0].x, pUpLeft[1].x) : pUpLeft[0].x;
         y = pUpLeft[0].y;
 
         w = pDownRight[0].x - pUpLeft[0].x + coverBoundary * (pDownRight[1].x - pUpLeft[1].x);
-        h = pDownRight[0].y - pUpLeft[0].y + coverBoundary * (pDownRight[1].y - pUpLeft[1].y);
+        h = pDownRight[0].y - pUpLeft[0].y;
 
         pOutCC->centreAzimuth   = (int32_t)((((videoWidth / 2) - (float)(x + w / 2)) * 360 * 65536) / videoWidth);
         pOutCC->centreElevation = (int32_t)((((videoHeight / 2) - (float)(y + h / 2)) * 180 * 65536) / videoHeight);
@@ -286,8 +343,15 @@ int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile)
     maxTileNum = cTAppConvCfg->m_maxTileNum;
 
     //select the additional tiles randomly
-    additionalTilesNum = maxTileNum - tileNum;
-    printf("the max tile count = %d additionalTilesNum = %d\n", maxTileNum, additionalTilesNum);
+    if (cTAppConvCfg->m_usageType == E_PARSER_ONENAL)
+    {
+        additionalTilesNum = 0;
+    }
+    else
+    {
+        additionalTilesNum = maxTileNum - tileNum;
+    }
+    // printf("the max tile count = %d additionalTilesNum = %d\n", maxTileNum, additionalTilesNum);
     if (additionalTilesNum < 0)
         printf("there is an error in the judgement\n");
     int32_t pos = 0;
@@ -307,22 +371,53 @@ int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile)
     //set the occupy tile into the output parameter
     int32_t idx = 0;
     TileDef* pOutTileTmp = pOutTile;
-    tileNum = tileNum + additionalTilesNum;
-    for (uint32_t col = 0; col < cTAppConvCfg->m_tileNumCol; col++)
+    if (cTAppConvCfg->m_usageType == E_PARSER_ONENAL)
     {
-        for (uint32_t row = 0; row < cTAppConvCfg->m_tileNumRow; row++)
-        {
-            if (cTAppConvCfg->m_srd[idx].isOccupy == 1)
-            {
-                pOutTileTmp->faceId = cTAppConvCfg->m_srd[idx].faceId;
-                pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
-                pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
-                pOutTileTmp->idx = idx;
-                pOutTileTmp++;
-            }
-            idx++;
-        }
+        tileNum = maxTileNum;
     }
+    else
+    {
+        tileNum = tileNum + additionalTilesNum;
+    }
+
+	if (cTAppConvCfg->m_srd[cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow-1].isOccupy == 1)
+	{
+		idx = cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow -1;
+		for (uint32_t col = cTAppConvCfg->m_tileNumCol; col > 0 ; col--)
+		{
+			for (uint32_t row = cTAppConvCfg->m_tileNumRow; row > 0 ; row--)
+			{
+				if (cTAppConvCfg->m_srd[idx].isOccupy == 1)
+				{
+					pOutTileTmp->faceId = cTAppConvCfg->m_srd[idx].faceId;
+					pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
+					pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
+					pOutTileTmp->idx = idx;
+					pOutTileTmp++;
+				}
+				idx--;
+			}
+		}
+
+	}
+	else
+	{
+		for (uint32_t col = 0; col < cTAppConvCfg->m_tileNumCol; col++)
+		{
+			for (uint32_t row = 0; row < cTAppConvCfg->m_tileNumRow; row++)
+			{
+				if (cTAppConvCfg->m_srd[idx].isOccupy == 1)
+				{
+					pOutTileTmp->faceId = cTAppConvCfg->m_srd[idx].faceId;
+					pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
+					pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
+					pOutTileTmp->idx = idx;
+					pOutTileTmp++;
+				}
+				idx++;
+			}
+		}
+	}
     return tileNum;
 }
 
@@ -439,6 +534,7 @@ TgenViewport::TgenViewport()
     m_iInputWidth = 0;
     m_iInputHeight = 0;
     m_maxTileNum = 0;
+    m_usageType = E_STREAM_STITCH_ONLY;
     m_numFaces = 0;
     m_srd = new ITileInfo;
 }
@@ -481,6 +577,7 @@ TgenViewport& TgenViewport::operator=(const TgenViewport& src)
     this->m_iFrameRate = src.m_iFrameRate;
     this->m_iInputWidth = src.m_iInputWidth;
     this->m_iInputHeight = src.m_iInputHeight;
+    this->m_usageType = src.m_usageType;
     memcpy(this->m_srd, src.m_srd, sizeof(ITileInfo));
     return *this;
 }
@@ -532,15 +629,19 @@ int32_t TgenViewport::parseCfg(  )
     m_codingSVideoInfo.iNumFaces = 1;
     m_codingSVideoInfo.iFaceWidth = m_iCodingFaceWidth ;
     m_codingSVideoInfo.iFaceHeight = m_iCodingFaceHeight;
+    m_codingSVideoInfo.fullWidth = m_iInputWidth;
+    m_codingSVideoInfo.fullHeight = m_iSourceHeight;
 
     m_aiPad[1] = m_aiPad[0] = 0;
 
     if (m_tileNumCol == 0 || m_tileNumRow == 0)
         return -1;
-    // the following code is temporary, need to update accoridg to the API
     int32_t posY = 0;
     int32_t stepX = m_iInputWidth / m_tileNumCol;
     int32_t stepY = m_iInputHeight / m_tileNumRow;
+    float stepHorzPos = ERP_HORZ_ANGLE / (float)m_tileNumCol;
+    float stepVertPos = ERP_VERT_ANGLE / (float)m_tileNumRow;
+    float vertPos = ERP_VERT_START;
     int32_t idx = 0;
 
     int32_t faceNum = (m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 1;
@@ -551,6 +652,7 @@ int32_t TgenViewport::parseCfg(  )
         for (uint32_t i = 0; i < m_tileNumRow; i++)
         {
             int32_t posX = 0;
+            float horzPos = ERP_HORZ_START;
             for (uint32_t j = 0; j < m_tileNumCol; j++)
             {
                 m_srd[idx].x = posX;
@@ -559,12 +661,136 @@ int32_t TgenViewport::parseCfg(  )
                 m_srd[idx].tileheight = stepY;
                 m_srd[idx].faceId = faceid;
                 m_srd[idx].isOccupy = 0;
+                m_srd[idx].horzPos = horzPos;
+                m_srd[idx].vertPos = vertPos;
                 posX += stepX;
+                horzPos += stepHorzPos;
                 idx++;
             }
             posY += stepY;
+            vertPos -= stepVertPos;
         }
     }
+    return 0;
+}
+
+int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short dstWidth, short dstHeight)
+{
+    uint32_t idx = 0;
+    int32_t faceNum = (m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 1;
+    float fYaw = m_codingSVideoInfo.viewPort.fYaw;
+    float fPitch = m_codingSVideoInfo.viewPort.fPitch;
+    // starting time
+    double dResult;
+    clock_t lBefore = clock();
+
+    // seek the center tile of the FOV
+    float leastDistance = FLT_MAX;
+    uint32_t opt_idx = m_tileNumRow * m_tileNumCol;
+    for (int32_t faceid = 0; faceid < faceNum; faceid++)
+    {
+        // select optimization
+        float cal_yaw = fYaw + ERP_HORZ_ANGLE / 2;
+        float cal_pitch = ERP_VERT_ANGLE / 2 - fPitch;
+        float horzStep = ERP_HORZ_ANGLE / (float)m_tileNumCol;
+        float vertStep = ERP_VERT_ANGLE / (float)m_tileNumRow;
+        std::pair<uint32_t, uint32_t> fov_corr((uint32_t)cal_yaw / (uint32_t)horzStep, (uint32_t)cal_pitch / (uint32_t)vertStep);
+        if (fov_corr.second == m_tileNumRow){
+            fov_corr.second--;
+        }
+        if (fov_corr.first == m_tileNumCol){
+            fov_corr.first--;
+        }
+        std::vector<uint32_t> selected_idxs;
+        uint32_t select_idx = fov_corr.first + fov_corr.second * m_tileNumCol;
+        uint32_t boundary_offset = fov_corr.first == m_tileNumCol -1 ? m_tileNumCol : 0;
+        selected_idxs.push_back(select_idx);
+        selected_idxs.push_back(select_idx + 1 - boundary_offset);
+        selected_idxs.push_back(select_idx + m_tileNumCol);
+        selected_idxs.push_back(select_idx + 1 + m_tileNumCol - boundary_offset);
+        for (uint32_t it=0;it<selected_idxs.size();it++)
+        {
+            float correct_offset = fYaw - m_srd[selected_idxs[it]].horzPos > ERP_HORZ_ANGLE / 2 ? ERP_HORZ_ANGLE : 0;
+            float distance = sqrt(pow(fYaw - m_srd[selected_idxs[it]].horzPos - correct_offset, 2) + pow(fPitch - m_srd[selected_idxs[it]].vertPos, 2));
+            if (distance < leastDistance)
+            {
+                leastDistance = distance;
+                opt_idx = selected_idxs[it];
+            }
+        }
+    }
+    if (opt_idx == m_tileNumRow * m_tileNumCol)
+        opt_idx--;
+    idx = opt_idx;
+    //select all of the tiles to cover the whole viewport
+    short centerX = m_srd[idx].x;
+    short centerY = m_srd[idx].y;
+    short halfVPhorz = (dstWidth - m_srd[0].tilewidth) >> 1;
+    short halfVPvert = (dstHeight - m_srd[0].tileheight) >> 1;
+	//need to refine later
+	if (NORMAL_PITCH_MAX > fPitch  && fPitch > NORMAL_PITCH_MIN)
+		centerY -= m_srd[0].tileheight;
+    for (uint32_t i=0;i<FACE_NUMBER;i++)
+    {
+        m_pUpLeft[i].x = inputWidth;
+        m_pUpLeft[i].y = inputHeight;
+        m_pDownRight[i].x = 0;
+        m_pDownRight[i].y = 0;
+        m_pUpLeft[i].faceIdx = -1;
+        m_pDownRight[i].faceIdx = -1;
+    }
+    SPos*pTmpUpLeft = m_pUpLeft;
+    SPos*pTmpDownRight = m_pDownRight;
+	pTmpUpLeft->faceIdx = 0;
+	pTmpDownRight->faceIdx = 0;
+    pTmpUpLeft->x = centerX - halfVPhorz;
+    pTmpDownRight->x = centerX + halfVPhorz;
+    pTmpUpLeft->y = centerY - halfVPvert;
+    pTmpDownRight->y = centerY + halfVPvert;
+    if (pTmpUpLeft->y < m_srd[idx].tileheight*(-1))
+    {
+        pTmpUpLeft->y = 0;
+        pTmpUpLeft->x = 0;
+        pTmpDownRight->x = inputWidth;
+    }
+    else if(pTmpUpLeft->y < 0)
+        pTmpUpLeft->y = 0;
+    // Need to ajust after region select optimization in two pole areas
+    if (pTmpDownRight->y >= inputHeight + m_srd[idx].tileheight / 2)
+    {
+        pTmpUpLeft->x = 0;
+        pTmpDownRight->x = inputWidth;
+        pTmpDownRight->y = inputHeight;
+    }
+    else if (pTmpDownRight->y > inputHeight)
+        pTmpDownRight->y = inputHeight;
+
+    if (pTmpUpLeft->x < 0)
+    {
+        pTmpUpLeft->x = 0;
+        pTmpDownRight++;
+        pTmpDownRight->faceIdx = 0;
+        pTmpDownRight->x = inputWidth;
+        pTmpDownRight->y = m_pDownRight->y;
+        pTmpUpLeft++;
+        pTmpUpLeft->faceIdx = 0;
+        pTmpUpLeft->x = inputWidth - (halfVPhorz - centerX);
+        pTmpUpLeft->y = m_pUpLeft->y;
+    }
+    else if (pTmpDownRight->x > inputWidth)
+    {
+        pTmpDownRight->x = inputWidth;
+        pTmpDownRight++;
+        pTmpDownRight->faceIdx = 0;
+        pTmpUpLeft++;
+        pTmpUpLeft->faceIdx = 0;
+        pTmpUpLeft->x = 0;
+        pTmpUpLeft->y = m_pUpLeft->y;
+        pTmpDownRight->x = centerX + halfVPhorz - inputWidth;
+        pTmpDownRight->y = m_pDownRight->y;
+    }
+    dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
+    printf("\n Total Time for tile selection: %12.3f sec.\n", dResult);
     return 0;
 }
 
@@ -652,24 +878,24 @@ bool TgenViewport::isInside(int32_t x, int32_t y, int32_t width, int32_t height,
         return ret;
 
     if ((x >= pUpLeft->x)
-        && (x <= pDownRight->x)
+        && (x < pDownRight->x)
         && (y >= pUpLeft->y)
-        && (y <= pDownRight->y))
+        && (y < pDownRight->y))
         ret = 1;
     else if ((x + width >= pUpLeft->x)
-        && (x + width <= pDownRight->x)
+        && (x + width < pDownRight->x)
         && (y + height >= pUpLeft->y)
-        && (y + height <= pDownRight->y))
+        && (y + height < pDownRight->y))
         ret = 1;
     else if ((x + width >= pUpLeft->x)
-        && (x + width <= pDownRight->x)
+        && (x + width < pDownRight->x)
         && (y >= pUpLeft->y)
-        && (y <= pDownRight->y))
+        && (y < pDownRight->y))
         ret = 1;
     else if ((x >= pUpLeft->x)
-        && (x <= pDownRight->x)
+        && (x < pDownRight->x)
         && (y + height >= pUpLeft->y)
-        && (y + height <= pDownRight->y))
+        && (y + height < pDownRight->y))
         ret = 1;
 
     //for erp format source, need to judge the boudary

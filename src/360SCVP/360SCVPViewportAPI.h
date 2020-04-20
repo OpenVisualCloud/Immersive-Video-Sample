@@ -47,8 +47,8 @@ typedef struct POINTDEF
 //!
 //! \param    m_iViewportWidth,      input,    the width for the viewport
 //! \param    m_iViewportHeight,     input,    the height for the viewport
-//! \param    m_viewPort_fPitch,      input,    the angle rotated aroud z
-//! \param    m_viewPort_fYaw,       input,    the angle rotated aroud x
+//! \param    m_viewPort_fYaw,       input,    the angle rotated aroud z(-180 ~ 180)
+//! \param    m_viewPort_fPitch,     input,    the angle rotated aroud x(-90 ~ 90)
 //! \param    m_viewPort_hFOV,       input,    the horizontal FOV angle
 //! \param    m_viewPort_vFOV,       input,    the vertical FOV angle
 //! \param    m_output_geoType,      input,    the type for the output projection(viewport)
@@ -81,6 +81,7 @@ typedef struct GENERATE_VIEWPORT_PARAM
     point*  m_pDownRight;
     int32_t m_viewportDestWidth;
     int32_t m_viewportDestHeight;
+    UsageType m_usageType;
 
 } generateViewPortParam;
 
@@ -106,6 +107,18 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport);
 //!           not 0, if fail
 //!
 int32_t   genViewport_process(generateViewPortParam* pParamGenViewport, void* pGenHandle);
+
+//!
+//! \brief    This function completes the viewport selection by look up table , according to the FOV information.
+//!
+//! \param    generateViewPortParam* pParamGenViewport, output, refer to the structure generateViewPortParam
+//! \param    void*                 pGenHandle,            input, which is created by the genTiledStream_Init function
+//!
+//! \return   s32, the status of the function.
+//!           0,     if succeed
+//!           not 0, if fail
+//!
+int32_t   genViewport_postprocess(generateViewPortParam* pParamGenViewport, void* pGenHandle);
 
 //!
 //! \brief    This function sets the parameter of the viewPort.

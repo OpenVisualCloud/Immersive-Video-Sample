@@ -224,6 +224,7 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
     m_pViewportParam.m_viewPort_fYaw = pViewPortInfo->viewPortYaw;
     m_pViewportParam.m_viewPort_hFOV = pViewPortInfo->viewPortFOVH;
     m_pViewportParam.m_viewPort_vFOV = pViewPortInfo->viewPortFOVV;
+    m_pViewportParam.m_usageType = pViewPortInfo->usageType;
     m_pViewport = genViewport_Init(&m_pViewportParam);
     return 0;
 }
@@ -321,8 +322,15 @@ int32_t TstitchStream::init(param_360SCVP* pParamStitchStream)
     m_specialDataLen[1] = 0;
     m_usedType = pParamStitchStream->usedType;
     m_dstRwpk.rectRegionPacking = NULL;
+    pParamStitchStream->paramViewPort.usageType = (UsageType)(pParamStitchStream->usedType);
     if (m_usedType == E_PARSER_FOR_CLIENT)
     {
+        return ret;
+    }
+    if (m_usedType == E_VIEWPORT_ONLY)
+    {
+        // Init the viewport library
+        ret = initViewport(&pParamStitchStream->paramViewPort, pParamStitchStream->paramViewPort.tileNumCol, pParamStitchStream->paramViewPort.tileNumRow);
         return ret;
     }
     if (m_usedType == E_STREAM_STITCH_ONLY)
@@ -608,7 +616,7 @@ int32_t TstitchStream::getViewPortTiles()
     if (!m_pViewport)
         return -1;
     int32_t ret = 0;
-    ret = genViewport_process(&m_pViewportParam, m_pViewport);
+    ret = genViewport_postprocess(&m_pViewportParam, m_pViewport);
     if (ret)
     {
         printf("gen viewport process error!\n");
@@ -1153,6 +1161,14 @@ int32_t  TstitchStream::setViewportSEI(OMNIViewPort* pSeiViewport)
     return ret;
 }
 
+int32_t  TstitchStream::getContentCoverage(CCDef* pOutCC)
+{
+    int32_t ret = 0;
+    if (pOutCC == NULL)
+        return -1;
+    ret = genViewport_getContentCoverage(m_pViewport, pOutCC);
+    return ret;
+}
 
 int32_t  TstitchStream::GeneratePPS(param_360SCVP* pParamStitchStream, TileArrangement* pTileArrange)
 {

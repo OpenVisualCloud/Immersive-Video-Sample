@@ -26,6 +26,7 @@
 #ifndef __360SCVP_VIEWPORTIMPL__
 #define __360SCVP_VIEWPORTIMPL__
 
+#include "360SCVPAPI.h"
 #include "360SCVPGeometry.h"
 
 #include <sstream>
@@ -40,6 +41,8 @@ typedef struct SIZE_DEF
 
 #define MAX_FOV_ANGLE 100;
 #define NORMAL_FACE_SIZE 960;
+#define NORMAL_PITCH_MIN -75
+#define NORMAL_PITCH_MAX -15
 
 enum FOVAngle
 {
@@ -68,6 +71,8 @@ struct ITileInfo
     short tileheight;
     int32_t   faceId;
     uint32_t  isOccupy;
+    float vertPos;
+    float horzPos;
 };
 /// generate viewport class
 class TgenViewport
@@ -93,6 +98,7 @@ public:
     int32_t       m_aiPad[2];                                       ///< number of padded pixels for width and height
     int32_t   m_faceSizeAlignment;
     int32_t       m_maxTileNum;
+    UsageType     m_usageType;
     inline int32_t round(POSType t) { return (int32_t)(t+ (t>=0? 0.5 :-0.5)); };
 public:
     TgenViewport();
@@ -104,6 +110,7 @@ public:
     void     destroy();    ///< destroy option handling class
     int32_t  parseCfg(  );  ///< parse configuration file to fill member variables
     int32_t  convert();
+    int32_t  selectregion(short inputWidth, short inputHeight, short dstWidth, short dstHeight);
     //analysis;
     bool     isInside(int32_t x, int32_t y, int32_t width, int32_t height, int32_t faceId);
     int32_t  calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol, int32_t tileRow);
