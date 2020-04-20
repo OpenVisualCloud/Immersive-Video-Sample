@@ -149,21 +149,21 @@ BoxBlockAccess::~BoxBlockAccess()
 
 BoxBlock BoxBlockAccess::GetBoxBlock(FourCCInt aFourcc) const
 {
-    auto at = m_index.find(aFourcc);
-    if (at == m_index.end())
+    map<FourCCInt, list<BoxBlock>>::const_iterator iter = m_index.find(aFourcc);
+    if (iter == m_index.end())
+    {
+        LOG(ERROR) << "Couldn't find Boxes List!" << endl;
+        throw exception();
+    }
+
+    list<BoxBlock> boxList = iter->second;
+    if (boxList.size() == 0)
     {
         LOG(ERROR) << "Couldn't find Box !" << endl;
         throw exception();
     }
 
-    auto& els = at->second;
-    if (els.size() == 0)
-    {
-        LOG(ERROR) << "Couldn't find Box !" << endl;
-        throw exception();
-    }
-
-    return *at->second.begin();
+    return *((iter->second).begin());
 }
 
 std::vector<uint8_t> BoxBlockAccess::GetData(const DataBlock& aBlock) const
