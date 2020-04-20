@@ -7,4 +7,4 @@ Name:OmafDashAccess
 Description: OMAF DASH Access library
 Version:0.0.1-DEV
 Cflags: -I${prefix}/include
-Libs: -L${libdir} -lOmafDashAccess -lstdc++ -l360SCVP -lglog -lpthread -lcurl -L/usr/lib64 -L/usr/local/lib64
+Libs: -L${libdir} -lOmafDashAccess -static-libstdc++ -l360SCVP -lglog -lpthread -lcurl -L/usr/lib64 -L/usr/local/lib64
