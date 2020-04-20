@@ -64,6 +64,7 @@ class StreamIOInternal
 {
 public:
     StreamIOInternal(StreamIO* stream = nullptr);
+    StreamIOInternal(const StreamIOInternal&) = default;
     StreamIOInternal& operator=(const StreamIOInternal&) = default;
     //StreamIOInternal& operator=(StreamIOInternal&&);
     ~StreamIOInternal();

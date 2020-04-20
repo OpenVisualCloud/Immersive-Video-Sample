@@ -44,6 +44,7 @@ StreamIOInternal::StreamIOInternal(StreamIO* stream)
 {
     m_error = !stream || !stream->SeekAbsoluteOffset(0);
 }
+
 /*
 StreamIOInternal& StreamIOInternal::operator=(StreamIOInternal&& other)
 {

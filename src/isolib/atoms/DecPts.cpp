@@ -244,23 +244,13 @@ bool DecodePts::Unravel()
         std::vector<std::int32_t> DeltaPts;
         DeltaPts = m_compOffsetAtom->GetSampleCompositionOffsets();
 
-        if (DeltaPts.size() != pDts.size())
+        if (DeltaPts.size() == pDts.size())
         {
-            LOG(ERROR)<<"Error in size !"<<std::endl;
-            return false;
-        }
-
-        //if (DeltaPts.size() == pDts.size())
-        //{
         std::transform(pDts.begin(), pDts.end(), DeltaPts.begin(), std::back_inserter(mediaPtsTS),
                        [](std::uint64_t theMediaDts, std::int32_t thePtsDelta) {
-                           return std::uint64_t(std::int32_t(theMediaDts) + thePtsDelta);
+                           return std::uint64_t(theMediaDts + (std::uint64_t)(thePtsDelta));
                        });
-        //}
-        //else
-        //{
-        //    ret = false;
-        //}
+        }
     }
     else
     {
