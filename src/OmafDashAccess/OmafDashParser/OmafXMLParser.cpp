@@ -56,9 +56,9 @@ size_t OmafXMLParser::WriteData(void* ptr, size_t size, size_t nmemb, FILE* fp)
     return fwrite(ptr, size, nmemb, fp);
 }
 
-string OmafXMLParser::DownloadXMLFile(string url)
+string OmafXMLParser::DownloadXMLFile(string url, string cache_dir)
 {
-    string fileName = url.substr(url.find_last_of('/') + 1, url.length() - url.find_last_of('/') - 1);
+    string fileName = cache_dir + url.substr(url.find_last_of('/') + 1, url.length() - url.find_last_of('/') - 1);
     CURL* curl = curl_easy_init();
     if(!curl)
     {
@@ -81,7 +81,7 @@ string OmafXMLParser::DownloadXMLFile(string url)
     return fileName;
 }
 
-ODStatus OmafXMLParser::Generate(string url)
+ODStatus OmafXMLParser::Generate(string url, string cacheDir)
 {
     ODStatus ret = OD_STATUS_SUCCESS;
 
@@ -91,7 +91,7 @@ ODStatus OmafXMLParser::Generate(string url)
     string url_prefix = "http";
     bool local = m_path.length() < url_prefix.length() || m_path.substr(0, 4) != url_prefix;
 
-    string fileName = local ? url : DownloadXMLFile(url);
+    string fileName = local ? url : DownloadXMLFile(url, cacheDir);
     if(!fileName.length())
         return OD_STATUS_INVALID;
 

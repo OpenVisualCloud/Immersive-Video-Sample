@@ -103,16 +103,17 @@ int OmafReaderManager::Close()
     releaseAllSegments();
     releasePacketQueue();
 
-    for(auto &it:m_readSegMap)
+    std::map<uint32_t, std::map<uint32_t, OmafSegment*>>::iterator it;
+    for (it = m_readSegMap.begin(); it != m_readSegMap.end();)
     {
-        std::map<uint32_t, OmafSegment*> initSegNormalSeg = it.second;
+        std::map<uint32_t, OmafSegment*> initSegNormalSeg = it->second;
         for (auto& itRmSeg : initSegNormalSeg)
         {
             OmafSegment *rmSeg = itRmSeg.second;
             delete rmSeg;
             rmSeg = NULL;
         }
-        m_readSegMap.erase(it.first);
+        m_readSegMap.erase(it++);
     }
     m_readSegMap.clear();
 

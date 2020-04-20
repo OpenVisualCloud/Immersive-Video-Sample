@@ -88,6 +88,11 @@ public:
     //!
     MPDInfo* GetMPDInfo();
 
+    //!
+    //! \brief  Set cache dir.
+    //!
+    void SetCacheDir(string cache_dir) {mCacheDir = cache_dir;};
+
 private:
 
     //!
@@ -131,6 +136,7 @@ private:
     MPDInfo                        *mMPDInfo;     //!< the information of MPD
     std::vector<BaseUrlElement *>  mBaseUrls;
     ProjectionFormat               mPF;           //!< the projection format of the video content
+    std::string                    mCacheDir;     //!< cache directory
 };
 
 VCD_OMAF_END;

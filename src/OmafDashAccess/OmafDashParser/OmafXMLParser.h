@@ -62,22 +62,26 @@ public:
     //!
     //! \param    [in] url
     //!           MPD file url
+    //!           [in] cacheDir
+    //!           cache directory
     //!
     //! \return   ODStatus
     //!           OD_STATUS_SUCCESS if success, else fail reason
     //!
-    ODStatus Generate(string url);
+    ODStatus Generate(string url, string cacheDir);
 
     //!
     //! \brief    Download MPD file
     //!
     //! \param    [in] url
     //!           MPD file url
+    //!           [in] cacheDir
+    //!           cache directory
     //!
     //! \return   string
     //!           the name of downloaded file
     //!
-    string DownloadXMLFile(string url);
+    string DownloadXMLFile(string url, string cacheDir);
 
     //!
     //! \brief    Generate XML tree

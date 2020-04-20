@@ -43,6 +43,8 @@ OmafMediaStream::OmafMediaStream()
 
 OmafMediaStream::~OmafMediaStream()
 {
+    SAFE_DELETE(m_pStreamInfo->codec);
+    SAFE_DELETE(m_pStreamInfo->mime_type);
     SAFE_FREE(m_pStreamInfo);
     SAFE_FREE(mMainAdaptationSet);
     if(mMediaAdaptationSet.size())
@@ -124,8 +126,12 @@ void OmafMediaStream::UpdateStreamInfo()
         m_pStreamInfo->framerate_num = vi.frame_Rate.num;
         m_pStreamInfo->height        = mExtratorAdaptationSet->GetVideoInfo().height;
         m_pStreamInfo->width         = mExtratorAdaptationSet->GetVideoInfo().width;
-        m_pStreamInfo->mime_type     = mMainAdaptationSet->GetMimeType().c_str();
-        m_pStreamInfo->codec         = mMainAdaptationSet->GetCodec()[0].c_str();
+        m_pStreamInfo->mime_type     = new char[1024];
+        m_pStreamInfo->codec         = new char[1024];
+        memcpy(const_cast<char*>(m_pStreamInfo->mime_type), mMainAdaptationSet->GetMimeType().c_str(), 1024);
+        memcpy(const_cast<char*>(m_pStreamInfo->codec), mMainAdaptationSet->GetCodec()[0].c_str(), 1024);
+        // m_pStreamInfo->mime_type     = mMainAdaptationSet->GetMimeType().c_str();
+        // m_pStreamInfo->codec         = mMainAdaptationSet->GetCodec()[0].c_str();
         m_pStreamInfo->mFpt          = (int32_t)mMainAdaptationSet->GetFramePackingType();
         m_pStreamInfo->mProjFormat   = (int32_t)mMainAdaptationSet->GetProjectionFormat();
         m_pStreamInfo->segmentDuration = mMainAdaptationSet->GetSegmentDuration();
