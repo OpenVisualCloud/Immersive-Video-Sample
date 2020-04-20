@@ -2010,11 +2010,6 @@ pair<TrackBasicInfo, TrackDecInfo> Mp4Reader::ExtractTrackDecInfo(TrackAtom* tra
         ptsInfo.SetAtom(editListAtom, movieTimescale, mdhdAtom.GetTimeScale());
     }
     ptsInfo.Unravel();
-    //if (!ptsInfo.Unravel())
-    //{
-    //    LOG(ERROR) << "Init segment file header is not correct !" << endl;
-    //    throw exception();
-    //}
 
     trackDecInfo.durationTS = PrestTS(ptsInfo.GetSpan());
     trackDecInfo.pMap       = ptsInfo.GetTime(basicTrackInfo.timeScale);
@@ -2143,11 +2138,6 @@ MoovProperties Mp4Reader::ExtractMoovProps(const MovieAtom& moovAtom) const
 {
     MoovProperties moovProperties;
     moovProperties.fragmentDuration = 0;
-
-    //if (moovAtom.IsMetaAtomPresent())
-    //{
-    //    moovProperties.moovFeature.SetProperty(MoovProperty::HasMoovLevelMetaBox);
-    //}
 
     if (moovAtom.IsMovieExtendsAtomPresent())
     {
@@ -3822,20 +3812,6 @@ int32_t Mp4Reader::GetSampData(uint32_t trackId,
                 extSize = 0;
                 for (auto& extractor : extSamp.extractors)
                 {
-                    //vector<ExtSample::SampleConstruct>::iterator sampConst = extractor.sampleConstruct.begin();
-                    //for ( ; sampConst != extractor.sampleConstruct.end(); ++sampConst)
-                    //{
-                    //    uint64_t refSampLength = 0;
-                    //    uint64_t refDataOffset = 0;
-                    //    result =
-                    //        GetDepedentSampInfo(trackId, itemIndex, initSegId, (*sampConst).track_ref_index,
-                    //            refSampLength, refDataOffset);
-                    //    if (result != ERROR_NONE)
-                    //    {
-                    //        return result;
-                    //    }
-                    //    extSize += refSampLength;
-                    //}
                     for (auto& sampConstr : extractor.sampleConstruct)
                     {
                         uint64_t refSampLength = 0;
