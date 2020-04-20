@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 babeltrace2 ust/ > packing_trace.txt
 
@@ -128,7 +128,7 @@ selected_tile_cols=$(echo $selected_tile_cols | awk -F "," '{print $1}')
 selection_accurancy=`awk 'BEGIN{printf "%.2f%%\n", ('$(($calculated_net_width*$calculated_net_height))'/'$(($calculated_tilealigned_width*$calculated_tilealigned_height))')*100}'`
 
 echo "Calculated viewport area : $calculated_net_width x $calculated_net_height" >> "$summary_file_name".txt
-echo "Selected tiles layout    : $selected_tile_rows x $selected_tile_cols" >> "$summary_file_name".txt
+echo "Selected tiles layout    : $selected_tile_cols x $selected_tile_rows" >> "$summary_file_name".txt
 echo "Selected tiles area      : $calculated_tilealigned_width x $calculated_tilealigned_height" >> "$summary_file_name".txt
 echo "Calculated viewport area / Selected tiles area : $selection_accurancy" >> "$summary_file_name".txt
 

@@ -114,6 +114,36 @@ TRACEPOINT_EVENT(
     )
 )
 
+TRACEPOINT_EVENT(
+    bandwidth_tp_provider,
+    extractor_track_dependent_info,
+    TP_ARGS(
+        int,       extractor_track_index,
+        uint32_t,  dependent_tracks_num,
+        uint32_t*, dependent_tracks_index
+    ),
+
+    TP_FIELDS(
+        ctf_integer(int, extractor_index_field, extractor_track_index)
+        ctf_integer(uint32_t, dependent_tracks_num_field, dependent_tracks_num)
+        ctf_sequence(uint32_t, dependent_tracks_index_field, dependent_tracks_index, uint32_t, dependent_tracks_num)
+    )
+)
+
+TRACEPOINT_EVENT(
+    bandwidth_tp_provider,
+    download_info,
+    TP_ARGS(
+        uint64_t, download_start_time,
+        uint32_t, download_segment_id
+    ),
+
+    TP_FIELDS(
+        ctf_integer(uint64_t, download_start_time_field, download_start_time)
+        ctf_integer(uint32_t, download_segment_id_field, download_segment_id)
+    )
+)
+
 #endif /* _TRACEPOINT_BANDWIDTH_H */
 
 #undef TRACEPOINT_INCLUDE

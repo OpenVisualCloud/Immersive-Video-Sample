@@ -98,6 +98,7 @@ install_dependencies() {
         ./build_glog.sh
         ./prebuild_player.sh
         ./install_FFmpeg.sh client
+        ./install_lttng.sh
     elif [ $1 == "android" ] ; then
         ./prebuild_android.sh
     fi
