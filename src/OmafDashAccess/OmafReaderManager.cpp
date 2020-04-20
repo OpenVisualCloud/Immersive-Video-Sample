@@ -36,8 +36,9 @@
 #include "OmafReaderManager.h"
 #include "OmafMP4VRReader.h"
 #include <math.h>
-
+#ifndef _ANDROID_NDK_OPTION_
 #include "../trace/Bandwidth_tp.h"
+#endif
 
 VCD_OMAF_BEGIN
 
@@ -125,12 +126,12 @@ int OmafReaderManager::AddInitSegment( OmafSegment* pInitSeg, uint32_t& nInitSeg
     if(NULL == mReader) return ERROR_NULL_PTR;
 
     ScopeLock readerLock(mReaderLock);
-
+#ifndef _ANDROID_NDK_OPTION_
     //trace
     const char *trackType = "init_track";
     uint64_t segSize = pInitSeg->GetSegSize();
     tracepoint(bandwidth_tp_provider, packed_segment_size, 0, trackType, 0, segSize);
-
+#endif
     nInitSegID = mCurTrkCnt++;
     int32_t result = mReader->parseInitializationSegment(pInitSeg, nInitSegID);
     if (result != 0)
@@ -234,7 +235,7 @@ int OmafReaderManager::AddSegment( OmafSegment* pSeg, uint32_t nInitSegID, uint3
 
     nSegID = ++(mMapSegCnt[nInitSegID]);
     //LOG(INFO)<<"now nSegID = "<<nSegID<<", pSeg->IsReEnabled() = "<<pSeg->IsReEnabled()<<", segCnt = "<<segCnt<<endl;
-
+#ifndef _ANDROID_NDK_OPTION_
     //trace
     int trackIndex = mMapInitTrk[nInitSegID];
     if (mMapSegStatus[trackIndex].depTrackIDs.size())
@@ -249,7 +250,7 @@ int OmafReaderManager::AddSegment( OmafSegment* pSeg, uint32_t nInitSegID, uint3
         uint64_t segSize = pSeg->GetSegSize();
         tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, nSegID, segSize);
     }
-
+#endif
     auto it = m_readSegMap.begin();
     for ( ; it != m_readSegMap.end(); it++)
     {
