@@ -39,6 +39,10 @@ SphereRegionConfigAtom::SphereRegionConfigAtom()
     : FullAtom("rosc", 0, 0)
     , m_numRegions(1)
 {
+    m_shapeType = ShapeMode::TwoAzimuthAndTwoElevationCircles;
+    m_dynamicRangeFlag = false;
+    m_staticAzimuthRange = 0;
+    m_staticElevationRange = 0;
 }
 
 void SphereRegionConfigAtom::SetShapeMode(ShapeMode shapeType)

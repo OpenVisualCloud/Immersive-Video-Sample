@@ -44,29 +44,37 @@ StreamIOInternal::StreamIOInternal(StreamIO* stream)
 {
     m_error = !stream || !stream->SeekAbsoluteOffset(0);
 }
-
+/*
+StreamIOInternal& StreamIOInternal::operator=(StreamIOInternal&& other)
+{
+    m_error = other.m_error;
+    m_eof   = other.m_eof;
+    m_stream = std::move(other.m_stream);
+    return *this;
+}
+*/
 StreamIOInternal::~StreamIOInternal()
 {
     if(m_stream)
+    {
         delete m_stream;
+        m_stream = NULL;
+    }
     // nothing
 }
 
 void StreamIOInternal::ReadStream(char* buffer, StreamIO::offset_t size_)
 {
-    //TRACE(logInfo() << "Reading " << size_ << " at " << m_stream->TellOffset() << " ");
     LOG(INFO) << "Reading " << size_ << " bytes at position " << m_stream->TellOffset() << endl;
     StreamIO::offset_t got = m_stream->ReadStream(buffer, size_);
     if (got < size_)
     {
-        //TRACE(logInfo() << "FAIL!" << endl);
         LOG(INFO) << "Read Failed!" << endl;
         m_eof   = true;
         m_error = true;
     }
     else
     {
-        //TRACE(logInfo() << "OK!" << endl);
         LOG(INFO) << "Read Success!" << endl;
     }
 }
@@ -74,18 +82,15 @@ void StreamIOInternal::ReadStream(char* buffer, StreamIO::offset_t size_)
 int StreamIOInternal::GetOneByte()
 {
     char ch;
-    //TRACE(logInfo() << "Getting at " << m_stream->TellOffset() << " ");
     LOG(INFO) << "Getting One Character at position " << m_stream->TellOffset() << endl;
     StreamIO::offset_t got = m_stream->ReadStream(&ch, sizeof(ch));
     if (got)
     {
-        //TRACE(logInfo() << "OK!" << endl);
         LOG(INFO) << "Get One Character Success!" << endl;
         return static_cast<unsigned char>(ch);
     }
     else
     {
-        //TRACE(logInfo() << "FAIL!" << endl);
         LOG(INFO) << "Get One Character Failed!" << endl;
         m_eof = true;
         return 0;
@@ -95,18 +100,15 @@ int StreamIOInternal::GetOneByte()
 bool StreamIOInternal::PeekEOS()
 {
     char buffer;
-    //TRACE(logInfo() << "Peek EOF at " << m_stream->TellOffset() << " ");
     LOG(INFO) << "Peek EOS at position " << m_stream->TellOffset() << endl;
     auto was = m_stream->TellOffset();
     if (m_stream->ReadStream(&buffer, sizeof(buffer)) == 0)
     {
-        //TRACE(logInfo() << "EOF!" << endl);
         LOG(INFO) << "Get EOS !" << endl;
         return true;
     }
     else
     {
-        //TRACE(logInfo() << "No EOF!" << endl);
         LOG(INFO) << "Not EOS !" << endl;
         m_stream->SeekAbsoluteOffset(was);
         return false;
@@ -115,18 +117,15 @@ bool StreamIOInternal::PeekEOS()
 
 void StreamIOInternal::SeekOffset(StreamIO::offset_t offset)
 {
-    //TRACE(logInfo() << "Seeking to " << offset << " at " << m_stream->TellOffset() << " ");
     LOG(INFO) << "Seeking to " << offset << " bytes at position " << m_stream->TellOffset() << endl;
     if (!m_stream->SeekAbsoluteOffset(offset))
     {
-        //TRACE(logInfo() << "FAIL!" << endl);
         LOG(INFO) << "Seek Failed !" << endl;
         m_eof   = true;
         m_error = true;
     }
     else
     {
-        //TRACE(logInfo() << "OK!" << endl);
         LOG(INFO) << "Seek Sucess !" << endl;
     }
 }

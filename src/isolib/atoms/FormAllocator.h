@@ -122,6 +122,8 @@ public:
     {
     }
 
+    Allocator& operator=(const Allocator&) = default;
+
     //!
     //! \brief Destructor
     //!
@@ -169,7 +171,11 @@ public:
     //!
     //! \brief Constructor
     //!
-    Exception() : std::exception(){}
+    Exception()
+        : std::exception()
+        , m_data(NULL)
+    {
+    }
 
     //!
     //! \brief Destructor

@@ -47,7 +47,7 @@ public:
     virtual ~GetDataOfFrame();
 
     GetDataOfFrame(const GetDataOfFrame& other) = delete;
-    void operator=(const GetDataOfFrame&) = delete;
+    GetDataOfFrame& operator=(const GetDataOfFrame&) = delete;
 
     virtual size_t GetDataSize() const = 0;
     virtual FrameBuf Get() const  = 0;

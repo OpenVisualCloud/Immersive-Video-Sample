@@ -53,6 +53,8 @@ public:
     AvcSampleEntry();
     AvcSampleEntry(const AvcSampleEntry& Atom);
 
+    AvcSampleEntry& operator=(const AvcSampleEntry&) = default;
+
     //!
     //! \brief Destructor
     //!

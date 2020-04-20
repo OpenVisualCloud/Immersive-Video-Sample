@@ -369,6 +369,8 @@ public:
     AvcConfigurationAtom();
     AvcConfigurationAtom(const AvcConfigurationAtom& Atom);
 
+    AvcConfigurationAtom& operator=(const AvcConfigurationAtom&) = default;
+
     //!
     //! \brief Destructor
     //!

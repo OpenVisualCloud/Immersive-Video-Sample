@@ -127,10 +127,24 @@ OmafMP4VRReader::OmafMP4VRReader()
     mMP4ReaderImpl = (void*) VCD::MP4::Mp4Reader::Create();
 }
 
+OmafMP4VRReader::OmafMP4VRReader(OmafMP4VRReader&& other)
+{
+    mMP4ReaderImpl = std::move(other.mMP4ReaderImpl);
+}
+
+OmafMP4VRReader& OmafMP4VRReader::operator=(OmafMP4VRReader&& other)
+{
+    mMP4ReaderImpl = std::move(other.mMP4ReaderImpl);
+    return *this;
+}
+
 OmafMP4VRReader::~OmafMP4VRReader()
 {
     if(mMP4ReaderImpl)
+    {
         VCD::MP4::Mp4Reader::Destroy((VCD::MP4::Mp4Reader*)mMP4ReaderImpl);
+        mMP4ReaderImpl = NULL;
+    }
 }
 
 int32_t OmafMP4VRReader::initialize( OmafSegment* pSeg)

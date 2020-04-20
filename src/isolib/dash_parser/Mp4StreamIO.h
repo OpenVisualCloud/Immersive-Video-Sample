@@ -64,6 +64,8 @@ class StreamIOInternal
 {
 public:
     StreamIOInternal(StreamIO* stream = nullptr);
+    StreamIOInternal& operator=(const StreamIOInternal&) = default;
+    //StreamIOInternal& operator=(StreamIOInternal&&);
     ~StreamIOInternal();
 
     void ReadStream(char* buffer, StreamIO::offset_t size);

@@ -61,6 +61,8 @@ public:
     SampleTableAtom();
     SampleTableAtom(const SampleTableAtom& obj) = delete;
 
+    SampleTableAtom& operator=(const SampleTableAtom&) = default;
+
     //!
     //! \brief Destructor
     //!

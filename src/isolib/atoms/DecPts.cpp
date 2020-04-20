@@ -108,7 +108,7 @@ void DecodePts::SetDwellEdit(T& entry)
 
 std::uint64_t DecodePts::LastSampleDuration() const
 {
-    std::uint64_t lastSampleDuration{};
+    std::uint64_t lastSampleDuration = 0;
     if (m_trackRunAtom)
     {
         auto& pSample = m_trackRunAtom->GetSampleDetails();
@@ -244,17 +244,23 @@ bool DecodePts::Unravel()
         std::vector<std::int32_t> DeltaPts;
         DeltaPts = m_compOffsetAtom->GetSampleCompositionOffsets();
 
-        if (DeltaPts.size() == pDts.size())
+        if (DeltaPts.size() != pDts.size())
         {
-            std::transform(pDts.begin(), pDts.end(), DeltaPts.begin(), std::back_inserter(mediaPtsTS),
-                           [](std::uint64_t theMediaDts, std::int32_t thePtsDelta) {
-                               return std::uint64_t(std::int32_t(theMediaDts) + thePtsDelta);
-                           });
+            LOG(ERROR)<<"Error in size !"<<std::endl;
+            return false;
         }
-        else
-        {
-            ret = false;
-        }
+
+        //if (DeltaPts.size() == pDts.size())
+        //{
+        std::transform(pDts.begin(), pDts.end(), DeltaPts.begin(), std::back_inserter(mediaPtsTS),
+                       [](std::uint64_t theMediaDts, std::int32_t thePtsDelta) {
+                           return std::uint64_t(std::int32_t(theMediaDts) + thePtsDelta);
+                       });
+        //}
+        //else
+        //{
+        //    ret = false;
+        //}
     }
     else
     {

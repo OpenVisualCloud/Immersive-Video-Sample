@@ -56,6 +56,8 @@ public:
 
     VisualSampleEntryAtom(const VisualSampleEntryAtom& Atom);
 
+    VisualSampleEntryAtom& operator=(const VisualSampleEntryAtom&) = default;
+
     //!
     //! \brief Destructor
     //!

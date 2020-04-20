@@ -77,8 +77,7 @@ void Mp4Reader::Destroy(Mp4Reader* mp4Reader)
 {
     if (NULL != mp4Reader)
     {
-        mp4Reader->~Mp4Reader();
-        free(mp4Reader);
+        delete mp4Reader;
     }
 }
 
@@ -329,6 +328,11 @@ void Mp4Reader::RefreshCompTimes(InitSegmentId initSegId, SegmentId segIndex)
             if (trackDecInfo.hasEditList)
             {
                 PMapTSRevIt iter3 = trackDecInfo.pMapTS.rbegin();
+                if (iter3 == trackDecInfo.pMapTS.rend())
+                {
+                    LOG(ERROR) << "Failed to get TimeStamp !" << std::endl;
+                    throw exception();
+                }
                 trackDecInfo.samples.at(iter3->second).sampleDuration =
                     min(trackDecInfo.samples.at(iter3->second).sampleDuration,
                              static_cast<uint32_t>(trackDecInfo.durationTS - iter3->first));
@@ -417,10 +421,15 @@ int32_t Mp4Reader::ParseInitSeg(StreamIO* strIO, uint32_t initSegId)
                         }
 
                         LOG(INFO) << "Compatible brands found:" << endl;
-                        for (auto brand : supportedBrands)
+                        std::set<std::string>::iterator iter = supportedBrands.begin();
+                        for( ; iter != supportedBrands.end(); iter++)
                         {
-                            LOG(INFO) << " " << brand << endl;
+                            LOG(INFO) << " " << (*iter) << endl;
                         }
+                        //for (auto brand : supportedBrands)
+                        //{
+                        //    LOG(INFO) << " " << brand << endl;
+                        //}
 
                         m_initSegProps[initSegmentId].ftyp = ftyp;
                     }
@@ -645,7 +654,10 @@ int32_t Mp4Reader::ParseSeg(StreamIO* strIO,
                                 else if (const TrackDecInfo* precTrackDecInfo = GetPrevTrackDecInfo(
                                              initSegId, SegmentTrackId(segIndex, ctxId)))
                                 {
-                                    earliestPTSTS[ctxId] = precTrackDecInfo->noSidxFallbackPTSTS;
+                                    if (precTrackDecInfo)
+                                    {
+                                        earliestPTSTS[ctxId] = precTrackDecInfo->noSidxFallbackPTSTS;
+                                    }
                                 }
                                 else
                                 {
@@ -929,10 +941,16 @@ int32_t Mp4Reader::ReadStream(InitSegmentId initSegId, SegmentId segIndex)
                     }
 
                     LOG(INFO) << "Compatible brands found:" << endl;
-                    for (auto brand : supportedBrands)
+                    std::set<std::string>::iterator iter = supportedBrands.begin();
+                    for ( ; iter != supportedBrands.end(); iter++)
                     {
-                        LOG(INFO) << " " << brand << endl;
+                        LOG(INFO) << " " << (*iter) << endl;
                     }
+
+                    //for (auto brand : supportedBrands)
+                    //{
+                    //    LOG(INFO) << " " << brand << endl;
+                    //}
 
                     m_initSegProps[initSegId].ftyp = ftyp;
                 }
@@ -948,10 +966,15 @@ int32_t Mp4Reader::ReadStream(InitSegmentId initSegId, SegmentId segIndex)
                     std::set<std::string> supportedBrands;
 
                     LOG(INFO) << "Compatible brands found:" << endl;
-                    for (auto brand : supportedBrands)
+                    std::set<std::string>::iterator iter = supportedBrands.begin();
+                    for ( ; iter != supportedBrands.end(); iter++)
                     {
-                        LOG(INFO) << " " << brand << endl;
+                        LOG(INFO) << " " << (*iter) << endl;
                     }
+                    //for (auto brand : supportedBrands)
+                    //{
+                    //    LOG(INFO) << " " << brand << endl;
+                    //}
                 }
             }
             else if (boxType == "sidx")
@@ -2120,10 +2143,10 @@ MoovProperties Mp4Reader::ExtractMoovProps(const MovieAtom& moovAtom) const
     MoovProperties moovProperties;
     moovProperties.fragmentDuration = 0;
 
-    if (moovAtom.IsMetaAtomPresent())
-    {
-        moovProperties.moovFeature.SetProperty(MoovProperty::HasMoovLevelMetaBox);
-    }
+    //if (moovAtom.IsMetaAtomPresent())
+    //{
+    //    moovProperties.moovFeature.SetProperty(MoovProperty::HasMoovLevelMetaBox);
+    //}
 
     if (moovAtom.IsMovieExtendsAtomPresent())
     {
@@ -2401,13 +2424,13 @@ uint64_t Mp4Reader::ParseNalLen(char* buffer) const
 {
     uint64_t nalLen = 0;
     size_t id = 0;
-    nalLen |= ((uint32_t)((uint8_t)(buffer[id]))) << 24;
+    nalLen |= ((uint64_t)((uint8_t)(buffer[id]))) << 24;
     id++;
-    nalLen |= (((uint32_t)((uint8_t)(buffer[id]))) << 16) & 0x00ff0000;
+    nalLen |= (((uint64_t)((uint8_t)(buffer[id]))) << 16) & 0x0000000000ff0000;
     id++;
-    nalLen |= (((uint32_t)((uint8_t)(buffer[id]))) << 8) & 0x0000ff00;
+    nalLen |= (((uint64_t)((uint8_t)(buffer[id]))) << 8) & 0x000000000000ff00;
     id++;
-    nalLen |= ((uint32_t)((uint8_t)(buffer[id]))) & 0x000000ff;
+    nalLen |= ((uint64_t)((uint8_t)(buffer[id]))) & 0x00000000000000ff;
     id++;
     return nalLen;
 }
@@ -3127,10 +3150,10 @@ int32_t Mp4Reader::GetSampListByType(uint32_t trackId,
             {
                 matches = allItems;
             }
-            else
-            {
-                return OMAF_ERROR_BAD_PARAM;
-            }
+            //else
+            //{
+            //    return OMAF_ERROR_BAD_PARAM;
+            //}
         }
     }
 
@@ -3519,9 +3542,8 @@ int32_t Mp4Reader::GetExtractorTrackSampData(uint32_t trackId,
                 extSize = 0;
                 for (auto& extractor : extSamp.extractors)
                 {
-                    for (vector<ExtSample::SampleConstruct>::iterator sampConst =
-                        extractor.sampleConstruct.begin();
-                        sampConst != extractor.sampleConstruct.end(); ++sampConst)
+                    vector<ExtSample::SampleConstruct>::iterator sampConst = extractor.sampleConstruct.begin();
+                    for ( ; sampConst != extractor.sampleConstruct.end(); ++sampConst)
                     {
                         uint64_t refSampLength = 0;
                         uint64_t refDataOffset = 0;
@@ -3800,9 +3822,8 @@ int32_t Mp4Reader::GetSampData(uint32_t trackId,
                 extSize = 0;
                 for (auto& extractor : extSamp.extractors)
                 {
-                    for (vector<ExtSample::SampleConstruct>::iterator sampConst =
-                        extractor.sampleConstruct.begin();
-                        sampConst != extractor.sampleConstruct.end(); ++sampConst)
+                    vector<ExtSample::SampleConstruct>::iterator sampConst = extractor.sampleConstruct.begin();
+                    for ( ; sampConst != extractor.sampleConstruct.end(); ++sampConst)
                     {
                         uint64_t refSampLength = 0;
                         uint64_t refDataOffset = 0;

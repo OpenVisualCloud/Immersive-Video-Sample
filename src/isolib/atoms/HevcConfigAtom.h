@@ -280,6 +280,8 @@ public:
     HevcConfigurationAtom();
     HevcConfigurationAtom(const HevcConfigurationAtom& Atom);
 
+    HevcConfigurationAtom& operator=(const HevcConfigurationAtom&) = default;
+
     //!
     //! \brief Destructor
     //!

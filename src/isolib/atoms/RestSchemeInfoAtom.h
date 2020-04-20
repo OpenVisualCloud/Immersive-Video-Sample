@@ -108,6 +108,8 @@ public:
     ProjectedOmniVideoAtom();
     ProjectedOmniVideoAtom(const ProjectedOmniVideoAtom&);
 
+    ProjectedOmniVideoAtom& operator=(const ProjectedOmniVideoAtom&) = default;
+
     //!
     //! \brief Destructor
     //!
@@ -505,6 +507,8 @@ public:
     //!
     RestrictedSchemeInfoAtom();
     RestrictedSchemeInfoAtom(const RestrictedSchemeInfoAtom&);
+
+    RestrictedSchemeInfoAtom& operator=(const RestrictedSchemeInfoAtom&) = default;
 
     //!
     //! \brief Destructor
