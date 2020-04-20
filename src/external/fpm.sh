@@ -48,6 +48,13 @@ if [ ${ITEM} = "server" ] ; then
     echo `fgrep -rn "checkout" install_SVT.sh` | awk '{ print $3 }' > SVT_version
     git log | head -n 3 > git_info
     cd ../build
+    cp external/ffmpeg_server_so/libavcodec.so.58                     ${LIBDIR}
+    cp external/ffmpeg_server_so/libavutil.so.56                      ${LIBDIR}
+    cp external/ffmpeg_server_so/libavformat.so.58                    ${LIBDIR}
+    cp external/ffmpeg_server_so/libavfilter.so.7                     ${LIBDIR}
+    cp external/ffmpeg_server_so/libswscale.so.5                      ${LIBDIR}
+    cp external/ffmpeg_server_so/libswresample.so.3                   ${LIBDIR}
+    cp external/ffmpeg_server_so/libpostproc.so.55                    ${LIBDIR}
     cp /usr/local/lib/libglog.so.0                                    ${LIBDIR}
     cp /usr/local/lib/libthrift-0.12.0.so                             ${LIBDIR}
     cp /usr/local/lib/libthriftnb-0.12.0.so                           ${LIBDIR}
@@ -70,6 +77,14 @@ fi
 if [ ${ITEM} = "client" ] ; then
     git log | head -n 3 > git_info
     cd ../build
+    cp external/ffmpeg_client_so/libavcodec.so.58                     ${LIBDIR}
+    cp external/ffmpeg_client_so/libavutil.so.56                      ${LIBDIR}
+    cp external/ffmpeg_client_so/libavformat.so.58                    ${LIBDIR}
+    cp external/ffmpeg_client_so/libavfilter.so.7                     ${LIBDIR}
+    cp external/ffmpeg_client_so/libavdevice.so.58                    ${LIBDIR}
+    cp external/ffmpeg_client_so/libswscale.so.5                      ${LIBDIR}
+    cp external/ffmpeg_client_so/libswresample.so.3                   ${LIBDIR}
+    cp external/ffmpeg_client_so/libpostproc.so.55                    ${LIBDIR}
     cp /usr/local/lib/libva-drm.so.2                                  ${LIBDIR}
     cp /usr/local/lib/libva-x11.so.2                                  ${LIBDIR}
     cp /usr/local/lib/libva.so.2                                      ${LIBDIR}
