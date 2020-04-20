@@ -1,0 +1,25 @@
+From bf86910d8420514738285bdb9ef8d9a204f5d69b Mon Sep 17 00:00:00 2001
+From: "Luo, Ying" <ying2.luo@intel.com>
+Date: Mon, 10 Feb 2020 08:37:16 +0800
+Subject: [PATCH] Modify CMakeList in 360SCVP to build android ndk.
+
+Signed-off-by: Luo, Ying <ying2.luo@intel.com>
+---
+ 360SCVP/CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/360SCVP/CMakeLists.txt b/360SCVP/CMakeLists.txt
+index b75915ce..94c7789c 100644
+--- a/360SCVP/CMakeLists.txt
++++ b/360SCVP/CMakeLists.txt
+@@ -4,7 +4,7 @@ project(360SCVP)
+
+ AUX_SOURCE_DIRECTORY(. DIR_SRC)
+
+-ADD_DEFINITIONS("-z noexecstack -z relro -z now -fstack-protector-strong -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wl,-S -Wall -Werror -g -c -fPIC -std=c++11")
++ADD_DEFINITIONS("-fPIE -fPIC -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wall -Werror -g -c -fPIC -std=c++11")
+
+ INCLUDE_DIRECTORIES(/usr/local/include)
+ LINK_DIRECTORIES(/usr/local/lib)
+--
+2.17.1

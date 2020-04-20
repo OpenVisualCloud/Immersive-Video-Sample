@@ -4,11 +4,11 @@ TARGET=$1
 EX_PATH=${PWD}
 
 if [ $# != 1 ] ; then
-    echo "Please choose server or client you want to build on."
+    echo "Please choose server, client or android you want to build on."
     exit
 fi
 
-if [ "${TARGET}" != "server" ] && [ "${TARGET}" != "client" ] ; then
+if [ "${TARGET}" != "server" ] && [ "${TARGET}" != "client" ] && [ "${TARGET}" != "android" ] ; then
     echo "Please choose server, client or test you want to build on."
     exit
 fi
