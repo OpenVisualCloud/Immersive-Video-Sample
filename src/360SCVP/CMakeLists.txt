@@ -1,10 +1,19 @@
 cmake_minimum_required(VERSION 2.8)
 
+option(USE_ANDROID_NDK
+      "Use android ndk"
+      OFF
+)
+
 project(360SCVP)
 
 AUX_SOURCE_DIRECTORY(. DIR_SRC)
 
+if(NOT USE_ANDROID_NDK)
 ADD_DEFINITIONS("-z noexecstack -z relro -z now -fstack-protector-strong -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wl,-S -Wall -Werror -g -c -fPIC -std=c++11")
+else()
+ADD_DEFINITIONS("-fPIE -fPIC -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wall -Werror -g -c -fPIC -std=c++11")
+endif()
 
 INCLUDE_DIRECTORIES(/usr/local/include)
 LINK_DIRECTORIES(/usr/local/lib)
