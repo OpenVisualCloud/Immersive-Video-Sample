@@ -51,14 +51,4 @@ sudo make install
 sudo ldconfig
 cd ../
 
-#install lttng-tool
-wget -c http://lttng.org/files/lttng-tools/lttng-tools-latest-2.11.tar.bz2
-tar -xjf lttng-tools-latest-2.11.tar.bz2
-cd lttng-tools-2.11.*
-./configure --disable-man-pages
-make
-sudo make install
-sudo ldconfig
-cd ../
-
 cd ../../../external

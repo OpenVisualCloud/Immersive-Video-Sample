@@ -122,6 +122,8 @@ public:
 
     bool    IsReEnabled(){return mReEnabled;};
     int     GetSegCount(){return mSegCnt;};
+    void     SetSegSize(uint64_t segSize) { mSegSize = segSize; };
+    uint64_t GetSegSize() { return mSegSize; };
 
 private:
     //!

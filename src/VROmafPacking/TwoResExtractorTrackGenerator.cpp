@@ -329,6 +329,32 @@ int32_t TwoResExtractorTrackGenerator::Initialize()
     if (!m_viewInfo)
         return OMAF_ERROR_NULL_PTR;
 
+    //trace
+    if ((EGeometryType)((m_initInfo->viewportInfo)->inGeoType) == EGeometryType::E_SVIDEO_EQUIRECT)
+    {
+        const char *projType = "ERP";
+        tracepoint(bandwidth_tp_provider, initial_viewport_info,
+            (m_initInfo->viewportInfo)->viewportWidth,
+            (m_initInfo->viewportInfo)->viewportHeight,
+            (m_initInfo->viewportInfo)->viewportPitch,
+            (m_initInfo->viewportInfo)->viewportYaw,
+            (m_initInfo->viewportInfo)->horizontalFOVAngle,
+            (m_initInfo->viewportInfo)->verticalFOVAngle,
+            projType);
+    }
+    else if ((EGeometryType)((m_initInfo->viewportInfo)->inGeoType) == EGeometryType::E_SVIDEO_CUBEMAP)
+    {
+        const char *projType = "CubeMap";
+        tracepoint(bandwidth_tp_provider, initial_viewport_info,
+            (m_initInfo->viewportInfo)->viewportWidth,
+            (m_initInfo->viewportInfo)->viewportHeight,
+            (m_initInfo->viewportInfo)->viewportPitch,
+            (m_initInfo->viewportInfo)->viewportYaw,
+            (m_initInfo->viewportInfo)->horizontalFOVAngle,
+            (m_initInfo->viewportInfo)->verticalFOVAngle,
+            projType);
+    }
+
     m_viewInfo->viewportWidth  = (m_initInfo->viewportInfo)->viewportWidth;
     m_viewInfo->viewportHeight = (m_initInfo->viewportInfo)->viewportHeight;
     m_viewInfo->viewPortPitch  = (m_initInfo->viewportInfo)->viewportPitch;
@@ -372,9 +398,14 @@ int32_t TwoResExtractorTrackGenerator::Initialize()
     m_finalViewportHeight = paramViewportOutput.dstHeightAlignTile;
 
     //trace
+    uint16_t highResTileWidth = (vs->GetSrcWidth()) / (vs->GetTileInRow());
+    uint16_t highResTileHeight = (vs->GetSrcHeight()) / (vs->GetTileInCol());
+    int32_t  selectedTileCols = paramViewportOutput.dstWidthAlignTile / (int32_t)(highResTileWidth);
+    int32_t  selectedTileRows = paramViewportOutput.dstHeightAlignTile / (int32_t)(highResTileHeight);
     tracepoint(bandwidth_tp_provider, tiles_selection_redundancy,
                 paramViewportOutput.dstWidthNet, paramViewportOutput.dstHeightNet,
-                paramViewportOutput.dstWidthAlignTile, paramViewportOutput.dstHeightAlignTile);
+                paramViewportOutput.dstWidthAlignTile, paramViewportOutput.dstHeightAlignTile,
+                selectedTileRows, selectedTileCols);
 
     LOG(INFO) << "Calculated Viewport has width " << m_finalViewportWidth << " and height " << m_finalViewportHeight << " ! " << std::endl;
 
