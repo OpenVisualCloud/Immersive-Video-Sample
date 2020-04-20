@@ -31,6 +31,10 @@
 #include "OmafReaderManager.h"
 #include <math.h>
 #include <dirent.h>
+#ifndef _ANDROID_NDK_OPTION_
+#include <sys/time.h>
+#include "../trace/Bandwidth_tp.h"
+#endif
 
 VCD_OMAF_BEGIN
 
@@ -360,6 +364,14 @@ void OmafDashSource::Run()
 
 int OmafDashSource::TimedDownloadSegment( bool bFirst )
 {
+#ifndef _ANDROID_NDK_OPTION_
+    //trace
+    struct timeval currTime;
+    gettimeofday(&currTime, NULL);
+    uint64_t timeUs = currTime.tv_sec * 1000000 + currTime.tv_usec;
+    tracepoint(bandwidth_tp_provider, download_info, timeUs, dcount);
+#endif
+
     std::map<int, OmafMediaStream*>::iterator it;
     for(it=this->mMapStream.begin(); it!=this->mMapStream.end(); it++){
         OmafMediaStream* pStream = it->second;
@@ -640,7 +652,8 @@ void OmafDashSource::thread_static()
         uint32_t interval = sys_clock() - uLastSegTime;
 
         /// one segment duration ahead of time to fetch segment.
-        uint32_t wait_time = (mMPDinfo->max_segment_duration / 2 > interval) ? (mMPDinfo->max_segment_duration - interval) : 0;
+        //uint32_t wait_time = (mMPDinfo->max_segment_duration / 2 > interval) ? (mMPDinfo->max_segment_duration - interval) : 0;
+        uint32_t wait_time = mMPDinfo->max_segment_duration > interval ? mMPDinfo->max_segment_duration - interval : 0;
 
         ::usleep(wait_time*1000);
 

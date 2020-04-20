@@ -769,6 +769,46 @@ void OmafReaderManager::Run()
                         uint32_t totalSegNum = abs(tmpSegNum - uint32_t(tmpSegNum)) < 1e-6 ? uint32_t(tmpSegNum) : uint32_t(tmpSegNum) + 1;
                         if (st->sampleIndex.mCurrentReadSegment > totalSegNum)
                         {
+#ifndef _ANDROID_NDK_OPTION_
+                            //trace
+                            uint32_t dependentTracksNum = st->depTrackIDs.size();
+                            uint32_t *dependentTracksIdx = new uint32_t[dependentTracksNum];
+                            if (!dependentTracksIdx)
+                                return;
+
+                            memset(dependentTracksIdx, 0, dependentTracksNum * sizeof(uint32_t));
+                            std::list<int>::iterator itDep = st->depTrackIDs.begin();
+                            uint32_t index = 0;
+                            for ( ; itDep != st->depTrackIDs.end(); itDep++)
+                            {
+                                dependentTracksIdx[index] = (uint32_t)(*itDep);
+                                index++;
+                            }
+
+                            tracepoint(bandwidth_tp_provider, extractor_track_dependent_info,
+                                pExt->GetTrackNumber(), dependentTracksNum, dependentTracksIdx);
+                            delete [] dependentTracksIdx;
+                            dependentTracksIdx = NULL;
+
+                            const char *dashMode = "static";
+                            uint32_t streamsNum = (uint32_t)(info.stream_count);
+                            uint64_t *streamBitrate = new uint64_t[streamsNum];
+                            if (!streamBitrate)
+                                return;
+
+                            memset(streamBitrate, 0, streamsNum * sizeof(uint64_t));
+
+                            float frameRate = (float)(info.stream_info[0].framerate_num) / (float)(info.stream_info[0].framerate_den);
+                            uint32_t totalFramesNum = (uint32_t)((info.duration * frameRate) / 1000);
+                            tracepoint(bandwidth_tp_provider, segmentation_info,
+                                dashMode, segmentDur, frameRate,
+                                streamsNum, streamBitrate, totalFramesNum, totalSegNum);
+
+                            delete [] streamBitrate;
+                            streamBitrate = NULL;
+                            printf("Run here ~~~~~~\n");
+#endif
+
                             mLock.lock();
                             this->mEOS = true;
                             mLock.unlock();
