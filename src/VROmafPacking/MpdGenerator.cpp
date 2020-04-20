@@ -148,7 +148,7 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
     memset(string, 0, 1024);
 
     XMLElement *asEle = m_xmlDoc->NewElement(ADAPTATIONSET);
-    asEle->SetAttribute(INDEX, trackSegCtx.trackIdx.get());
+    asEle->SetAttribute(INDEX, trackSegCtx.trackIdx.GetIndex());
     asEle->SetAttribute(MIMETYPE, MIMETYPE_VALUE); //?
     asEle->SetAttribute(CODECS, CODECS_VALUE);
     asEle->SetAttribute(MAXWIDTH, trackSegCtx.tileInfo->tileWidth);
@@ -178,8 +178,8 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
 
     XMLElement *representationEle = m_xmlDoc->NewElement(REPRESENTATION);
     memset(string, 0, 1024);
-    snprintf(string, 1024, "%s_track%d", m_segInfo->outName, trackSegCtx.trackIdx.get());
-    representationEle->SetAttribute(INDEX, string);//trackSegCtx.trackIdx.get());
+    snprintf(string, 1024, "%s_track%d", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
+    representationEle->SetAttribute(INDEX, string);//trackSegCtx.trackIdx.GetIndex());
     representationEle->SetAttribute(QUALITYRANKING, trackSegCtx.qualityRanking);
     representationEle->SetAttribute(BANDWIDTH, trackSegCtx.codedMeta.bitrate.avgBitrate);
     representationEle->SetAttribute(WIDTH, trackSegCtx.tileInfo->tileWidth);
@@ -191,11 +191,11 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
     asEle->InsertEndChild(representationEle);
 
     memset(string, 0, 1024);
-    snprintf(string, 1024, "%s_track%d.$Number$.mp4", m_segInfo->outName, trackSegCtx.trackIdx.get());
+    snprintf(string, 1024, "%s_track%d.$Number$.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     XMLElement *sgtTpeEle = m_xmlDoc->NewElement(SEGMENTTEMPLATE);
     sgtTpeEle->SetAttribute(MEDIA, string);
     memset(string, 0, 1024);
-    snprintf(string, 1024, "%s_track%d.init.mp4", m_segInfo->outName, trackSegCtx.trackIdx.get());
+    snprintf(string, 1024, "%s_track%d.init.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     sgtTpeEle->SetAttribute(INITIALIZATION, string);
     sgtTpeEle->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
     sgtTpeEle->SetAttribute(STARTNUMBER, 0);
@@ -213,7 +213,7 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
     memset(string, 0, 1024);
 
     XMLElement *asEle = m_xmlDoc->NewElement(ADAPTATIONSET);
-    asEle->SetAttribute(INDEX, trackSegCtx.trackIdx.get());
+    asEle->SetAttribute(INDEX, trackSegCtx.trackIdx.GetIndex());
     asEle->SetAttribute(MIMETYPE, MIMETYPE_VALUE); //?
     asEle->SetAttribute(CODECS, CODECS_VALUE_EXTRACTORTRACK);
     asEle->SetAttribute(MAXWIDTH, trackSegCtx.codedMeta.width);
@@ -266,15 +266,15 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
     }
 
     memset(string, 0, 1024);
-    snprintf(string, 1024, "ext%d,%d ", trackSegCtx.trackIdx.get(), trackSegCtx.trackIdx.get());
-    std::list<TrackId>::iterator itRefTrack;
+    snprintf(string, 1024, "ext%d,%d ", trackSegCtx.trackIdx.GetIndex(), trackSegCtx.trackIdx.GetIndex());
+    std::list<VCD::MP4::TrackId>::iterator itRefTrack;
     for (itRefTrack = trackSegCtx.refTrackIdxs.begin();
         itRefTrack != trackSegCtx.refTrackIdxs.end();
         itRefTrack++)
     {
         char string1[16];
         memset(string1, 0, 16);
-        snprintf(string1, 16, "%d ", (*itRefTrack).get());
+        snprintf(string1, 16, "%d ", (*itRefTrack).GetIndex());
 
         strncat(string, string1, 16);
     }
@@ -286,8 +286,8 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
 
     XMLElement *representationEle = m_xmlDoc->NewElement(REPRESENTATION);
     memset(string, 0, 1024);
-    snprintf(string, 1024, "%s_track%d", m_segInfo->outName, trackSegCtx.trackIdx.get());
-    representationEle->SetAttribute(INDEX, string);//trackSegCtx.trackIdx.get());
+    snprintf(string, 1024, "%s_track%d", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
+    representationEle->SetAttribute(INDEX, string);//trackSegCtx.trackIdx.GetIndex());
     //representationEle->SetAttribute(BANDWIDTH, 19502);
     representationEle->SetAttribute(WIDTH, trackSegCtx.codedMeta.width);
     representationEle->SetAttribute(HEIGHT, trackSegCtx.codedMeta.height);
@@ -298,10 +298,10 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
 
     XMLElement *sgtTpeEle = m_xmlDoc->NewElement(SEGMENTTEMPLATE);
     memset(string, 0, 1024);
-    snprintf(string, 1024, "%s_track%d.$Number$.mp4", m_segInfo->outName, trackSegCtx.trackIdx.get());
+    snprintf(string, 1024, "%s_track%d.$Number$.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     sgtTpeEle->SetAttribute(MEDIA, string);
     memset(string, 0, 1024);
-    snprintf(string, 1024, "%s_track%d.init.mp4", m_segInfo->outName, trackSegCtx.trackIdx.get());
+    snprintf(string, 1024, "%s_track%d.init.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     sgtTpeEle->SetAttribute(INITIALIZATION, string);
     sgtTpeEle->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
     sgtTpeEle->SetAttribute(STARTNUMBER, 0);

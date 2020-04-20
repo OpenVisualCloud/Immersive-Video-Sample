@@ -1,0 +1,229 @@
+/*
+ * Copyright (c) 2019, Intel Corporation
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+//!
+//! \file:   DataItem.icc
+//! \brief:  DataItem class implementation
+//!
+
+#ifndef _DATAITEM_ICC_
+#define _DATAITEM_ICC_
+
+#include "DataItem.h"
+
+using namespace std;
+
+//VCD_MP4_BEGIN
+
+//NoneType none;
+
+template <typename T>
+DataItem<T>::DataItem()
+{
+    // nothing
+}
+
+template <typename T>
+DataItem<T>::DataItem(EmptyData)
+{
+    // nothing
+}
+
+template <typename T>
+DataItem<T>::~DataItem()
+{
+    // nothing
+}
+
+template <typename T>
+bool DataItem<T>::operator==(const DataItem<T>& other) const
+{
+    bool a = !!m_value.get();
+    bool b = !!other.m_value.get();
+    return (!a && !b) || (a && b && *m_value == *other.m_value);
+}
+
+template <typename T>
+bool DataItem<T>::operator!=(const DataItem<T>& other) const
+{
+    return !(*this == other);
+}
+
+template <typename T>
+bool DataItem<T>::operator<(const DataItem<T>& other) const
+{
+    bool a = !!m_value.get();
+    bool b = !!other.m_value.get();
+    return (a < b) ? true : (a > b) ? false : (!a && !b) ? false : (*m_value < *other.m_value);
+}
+
+template <typename T>
+bool DataItem<T>::operator>(const DataItem<T>& other) const
+{
+    bool a = !!m_value.get();
+    bool b = !!other.m_value.get();
+    return (a < b) ? false : (a > b) ? true : (!a && !b) ? false : (*m_value > *other.m_value);
+}
+
+template <typename T>
+bool DataItem<T>::operator<=(const DataItem<T>& other) const
+{
+    bool a = !!m_value.get();
+    bool b = !!other.m_value.get();
+    return (a < b) ? true : (a > b) ? false : (!a && !b) ? true : (*m_value <= *other.m_value);
+}
+
+template <typename T>
+bool DataItem<T>::operator>=(const DataItem<T>& other) const
+{
+    bool a = !!m_value.get();
+    bool b = !!other.m_value.get();
+    return (a < b) ? false : (a > b) ? true : (!a && !b) ? true : (*m_value >= *other.m_value);
+}
+
+template <typename T>
+DataItem<T>::DataItem(const DataItem<T>& other)
+    : m_value(other.m_value ? new T(*other.m_value) : nullptr)
+{
+    // nothing
+}
+
+template <typename T>
+DataItem<T>::DataItem(DataItem<T>&& other)
+    : m_value(move(other.m_value))
+{
+    // nothing
+}
+
+template <typename T>
+DataItem<T>& DataItem<T>::operator=(const DataItem<T>& other)
+{
+    if (this != &other)
+    {
+        m_value.reset(other.m_value ? new T(*other.m_value) : nullptr);
+    }
+    return *this;
+}
+
+template <typename T>
+DataItem<T>& DataItem<T>::operator=(DataItem<T>&& other)
+{
+    if (this != &other)
+    {
+        m_value = move(other.m_value);
+    }
+    return *this;
+}
+
+template <typename T>
+DataItem<T>::DataItem(const T& other)
+{
+    m_value.reset(new T(other));
+}
+
+template <typename T>
+DataItem<T>::DataItem(T&& other)
+{
+    m_value.reset(new T(move(other)));
+}
+
+template <typename T>
+DataItem<T>::operator bool() const
+{
+    return !!m_value.get();
+}
+
+template <typename T>
+T& DataItem<T>::operator*()
+{
+    return *m_value;
+}
+
+template <typename T>
+const T& DataItem<T>::operator*() const
+{
+    return *m_value;
+}
+
+template <typename T>
+T& DataItem<T>::get()
+{
+    return *m_value;
+}
+
+template <typename T>
+const T& DataItem<T>::get() const
+{
+    return *m_value;
+}
+
+template <typename T>
+T* DataItem<T>::operator->()
+{
+    return m_value.get();
+}
+
+template <typename T>
+const T* DataItem<T>::operator->() const
+{
+    return m_value.get();
+}
+
+template <typename T>
+DataItem<T> GenDataItem(const T& value)
+{
+    return DataItem<T>(value);
+}
+
+template <typename T>
+DataItem<T> GenDataItem(T&& value)
+{
+    return DataItem<T>(move(value));
+}
+
+// base case
+template <typename First>
+First CoalesceData(First value)
+{
+    return value;
+}
+
+// general case
+template <typename First, typename... Rest>
+First CoalesceData(First value, Rest... rest)
+{
+    if (value)
+    {
+        return value;
+    }
+    else
+    {
+        return CoalesceData(rest...);
+    }
+}
+
+//VCD_MP4_END
+#endif

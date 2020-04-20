@@ -9,8 +9,8 @@ AUX_SOURCE_DIRECTORY(OmafDashParser/. PARSE_SRC)
 
 ADD_DEFINITIONS("-g -c -fPIC -lstdc++fs -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 -z noexecstack -z relro -z now -fstack-protector-strong -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wl,-S -Wall -Werror")
 
-INCLUDE_DIRECTORIES(/usr/local/include ../utils mp4lib/api/reader)
-LINK_DIRECTORIES(/usr/local/lib)
+INCLUDE_DIRECTORIES(/usr/local/include ../utils ../isolib)
+LINK_DIRECTORIES(/usr/local/lib ../isolib/dash_parser)
 
 set(DIR_SRC
     ${DIR_SRC}
@@ -21,12 +21,9 @@ set(DIR_SRC
 
 ADD_LIBRARY(OmafDashAccess SHARED  ${DIR_SRC})
 
-TARGET_LINK_LIBRARIES(OmafDashAccess streamsegmenter_static_fpic)
-TARGET_LINK_LIBRARIES(OmafDashAccess streamsegmenter_static)
-TARGET_LINK_LIBRARIES(OmafDashAccess mp4vr_static_fpic)
-TARGET_LINK_LIBRARIES(OmafDashAccess mp4vr_static)
 TARGET_LINK_LIBRARIES(OmafDashAccess glog)
 TARGET_LINK_LIBRARIES(OmafDashAccess curl)
+TARGET_LINK_LIBRARIES(OmafDashAccess dashparser)
 TARGET_LINK_LIBRARIES(OmafDashAccess 360SCVP)
 
 install(TARGETS OmafDashAccess

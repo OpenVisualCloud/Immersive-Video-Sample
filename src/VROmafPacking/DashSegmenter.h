@@ -40,10 +40,9 @@
 #include <map>
 #include <set>
 
-#include "streamsegmenter/autosegmenter.hpp"
-#include "streamsegmenter/segmenterapi.hpp"
-#include "streamsegmenter/track.hpp"
-#include "streamsegmenter/optional.hpp"
+#include "../isolib/dash_writer/SegmentWriter.h"
+#include "../isolib/dash_writer/AcquireTrackData.h"
+#include "../isolib/dash_writer/DataItem.h"
 
 #include "definitions.h"
 #include "OmafPackingCommon.h"
@@ -65,14 +64,6 @@ VCD_NS_BEGIN
 
 class DashInitSegmenter;
 class DashSegmenter;
-
-template <typename T>
-using Optional = StreamSegmenter::Utils::Optional<T>;
-
-using TrackId = StreamSegmenter::TrackId;
-using FrameTime = StreamSegmenter::FrameTime;
-using FrameDuration = StreamSegmenter::FrameDuration;
-using FrameRate = StreamSegmenter::FrameRate;
 
 typedef uint32_t StreamId;
 
@@ -157,8 +148,8 @@ enum DataInputFormat
 //!
 struct TrackConfig
 {
-    StreamSegmenter::TrackMeta meta;
-    std::map<std::string, std::set<TrackId>> trackReferences;
+    VCD::MP4::TrackMeta meta;
+    std::map<std::string, std::set<VCD::MP4::TrackId>> trackReferences;
     DataInputFormat pipelineOutput;
 };
 
@@ -169,7 +160,7 @@ struct TrackConfig
 //!
 struct InitSegConfig
 {
-    std::map<TrackId, TrackConfig> tracks;
+    std::map<VCD::MP4::TrackId, TrackConfig> tracks;
 
     bool fragmented = true;
 
@@ -191,15 +182,15 @@ struct InitSegConfig
 //!
 struct GeneralSegConfig
 {
-    StreamSegmenter::Segmenter::Duration sgtDuration;
+    VCD::MP4::FractU64 sgtDuration;
 
-    Optional<StreamSegmenter::Segmenter::Duration> subsgtDuration;
+    VCD::MP4::DataItem<VCD::MP4::FractU64> subsgtDuration;
 
     bool needCheckIDR = true;
 
-    std::map<TrackId, StreamSegmenter::TrackMeta> tracks;
+    std::map<VCD::MP4::TrackId, VCD::MP4::TrackMeta> tracks;
 
-    StreamSegmenter::Segmenter::SequenceId baseSequenceIdx;
+    VCD::MP4::SequenceId baseSequenceIdx;
 
     bool useSeparatedSidx;
 
@@ -217,13 +208,13 @@ struct GeneralSegConfig
 //!
 struct TrackInfo
 {
-    StreamSegmenter::FrameTime nextFramePresTime; // used for constructing frame presentation time
+    VCD::MP4::FrameTime nextFramePresTime; // used for constructing frame presentation time
 
     bool isFirstFrame = true;
 
     int64_t lastPresIndex;
 
-    StreamSegmenter::FrameTime nextCodingTime;
+    VCD::MP4::FrameTime nextCodingTime;
 
     size_t numConsecutiveFrames = 0;
 
@@ -247,7 +238,7 @@ struct Bitrate
 struct SegmenterMeta
 {
     // the duration of the produced segment
-    FrameDuration segmentDuration;
+    VCD::MP4::FrameDuration segmentDuration;
 };
 
 //!
@@ -309,7 +300,7 @@ struct QualityInfo
     uint8_t qualityRank;
     uint16_t origWidth = 0;    // used only with multi-res cases
     uint16_t origHeight = 0;   // used only with multi-res cases
-    Optional<Spherical> sphere;    // not used with remaining area info
+    VCD::MP4::DataItem<Spherical> sphere;    // not used with remaining area info
 };
 
 //!
@@ -333,11 +324,11 @@ struct CodedMeta
 {
     int64_t presIndex;        // presentation index (as in RawFormatMeta)
     int64_t codingIndex; // coding index
-    FrameTime codingTime;
-    FrameTime presTime;
-    FrameDuration duration;
+    VCD::MP4::FrameTime codingTime;
+    VCD::MP4::FrameTime presTime;
+    VCD::MP4::FrameDuration duration;
 
-    TrackId trackId;
+    VCD::MP4::TrackId trackId;
 
     bool inCodingOrder;
 
@@ -356,28 +347,15 @@ struct CodedMeta
 
     // applicable in OMAF
     OmafProjectionType projection = OmafProjectionType::EQUIRECTANGULAR;
-    Optional<RegionPacking> regionPacking;
-    Optional<Spherical> sphericalCoverage;
-    Optional<Quality3d> qualityRankCoverage;
+    VCD::MP4::DataItem<RegionPacking> regionPacking;
+    VCD::MP4::DataItem<Spherical> sphericalCoverage;
+    VCD::MP4::DataItem<Quality3d> qualityRankCoverage;
 
     bool isEOS = false;
 
     bool isIDR() const
     {
         return type == FrameType::IDR;
-    }
-};
-
-//!
-//! \struct: SegmentWriterDestructor
-//! \brief:  define the destruction operation for the
-//!          segment writer
-//!
-struct SegmentWriterDestructor
-{
-    void operator()(StreamSegmenter::Writer* aWriter)
-    {
-        StreamSegmenter::Writer::destruct(aWriter);
     }
 };
 
@@ -397,9 +375,9 @@ struct TrackSegmentCtx
     uint8_t           extractorTrackIdx;
     std::map<uint8_t, Extractor*>* extractors;
     Nalu              extractorTrackNalu;
-    std::list<TrackId> refTrackIdxs;
+    std::list<VCD::MP4::TrackId> refTrackIdxs;
 
-    TrackId           trackIdx;
+    VCD::MP4::TrackId trackIdx;
     InitSegConfig     dashInitCfg;
     GeneralSegConfig  dashCfg;
     DashInitSegmenter *initSegmenter;
@@ -449,12 +427,12 @@ public:
     //!
     int32_t GenerateInitSegment(
         TrackSegmentCtx *trackSegCtx,
-        std::map<TrackId, TrackSegmentCtx*> trackSegCtxs);
+        std::map<VCD::MP4::TrackId, TrackSegmentCtx*> trackSegCtxs);
 
 private:
-    StreamSegmenter::Segmenter::TrackDescriptions m_trackDescriptions;           //!< track description information
+    VCD::MP4::TrackDescriptionsMap                m_trackDescriptions;           //!< track description information
 
-    std::set<TrackId>                             m_firstFrameRemaining;         //!< the remaining track index for which initial segment is not generated for the first frame
+    std::set<VCD::MP4::TrackId>                   m_firstFrameRemaining;         //!< the remaining track index for which initial segment is not generated for the first frame
 
     const InitSegConfig                           m_config;                      //!< the configuration for the initial segment
 
@@ -474,7 +452,7 @@ private:
     //!
     //! \return void
     //!
-    void AddH264VideoTrack(TrackId aTrackId, CodedMeta& aMeta);
+    void AddH264VideoTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
 
     //!
     //! \brief  Add the specified track of HEVC coded data into sample
@@ -487,7 +465,7 @@ private:
     //!
     //! \return void
     //!
-    void AddH265VideoTrack(TrackId aTrackId, CodedMeta& aMeta);
+    void AddH265VideoTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
 
     //!
     //! \brief  Add the specified track of HEVC extractor track data
@@ -500,7 +478,7 @@ private:
     //!
     //! \return void
     //!
-    void AddH265ExtractorTrack(TrackId aTrackId, CodedMeta& aMeta);
+    void AddH265ExtractorTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
 
     //!
     //! \brief  Make initial segment for the track
@@ -508,10 +486,10 @@ private:
     //! \param  [in]aFragmented
     //!         indicate whether the initial segment is fragmented
     //!
-    //! \return StreamSegmenter::Segmenter::InitSegment
+    //! \return InitialSegment
     //!         the initial segment
     //!
-    StreamSegmenter::Segmenter::InitSegment MakeInitSegment(bool aFragmented);
+    VCD::MP4::InitialSegment MakeInitSegment(bool aFragmented);
 
     //!
     //! \brief  Fill the OMAF compliant sample entry
@@ -529,10 +507,10 @@ private:
     //! \return void
     //!
     void FillOmafStructures(
-        TrackId aTrackId,
+        VCD::MP4::TrackId aTrackId,
         CodedMeta& aMeta,
-        StreamSegmenter::Segmenter::HevcVideoSampleEntry& aSampleEntry,
-        StreamSegmenter::TrackMeta& aTrackMeta);
+        VCD::MP4::HevcVideoSampleEntry& aSampleEntry,
+        VCD::MP4::TrackMeta& aTrackMeta);
 };
 
 //!
@@ -540,7 +518,7 @@ private:
 //! \brief Define the operation of acquiring video coded data
 //!
 
-class AcquireVideoFrameData : public StreamSegmenter::AcquireFrameData
+class AcquireVideoFrameData : public VCD::MP4::GetDataOfFrame
 {
 public:
 
@@ -562,10 +540,10 @@ public:
     //!
     //! \brief  Get the coded data
     //!
-    //! \return StreamSegmenter::FrameData
-    //!         the FrameData which includes the coded data
+    //! \return FrameBuf
+    //!         the FrameBuf which includes the coded data
     //!
-    StreamSegmenter::FrameData get() const override;
+    VCD::MP4::FrameBuf Get() const override;
 
     //!
     //! \brief  Get the size of coded data
@@ -573,7 +551,7 @@ public:
     //! \return size_t
     //!         the size of coded data
     //!
-    size_t getSize() const override;
+    size_t GetDataSize() const override;
 
     //!
     //! \brief  Clone one AcquireVideoFrameData object
@@ -581,7 +559,7 @@ public:
     //! \return AcquireVideoFrameData*
     //!         the pointer to the cloned AcquireVideoFrameData object
     //!
-    AcquireVideoFrameData* clone() const override;
+    AcquireVideoFrameData* Clone() const override;
 
 private:
     //Nalu *m_tileNalu; //!< the pointer to the nalu information of coded data
@@ -664,16 +642,17 @@ protected:
     //! \return void
     //!
     void Feed(
-        TrackId trackId,
+        VCD::MP4::TrackId trackId,
         CodedMeta codedFrameMeta,
         Nalu *dataNalu,
-        StreamSegmenter::FrameCts compositionTime);
+        VCD::MP4::FrameCts compositionTime);
 
-    std::map<TrackId, TrackInfo>   m_trackInfo;                   //!< track information of all tracks
+    std::map<VCD::MP4::TrackId, TrackInfo>   m_trackInfo;                   //!< track information of all tracks
 
     const GeneralSegConfig         m_config;                      //!< the configuration of data segment of the track
 
-    StreamSegmenter::AutoSegmenter m_autoSegmenter;               //!< the low level segmenter to write segment
+    //VCD::MP4::AutoSegmenter m_autoSegmenter;               //!< the low level segmenter to write segment
+    VCD::MP4::SegmentWriter        m_segWriter;
 
     bool                           m_waitForInitSegment = false;  //!< whether to wait for initial segment
 
@@ -697,7 +676,7 @@ protected:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason 
     //!
-    int32_t WriteSegment(StreamSegmenter::Segmenter::Segments& aSegments);
+    int32_t WriteSegment(VCD::MP4::SegmentList& aSegments);
 
     //!
     //! \brief  Pack all extractors data into bitstream
@@ -716,14 +695,10 @@ protected:
     //!
     int32_t PackExtractors(
         std::map<uint8_t, Extractor*>* extractorsMap,
-        std::list<TrackId> refTrackIdxs,
+        std::list<VCD::MP4::TrackId> refTrackIdxs,
         Nalu *extractorsNalu);
 
 private:
-
-    std::unique_ptr<StreamSegmenter::Writer, SegmentWriterDestructor> m_segmentWriter;         //!< the low level segment writer
-
-    StreamSegmenter::SidxWriter                                       *m_sidxWriter = NULL;    //!< the low level sidx writer
 
     uint64_t                                                          m_segNum = 0;            //!< current segments number
     FILE                                                              *m_file = NULL;          //!< file pointer to write segments

@@ -44,9 +44,21 @@ VCD_OMAF_BEGIN
 
 using namespace VCD::OMAF;
 
+//!
+//! \class OmafReader
+//! \brief Define the operation and needed data for omaf file reading
+//!
+
 class OmafReader {
 public:
+    //!
+    //! \brief  Constructor
+    //!
     OmafReader(){};
+
+    //!
+    //! \brief  Destructor
+    //!
     virtual ~OmafReader(){};
 
 public:
@@ -62,211 +74,230 @@ public:
     virtual int32_t initialize(OmafSegment* pSeg) = 0;
 
     //!
-    //! \brief  Close file
+    //! \brief  Free resource of OmafReader
+    //!
+    //! \return void
     //!
     virtual void close() = 0;
 
     //!
-    //! \brief  Get brand information from the file
+    //! \brief  Get the major brand from specified segment
+    //!         of specified track
     //!
-    //! \param  [out] FourCC&
-    //!               major brand information
-    //!         [in] uint32_t
-    //!              initialization Segment Id
-    //!         [in] uint32_t
-    //!              segment Id
+    //! \param  [out] majorBrand
+    //!         output major brand
+    //! \param  [in]  initializationSegmentId
+    //!         initial segment index corresponding to
+    //!         specified track
+    //! \param  [in] segmentId
+    //!         index of specified segment
+    //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getMajorBrand(FourCC& majorBrand,
                                   uint32_t initializationSegmentId = 0,
                                   uint32_t segmentId               = UINT32_MAX) const = 0;
 
     //!
-    //! \brief  Get minor version information from the file
+    //! \brief  Get the minor version from specified segment
+    //!         of specified track
     //!
-    //! \param  [out] uint32_t&
-    //!               minor Version information
-    //!         [in] uint32_t
-    //!              initialization Segment Id
-    //!         [in] uint32_t
-    //!              segment Id
+    //! \param  [out] minorVersion
+    //!         output minor version
+    //! \param  [in]  initializationSegmentId
+    //!         initial segment index corresponding to
+    //!         specified track
+    //! \param  [in] segmentId
+    //!         index of specified segment
+    //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getMinorVersion(uint32_t& minorVersion,
                                     uint32_t initializationSegmentId = 0,
                                     uint32_t segmentId               = UINT32_MAX) const  = 0;
 
     //!
-    //! \brief  Get Compatible Brands information from the file
+    //! \brief  Get the compatible brands from specified segment
+    //!         of specified track
     //!
-    //! \param  [out] std::vector<VCD::OMAF::FourCC*>&
-    //!               compatible Brands information
-    //!         [in] uint32_t
-    //!              initialization Segment Id
-    //!         [in] uint32_t
-    //!              segment Id
+    //! \param  [out] compatibleBrands
+    //!         output compatible brands
+    //! \param  [in]  initializationSegmentId
+    //!         initial segment index corresponding to
+    //!         specified track
+    //! \param  [in]  segmentId
+    //!         index of specified segment
+    //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getCompatibleBrands(std::vector<VCD::OMAF::FourCC*>& compatibleBrands,
                                         uint32_t initializationSegmentId = 0,
                                         uint32_t segmentId               = UINT32_MAX) const  = 0;
 
     //!
-    //! \brief  Get Track Informations
+    //! \brief  Get the track information for all tracks
+    //!         after one segment file is parsed and OmafReader
+    //!         is initialized
     //!
-    //! \param  [out] std::vector<VCD::OMAF::TrackInformation*>&
-    //!               Track Informations
+    //! \param  [out] trackInfos
+    //!         track information for all tracks
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getTrackInformations(std::vector<VCD::OMAF::TrackInformation*>& trackInfos) const = 0;
 
     //!
-    //! \brief  Get Display Width
+    //! \brief  Get picture display width
     //!
-    //! \param      [in] uint32_t
-    //!                  trackId
-    //!             [out] uint32_t&
-    //!                  Display Width
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [out] displayWidth
+    //!         picture display width
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getDisplayWidth(uint32_t trackId, uint32_t& displayWidth) const = 0;
 
     //!
-    //! \brief  Get Display Height
+    //! \brief  Get picture display height
     //!
-    //! \param      [in] uint32_t
-    //!                  trackId
-    //!             [out] uint32_t&
-    //!                  Display Height
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [out] displayHeight
+    //!         picture display height
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getDisplayHeight(uint32_t trackId, uint32_t& displayHeight) const = 0;
 
     //!
-    //! \brief  Get Display Width FP
+    //! \brief  Get fixed point picture display width
     //!
-    //! \param      [in] uint32_t
-    //!                  trackId
-    //!             [out] uint32_t&
-    //!                  Display Width
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [out] displayWidth
+    //!         fixed point picture display width
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getDisplayWidthFP(uint32_t trackId, uint32_t& displayWidth) const  = 0;
 
     //!
-    //! \brief  Get Display Height FP
+    //! \brief  Get fixed point picture display height
     //!
-    //! \param      [in] uint32_t
-    //!                  trackId
-    //!             [out] uint32_t&
-    //!                  Display Height
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [out] displayHeight
+    //!         fixed point picture display height
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getDisplayHeightFP(uint32_t trackId, uint32_t& displayHeight) const  = 0;
 
     //!
-    //! \brief  Get Width of a sample
+    //! \brief  Get width of specified sample in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample Id
-    //!             [out] uint32_t&
-    //!                  Width
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] width
+    //!         width of specified sample in pixels
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getWidth(uint32_t trackId, uint32_t sampleId, uint32_t& width) const = 0;
 
     //!
-    //! \brief  Get Height of a sample
+    //! \brief  Get height of specified sample in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample Id
-    //!             [out] uint32_t&
-    //!                  Height
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] height
+    //!         height of specified sample in pixels
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getHeight(uint32_t trackId, uint32_t sampleId, uint32_t& height) const = 0;
 
     //!
-    //! \brief  Get Playback Duration In Seconds
+    //! \brief  Get playback duration of specified track,
+    //!         and unit is second
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [out] double&
-    //!                  duration In Seconds
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [out] durationInSecs
+    //!         playback duration in second
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getPlaybackDurationInSecs(uint32_t trackId, double& durationInSecs) const = 0;
 
     //!
-    //! \brief  Get Track Sample List By Type
+    //! \brief  Get samples list of specified sample frame type from
+    //!         the specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] VCD::OMAF::TrackSampleType
-    //!                  sample Types
-    //!             [out] std::vector<uint32_t>&
-    //!                  sample Id array
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleType
+    //!         specified sample frame type, like reference frame type
+    //! \param  [out] sampleIds
+    //!         samples list
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getTrackSampleListByType(uint32_t trackId, VCD::OMAF::TrackSampleType sampleType,
                                              std::vector<uint32_t>& sampleIds) const = 0;
 
     //!
-    //! \brief  Get Track Sample Type
+    //! \brief  Get sample type of specified sample in
+    //!         the specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] VCD::OMAF::FourCC&
-    //!                  track sample box type
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] trackSampleBoxType
+    //!         detailed sample type
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getTrackSampleType(uint32_t trackId, uint32_t sampleId, VCD::OMAF::FourCC& trackSampleBoxType) const = 0;
 
     //!
-    //! \brief  Get Extractor Track Sample data
+    //! \brief  Get complete data for specified sample in
+    //!         the specified extractor track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] char*
-    //!                  memory Buffer
-    //!             [out] uint32_t&
-    //!                  memory Buffer Size
-    //!             [in] bool
-    //!                  has video Byte Stream Headers or not
+    //! \param  [in]  trackId
+    //!         index of specific extractor track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] memoryBuffer
+    //!         pointer to the allocated memory to store
+    //!         the sample data
+    //! \param  [out] memoryBufferSize
+    //!         size of sample data
+    //! \param  [in]  videoByteStreamHeaders
+    //!         whether to insert NAL unit start codes into
+    //!         sample data
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getExtractorTrackSampleData(uint32_t trackId,
                                                 uint32_t sampleId,
@@ -275,21 +306,24 @@ public:
                                                 bool videoByteStreamHeaders = true ) = 0;
 
     //!
-    //! \brief  Get Track Sample data
+    //! \brief  Get complete data for specified sample in
+    //!         the specified normal track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] char*
-    //!                  memory Buffer
-    //!             [out] uint32_t&
-    //!                  memory Buffer Size
-    //!             [in] bool
-    //!                  has video Byte Stream Headers or not
+    //! \param  [in]  trackId
+    //!         index of specific normal track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] memoryBuffer
+    //!         pointer to the allocated memory to store
+    //!         the sample data
+    //! \param  [out] memoryBufferSize
+    //!         size of sample data
+    //! \param  [in]  videoByteStreamHeaders
+    //!         whether to insert NAL unit start codes into
+    //!         sample data
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getTrackSampleData(uint32_t trackId,
                                        uint32_t sampleId,
@@ -298,322 +332,350 @@ public:
                                        bool videoByteStreamHeaders = true) = 0;
 
     //!
-    //! \brief  Get Track Sample offset
+    //! \brief  Get track sample data offset and length for
+    //!         the specified sample in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] uint64_t&
-    //!                  sample Offset
-    //!             [out] uint32_t&
-    //!                  sample Length
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] sampleOffset
+    //!         output sample offset
+    //! \param  [out] sampleLength
+    //!         output sample length
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getTrackSampleOffset(uint32_t trackId, uint32_t sampleId, uint64_t& sampleOffset, uint32_t& sampleLength) = 0;
 
     //!
-    //! \brief  Get Decoder Configuration
+    //! \brief  Get media codec related specific information,
+    //!         like SPS, PPS and so on, for specified sample in
+    //!         specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] std::vector<VCD::OMAF::DecoderSpecificInfo>&
-    //!                  decoder Information
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] decoderInfos
+    //!         output media codec related specific information
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getDecoderConfiguration(uint32_t trackId, uint32_t sampleId, std::vector<VCD::OMAF::DecoderSpecificInfo>& decoderInfos) const = 0;
 
     //!
-    //! \brief  Get Track Time stamps
+    //! \brief  Get display time stamp of each sample in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [out] std::vector<VCD::OMAF::TimestampIDPair>&
-    //!                  timestamps
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [out] timestamps
+    //!         output time stamps for each sample
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getTrackTimestamps(uint32_t trackId, std::vector<VCD::OMAF::TimestampIDPair>& timestamps) const = 0;
 
     //!
-    //! \brief  Get Track Time stamps of sample
+    //! \brief  Get display time stamp of the specified sample
+    //!         in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] std::vector<VCD::OMAF::TimestampIDPair>&
-    //!                  timestamps
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of the specified sample
+    //! \param  [out] timestamps
+    //!         output time stamps for the sample
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getTimestampsOfSample(uint32_t trackId, uint32_t sampleId, std::vector<uint64_t>& timestamps) const = 0;
 
     //!
-    //! \brief  Get Samples In Decoding Order
+    //! \brief  Get samples in decoding sequence in specified track,
+    //!         gotten samples are presented by TimestampIDPair structure,
+    //!         that is <timestamp, sampleId> pair
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [out] std::vector<VCD::OMAF::TimestampIDPair>&
-    //!                  sample Decoding Order
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [out] sampleDecodingOrder
+    //!         output samples in decoding sequence
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getSamplesInDecodingOrder(uint32_t trackId, std::vector<VCD::OMAF::TimestampIDPair>& sampleDecodingOrder) const = 0;
 
     //!
-    //! \brief  Get decoder code type
+    //! \brief  Get decoder code type for specified sample
+    //!         in specified track, like "hvc1" and so on.
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] FourCC&
-    //!                  decoder Code Type
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] decoderCodeType
+    //!         output decoder code type
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getDecoderCodeType(uint32_t trackId, uint32_t sampleId, FourCC& decoderCodeType) const = 0;
 
     //!
-    //! \brief  Get sample duration
+    //! \brief  Get duration for specified sample
+    //!         in specified track, in milliseconds.
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] uint32_t&
-    //!                  sample Duration
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] sampleDuration
+    //!         output sample duration
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getSampleDuration(uint32_t trackId, uint32_t sampleId, uint32_t& sampleDuration) const  = 0;
 
 public:
 
     //!
-    //! \brief  Get sample duration
+    //! \brief  Get audio channel layout box information for
+    //!         specified sample in specified 'chnl' track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] uint32_t&
-    //!                  sample Duration
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] chProperty
+    //!         output channel property
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getPropertyChnl(uint32_t trackId, uint32_t sampleId, VCD::OMAF::chnlProperty& chProperty) const  = 0;
-   
+
     //!
-    //! \brief  Get Property Spatial Audio
+    //! \brief  Get spatial audio box information for
+    //!         specified sample in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] VCD::OMAF::SpatialAudioProperty&
-    //!                  spatial audio property
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] spatialaudioproperty
+    //!         output spatial audio property
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getPropertySpatialAudio(uint32_t trackId, uint32_t sampleId, VCD::OMAF::SpatialAudioProperty& spatialaudioproperty) const = 0;
 
     //!
-    //! \brief  Get Property Stereo Scopic 3D
+    //! \brief  Get stereo scopic 3D information for spherical video for
+    //!         specified sample in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] VCD::OMAF::StereoScopic3DProperty&
-    //!                  stereo scopic property
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] stereoscopicproperty
+    //!         output stereo scopic 3D property
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getPropertyStereoScopic3D(uint32_t trackId, uint32_t sampleId, VCD::OMAF::StereoScopic3DProperty& stereoscopicproperty) const = 0;
 
     //!
-    //! \brief  Get Property Spherical Video V1
+    //! \brief  Get spherical video V1 information for
+    //!         specified sample in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] VCD::OMAF::SphericalVideoV1Property&
-    //!                  spherical property
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] sphericalproperty
+    //!         output spherical video V1 property
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getPropertySphericalVideoV1(uint32_t trackId, uint32_t sampleId, VCD::OMAF::SphericalVideoV1Property& sphericalproperty) const  = 0;
 
     //!
-    //! \brief  Get Property Spherical Video V2
+    //! \brief  Get spherical video V2 information for
+    //!         specified sample in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] VCD::OMAF::SphericalVideoV2Property&
-    //!                  spherical property
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] sphericalproperty
+    //!         output spherical video V2 property
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getPropertySphericalVideoV2(uint32_t trackId, uint32_t sampleId, VCD::OMAF::SphericalVideoV2Property& sphericalproperty) const = 0;
 
     //!
-    //! \brief  Get Property Region Wise Packing
+    //! \brief  Get region wise packing information for
+    //!         specified sample in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] RegionWisePacking*
-    //!                  rwpk
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] rwpk
+    //!         output region wise packing property
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getPropertyRegionWisePacking(uint32_t trackId, uint32_t sampleId, RegionWisePacking *rwpk) const = 0;
 
     //!
-    //! \brief  Get Property Coverage Information
+    //! \brief  Get content coverage information for
+    //!         specified sample in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] VCD::OMAF::CoverageInformationProperty&
-    //!                  covi Property
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] coviProperty
+    //!         output content coverage property
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getPropertyCoverageInformation(uint32_t trackId, uint32_t sampleId, VCD::OMAF::CoverageInformationProperty& coviProperty) const = 0;
 
     //!
-    //! \brief  Get Property Projection Format
+    //! \brief  Get projection format information for
+    //!         specified sample in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] VCD::OMAF::ProjectionFormatProperty&
-    //!                  projection Format Property
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] projectionFormatProperty
+    //!         output projection format property
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getPropertyProjectionFormat(uint32_t trackId, uint32_t sampleId, VCD::OMAF::ProjectionFormatProperty& projectionFormatProperty) const = 0;
 
     //!
-    //! \brief  Get Property Scheme Types
+    //! \brief  Get scheme type information for
+    //!         specified sample in specified track
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] VCD::OMAF::SchemeTypesProperty&
-    //!                  scheme Types Property
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] schemeTypesProperty
+    //!         output scheme type property
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getPropertySchemeTypes(uint32_t trackId, uint32_t sampleId, VCD::OMAF::SchemeTypesProperty& schemeTypesProperty) const = 0;
 
     //!
-    //! \brief  Get Property Stereo Video Configuration
+    //! \brief  Get stereo video information for
+    //!         specified sample in specified track,
+    //!         only podv scheme is supported
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] VCD::OMAF::PodvStereoVideoConfiguration&
-    //!                  stereo Video Property
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] stereoVideoProperty
+    //!         output stereo video property
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getPropertyStereoVideoConfiguration(uint32_t trackId, uint32_t sampleId, VCD::OMAF::PodvStereoVideoConfiguration& stereoVideoProperty) const  = 0;
 
     //!
-    //! \brief  Get Property Rotation
+    //! \brief  Get rotation information for
+    //!         specified sample in specified track,
     //!
-    //! \param      [in] uint32_t
-    //!                  track Id
-    //!             [in] uint32_t
-    //!                  sample id
-    //!             [out] VCD::OMAF::Rotation&
-    //!                  Rotation Property
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] rotationProperty
+    //!         output podv rotation property
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t getPropertyRotation(uint32_t trackId, uint32_t sampleId, VCD::OMAF::Rotation& rotationProperty) const  = 0;
+
     //!
-    //! \brief  Get Property Rotation
+    //! \brief  Get the <initSegmentId, trackId> map
     //!
     //! \return std::map<int,int>
-    //!         return Map Init Track
+    //!         map of <initSegmentId, trackId>
     //!
     std::map<int,int> getMapInitTrk() const {return mMapInitTrk;}
 
 public:
 
     //!
-    //! \brief  parse Initialization Segment
+    //! \brief  Parse specified initial segment
     //!
-    //! \param      [in] OmafSegment*
-    //!                  stream Interface
-    //!             [in] uint32_t
-    //!                  init Segment Id
+    //! \param  [in]  streamInterface
+    //!         pointer to specified initial segment
+    //! \param  [in]  initSegmentId
+    //!         index of specified initial segment,
+    //!         corresponding to specified track
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t parseInitializationSegment(OmafSegment* streamInterface, uint32_t initSegmentId)  = 0;
 
     //!
-    //! \brief  invalidate Initialization Segment
+    //! \brief  Invalidate specified initial segment
+    //!         Disable the data buffer pointer to the
+    //!         specified initial segment, then the data
+    //!         from the segment can not be accessed any longer
     //!
-    //! \param      [in] uint32_t
-    //!                  init Segment Id
+    //! \param  [in]  initSegmentId
+    //!         index of specified initial segment,
+    //!         corresponding to specified track
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t invalidateInitializationSegment(uint32_t initSegmentId) = 0 ;
 
     //!
-    //! \brief  parse Segment
+    //! \brief  Parse specified segment for specified track
     //!
-    //! \param      [in] OmafSegment*
-    //!                  stream Interface
-    //!             [in] uint32_t
-    //!                  init segment id
-    //!             [in] uint32_t
-    //!                  segment id
-    //!             [in] uint64_t
-    //!                  earliest PTS in TS
+    //! \param  [in]  streamInterface
+    //!         pointer to specified segment handler
+    //! \param  [in]  initSegmentId
+    //!         index of specified initial segment, this index
+    //!         is corresponding to track index
+    //! \param  [in]  segmentId
+    //!         index of specified segment
+    //! \param  [in]  earliestPTSinTS
+    //!         the earliest presentation time in timescale for
+    //!         the specified sample
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t parseSegment( OmafSegment* streamInterface,
                                   uint32_t initSegmentId,
@@ -621,32 +683,37 @@ public:
                                   uint64_t earliestPTSinTS = UINT64_MAX)  = 0;
 
     //!
-    //! \brief  invalidate Segment
+    //! \brief  Invalidate specified segment for specified track
+    //!         Disable the data buffer pointer to the specified
+    //!         segment, then the data from the segment can not
+    //!         be accessed any longer
     //!
-    //! \param      [in] uint32_t
-    //!                  init Segment Id
-    //!             [in] uint32_t
-    //!                  segment id
+    //! \param  [in]  initSegmentId
+    //!         index of specified initial segment, which is
+    //!         corresponding to track index
+    //! \param  [in]  segmentId
+    //!         index of specified segment
     //!
     //! \return int32_t
-    //!         return value
+    //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t invalidateSegment(uint32_t initSegmentId, uint32_t segmentId)  = 0;
+
     //!
-    //! \brief  set Map Init Track
+    //! \brief  Set the <initSegmentId, trackId> map to
+    //!         input map
     //!
-    //! \param      [in] std::map<int,int>
-    //!                  map
+    //! \param  [in]  map
+    //!         input map of <initSegmentId, trackId> type
     //!
-    //! \return int32_t
-    //!         return value
+    //! \return void
     //!
     void setMapInitTrk(std::map<int,int> map){mMapInitTrk = map;}
+
 private:
-    std::map<int, int>  mMapInitTrk;      //<! ID pair for InitSegID to TrackID;
+    std::map<int, int>  mMapInitTrk;           //!< the map of <initSegmentId, trackId>
 };
 
 VCD_OMAF_END;
 
 #endif /* OMAFREADER_H */
-

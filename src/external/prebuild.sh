@@ -89,14 +89,12 @@ install_dependencies() {
     cd ${EX_PATH}
     if [ $1 == "server" ] ; then
         ./build_glog.sh
-        ./build_Nokia_omaf.sh
         ./install_openHEVC.sh
         ./install_SVT.sh
         ./install_thrift.sh
         ./install_FFmpeg.sh server
     elif [ $1 == "client" ] ; then
         ./build_glog.sh
-        ./build_Nokia_omaf.sh
         ./prebuild_player.sh
         ./install_FFmpeg.sh client
     elif [ $1 == "android" ] ; then
