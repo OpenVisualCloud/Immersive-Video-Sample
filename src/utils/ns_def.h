@@ -34,6 +34,11 @@
 #ifndef NS_DEF_H
 #define NS_DEF_H
 
+#define VCD_MP4_BEGIN namespace VCD { namespace MP4 {
+#define VCD_MP4_END }}
+
+#define VCD_USE_MP4 using namespace VCD::MP4
+
 #define VCD_NS_BEGIN namespace VCD { namespace VRVideo {
 #define VCD_NS_END }}
 
@@ -49,4 +54,3 @@
 #define VCD_VROMAF_NS VCD::OMAF
 
 #endif /* NS_DEF_H */
-
