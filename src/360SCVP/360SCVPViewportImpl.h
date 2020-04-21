@@ -69,6 +69,8 @@ struct ITileInfo
     short tileheight;
     int32_t   faceId;
     uint32_t  isOccupy;
+    float vertPos;
+    float horzPos;
 };
 /// generate viewport class
 class TgenViewport
@@ -106,6 +108,7 @@ public:
     void     destroy();    ///< destroy option handling class
     int32_t  parseCfg(  );  ///< parse configuration file to fill member variables
     int32_t  convert();
+    int32_t  selectregion(short inputWidth, short inputHeight, short dstWidth, short dstHeight);
     //analysis;
     bool     isInside(int32_t x, int32_t y, int32_t width, int32_t height, int32_t faceId);
     int32_t  calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol, int32_t tileRow);

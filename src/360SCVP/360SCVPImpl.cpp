@@ -610,7 +610,7 @@ int32_t TstitchStream::getViewPortTiles()
     if (!m_pViewport)
         return -1;
     int32_t ret = 0;
-    ret = genViewport_process(&m_pViewportParam, m_pViewport);
+    ret = genViewport_postprocess(&m_pViewportParam, m_pViewport);
     if (ret)
     {
         printf("gen viewport process error!\n");

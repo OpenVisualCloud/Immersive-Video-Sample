@@ -213,6 +213,41 @@ int32_t   genViewport_process(generateViewPortParam* pParamGenViewport, void* pG
 }
 
 
+int32_t   genViewport_postprocess(generateViewPortParam* pParamGenViewport, void* pGenHandle)
+{
+    TgenViewport* cTAppConvCfg = (TgenViewport*)(pGenHandle);
+    if (!cTAppConvCfg || !pParamGenViewport)
+        return -1;
+
+    cTAppConvCfg->selectregion(pParamGenViewport->m_iInputWidth, pParamGenViewport->m_iInputHeight, pParamGenViewport->m_viewportDestWidth, pParamGenViewport->m_viewportDestHeight);
+
+    pParamGenViewport->m_numFaces = cTAppConvCfg->m_numFaces;
+    point* pTmpUpleftDst = pParamGenViewport->m_pUpLeft;
+    point* pTmpDownRightDst = pParamGenViewport->m_pDownRight;
+    SPos * pTmpUpleftSrc = cTAppConvCfg->m_pUpLeft;
+    SPos * pTmpDownRightSrc = cTAppConvCfg->m_pDownRight;
+
+    for (int32_t i = 0; i < FACE_NUMBER; i++)
+    {
+        if (pTmpUpleftSrc->faceIdx >= 0)
+        {
+            pTmpUpleftDst->faceId = (int32_t)pTmpUpleftSrc->faceIdx;
+            pTmpUpleftDst->x = (int32_t)pTmpUpleftSrc->x;
+            pTmpUpleftDst->y = (int32_t)pTmpUpleftSrc->y;
+            pTmpDownRightDst->faceId = (int32_t)pTmpDownRightSrc->faceIdx;
+            pTmpDownRightDst->x = (int32_t)pTmpDownRightSrc->x;
+            pTmpDownRightDst->y = (int32_t)pTmpDownRightSrc->y;
+            pTmpUpleftDst++;
+            pTmpDownRightDst++;
+        }
+
+        pTmpUpleftSrc++;
+        pTmpDownRightSrc++;
+    }
+    return 0;
+}
+
+
 int32_t genViewport_setMaxSelTiles(void* pGenHandle, int32_t maxSelTiles)
 {
     TgenViewport* cTAppConvCfg = (TgenViewport*)(pGenHandle);
@@ -572,10 +607,12 @@ int32_t TgenViewport::parseCfg(  )
 
     if (m_tileNumCol == 0 || m_tileNumRow == 0)
         return -1;
-    // the following code is temporary, need to update accoridg to the API
     int32_t posY = 0;
     int32_t stepX = m_iInputWidth / m_tileNumCol;
     int32_t stepY = m_iInputHeight / m_tileNumRow;
+    float stepHorzPos = ERP_HORZ_ANGLE / m_tileNumCol;
+    float stepVertPos = ERP_VERT_ANGLE / m_tileNumRow;
+    float vertPos = ERP_VERT_START;
     int32_t idx = 0;
 
     int32_t faceNum = (m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 1;
@@ -586,6 +623,7 @@ int32_t TgenViewport::parseCfg(  )
         for (uint32_t i = 0; i < m_tileNumRow; i++)
         {
             int32_t posX = 0;
+            float horzPos = ERP_HORZ_START;
             for (uint32_t j = 0; j < m_tileNumCol; j++)
             {
                 m_srd[idx].x = posX;
@@ -594,12 +632,105 @@ int32_t TgenViewport::parseCfg(  )
                 m_srd[idx].tileheight = stepY;
                 m_srd[idx].faceId = faceid;
                 m_srd[idx].isOccupy = 0;
+                m_srd[idx].horzPos = horzPos;
+                m_srd[idx].vertPos = vertPos;
                 posX += stepX;
+                horzPos += stepHorzPos;
                 idx++;
             }
             posY += stepY;
+            vertPos -= stepVertPos;
         }
     }
+    return 0;
+}
+
+int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short dstWidth, short dstHeight)
+{
+    uint32_t idx = 0;
+    int32_t faceNum = (m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 1;
+    float fYaw = m_codingSVideoInfo.viewPort.fYaw;
+    float fPitch = m_codingSVideoInfo.viewPort.fPitch;
+    float stepHorzPos = ERP_HORZ_ANGLE / m_tileNumCol;
+    float stepVertPos = ERP_VERT_ANGLE / m_tileNumRow;
+    // starting time
+    double dResult;
+    clock_t lBefore = clock();
+
+    // seek the center tile of the FOV
+    for (int32_t faceid = 0; faceid < faceNum; faceid++)
+    {
+        for (uint32_t i = 0; i < m_tileNumRow; i++)
+        {
+            for (uint32_t j = 0; j < m_tileNumCol; j++)
+            {
+                m_srd[idx].faceId = faceid;
+                m_srd[idx].isOccupy = 0;
+                if (fPitch >= m_srd[idx].horzPos && fPitch <= m_srd[idx].horzPos + stepHorzPos
+                  && fYaw <= m_srd[idx].vertPos && fYaw >= m_srd[idx].vertPos - stepVertPos)
+                     break;
+		idx++;
+            }
+        }
+    }
+    if (idx == m_tileNumRow * m_tileNumCol)
+        idx--;
+    //select all of the tiles to cover the whole viewport
+    short centerX = m_srd[idx].x;
+    short centerY = m_srd[idx].y;
+    short halfVPhorz = (dstWidth - m_srd[idx].tilewidth) >> 1;
+    short halfVPvert = (dstHeight - m_srd[idx].tileheight) >> 1;
+    SPos*pTmpUpLeft = m_pUpLeft;
+    SPos*pTmpDownRight = m_pDownRight;
+    pTmpUpLeft->x = centerX - halfVPhorz;
+    pTmpDownRight->x = centerX + halfVPhorz;
+    pTmpUpLeft->y = centerY - halfVPvert;
+    pTmpDownRight->y = centerY + halfVPvert;
+    if (pTmpUpLeft->y < m_srd[idx].tileheight*(-1))
+    {
+        pTmpUpLeft->y = 0;
+        pTmpUpLeft->x = 0;
+        pTmpDownRight->x = inputWidth;
+    }
+    else if(pTmpUpLeft->y < 0)
+        pTmpUpLeft->y = 0;
+
+    if (pTmpDownRight->y >= inputHeight + m_srd[idx].tileheight)
+    {
+        pTmpUpLeft->x = 0;
+        pTmpUpLeft->y = pTmpUpLeft->y + halfVPvert;
+        pTmpDownRight->x = inputWidth;
+        pTmpDownRight->y = inputHeight;
+    }
+    else if (pTmpDownRight->y > inputHeight)
+        pTmpDownRight->y = inputHeight;
+
+    if (pTmpUpLeft->x < 0)
+    {
+        pTmpUpLeft->x = 0;
+        pTmpDownRight++;
+        pTmpDownRight->faceIdx = 0;
+        pTmpDownRight->x = inputWidth;
+        pTmpDownRight->y = m_pDownRight->y;
+        pTmpUpLeft++;
+        pTmpUpLeft->faceIdx = 0;
+        pTmpUpLeft->x = inputWidth - (halfVPhorz - centerX);
+        pTmpUpLeft->y = m_pUpLeft->y;
+    }
+    else if (pTmpDownRight->x > inputWidth)
+    {
+        pTmpDownRight->x = inputWidth;
+        pTmpDownRight++;
+        pTmpDownRight->faceIdx = 0;
+        pTmpUpLeft++;
+        pTmpUpLeft->faceIdx = 0;
+        pTmpUpLeft->x = 0;
+        pTmpUpLeft->y = m_pUpLeft->y;
+        pTmpDownRight->x = centerX + halfVPhorz - inputWidth;
+        pTmpDownRight->y = m_pDownRight->y;
+    }
+    dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
+    printf("\n Total Time for tile selection: %12.3f sec.\n", dResult);
     return 0;
 }
 

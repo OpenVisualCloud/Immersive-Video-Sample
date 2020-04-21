@@ -109,6 +109,18 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport);
 int32_t   genViewport_process(generateViewPortParam* pParamGenViewport, void* pGenHandle);
 
 //!
+//! \brief    This function completes the viewport selection by look up table , according to the FOV information.
+//!
+//! \param    generateViewPortParam* pParamGenViewport, output, refer to the structure generateViewPortParam
+//! \param    void*                 pGenHandle,            input, which is created by the genTiledStream_Init function
+//!
+//! \return   s32, the status of the function.
+//!           0,     if succeed
+//!           not 0, if fail
+//!
+int32_t   genViewport_postprocess(generateViewPortParam* pParamGenViewport, void* pGenHandle);
+
+//!
 //! \brief    This function sets the parameter of the viewPort.
 //!
 //! \param    void*  pGenHandle,        input, which is created by the genTiledStream_Init function
