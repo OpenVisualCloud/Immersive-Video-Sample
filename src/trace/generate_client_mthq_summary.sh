@@ -68,8 +68,9 @@ decode_fifo_num=`cat mthq_trace.txt | grep  "decode_fifo" | awk -F " " '{print $
 # filter init pose change logs
 start=`cat mthq_trace.txt | grep -n "is_changed_field = 1" | awk -F ":" '{print $1}'`
 start=`echo $start | awk -F " " '{print $1}'`
-# get timeArray from T2 - T9 in every segment && isChangedArray && segIDArray
+# get timeArray from T2 - T9 in every segment && segIDArray
 cur_index=$start
+motion_change_times=0
 
 for i in $(seq 1 $seg_num)
 do
@@ -80,7 +81,10 @@ do
     timeT2=`calc_time $T2`
 
     is_changed=`cat mthq_trace.txt | awk "NR > $cur_index" | grep -m 1 "T2_detect_pose_change" | awk -F " " '{print $13}'`
-    isChangedArray[$i]=$is_changed
+    if [ $is_changed -eq 1 ]
+    then
+        motion_change_times=$motion_change_times+1
+    fi
     # echo "is_changed:$is_changed"
 
     T3=`cat mthq_trace.txt | awk "NR > $cur_index" | grep -m 1 "T3_start_download_time" | awk -F " " '{print $1}' | awk -F "[][]" '{print $2}'`
@@ -180,7 +184,6 @@ echo "-------------------[Time Cost] Motion $(($cur_T1+1)) happens and FOV start
 echo "(T1) change to low quality                        - player :    ${T1Array[0]}" >> "$summary_file_name".txt
 in_flag=0 # if [T2,T9] in [T1,T9']
 is_quit_finding=0 # if quiting finding [T2,T9] in [T1,T9']
-nochangedTimes=0 # pose change but FOV quality remains high quality
 detectInChanged=0
 for iter in $(seq 0 $((${#total_T2toT9[@]}-1)))
 do
@@ -243,20 +246,6 @@ do
         then
             echo "(T9) render first packet in segment $segID             - player :    ${total_T2toT9[$iter]}" >> "$summary_file_name".txt
         fi
-    else
-        # not in [T1,T9'] but pose changed
-        category=`expr $iter % 8`
-        seg_id=`expr $iter / 8 + 1` # 1 - seg_num
-        # ensure [T2,T9] not in [T1,T9']
-        if [ $category -eq 0 ] && [ ${isChangedArray[$seg_id]} -eq 1 ]
-        then
-            cur_T9=`calc_time ${total_T2toT9[$(($iter+7))]}`
-            if [ `echo "$cur_T9 < $T1_time" | bc` -eq 1 ]
-            then
-                nochangedTimes=$(($nochangedTimes+1))
-                # echo "seg_id$seg_id"
-            fi
-        fi
     fi
 done
 # # 5.echo the last T9' information if occurs in last segment
@@ -269,9 +258,9 @@ then
 fi
 
 echo "--------------------------------[Average Time Cost]--------------------------------" >> "$summary_file_name".txt
-echo "Motion changes $(($changedTimes+$nochangedTimes)) times, in which $changedTimes of them occurs low quality in FOV" >> "$summary_file_name".txt
+echo "Motion changes $(($motion_change_times)) times, in which $changedTimes of them occurs low quality in FOV" >> "$summary_file_name".txt
 echo "Motion from low quality to high quality average time cost  :  $changedAVGTime s" >> "$summary_file_name".txt
-totalAVGTime=`awk 'BEGIN{printf "%.9f\n", '$changedAVGTime\*$changedTimes/$(($changedTimes+$nochangedTimes))'}'`
+totalAVGTime=`awk 'BEGIN{printf "%.9f\n", '$changedAVGTime\*$changedTimes/$(($motion_change_times))'}'`
 echo "Total motion to high quality average time cost             :  $totalAVGTime s" >> "$summary_file_name".txt
 echo "--------------------------------[Average Time Cost in sub modules]--------------------------------" >> "$summary_file_name".txt
 if [ $detectInChanged -eq 0 ]
