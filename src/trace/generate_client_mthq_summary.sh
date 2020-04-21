@@ -274,7 +274,12 @@ echo "Motion from low quality to high quality average time cost  :  $changedAVGT
 totalAVGTime=`awk 'BEGIN{printf "%.9f\n", '$changedAVGTime\*$changedTimes/$(($changedTimes+$nochangedTimes))'}'`
 echo "Total motion to high quality average time cost             :  $totalAVGTime s" >> "$summary_file_name".txt
 echo "--------------------------------[Average Time Cost in sub modules]--------------------------------" >> "$summary_file_name".txt
-detectTimeAverage=`awk 'BEGIN{printf "%.9f\n", '$detectTimeAverage/$detectInChanged'}'`
+if [ $detectInChanged -eq 0 ]
+then
+    detectTimeAverage=0
+else
+    detectTimeAverage=`awk 'BEGIN{printf "%.9f\n", '$detectTimeAverage/$detectInChanged'}'`
+fi
 echo "Detect pose change time cost                               :  $detectTimeAverage s" >> "$summary_file_name".txt
 echo "Download segment time cost                                 :  ${timeAverageArray[1]} s" >> "$summary_file_name".txt
 echo "Parse segment time cost                                    :  ${timeAverageArray[2]} s" >> "$summary_file_name".txt
