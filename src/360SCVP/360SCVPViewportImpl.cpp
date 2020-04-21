@@ -610,8 +610,8 @@ int32_t TgenViewport::parseCfg(  )
     int32_t posY = 0;
     int32_t stepX = m_iInputWidth / m_tileNumCol;
     int32_t stepY = m_iInputHeight / m_tileNumRow;
-    float stepHorzPos = ERP_HORZ_ANGLE / m_tileNumCol;
-    float stepVertPos = ERP_VERT_ANGLE / m_tileNumRow;
+    float stepHorzPos = ERP_HORZ_ANGLE / (float)m_tileNumCol;
+    float stepVertPos = ERP_VERT_ANGLE / (float)m_tileNumRow;
     float vertPos = ERP_VERT_START;
     int32_t idx = 0;
 
@@ -651,8 +651,8 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     int32_t faceNum = (m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 1;
     float fYaw = m_codingSVideoInfo.viewPort.fYaw;
     float fPitch = m_codingSVideoInfo.viewPort.fPitch;
-    float stepHorzPos = ERP_HORZ_ANGLE / m_tileNumCol;
-    float stepVertPos = ERP_VERT_ANGLE / m_tileNumRow;
+    float stepHorzPos = ERP_HORZ_ANGLE / (float)m_tileNumCol;
+    float stepVertPos = ERP_VERT_ANGLE / (float)m_tileNumRow;
     // starting time
     double dResult;
     clock_t lBefore = clock();
