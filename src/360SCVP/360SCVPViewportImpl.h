@@ -26,6 +26,7 @@
 #ifndef __360SCVP_VIEWPORTIMPL__
 #define __360SCVP_VIEWPORTIMPL__
 
+#include "360SCVPAPI.h"
 #include "360SCVPGeometry.h"
 
 #include <sstream>
@@ -93,6 +94,7 @@ public:
     int32_t       m_aiPad[2];                                       ///< number of padded pixels for width and height
     int32_t   m_faceSizeAlignment;
     int32_t       m_maxTileNum;
+    UsageType     m_usageType;
     inline int32_t round(POSType t) { return (int32_t)(t+ (t>=0? 0.5 :-0.5)); };
 public:
     TgenViewport();

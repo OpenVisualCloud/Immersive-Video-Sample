@@ -416,6 +416,7 @@ TEST_F(I360SCVPTest, SetParameter_SetViewport)
     paramViewPorInfo.viewPortFOVV = 80;
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
+    paramViewPorInfo.usageType = E_STREAM_STITCH_ONLY;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);
     I360SCVP_unInit(pI360SCVP);
     EXPECT_TRUE(ret ==0);
@@ -547,6 +548,7 @@ TEST_F(I360SCVPTest, SetViewportSEI)
     paramViewPorInfo.viewPortFOVV = 80;
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
+    paramViewPorInfo.usageType = E_STREAM_STITCH_ONLY;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    EXPECT_TRUE(ret == 0);
     if (ret)
     {
@@ -653,6 +655,7 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
     paramViewPorInfo.viewPortFOVV = 80;
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
+    paramViewPorInfo.usageType = E_STREAM_STITCH_ONLY;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    
     EXPECT_TRUE(ret == 0);
     if (ret)
@@ -740,6 +743,7 @@ TEST_F(I360SCVPTest, SetRotationSEI)
     paramViewPorInfo.viewPortFOVV = 80;
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
+    paramViewPorInfo.usageType = E_STREAM_STITCH_ONLY;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);
     EXPECT_TRUE(ret == 0);
     if (ret)
@@ -827,6 +831,7 @@ TEST_F(I360SCVPTest, SetFramePackingSEI)
     paramViewPorInfo.viewPortFOVV = 80;
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
+    paramViewPorInfo.usageType = E_STREAM_STITCH_ONLY;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);
     EXPECT_TRUE(ret == 0);
     if (ret)

@@ -48,6 +48,8 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
     TgenViewport*  cTAppConvCfg = new TgenViewport;
     if (!cTAppConvCfg)
         return NULL;
+
+    cTAppConvCfg->m_usageType = pParamGenViewport->m_usageType;
     memset(&cTAppConvCfg->m_sourceSVideoInfo, 0, sizeof(struct SVideoInfo));
     memset(&cTAppConvCfg->m_codingSVideoInfo, 0, sizeof(struct SVideoInfo));
     cTAppConvCfg->m_iCodingFaceWidth = pParamGenViewport->m_iViewportWidth;
@@ -138,12 +140,29 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
             pDownRight++;
         }
 
-        maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 2);
-        if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
-            maxTileNumCol = cTAppConvCfg->m_tileNumCol;
-        maxTileNumRow = (viewPortHeightmax / cTAppConvCfg->m_srd[0].tileheight + 2);
-        if (maxTileNumRow > cTAppConvCfg->m_tileNumRow)
-            maxTileNumRow = cTAppConvCfg->m_tileNumRow;
+        if (pParamGenViewport->m_usageType == E_PARSER_ONENAL)
+        {
+            viewPortWidth = floor((float)(viewPortWidth) / (float)(cTAppConvCfg->m_srd[0].tilewidth) + 0.499) * cTAppConvCfg->m_srd[0].tilewidth;
+            viewPortHeightmax = floor((float)(viewPortHeightmax) / (float)(cTAppConvCfg->m_srd[0].tileheight) + 0.499) * cTAppConvCfg->m_srd[0].tileheight;
+            printf("viewPortWidthMax = %d viewPortHeightMax = %d, tile_width %d, tile_height %d\n", viewPortWidth, viewPortHeightmax, cTAppConvCfg->m_srd[0].tilewidth, cTAppConvCfg->m_srd[0].tileheight);
+
+            maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 1);
+            if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
+                maxTileNumCol = cTAppConvCfg->m_tileNumCol;
+
+            maxTileNumRow = (viewPortHeightmax / cTAppConvCfg->m_srd[0].tileheight + 1);
+            if (maxTileNumRow > cTAppConvCfg->m_tileNumRow)
+                maxTileNumRow = cTAppConvCfg->m_tileNumRow;
+        }
+        else
+        {
+            maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 2);
+            if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
+                maxTileNumCol = cTAppConvCfg->m_tileNumCol;
+            maxTileNumRow = (viewPortHeightmax / cTAppConvCfg->m_srd[0].tileheight + 2);
+            if (maxTileNumRow > cTAppConvCfg->m_tileNumRow)
+                maxTileNumRow = cTAppConvCfg->m_tileNumRow;
+        }
 
         maxTileNum = maxTileNumCol * maxTileNumRow;
         cTAppConvCfg->m_maxTileNum = maxTileNum;
@@ -286,7 +305,14 @@ int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile)
     maxTileNum = cTAppConvCfg->m_maxTileNum;
 
     //select the additional tiles randomly
-    additionalTilesNum = maxTileNum - tileNum;
+    if (cTAppConvCfg->m_usageType == E_PARSER_ONENAL)
+    {
+        additionalTilesNum = 0;
+    }
+    else
+    {
+        additionalTilesNum = maxTileNum - tileNum;
+    }
     printf("the max tile count = %d additionalTilesNum = %d\n", maxTileNum, additionalTilesNum);
     if (additionalTilesNum < 0)
         printf("there is an error in the judgement\n");
@@ -307,7 +333,14 @@ int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile)
     //set the occupy tile into the output parameter
     int32_t idx = 0;
     TileDef* pOutTileTmp = pOutTile;
-    tileNum = tileNum + additionalTilesNum;
+    if (cTAppConvCfg->m_usageType == E_PARSER_ONENAL)
+    {
+        tileNum = maxTileNum;
+    }
+    else
+    {
+        tileNum = tileNum + additionalTilesNum;
+    }
     for (uint32_t col = 0; col < cTAppConvCfg->m_tileNumCol; col++)
     {
         for (uint32_t row = 0; row < cTAppConvCfg->m_tileNumRow; row++)
@@ -439,6 +472,7 @@ TgenViewport::TgenViewport()
     m_iInputWidth = 0;
     m_iInputHeight = 0;
     m_maxTileNum = 0;
+    m_usageType = E_STREAM_STITCH_ONLY;
     m_numFaces = 0;
     m_srd = new ITileInfo;
 }
@@ -481,6 +515,7 @@ TgenViewport& TgenViewport::operator=(const TgenViewport& src)
     this->m_iFrameRate = src.m_iFrameRate;
     this->m_iInputWidth = src.m_iInputWidth;
     this->m_iInputHeight = src.m_iInputHeight;
+    this->m_usageType = src.m_usageType;
     memcpy(this->m_srd, src.m_srd, sizeof(ITileInfo));
     return *this;
 }

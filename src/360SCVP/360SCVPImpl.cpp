@@ -224,6 +224,7 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
     m_pViewportParam.m_viewPort_fYaw = pViewPortInfo->viewPortYaw;
     m_pViewportParam.m_viewPort_hFOV = pViewPortInfo->viewPortFOVH;
     m_pViewportParam.m_viewPort_vFOV = pViewPortInfo->viewPortFOVV;
+    m_pViewportParam.m_usageType = pViewPortInfo->usageType;
     m_pViewport = genViewport_Init(&m_pViewportParam);
     return 0;
 }
@@ -321,6 +322,7 @@ int32_t TstitchStream::init(param_360SCVP* pParamStitchStream)
     m_specialDataLen[1] = 0;
     m_usedType = pParamStitchStream->usedType;
     m_dstRwpk.rectRegionPacking = NULL;
+    pParamStitchStream->paramViewPort.usageType = (UsageType)(pParamStitchStream->usedType);
     if (m_usedType == E_PARSER_FOR_CLIENT)
     {
         return ret;
@@ -666,7 +668,6 @@ int32_t TstitchStream::doMerge(param_360SCVP* pParamStitchStream)
     m_dstRwpk.numHiRegions = m_tileWidthCountSel[0] * m_tileHeightCountSel[0];
     m_dstRwpk.lowResPicWidth = mergeStream->lowRes.width;
     m_dstRwpk.lowResPicHeight = mergeStream->lowRes.height;
-    m_dstRwpk.timeStamp = pParamStitchStream->timeStamp;
 
     if (!m_dstRwpk.rectRegionPacking)
     {
@@ -748,9 +749,10 @@ int TstitchStream::GenerateRwpkInfo(RegionWisePacking *dstRwpk)
     int lowRes_tile_height = m_mergeStreamParam.lowRes.height / m_tileHeightCountOri[1];
     dstRwpk->constituentPicMatching = 0;
 
-    uint8_t highTilesNum = m_tileWidthCountSel[0] * m_tileHeightCountSel[0];
-    dstRwpk->packedPicWidth = highRes_tile_width * m_tileWidthCountSel[0] + lowRes_tile_width * ((dstRwpk->numRegions- highTilesNum) / m_lrTilesInCol);
+    dstRwpk->packedPicWidth = highRes_tile_width * m_tileWidthCountSel[0] + lowRes_tile_width * m_tileHeightCountSel[1];
     dstRwpk->packedPicHeight = highRes_tile_height * m_tileHeightCountSel[0];
+
+    uint8_t highTilesNum = m_tileWidthCountSel[0] * m_tileHeightCountSel[0];
 
     for (uint8_t regionIdx = 0; regionIdx < dstRwpk->numRegions; regionIdx++)
     {
