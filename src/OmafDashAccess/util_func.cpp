@@ -77,63 +77,63 @@ uint64_t net_parse_date(const char *val)
 {
     uint64_t current_time;
     char szDay[50], szMonth[50];
-    int32_t year, month, day, h, m, s, ms;
+    int32_t curr_year, curr_month, curr_day, curr_hour, curr_min, curr_sec, ms;
     int32_t oh, om;
-    float secs;
+    float seconds;
     bool neg_time_zone = false;
 
     struct tm t;
     memset(&t, 0, sizeof(struct tm));
 
     szDay[0] = szMonth[0] = 0;
-    year = month = day = h = m = s = 0;
+    curr_year = curr_month = curr_day = curr_hour = curr_min = curr_sec = 0;
     oh = om = 0;
-    secs = 0;
+    seconds = 0;
 
-    if (sscanf(val, "%d-%d-%dT%d:%d:%gZ", &year, &month, &day, &h, &m, &secs) == 6) {
+    if (sscanf(val, "%d-%d-%dT%d:%d:%gZ", &curr_year, &curr_month, &curr_day, &curr_hour, &curr_min, &seconds) == 6) {
     }
-    else if (sscanf(val, "%d-%d-%dT%d:%d:%g-%d:%d", &year, &month, &day, &h, &m, &secs, &oh, &om) == 8) {
+    else if (sscanf(val, "%d-%d-%dT%d:%d:%g-%d:%d", &curr_year, &curr_month, &curr_day, &curr_hour, &curr_min, &seconds, &oh, &om) == 8) {
         neg_time_zone = true;
     }
-    else if (sscanf(val, "%d-%d-%dT%d:%d:%g+%d:%d", &year, &month, &day, &h, &m, &secs, &oh, &om) == 8) {
+    else if (sscanf(val, "%d-%d-%dT%d:%d:%g+%d:%d", &curr_year, &curr_month, &curr_day, &curr_hour, &curr_min, &seconds, &oh, &om) == 8) {
     }
-    else if (sscanf(val, "%3s, %d %3s %d %d:%d:%d", szDay, &day, szMonth, &year, &h, &m, &s)==7) {
-        secs  = (float) s;
+    else if (sscanf(val, "%3s, %d %3s %d %d:%d:%d", szDay, &curr_day, szMonth, &curr_year, &curr_hour, &curr_min, &curr_sec)==7) {
+        seconds  = (float) curr_sec;
     }
-    else if (sscanf(val, "%9s, %d-%3s-%d %02d:%02d:%02d GMT", szDay, &day, szMonth, &year, &h, &m, &s)==7) {
-        secs  = (float) s;
+    else if (sscanf(val, "%9s, %d-%3s-%d %02d:%02d:%02d GMT", szDay, &curr_day, szMonth, &curr_year, &curr_hour, &curr_min, &curr_sec)==7) {
+        seconds  = (float) curr_sec;
     }
-    else if (sscanf(val, "%3s %3s %d %02d:%02d:%02d %d", szDay, szMonth, &day, &year, &h, &m, &s)==7) {
-        secs  = (float) s;
+    else if (sscanf(val, "%3s %3s %d %02d:%02d:%02d %d", szDay, szMonth, &curr_day, &curr_year, &curr_hour, &curr_min, &curr_sec)==7) {
+        seconds  = (float) curr_sec;
     }
     else {
         LOG(ERROR) << "[Core] Cannot parse date string" <<  val;
         return 0;
     }
 
-    if (month) {
-        month -= 1;
+    if (curr_month) {
+        curr_month -= 1;
     } else {
-        if (!strcmp(szMonth, "Jan")) month = 0;
-        else if (!strcmp(szMonth, "Feb")) month = 1;
-        else if (!strcmp(szMonth, "Mar")) month = 2;
-        else if (!strcmp(szMonth, "Apr")) month = 3;
-        else if (!strcmp(szMonth, "May")) month = 4;
-        else if (!strcmp(szMonth, "Jun")) month = 5;
-        else if (!strcmp(szMonth, "Jul")) month = 6;
-        else if (!strcmp(szMonth, "Aug")) month = 7;
-        else if (!strcmp(szMonth, "Sep")) month = 8;
-        else if (!strcmp(szMonth, "Oct")) month = 9;
-        else if (!strcmp(szMonth, "Nov")) month = 10;
-        else if (!strcmp(szMonth, "Dec")) month = 11;
+        if (!strcmp(szMonth, "Jan")) curr_month = 0;
+        else if (!strcmp(szMonth, "Feb")) curr_month = 1;
+        else if (!strcmp(szMonth, "Mar")) curr_month = 2;
+        else if (!strcmp(szMonth, "Apr")) curr_month = 3;
+        else if (!strcmp(szMonth, "May")) curr_month = 4;
+        else if (!strcmp(szMonth, "Jun")) curr_month = 5;
+        else if (!strcmp(szMonth, "Jul")) curr_month = 6;
+        else if (!strcmp(szMonth, "Aug")) curr_month = 7;
+        else if (!strcmp(szMonth, "Sep")) curr_month = 8;
+        else if (!strcmp(szMonth, "Oct")) curr_month = 9;
+        else if (!strcmp(szMonth, "Nov")) curr_month = 10;
+        else if (!strcmp(szMonth, "Dec")) curr_month = 11;
     }
 
-    t.tm_year = year>1000 ? year-1900 : year;
-    t.tm_mday = day;
-    t.tm_hour = h;
-    t.tm_min = m;
-    t.tm_sec = (uint32_t) secs;
-    t.tm_mon = month;
+    t.tm_year = curr_year>1000 ? curr_year-1900 : curr_year;
+    t.tm_mday = curr_day;
+    t.tm_hour = curr_hour;
+    t.tm_min = curr_min;
+    t.tm_sec = (uint32_t) seconds;
+    t.tm_mon = curr_month;
 
     if (strlen(szDay) ) {
         if (!strcmp(szDay, "Mon") || !strcmp(szDay, "Monday")) t.tm_wday = 0;
@@ -162,7 +162,7 @@ uint64_t net_parse_date(const char *val)
         current_time = current_time + diff;
     }
     current_time *= 1000;
-    ms = (uint32_t) ( (secs - (uint32_t) secs) * 1000);
+    ms = (uint32_t) ( (seconds - (uint32_t) seconds) * 1000);
     return current_time + ms;
 }
 
