@@ -86,6 +86,25 @@ public:
     //!         isrunning or not
     //!
     virtual bool isRunning();
+    //! \brief Auto change the viewport position
+    //!
+    //! \param  [out] float *
+    //          horizontal Angle
+    //!         [out] float *
+    //!         vertical Angle
+    //! \return void
+    //!
+    void AutoChangePos(float *hPos, float *vPos);
+    //! \brief Get motion to high quality xml parameters
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus GetMotionOptionParams();
+
+private:
+    bool m_needMotionTest;              //<! need motion test or not
+    struct MotionConfig m_motionConfig; //<! test params for motion to high quality test
 };
 
 VCD_NS_END

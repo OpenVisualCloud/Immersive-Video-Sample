@@ -132,6 +132,13 @@ struct RenderConfig
     uint32_t renderInterval;
 };
 
+struct MotionConfig
+{
+    char* mode;           //!< motion mode
+    uint32_t freq;        //!< times to render around
+    uint32_t timeInterval;//!< switch viewport once rendering N times
+};
+
 enum ThreadStatus{
     STATUS_CREATED=0,
     STATUS_RUNNING,
