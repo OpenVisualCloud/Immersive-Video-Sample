@@ -90,6 +90,15 @@
 #define OMAF_ERROR_INVALID_TIME                  -84
 #define OMAF_ERROR_EXTRACTOR_NOT_FOUND           -85
 #define OMAF_ERROR_EXTRACTORTRACK_NOT_FOUND      -86
+#define OMAF_INVALID_SAMPLEDESCRIPTION_INDEX     -87
+#define OMAF_FILE_OPEN_ERROR                     -88
+#define OMAF_FILE_READ_ERROR                     -89
+#define OMAF_INVALID_FILE_HEADER                 -90
+#define OMAF_INVALID_SEGMENT                     -91
+#define OMAF_MP4READER_NOT_INITIALIZED           -92
+#define OMAF_INVALID_MP4READER_CONTEXTID         -93
+#define OMAF_INVALID_ITEM_ID                     -94
+#define OMAF_UNSUPPORTED_DASH_CODECS_TYPE        -95
+#define OMAF_INVALID_PROPERTY_INDEX              -96
 
 #endif /* ERROR_H */
-
