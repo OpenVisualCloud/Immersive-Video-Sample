@@ -126,6 +126,7 @@ RenderStatus Player::Play()
         {
             m_renderManager->Render();
         }
+        m_renderManager->ChangeViewport(poseYaw, posePitch);
         LOG(INFO)<<"status:"<<GetStatus()<<std::endl;
         if (m_renderManager->IsEOS())
         {

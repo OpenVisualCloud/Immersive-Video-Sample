@@ -40,11 +40,10 @@
 #include "MediaSource.h"
 #include "RenderSource.h"
 #include "RenderContext.h"
-#include "../utils/Threadable.h"
 
 VCD_NS_BEGIN
 
-class RenderManager : public Threadable
+class RenderManager
 {
 
 public:
@@ -116,10 +115,6 @@ public:
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
     RenderStatus GetViewport(float *yaw, float *pitch);
-    //!
-    //! \brief  Thread functionality Pure virtual function  , it will be re implemented in derived classes
-    //!
-    virtual void Run();
 
     //!
     //! \brief  Get Render Configuration
@@ -163,7 +158,7 @@ private:
     RenderContext   *m_renderContext;
     struct RenderConfig m_renderConfig;
     pthread_mutex_t  m_poseMutex;
-    int32_t          m_status;
+
 };
 
 VCD_NS_END

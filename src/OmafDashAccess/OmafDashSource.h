@@ -77,7 +77,7 @@ public:
     //!
     //! \brief Interface implementation from base class: OmafMediaSource
     //!
-    virtual int OpenMedia(std::string url, std::string cacheDir = "", bool enablePredictor=false);
+    virtual int OpenMedia(std::string url, std::string cacheDir, bool enablePredictor=false, std::string predictPluginName="", std::string libPath="");
     virtual int CloseMedia();
     virtual int GetPacket( int streamID, std::list<MediaPacket*>* pkts, bool needParams, bool clearBuf );
     virtual int GetStatistic(DashStatisticInfo* dsInfo);

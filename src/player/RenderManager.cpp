@@ -50,7 +50,7 @@ VCD_NS_BEGIN
 RenderManager::RenderManager(struct RenderConfig config)
 {
     pthread_mutex_init(&m_poseMutex, NULL);
-    m_status = STATUS_UNKNOWN;
+
     //1.initial ViewPortManager
     m_viewPortManager = new ViewPortManager();
     //2.initial RenderBackend
@@ -123,8 +123,7 @@ RenderManager::~RenderManager()
 {
     int32_t res = pthread_mutex_destroy(&m_poseMutex);
     if (res != 0) {return;}
-    m_status = STATUS_STOPPED;
-    this->Join();
+
     if (m_mediaSource != NULL)
     {
         delete m_mediaSource;
@@ -220,9 +219,7 @@ RenderStatus RenderManager::Initialize() //should input the decoderManager
     {
         return RENDER_ERROR;
     }
-    //2. change viewport thread start
-    StartThread();
-    m_status= STATUS_CREATED;
+
     while (!m_mediaSource->getIsAllValid())
     {
         usleep(50*1000);
@@ -321,21 +318,6 @@ RenderStatus RenderManager::ChangeViewport(float yaw, float pitch)
 {
     m_mediaSource->ChangeViewport(yaw, pitch);
     return RENDER_STATUS_OK;
-}
-
-void RenderManager::Run()
-{
-    m_status = STATUS_RUNNING;
-    while (m_status != STATUS_STOPPED)
-    {
-        int32_t res = pthread_mutex_lock(&m_poseMutex);
-        if (res != 0) {return;}
-        struct Pose pose = m_viewPortManager->GetViewPort();
-        res = pthread_mutex_unlock(&m_poseMutex);
-        if (res != 0) {return;}
-        ChangeViewport(pose.yaw, pose.pitch);
-        usleep(5*1000);
-    }
 }
 
 RenderStatus RenderManager::SetViewport(float yaw, float pitch)

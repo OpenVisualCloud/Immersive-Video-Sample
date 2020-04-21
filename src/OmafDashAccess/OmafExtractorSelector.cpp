@@ -55,6 +55,8 @@ OmafExtractorSelector::OmafExtractorSelector( int size )
     mCurrentExtractor = nullptr;
     mPose = nullptr;
     mUsePrediction = false;
+    mPredictPluginName = "";
+    mLibPath = "";
 }
 
 OmafExtractorSelector::~OmafExtractorSelector()
@@ -81,7 +83,13 @@ OmafExtractorSelector::~OmafExtractorSelector()
             SAFE_DELETE(p.pose);
         }
     }
-
+    if (mPredictPluginMap.size())
+    {
+        for (auto &p:mPredictPluginMap)
+        {
+            SAFE_DELETE(p.second);
+        }
+    }
     mUsePrediction = false;
 }
 
@@ -322,22 +330,62 @@ ListExtractor OmafExtractorSelector::GetExtractorByPosePrediction( OmafMediaStre
     pf = mPoseHistory.front();
     pb = mPoseHistory.back();
     pthread_mutex_unlock(&mMutex);
-
-    std::chrono::high_resolution_clock clock;
-    uint64_t time = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-
-    // simple prediction, assuming the move is uniform
-    float yaw = (pb.pose->yaw - pf.pose->yaw)/(pb.time - pf.time) * (time - pb.time + 1000) + pb.pose->yaw;
-    float pitch = (pb.pose->pitch - pf.pose->pitch)/(pb.time - pf.time) * (time - pb.time + 1000) + pb.pose->pitch;
+    if (mPredictPluginMap.size() == 0)
+    {
+        LOG(INFO)<<"predict plugin map is empty!"<<endl;
+        return extractors;
+    }
+    ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);
+    uint32_t pose_interval = 40;
+    uint32_t pre_pose_count = 25;
+    uint32_t predict_interval = 1000;
+    plugin->Intialize(pose_interval, pre_pose_count, predict_interval);
+    std::list<ViewportAngle> pose_history;
+    ViewportAngle* predict_angle = plugin->Predict(pose_history);
+    if (predict_angle == NULL)
+    {
+        LOG(ERROR)<<"predictPose_func return an invalid value!"<<endl;
+        return extractors;
+    }
     HeadPose* pose = new HeadPose;
-    pose->yaw = yaw;
-    pose->pitch = pitch;
+    pose->yaw = predict_angle->yaw;
+    pose->pitch = predict_angle->pitch;
+
+    // std::chrono::high_resolution_clock clock;
+    // uint64_t time = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+
+    // // simple prediction, assuming the move is uniform
+    // float yaw = (pb.pose->yaw - pf.pose->yaw)/(pb.time - pf.time) * (time - pb.time + 1000) + pb.pose->yaw;
+    // float pitch = (pb.pose->pitch - pf.pose->pitch)/(pb.time - pf.time) * (time - pb.time + 1000) + pb.pose->pitch;
+    // HeadPose* pose = new HeadPose;
+    // pose->yaw = yaw;
+    // pose->pitch = pitch;
+
     // to select extractor;
     OmafExtractor *selectedExtractor = SelectExtractor(pStream, pose);
     if(selectedExtractor)
         extractors.push_back(selectedExtractor);
     SAFE_DELETE(pose);
     return extractors;
+}
+
+int OmafExtractorSelector::InitializePredictPlugins()
+{
+    if (mLibPath.empty() || mPredictPluginName.empty())
+    {
+        LOG(ERROR)<<"Viewport predict plugin path OR name is invalid!"<<endl;
+        return ERROR_INVALID;
+    }
+    ViewportPredictPlugin *plugin = new ViewportPredictPlugin();
+    std::string pluginPath = mLibPath + mPredictPluginName;
+    int ret = plugin->LoadPlugin(pluginPath.c_str());
+    if (ret != ERROR_NONE)
+    {
+        LOG(ERROR)<<"Load plugin failed!"<<endl;
+        return ret;
+    }
+    mPredictPluginMap.insert(std::pair<std::string, ViewportPredictPlugin*>(mPredictPluginName, plugin));
+    return ERROR_NONE;
 }
 
 VCD_OMAF_END

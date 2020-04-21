@@ -39,6 +39,7 @@
 #include "OmafExtractor.h"
 #include "OmafMediaStream.h"
 #include "360SCVPViewportAPI.h"
+#include "OmafViewportPredict/ViewportPredictPlugin.h"
 
 using namespace VCD::OMAF;
 
@@ -86,7 +87,13 @@ public:
     //!
     int SetInitialViewport( std::vector<Viewport*>& pView, HeadSetInfo* headSetInfo, OmafMediaStream* pStream);
 
-    void EnablePosePrediction(){mUsePrediction = true;};
+    void EnablePosePrediction(std::string predictPluginName, std::string libPath)
+    {
+        mUsePrediction = true;
+        mPredictPluginName.assign(predictPluginName);
+        mLibPath.assign(libPath);
+        InitializePredictPlugins();
+    };
 
 private:
     //!
@@ -105,6 +112,8 @@ private:
 
     OmafExtractor* SelectExtractor(OmafMediaStream* pStream, HeadPose* pose);
 
+    int InitializePredictPlugins();
+
 private:
     std::list<PoseInfo>               mPoseHistory;               //<!
     int                               mSize;
@@ -114,6 +123,9 @@ private:
     void                              *m360ViewPortHandle;
     generateViewPortParam             *mParamViewport;
     bool                              mUsePrediction;
+    std::string                       mPredictPluginName;
+    std::string                       mLibPath;
+    std::map<std::string, ViewportPredictPlugin*> mPredictPluginMap;
 };
 
 VCD_OMAF_END;

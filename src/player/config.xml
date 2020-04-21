@@ -26,5 +26,9 @@
     <ProjectionType>ERP</ProjectionType>
     <frameRate>30</frameRate>
     <frameNum>100</frameNum>
+    <predict enable="0">
+     <!-- <plugin>libViewportPredict_LR.so</plugin>
+     <path>../plugins/ViewportPredict_Plugin/predict_LR/</path> -->
+    </predict>
     <!-- attention! in R1 version, supported case of sourceType/decoderType/contextType/useDMABuffer is 0/0/0/0 -->
 </info>

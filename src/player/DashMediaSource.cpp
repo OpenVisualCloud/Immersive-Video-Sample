@@ -345,7 +345,7 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig)
     clientInfo.viewPort_Height = renderConfig.viewportHeight;
     OmafAccess_SetupHeadSetInfo(m_handler, &clientInfo);
     //3.load media source
-    if (ERROR_NONE != OmafAccess_OpenMedia(m_handler, pCtxDashStreaming, false))
+    if (ERROR_NONE != OmafAccess_OpenMedia(m_handler, pCtxDashStreaming, renderConfig.enablePredictor, (char *)renderConfig.predictPluginName.c_str(), (char *)renderConfig.libPath.c_str()))
     {
         LOG(ERROR)<<"Open media failed!"<<std::endl;
         free(pCtxDashStreaming);
@@ -454,7 +454,7 @@ RenderStatus DashMediaSource::SetMediaSourceInfo(void *mediaInfo)
         LOG(ERROR)<<"dash mode is invalid!"<<std::endl;
     }
     const char * dash_mode = (dashMediaInfo->streaming_type == 1) ? "static" : "dynamic";
-    tracepoint(mthq_tp_provider, stream_information, dash_mode, dashMediaInfo->stream_info[0].segmentDuration, dashMediaInfo->duration, \
+    tracepoint(mthq_tp_provider, stream_information, (char *)dash_mode, dashMediaInfo->stream_info[0].segmentDuration, dashMediaInfo->duration, \
                 m_mediaSourceInfo.frameRate, m_mediaSourceInfo.frameNum, m_mediaSourceInfo.sourceWH->width[0], m_mediaSourceInfo.sourceWH->height[0]);
     return RENDER_STATUS_OK;
 }

@@ -43,6 +43,8 @@ public:
         //url_static = "http://10.67.119.113:8080/UT_testOMAFstatic/Test.mpd";
         url_static = "http://10.67.112.194:8080/testOMAFstatic/Test.mpd";
         cache = "./cache";//getpwuid(getuid())->pw_dir + std::string("/cache");
+        pluginName = "libViewportPredict_LR.so";
+        libPath = "../../plugins/ViewportPredict_Plugin/predict_LR/";
 
         clientInfo = new HeadSetInfo;
         clientInfo->input_geoType = 0;
@@ -97,6 +99,8 @@ public:
     std::string url_live;
     std::string url_static;
     std::string cache;
+    std::string pluginName;
+    std::string libPath;
 };
 
 TEST_F(MediaSourceTest, Create)
@@ -166,7 +170,7 @@ TEST_F(MediaSourceTest, OpenMedia_static_withPredictor)
     int ret = dashSource->SetupHeadSetInfo(clientInfo);
     EXPECT_TRUE(ret == ERROR_NONE);
 
-    ret = dashSource->OpenMedia(url_static, cache, true);
+    ret = dashSource->OpenMedia(url_static, cache, true, pluginName, libPath);
     EXPECT_TRUE(ret == ERROR_NONE);
 
     sleep(15);
@@ -191,7 +195,7 @@ TEST_F(MediaSourceTest, OpenMedia_live_withPredictor)
     int ret = dashSource->SetupHeadSetInfo(clientInfo);
     EXPECT_TRUE(ret == ERROR_NONE);
 
-    ret = dashSource->OpenMedia(url_live, cache, true);
+    ret = dashSource->OpenMedia(url_live, cache, true, pluginName, libPath);
     EXPECT_TRUE(ret == ERROR_NONE);
 
     sleep(15);

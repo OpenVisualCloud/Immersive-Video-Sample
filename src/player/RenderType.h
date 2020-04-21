@@ -127,6 +127,10 @@ struct RenderConfig
     uint32_t viewportWidth;
     uint32_t viewportHeight;
     const char *cachePath;
+    //for viewport predict
+    bool enablePredictor;
+    std::string predictPluginName;
+    std::string libPath;
     //from media source
     int32_t projFormat;
     uint32_t renderInterval;
