@@ -327,6 +327,7 @@ int32_t OneVideoExtractorTrackGenerator::Initialize()
     m_viewInfo->faceHeight     = (m_initInfo->viewportInfo)->inHeight;
     m_viewInfo->tileNumRow     = (m_initInfo->viewportInfo)->tileInCol;
     m_viewInfo->tileNumCol     = (m_initInfo->viewportInfo)->tileInRow;
+    m_viewInfo->usageType      = E_PARSER_ONENAL;
 
     ret = I360SCVP_SetParameter(m_360scvpHandle, ID_SCVP_PARAM_VIEWPORT, (void*)m_viewInfo);
     if (ret)
@@ -344,6 +345,7 @@ int32_t OneVideoExtractorTrackGenerator::Initialize()
     m_360scvpParam->paramViewPort.faceHeight     = (m_initInfo->viewportInfo)->inHeight;
     m_360scvpParam->paramViewPort.tileNumRow     = (m_initInfo->viewportInfo)->tileInCol;
     m_360scvpParam->paramViewPort.tileNumCol     = (m_initInfo->viewportInfo)->tileInRow;
+    m_360scvpParam->paramViewPort.usageType      = E_PARSER_ONENAL;
 
     ret = I360SCVP_process(m_360scvpParam, m_360scvpHandle);
     if (ret)

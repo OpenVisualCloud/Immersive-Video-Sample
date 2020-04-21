@@ -4091,10 +4091,10 @@ index 0000000..0a66efa
 +
 +    int            viewport_w;
 +    int            viewport_h;
-+    int            viewport_yaw;
-+    int            viewport_pitch;
-+    int            viewport_fov_hor;
-+    int            viewport_fov_ver;
++    float          viewport_yaw;
++    float          viewport_pitch;
++    float          viewport_fov_hor;
++    float          viewport_fov_ver;
 +    int            window_size;
 +    int            extra_window_size;
 +    int            need_buffered_frames;
@@ -4421,10 +4421,10 @@ index 0000000..0a66efa
 +static const AVOption options[] = {
 +    { "viewport_w", "set viewport width", OFFSET(viewport_w), AV_OPT_TYPE_INT, { .i64 = 1024 }, 0, INT_MAX, E },
 +    { "viewport_h", "set viewport height", OFFSET(viewport_h), AV_OPT_TYPE_INT, { .i64 = 1024 }, 0, INT_MAX, E },
-+    { "viewport_yaw", "set viewport yaw", OFFSET(viewport_yaw), AV_OPT_TYPE_INT, { .i64 = 90 }, 0, 180, E },
-+    { "viewport_pitch", "set viewport pitch", OFFSET(viewport_pitch), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, 180, E },
-+    { "viewport_fov_hor", "set viewport FOV horizontal angle", OFFSET(viewport_fov_hor), AV_OPT_TYPE_INT, { .i64 = 80 }, 0, 180, E },
-+    { "viewport_fov_ver", "set viewport FOV vertical angle", OFFSET(viewport_fov_ver), AV_OPT_TYPE_INT, { .i64 = 90 }, 0, 180, E },
++    { "viewport_yaw", "set viewport yaw angle, which is the angle around y axis", OFFSET(viewport_yaw), AV_OPT_TYPE_FLOAT, { .dbl = 90 }, 0, 180, E },
++    { "viewport_pitch", "set viewport pitch angle, which is the angle around x axis", OFFSET(viewport_pitch), AV_OPT_TYPE_FLOAT, { .dbl = 0 }, 0, 100, E },
++    { "viewport_fov_hor", "set horizontal angle of field of view (FOV)", OFFSET(viewport_fov_hor), AV_OPT_TYPE_FLOAT, { .dbl = 80 }, 0, 180, E },
++    { "viewport_fov_ver", "set vertical angle of field of view (FOV)", OFFSET(viewport_fov_ver), AV_OPT_TYPE_FLOAT, { .dbl = 90 }, 0, 100, E },
 +    { "window_size", "number of segments kept in the manifest", OFFSET(window_size), AV_OPT_TYPE_INT, { .i64 = 5 }, 0, INT_MAX, E },
 +    { "extra_window_size", "number of segments kept outside of the manifest before removing from disk", OFFSET(extra_window_size), AV_OPT_TYPE_INT, { .i64 = 15 }, 0, INT_MAX, E },
 +    { "split_tile", "need split the stream to tiles if input is tile-based hevc stream", OFFSET(split_tile), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, 2, E },

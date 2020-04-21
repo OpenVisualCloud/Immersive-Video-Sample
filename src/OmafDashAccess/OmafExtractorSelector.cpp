@@ -174,6 +174,7 @@ int OmafExtractorSelector::SetInitialViewport( std::vector<Viewport*>& pView, He
     mParamViewport->m_tileNumCol = pStream->GetColSize();
     mParamViewport->m_pUpLeft = new point[6];
     mParamViewport->m_pDownRight = new point[6];
+    mParamViewport->m_usageType = E_STREAM_STITCH_ONLY;
 
     m360ViewPortHandle = genViewport_Init(mParamViewport);
     if(!m360ViewPortHandle)
