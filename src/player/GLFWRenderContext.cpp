@@ -32,8 +32,10 @@
 //!
 
 #include "GLFWRenderContext.h"
+#include "../utils/tinyxml2.h"
 
 VCD_NS_BEGIN
+using namespace tinyxml2;
 
 GLFWRenderContext::GLFWRenderContext()
 {
@@ -45,10 +47,17 @@ GLFWRenderContext::GLFWRenderContext(uint32_t width, uint32_t height)
     m_renderContextType = GLFW_CONTEXT;
     m_windowWidth  = width;
     m_windowHeight = height;
+    m_motionConfig.mode = NULL;
+    m_needMotionTest = (RENDER_STATUS_OK == GetMotionOptionParams()) ? true : false;
 }
 
 GLFWRenderContext::~GLFWRenderContext()
 {
+    if (m_motionConfig.mode != NULL)
+    {
+        delete m_motionConfig.mode;
+        m_motionConfig.mode = NULL;
+    }
 }
 
 RenderStatus GLFWRenderContext::SwapBuffers(void * window, int param)
@@ -64,12 +73,58 @@ bool GLFWRenderContext::isRunning()
     return !glfwGetKey((GLFWwindow *)m_window, GLFW_KEY_ESCAPE) && !glfwWindowShouldClose((GLFWwindow *)m_window);
 }
 
+void GLFWRenderContext::AutoChangePos(float *hPos, float *vPos)
+{
+    m_verticalAngle = *vPos;
+    m_horizontalAngle = *hPos;
+    if (!strcmp(m_motionConfig.mode, "smooth"))
+    {
+        *hPos += 2 * RENDER_PI / m_motionConfig.freq;
+    }
+    else if (!strcmp(m_motionConfig.mode, "sharp"))
+    {
+        static int timeInterval = 0;
+        timeInterval++;
+        if (timeInterval % m_motionConfig.timeInterval == 0)
+        {
+            *hPos +=  2 * RENDER_PI / m_motionConfig.freq;
+        }
+    }
+    else //xml input check
+    {
+        LOG(ERROR)<<"test motion option support only smooth and sharp mode!"<<std::endl;
+        m_needMotionTest = false;
+    }
+}
+
+RenderStatus GLFWRenderContext::GetMotionOptionParams()
+{
+    XMLDocument config;
+    config.LoadFile("config.xml");
+    XMLElement *info = config.RootElement();
+    XMLElement *motionElem = info->FirstChildElement("testMotionOption");
+    if (NULL == motionElem)
+    {
+        return RENDER_ERROR;
+    }
+    const XMLAttribute *attOfMotion = motionElem->FirstAttribute();
+    m_motionConfig.mode = new char[128];
+    strcpy(m_motionConfig.mode, attOfMotion->Value());
+    m_motionConfig.freq = atoi(motionElem->FirstChildElement("freq")->GetText());
+    m_motionConfig.timeInterval = atoi(motionElem->FirstChildElement("timeInterval")->GetText());
+    return RENDER_STATUS_OK;
+}
+
 RenderStatus GLFWRenderContext::GetStatusAndPose(float *yaw, float *pitch, uint32_t* status)
 {
     static glm::vec2 transfer(0, RENDER_PI);
     glm::vec3 direction(0.0f, 0.0f, 1.0f);
     double xpos, ypos;
 
+    if (m_needMotionTest)
+    {
+        AutoChangePos(&transfer.y, &transfer.x);
+    }
     glfwGetCursorPos((GLFWwindow *)m_window, &xpos, &ypos);
     glfwSetCursorPos((GLFWwindow *)m_window, m_windowWidth / 2, m_windowHeight / 2);
     if (glfwGetMouseButton((GLFWwindow *)m_window, GLFW_MOUSE_BUTTON_LEFT))
@@ -140,8 +195,11 @@ RenderStatus GLFWRenderContext::GetStatusAndPose(float *yaw, float *pitch, uint3
         direction,
         up // Head is up (set to 0,-1,0 to look upside-down)
     );
-    transfer.x = m_verticalAngle;
-    transfer.y = m_horizontalAngle;
+    if (!m_needMotionTest)
+    {
+        transfer.x = m_verticalAngle;
+        transfer.y = m_horizontalAngle;
+    }
     // eular angle and (longitude, latitude) transformation.
     float r = sqrt(direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2]);
     float longitude = atan2(direction[0], -direction[2]);
