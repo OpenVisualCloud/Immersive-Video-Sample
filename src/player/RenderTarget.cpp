@@ -58,6 +58,7 @@ RenderTarget::RenderTarget()
     m_targetWH.width    = NULL;
     m_targetWH.height   = NULL;
     m_isAllHighResoInView = true;
+    m_avgChangedTime    = 0;
 }
 
 RenderTarget::~RenderTarget()

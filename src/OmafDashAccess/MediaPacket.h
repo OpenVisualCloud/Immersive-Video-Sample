@@ -54,6 +54,7 @@ public:
         mPts = 0;
         m_nRealSize = 0;
         m_rwpk = NULL;
+        m_segID = 0;
     };
 
     //!
@@ -65,6 +66,7 @@ public:
         m_type = -1;
         mPts = 0;
         m_rwpk = NULL;
+        m_segID = 0;
     };
 
     //!
@@ -78,6 +80,7 @@ public:
             m_type = -1;
             mPts = 0;
             m_nRealSize = 0;
+            m_segID = 0;
         }
         if (m_rwpk != NULL)
             deleteRwpk();

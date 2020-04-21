@@ -40,6 +40,10 @@ using namespace tinyxml2;
 GLFWRenderContext::GLFWRenderContext()
 {
     m_renderContextType = GLFW_CONTEXT;
+    m_needMotionTest = false;
+    m_motionConfig.freq = 0;
+    m_motionConfig.timeInterval = 0;
+    m_motionConfig.mode = NULL;
 }
 
 GLFWRenderContext::GLFWRenderContext(uint32_t width, uint32_t height)
@@ -109,7 +113,7 @@ RenderStatus GLFWRenderContext::GetMotionOptionParams()
     }
     const XMLAttribute *attOfMotion = motionElem->FirstAttribute();
     m_motionConfig.mode = new char[128];
-    strcpy(m_motionConfig.mode, attOfMotion->Value());
+    memcpy(m_motionConfig.mode, attOfMotion->Value(), strlen(attOfMotion->Value()));
     m_motionConfig.freq = atoi(motionElem->FirstChildElement("freq")->GetText());
     m_motionConfig.timeInterval = atoi(motionElem->FirstChildElement("timeInterval")->GetText());
     return RENDER_STATUS_OK;
