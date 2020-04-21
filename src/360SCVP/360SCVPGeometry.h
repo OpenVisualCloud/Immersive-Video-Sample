@@ -88,6 +88,8 @@ struct SVideoInfo
     int32_t iFaceHeight;         //native size
     int32_t iNumFaces;          //geometry faces
     ViewPortSettings viewPort;
+    int32_t fullWidth;
+    int32_t fullHeight;
 };
 
 class Geometry

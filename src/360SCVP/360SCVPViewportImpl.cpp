@@ -32,6 +32,7 @@
 #include <limits>
 #include <math.h>
 #include <iomanip>
+#include <cfloat>
 #include "360SCVPViewPort.h"
 #include "360SCVPViewportImpl.h"
 #include "360SCVPViewportAPI.h"
@@ -301,11 +302,11 @@ int32_t genViewport_getContentCoverage(void* pGenHandle, CCDef* pOutCC)
     {
         int32_t w = 0, h = 0, x = 0, y = 0;
         bool coverBoundary = pUpLeft[1].faceIdx == 0 ? true : false;
-        x = pUpLeft[0].x;
+        x = coverBoundary ?  max(pUpLeft[0].x, pUpLeft[1].x) : pUpLeft[0].x;
         y = pUpLeft[0].y;
 
         w = pDownRight[0].x - pUpLeft[0].x + coverBoundary * (pDownRight[1].x - pUpLeft[1].x);
-        h = pDownRight[0].y - pUpLeft[0].y + coverBoundary * (pDownRight[1].y - pUpLeft[1].y);
+        h = pDownRight[0].y - pUpLeft[0].y;
 
         pOutCC->centreAzimuth   = (int32_t)((((videoWidth / 2) - (float)(x + w / 2)) * 360 * 65536) / videoWidth);
         pOutCC->centreElevation = (int32_t)((((videoHeight / 2) - (float)(y + h / 2)) * 180 * 65536) / videoHeight);
@@ -348,7 +349,7 @@ int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile)
     {
         additionalTilesNum = maxTileNum - tileNum;
     }
-    printf("the max tile count = %d additionalTilesNum = %d\n", maxTileNum, additionalTilesNum);
+    // printf("the max tile count = %d additionalTilesNum = %d\n", maxTileNum, additionalTilesNum);
     if (additionalTilesNum < 0)
         printf("there is an error in the judgement\n");
     int32_t pos = 0;
@@ -602,6 +603,8 @@ int32_t TgenViewport::parseCfg(  )
     m_codingSVideoInfo.iNumFaces = 1;
     m_codingSVideoInfo.iFaceWidth = m_iCodingFaceWidth ;
     m_codingSVideoInfo.iFaceHeight = m_iCodingFaceHeight;
+    m_codingSVideoInfo.fullWidth = m_iInputWidth;
+    m_codingSVideoInfo.fullHeight = m_iSourceHeight;
 
     m_aiPad[1] = m_aiPad[0] = 0;
 
@@ -651,13 +654,13 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     int32_t faceNum = (m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 1;
     float fYaw = m_codingSVideoInfo.viewPort.fYaw;
     float fPitch = m_codingSVideoInfo.viewPort.fPitch;
-    float stepHorzPos = ERP_HORZ_ANGLE / (float)m_tileNumCol;
-    float stepVertPos = ERP_VERT_ANGLE / (float)m_tileNumRow;
     // starting time
     double dResult;
     clock_t lBefore = clock();
 
     // seek the center tile of the FOV
+    float leastDistance = FLT_MAX;
+    uint32_t opt_idx = m_tileNumRow * m_tileNumCol;
     for (int32_t faceid = 0; faceid < faceNum; faceid++)
     {
         for (uint32_t i = 0; i < m_tileNumRow; i++)
@@ -666,20 +669,57 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
             {
                 m_srd[idx].faceId = faceid;
                 m_srd[idx].isOccupy = 0;
-                if (fYaw >= m_srd[idx].horzPos && fYaw <= m_srd[idx].horzPos + stepHorzPos
-                  && fPitch <= m_srd[idx].vertPos && fPitch >= m_srd[idx].vertPos - stepVertPos)
-                     break;
-		idx++;
+		        idx++;
+            }
+        }
+        // select optimization
+        float cal_yaw = fYaw + ERP_HORZ_ANGLE / 2;
+        float cal_pitch = ERP_VERT_ANGLE / 2 - fPitch;
+        float horzStep = ERP_HORZ_ANGLE / (float)m_tileNumCol;
+        float vertStep = ERP_VERT_ANGLE / (float)m_tileNumRow;
+        std::pair<uint32_t, uint32_t> fov_corr((uint32_t)cal_yaw / (uint32_t)horzStep, (uint32_t)cal_pitch / (uint32_t)vertStep);
+        if (fov_corr.second == m_tileNumRow){
+            fov_corr.second--;
+        }
+        if (fov_corr.first == m_tileNumCol){
+            fov_corr.first--;
+        }
+        std::vector<uint32_t> selected_idxs;
+        uint32_t select_idx = fov_corr.first + fov_corr.second * m_tileNumCol;
+        uint32_t boundary_offset = fov_corr.first == m_tileNumCol -1 ? m_tileNumCol : 0;
+        selected_idxs.push_back(select_idx);
+        selected_idxs.push_back(select_idx + 1 - boundary_offset);
+        selected_idxs.push_back(select_idx + m_tileNumCol);
+        selected_idxs.push_back(select_idx + 1 + m_tileNumCol - boundary_offset);
+        for (uint32_t it=0;it<selected_idxs.size();it++)
+        {
+            float correct_offset = fYaw - m_srd[selected_idxs[it]].horzPos > ERP_HORZ_ANGLE / 2 ? ERP_HORZ_ANGLE : 0;
+            float distance = sqrt(pow(fYaw - m_srd[selected_idxs[it]].horzPos - correct_offset, 2) + pow(fPitch - m_srd[selected_idxs[it]].vertPos, 2));
+            if (distance < leastDistance)
+            {
+                leastDistance = distance;
+                opt_idx = selected_idxs[it];
             }
         }
     }
-    if (idx == m_tileNumRow * m_tileNumCol)
-        idx--;
+    if (opt_idx == m_tileNumRow * m_tileNumCol)
+        opt_idx--;
+    idx = opt_idx;
     //select all of the tiles to cover the whole viewport
     short centerX = m_srd[idx].x;
     short centerY = m_srd[idx].y;
-    short halfVPhorz = (dstWidth - m_srd[idx].tilewidth) >> 1;
-    short halfVPvert = (dstHeight - m_srd[idx].tileheight) >> 1;
+    short halfVPhorz = (dstWidth) >> 1;
+    short halfVPvert = (dstHeight) >> 1;
+
+    for (uint32_t i=0;i<FACE_NUMBER;i++)
+    {
+        m_pUpLeft[i].x = inputWidth;
+        m_pUpLeft[i].y = inputHeight;
+        m_pDownRight[i].x = 0;
+        m_pDownRight[i].y = 0;
+        m_pUpLeft[i].faceIdx = -1;
+        m_pDownRight[i].faceIdx = -1;
+    }
     SPos*pTmpUpLeft = m_pUpLeft;
     SPos*pTmpDownRight = m_pDownRight;
     pTmpUpLeft->x = centerX - halfVPhorz;
@@ -694,7 +734,7 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     }
     else if(pTmpUpLeft->y < 0)
         pTmpUpLeft->y = 0;
-
+    // Need to ajust after region select optimization in two pole areas
     if (pTmpDownRight->y >= inputHeight + m_srd[idx].tileheight)
     {
         pTmpUpLeft->x = 0;
