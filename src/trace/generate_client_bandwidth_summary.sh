@@ -66,6 +66,7 @@ download_start_time=$(echo $download_start_time | awk -F ":" '{print $3}')
 download_time_second=$(echo $download_start_time | awk -F "." '{print $1}')
 ten_second=`expr $download_time_second / 10`
 one_second=`expr $download_time_second % 10`
+
 compare_value=0
 if [ "$ten_second" -eq "$compare_value" ]
 then
@@ -74,7 +75,17 @@ fi
 
 download_time_nsecond=$(echo $download_start_time | awk -F "." '{print $2}')
 download_time_nsecond=$(echo $download_time_nsecond | awk -F "]" '{print $1}')
+
+result=`expr $download_time_nsecond / 100000000`
+result1=`expr $download_time_nsecond % 100000000`
+
+if [ "$result" -eq "$compare_value" ]
+then
+  download_time_nsecond=$result1
+fi
+
 download_time=$(($(($download_time_second*1000000000))+$(($download_time_nsecond))))
+
 
 
 temp1=`cat downloaded_trace.txt | grep "segment_index_field = $segment_index" | awk -F " " '{print $1}'`
@@ -93,6 +104,13 @@ fi
 
 download_end_nsecond=$(echo $download_end_time | awk -F "." '{print $2}')
 download_end_nsecond=$(echo $download_end_nsecond | awk -F "]" '{print $1}')
+result2=`expr $download_end_nsecond / 100000000`
+result3=`expr $download_end_nsecond % 100000000`
+if [ "$result2" -eq "$compare_value" ]
+then
+  download_end_nsecond=$result3
+fi
+
 end_time=$(($(($download_end_second*1000000000))+$(($download_end_nsecond))))
 
 

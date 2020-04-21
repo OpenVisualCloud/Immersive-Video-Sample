@@ -48,7 +48,7 @@ tile_cols2=$(echo $tile_cols2 | awk -F "\"" '{print $1}')
 
 echo "-------------------------Tiles Selection Basing On Viewport-------------------------" > "$summary_file_name".txt
 
-if [[ $resolution1 > $resolution2 ]]
+if [ $resolution1 -gt $resolution2 ]
 then
   echo "Bitstream 1:" >> "$summary_file_name".txt
   echo "  Resolution : $width1 x $height1" >> "$summary_file_name".txt
