@@ -40,6 +40,9 @@
 #include <math.h>
 #include <chrono>
 #include <cstdint>
+#ifndef _ANDROID_NDK_OPTION_
+#include "../trace/MtHQ_tp.h"
+#endif
 
 VCD_OMAF_BEGIN
 
@@ -223,13 +226,23 @@ OmafExtractor* OmafExtractorSelector::GetExtractorByPose( OmafMediaStream* pStre
     if( previousPose && mPose && !IsDifferentPose( previousPose, mPose ) && historySize > 1)
     {
         LOG(INFO)<<"pose hasn't changed!"<<endl;
+#ifndef _ANDROID_NDK_OPTION_
+        //trace
+        tracepoint(mthq_tp_provider, T2_detect_pose_change, 0);
+#endif
         return NULL;
     }
 
     // to select extractor;
     OmafExtractor *selectedExtractor = SelectExtractor(pStream, mPose);
     if(selectedExtractor && previousPose)
+    {
         LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") ! extractor id is: "<<selectedExtractor->GetID()<<endl;
+#ifndef _ANDROID_NDK_OPTION_
+        //trace
+        tracepoint(mthq_tp_provider, T2_detect_pose_change, 1);
+#endif
+    }
 
     if(previousPose != mPose)
         SAFE_DELETE(previousPose);

@@ -121,6 +121,7 @@ int OmafAccess_GetPacket(
         packet[i].rwpk = newRwpk;
         packet[i].buf  = buf;
         packet[i].size = outSize;
+        packet[i].segID = pPkt->GetSegID();
         i++;
 
         delete pPkt;

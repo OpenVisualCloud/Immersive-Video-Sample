@@ -38,6 +38,7 @@
 #include <math.h>
 #ifndef _ANDROID_NDK_OPTION_
 #include "../trace/Bandwidth_tp.h"
+#include "../trace/MtHQ_tp.h"
 #endif
 
 VCD_OMAF_BEGIN
@@ -507,6 +508,9 @@ int OmafReaderManager::ReadNextSegment(
     SampleIndex *sampleIdx = &(mMapSegStatus[trackID].sampleIndex);
 
     LOG(INFO) << "Begin to read segment " << sampleIdx->mCurrentReadSegment <<" for track "<<trackID<< endl;
+#ifndef _ANDROID_NDK_OPTION_
+    tracepoint(mthq_tp_provider, T5_read_start_time, sampleIdx->mCurrentReadSegment);
+#endif
     TrackInformation *trackInfo = nullptr;
     for ( auto &itTrack : readTrackInfos)
     {
@@ -665,12 +669,16 @@ int OmafReaderManager::ReadNextSegment(
             return ret;
         }
         packet->SetRealSize(packetSize);
+        packet->SetSegID(trackInfo->sampleProperties[beginSampleId - 1].segmentId);
         mPacketLock.lock();
         mPacketQueues[trackID].push_back(packet);
         mPacketLock.unlock();
     }
 
     LOG(INFO) << "Segment " << trackInfo->sampleProperties[beginSampleId - 1].segmentId << " for track " << trackID << " has been read !" << endl;
+#ifndef _ANDROID_NDK_OPTION_
+    tracepoint(mthq_tp_provider, T6_read_end_time, trackInfo->sampleProperties[beginSampleId - 1].segmentId);
+#endif
     sampleIdx->mCurrentReadSegment++;
     sampleIdx->mGlobalSampleIndex += beginSampleId;
     LOG(INFO) << "Total read " << sampleIdx->mGlobalSampleIndex << " samples for track " << trackID <<" now !" << endl;
@@ -835,6 +843,10 @@ void OmafReaderManager::Run()
                     }
 
                     if((uint32_t)(st->segStatus[st->sampleIndex.mCurrentReadSegment]) == (st->depTrackIDs.size() + 1)){
+                        LOG(INFO)<<"Now will parse Segment "<<st->sampleIndex.mCurrentReadSegment<<endl;
+#ifndef _ANDROID_NDK_OPTION_
+                        tracepoint(mthq_tp_provider, T4_parse_start_time, st->sampleIndex.mCurrentReadSegment);
+#endif
                         uint16_t trackID = pExt->GetTrackNumber();
                         uint16_t initSegID = 0;
                         for (auto& idPair : mMapInitTrk)
