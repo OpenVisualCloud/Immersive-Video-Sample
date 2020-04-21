@@ -381,6 +381,7 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig)
         return RENDER_ERROR;
     }
     m_dashSourceData.codec_ctx = avcodec_alloc_context3(m_dashSourceData.decoder);
+    m_dashSourceData.codec_ctx->thread_count = 16;
     if (NULL == m_dashSourceData.codec_ctx)
     {
         LOG(ERROR)<<"avcodec alloc context failed!"<<std::endl;
