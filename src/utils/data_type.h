@@ -124,6 +124,13 @@ typedef struct DASHPACKET{
     int       segID;
 }DashPacket;
 
+typedef struct VIEWPORTANGLE{
+    // Euler angle
+    float yaw;
+    float pitch;
+    float roll;
+}ViewportAngle;
+
 #ifdef __cplusplus
 }
 #endif
