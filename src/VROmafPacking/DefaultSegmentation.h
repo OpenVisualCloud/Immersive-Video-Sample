@@ -67,6 +67,9 @@ public:
         m_threadNumForET = 0;
         m_videosNum = 0;
         m_videosBitrate = NULL;
+        m_prevSegedFrmNum = 0;
+        m_currSegedFrmNum = 0;
+        m_currProcessedFrmNum = 0;
     };
 
     //!
@@ -97,6 +100,9 @@ public:
         m_threadNumForET = 0;
         m_videosNum = 0;
         m_videosBitrate = NULL;
+        m_prevSegedFrmNum = 0;
+        m_currSegedFrmNum = 0;
+        m_currProcessedFrmNum = 0;
     };
 
     //!
@@ -289,6 +295,9 @@ private:
     uint16_t                                       m_threadNumForET;     //!< threads number for extractor track segmentation
     uint32_t                                        m_videosNum;          //!< video streams number
     uint64_t                                       *m_videosBitrate;     //!< video stream bitrate array
+    uint64_t                                       m_prevSegedFrmNum;    //!< previous number of frames which have been segmented for their tile tracks
+    uint64_t                                       m_currSegedFrmNum;    //!< newest number of frames which have been segmented for their tile tracks
+    uint64_t                                       m_currProcessedFrmNum;//!< newest number of frames which have been segmented for both tiles tracks and extractor tracks
 };
 
 VCD_NS_END;

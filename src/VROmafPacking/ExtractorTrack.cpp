@@ -54,8 +54,6 @@ ExtractorTrack::ExtractorTrack()
     m_rwpkSEI = NULL;
 
     m_processedFrmNum = 0;
-    m_isFramesReady = false;
-    //pthread_mutex_init(&m_mutex, NULL);
     m_360scvpParam = NULL;
     m_dstWidth = 0;
     m_dstHeight = 0;
@@ -108,7 +106,7 @@ int32_t ExtractorTrack::Initialize()
     int32_t ret = pthread_mutex_init(&m_mutex, NULL);
     if (ret)
     {
-        LOG(ERROR) << "Failed to initialize mutex for extractor track !" << std::endl;
+        LOG(ERROR) << "Failed to initialize mutex for extractor track and get error  " << ret << " !" << std::endl;
         return ret;
     }
 
@@ -131,8 +129,6 @@ ExtractorTrack::ExtractorTrack(uint8_t viewportIdx, std::map<uint8_t, MediaStrea
     m_rwpkSEI = NULL;
 
     m_processedFrmNum = 0;
-    m_isFramesReady = false;
-    //pthread_mutex_init(&m_mutex, NULL);
     m_360scvpParam = NULL;
     m_dstWidth = 0;
     m_dstHeight = 0;
@@ -257,7 +253,6 @@ ExtractorTrack::~ExtractorTrack()
         LOG(ERROR) << "Failed to destroy mutex of extractor track !" << std::endl;
         return;
     }
-    //DestroyCurrSegNalus();
 }
 
 int32_t ExtractorTrack::ConstructExtractors()
@@ -417,7 +412,6 @@ int32_t ExtractorTrack::GenerateExtractors()
             DELETE_ARRAY(tempData);
         }
     }
-    m_isFramesReady = false;
     return ERROR_NONE;
 }
 
@@ -456,7 +450,6 @@ int32_t ExtractorTrack::DestroyExtractors()
     }
     m_extractors.clear();
 
-    m_isFramesReady = false;
     return ERROR_NONE;
 }
 
@@ -576,7 +569,6 @@ int32_t ExtractorTrack::UpdateExtractors()
             DELETE_ARRAY(tempData);
         }
     }
-    m_isFramesReady = false;
     return ERROR_NONE;
 }
 
