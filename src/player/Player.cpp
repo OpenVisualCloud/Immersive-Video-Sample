@@ -94,6 +94,7 @@ RenderStatus Player::Play()
     {
         m_renderManager->GetStatusAndPose(&poseYaw, &posePitch, &m_status);
         m_renderManager->SetViewport(poseYaw, posePitch);
+        m_renderManager->ChangeViewport(poseYaw, posePitch);
         if (0 == lastTime)
         {
             lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
@@ -126,7 +127,6 @@ RenderStatus Player::Play()
         {
             m_renderManager->Render();
         }
-        m_renderManager->ChangeViewport(poseYaw, posePitch);
         LOG(INFO)<<"status:"<<GetStatus()<<std::endl;
         if (m_renderManager->IsEOS())
         {

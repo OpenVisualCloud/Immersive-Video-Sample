@@ -121,7 +121,7 @@ private:
     HeadPose                          *mPose;
     OmafExtractor                     *mCurrentExtractor;
     void                              *m360ViewPortHandle;
-    generateViewPortParam             *mParamViewport;
+    param_360SCVP                     *mParamViewport;
     bool                              mUsePrediction;
     std::string                       mPredictPluginName;
     std::string                       mLibPath;

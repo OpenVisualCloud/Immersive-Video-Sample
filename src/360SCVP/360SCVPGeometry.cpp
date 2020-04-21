@@ -61,8 +61,8 @@ void Geometry::geoInit(SVideoInfo& sVideoInfo)
         for (int32_t i = 0; i < FACE_NUMBER; i++)
         {
             pUpleftTmp->faceIdx = -1;
-            pUpleftTmp->x = 7680;// sVideoInfo.iFaceWidth; //7680
-            pUpleftTmp->y = 3840;// sVideoInfo.iFaceHeight; //3840
+            pUpleftTmp->x = sVideoInfo.fullWidth;
+            pUpleftTmp->y = sVideoInfo.fullHeight;
             pDownRightTmp->faceIdx = -1;
             pDownRightTmp->x = 0;
             pDownRightTmp->y = 0;

@@ -112,7 +112,7 @@ RenderStatus GLFWRenderContext::GetMotionOptionParams()
         return RENDER_ERROR;
     }
     const XMLAttribute *attOfMotion = motionElem->FirstAttribute();
-    m_motionConfig.mode = new char[128];
+    m_motionConfig.mode = new char[128]();
     memcpy(m_motionConfig.mode, attOfMotion->Value(), strlen(attOfMotion->Value()));
     m_motionConfig.freq = atoi(motionElem->FirstChildElement("freq")->GetText());
     m_motionConfig.timeInterval = atoi(motionElem->FirstChildElement("timeInterval")->GetText());

@@ -210,6 +210,10 @@ public:
 
     uint32_t GetStreamHeight() {return m_pStreamInfo ? m_pStreamInfo->height : 0;};
 
+    uint32_t GetStreamHighResWidth() {return m_pStreamInfo ? m_pStreamInfo->source_resolution[0].width : 0;};
+
+    uint32_t GetStreamHighResHeight() {return m_pStreamInfo ? m_pStreamInfo->source_resolution[0].height : 0;};
+
     uint32_t GetRowSize(){return m_pStreamInfo ? m_pStreamInfo->tileRowNum : 0;};
 
     uint32_t GetColSize(){return m_pStreamInfo ? m_pStreamInfo->tileColNum : 0;};

@@ -65,15 +65,10 @@ OmafExtractorSelector::~OmafExtractorSelector()
 
     if(m360ViewPortHandle)
     {
-        genViewport_unInit(m360ViewPortHandle);
+        I360SCVP_unInit(m360ViewPortHandle);
         m360ViewPortHandle = nullptr;
     }
 
-    if(mParamViewport)
-    {
-        SAFE_DELETE(mParamViewport->m_pUpLeft);
-        SAFE_DELETE(mParamViewport->m_pDownRight);
-    }
     SAFE_DELETE(mParamViewport);
 
     if(mPoseHistory.size())
@@ -165,26 +160,22 @@ int OmafExtractorSelector::SetInitialViewport( std::vector<Viewport*>& pView, He
         return ERROR_INVALID;
     }
 
-    mParamViewport = new generateViewPortParam;
-    mParamViewport->m_iViewportWidth = headSetInfo->viewPort_Width;
-    mParamViewport->m_iViewportHeight = headSetInfo->viewPort_Height;
-    mParamViewport->m_viewPort_fPitch = headSetInfo->pose->pitch;
-    mParamViewport->m_viewPort_fYaw = headSetInfo->pose->yaw;
-    mParamViewport->m_viewPort_hFOV = headSetInfo->viewPort_hFOV;
-    mParamViewport->m_viewPort_vFOV = headSetInfo->viewPort_vFOV;
-    mParamViewport->m_output_geoType = headSetInfo->output_geoType;
-    mParamViewport->m_input_geoType = headSetInfo->input_geoType;
-
-    mParamViewport->m_iInputWidth = pStream->GetStreamWidth();
-    mParamViewport->m_iInputHeight = pStream->GetStreamHeight();
-
-    mParamViewport->m_tileNumRow = pStream->GetRowSize();
-    mParamViewport->m_tileNumCol = pStream->GetColSize();
-    mParamViewport->m_pUpLeft = new point[6];
-    mParamViewport->m_pDownRight = new point[6];
-    mParamViewport->m_usageType = E_STREAM_STITCH_ONLY;
-
-    m360ViewPortHandle = genViewport_Init(mParamViewport);
+    mParamViewport = new param_360SCVP;
+    mParamViewport->usedType = E_VIEWPORT_ONLY;
+    mParamViewport->paramViewPort.viewportWidth = headSetInfo->viewPort_Width;
+    mParamViewport->paramViewPort.viewportHeight = headSetInfo->viewPort_Height;
+    mParamViewport->paramViewPort.viewPortPitch = headSetInfo->pose->pitch;
+    mParamViewport->paramViewPort.viewPortYaw = headSetInfo->pose->yaw;
+    mParamViewport->paramViewPort.viewPortFOVH = headSetInfo->viewPort_hFOV;
+    mParamViewport->paramViewPort.viewPortFOVV = headSetInfo->viewPort_vFOV;
+    mParamViewport->paramViewPort.geoTypeInput = (EGeometryType)headSetInfo->input_geoType;
+    mParamViewport->paramViewPort.geoTypeOutput = (EGeometryType)headSetInfo->output_geoType;
+    mParamViewport->paramViewPort.tileNumRow = pStream->GetRowSize();
+    mParamViewport->paramViewPort.tileNumCol = pStream->GetColSize();
+    mParamViewport->paramViewPort.usageType = E_VIEWPORT_ONLY;
+    mParamViewport->paramViewPort.faceWidth = pStream->GetStreamHighResWidth();
+    mParamViewport->paramViewPort.faceHeight = pStream->GetStreamHighResHeight();
+    m360ViewPortHandle = I360SCVP_Init(mParamViewport);
     if(!m360ViewPortHandle)
         return ERROR_NULL_PTR;
 
@@ -262,16 +253,16 @@ OmafExtractor* OmafExtractorSelector::GetExtractorByPose( OmafMediaStream* pStre
 OmafExtractor* OmafExtractorSelector::SelectExtractor(OmafMediaStream* pStream, HeadPose* pose)
 {
     // to select extractor;
-    int ret = genViewport_setViewPort(m360ViewPortHandle, pose->yaw, pose->pitch);
+    int ret = I360SCVP_setViewPort(m360ViewPortHandle, pose->yaw, pose->pitch);
     if(ret != 0)
         return NULL;
-    ret = genViewport_process(mParamViewport, m360ViewPortHandle);
+    ret = I360SCVP_process(mParamViewport, m360ViewPortHandle);
     if(ret != 0)
         return NULL;
 
     // get Content Coverage from 360SCVP library
     CCDef* outCC = new CCDef;
-    ret = genViewport_getContentCoverage(m360ViewPortHandle, outCC);
+    ret = I360SCVP_getContentCoverage(m360ViewPortHandle, outCC);
     if(ret != 0)
         return NULL;
 
