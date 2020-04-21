@@ -235,6 +235,7 @@ do
 done
 
 all_extractor_segs_size=0
+first_extractortrack_id=1000
 
 calculate_extractor_average_bitrate() {
 track_index=$1
@@ -257,8 +258,11 @@ average_bitrate=`expr $total_segs_size \* 8 \* $curr_frame_rate / $frames_num / 
 
 echo "extractor track: track_index = $track_index, average_packed_bitrate = $average_bitrate Kbps" >> "$summary_file_name".txt
 
-all_extractor_segs_size=$(($all_extractor_segs_size+$total_segs_size))
-all_segs_size=$(($all_segs_size+$total_segs_size))
+if [ $track_index -eq $first_extractortrack_id ]
+then
+  all_extractor_segs_size=$(($all_extractor_segs_size+$total_segs_size))
+  all_segs_size=$(($all_segs_size+$total_segs_size))
+fi
 }
 extractor_tracks_num=$(($high_tile_rows*$high_tile_cols))
 
@@ -273,7 +277,6 @@ tile_segs_proportion=`awk 'BEGIN{printf "%.2f%%\n", ('$(($all_tile_segs_size))'/
 extractor_segs_proportion=`awk 'BEGIN{printf "%.2f%%\n", ('$(($all_extractor_segs_size))'/'$(($all_segs_size))') * 100}'`
 total_packed_bitrate=`expr $all_segs_size \* 8 \* $frame_rate / $total_frames_num / 1000`
 encoding_to_packing_ratio=`awk 'BEGIN{printf "%.2f%%\n", ('$(($all_frames_size))'/'$(($all_segs_size))') * 100}'`
-
 
 echo "Summary:" >> "$summary_file_name".txt
 echo "total_packed_bitrate                                = $total_packed_bitrate Kbps" >> "$summary_file_name".txt
