@@ -779,6 +779,7 @@ void *DefaultSegmentation::LastExtractorTrackSegThread(void *pThis)
 
 int32_t DefaultSegmentation::ExtractorTrackSegmentation()
 {
+    bool isFrameReady = false;
     while(1)
     {
 
@@ -801,9 +802,11 @@ int32_t DefaultSegmentation::ExtractorTrackSegmentation()
             LOG(ERROR) << "Can't find specified Extractor Track! " << std::endl;
             return OMAF_ERROR_INVALID_DATA;
         }
-        while (!(extractorTrack->GetFramesReadyStatus()))
+        isFrameReady = ((m_currSegedFrmNum == (m_prevSegedFrmNum + 1)) && (extractorTrack->GetProcessedFrmNum() == m_currProcessedFrmNum) && (m_currSegedFrmNum == (m_currProcessedFrmNum + 1)));
+        while (!isFrameReady)
         {
             usleep(50);
+            isFrameReady = ((m_currSegedFrmNum == (m_prevSegedFrmNum + 1)) && (extractorTrack->GetProcessedFrmNum() == m_currProcessedFrmNum) && (m_currSegedFrmNum == (m_currProcessedFrmNum + 1)));
         }
 
         uint8_t etId = 0;
@@ -846,7 +849,6 @@ int32_t DefaultSegmentation::ExtractorTrackSegmentation()
             itExtractorTrack++;
         }
         if (m_isEOS)
-            //return ERROR_NONE;
             break;
     }
 
@@ -855,6 +857,7 @@ int32_t DefaultSegmentation::ExtractorTrackSegmentation()
 
 int32_t DefaultSegmentation::LastExtractorTrackSegmentation()
 {
+    bool isFrameReady = false;
     while(1)
     {
         std::map<uint8_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
@@ -877,9 +880,11 @@ int32_t DefaultSegmentation::LastExtractorTrackSegmentation()
             return OMAF_ERROR_INVALID_DATA;
         }
 
-        while (!(extractorTrack->GetFramesReadyStatus()))
+        isFrameReady = ((m_currSegedFrmNum == (m_prevSegedFrmNum + 1)) && (extractorTrack->GetProcessedFrmNum() == m_currProcessedFrmNum) && (m_currSegedFrmNum == (m_currProcessedFrmNum + 1)));
+        while (!isFrameReady)
         {
             usleep(50);
+            isFrameReady = ((m_currSegedFrmNum == (m_prevSegedFrmNum + 1)) && (extractorTrack->GetProcessedFrmNum() == m_currProcessedFrmNum) && (m_currSegedFrmNum == (m_currProcessedFrmNum + 1)));
         }
 
         uint8_t etId = 0;
@@ -893,7 +898,6 @@ int32_t DefaultSegmentation::LastExtractorTrackSegmentation()
             }
 
             ExtractorTrack *extractorTrack1 = itExtractorTrack->second;
-
             extractorTrack1->ConstructExtractors();
             WriteSegmentForEachExtractorTrack(extractorTrack1, m_nowKeyFrame, m_isEOS);
 
@@ -922,7 +926,6 @@ int32_t DefaultSegmentation::LastExtractorTrackSegmentation()
             itExtractorTrack++;
         }
         if (m_isEOS)
-            //return ERROR_NONE;
             break;
     }
 
@@ -1099,7 +1102,6 @@ int32_t DefaultSegmentation::VideoSegmentation()
             bool keyFrame = itKeyFrame->second;
             if (frameIsKey != keyFrame)
                 return OMAF_ERROR_INVALID_DATA;
-
         }
         m_nowKeyFrame = frameIsKey;
 
@@ -1116,12 +1118,13 @@ int32_t DefaultSegmentation::VideoSegmentation()
         }
         m_isEOS = nowEOS;
 
+        m_currSegedFrmNum++;
+
         std::map<uint8_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
         std::map<uint8_t, ExtractorTrack*>::iterator itExtractorTrack = extractorTracks->begin();
         for ( ; itExtractorTrack != extractorTracks->end(); /*itExtractorTrack++*/)
         {
             ExtractorTrack *extractorTrack = itExtractorTrack->second;
-            extractorTrack->SetFramesReady(true);
             if (m_extractorThreadIds.size() < m_threadNumForET)
             {
                 if (m_aveETPerSegThread == m_lastETPerSegThread)
@@ -1163,7 +1166,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
             }
             else
             {
-                itExtractorTrack++;
+                break;
             }
         }
         if (m_extractorThreadIds.size() != m_threadNumForET)
@@ -1183,9 +1186,13 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 usleep(1);
 
                 if (extractorTrack->GetProcessedFrmNum() == (m_framesNum + 1))
+                {
                     break;
+                }
             }
         }
+        m_prevSegedFrmNum++;
+        m_currProcessedFrmNum++;
 
         for (itStream = m_streamMap->begin(); itStream != m_streamMap->end(); itStream++)
         {
@@ -1266,7 +1273,6 @@ int32_t DefaultSegmentation::VideoSegmentation()
                     return ret;
             }
             LOG(INFO) << "Total  " << m_framesNum << " frames written into segments!" << std::endl;
-            //return ERROR_NONE;
             break;
         }
         m_framesNum++;

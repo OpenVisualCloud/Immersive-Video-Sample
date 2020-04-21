@@ -88,8 +88,6 @@ struct InlineConstructor
 //!
 struct Extractor
 {
-    //NaluHeader *naluHeader;
-    //uint8_t constructorType;
     std::list<SampleConstructor*> sampleConstructor;
     std::list<InlineConstructor*> inlineConstructor;
 };
@@ -301,20 +299,7 @@ public:
     //!
     uint64_t GetProcessedFrmNum()
     {
-        int32_t ret = 0;
-        ret = pthread_mutex_lock(&m_mutex);
-        if (ret)
-        {
-            LOG(ERROR) << "Failed to lock mutex in Extractor Track for getting processed frames number !" << std::endl;
-            return 0;
-        }
         uint64_t processedFrmNum = m_processedFrmNum;
-        ret = pthread_mutex_unlock(&m_mutex);
-        if (ret)
-        {
-            LOG(ERROR) << "Failed to unlock mutex in Extractor Track for getting processed frames number !" << std::endl;
-            return 0;
-        }
         return processedFrmNum;
     };
 
@@ -325,126 +310,11 @@ public:
     //!
     void IncreaseProcessedFrmNum()
     {
-        int32_t ret = 0;
-        ret = pthread_mutex_lock(&m_mutex);
-        if (ret)
-        {
-            LOG(ERROR) << "Failed to lock mutex in Extractor Track for increasing processed frames number !" << std::endl;
-            return;
-        }
         m_processedFrmNum++;
-        ret = pthread_mutex_unlock(&m_mutex);
-        if (ret)
-        {
-            LOG(ERROR) << "Failed to unlock mutex in Extractor Track for increasing processed frames number !" << std::endl;
-            return;
-        }
     }
 
-    //!
-    //! \brief  Set current frames ready status for extractor track
-    //!
-    //! \param  [in] isFramesReady
-    //!         whether current frames are ready for extractor track
-    //!
-    //! \return void
-    //!
-    void SetFramesReady(bool isFramesReady)
-    {
-        int32_t ret = 0;
-        ret = pthread_mutex_lock(&m_mutex);
-        if (ret)
-        {
-            LOG(ERROR) << "Failed to lock mutex in Extractor Track for setting frames ready status !" << std::endl;
-            return;
-        }
-        m_isFramesReady = isFramesReady;
-        ret = pthread_mutex_unlock(&m_mutex);
-        if (ret)
-        {
-            LOG(ERROR) << "Failed to unlock mutex in Extractor Track for setting frames ready status !" << std::endl;
-            return;
-        }
-    };
-
-    //!
-    //! \brief  Get current frames ready status for extractor track
-    //!
-    //! \return bool
-    //!         whether current frames are ready for extractor track
-    //!
-    bool GetFramesReadyStatus()
-    {
-        int32_t ret = 0;
-        ret = pthread_mutex_lock(&m_mutex);
-        if (ret)
-        {
-            LOG(ERROR) << "Failed to lock mutex in Extractor Track for getting frames ready status !" << std::endl;
-            return false;
-        }
-        bool isFramesReady = m_isFramesReady;
-        ret = pthread_mutex_unlock(&m_mutex);
-        if (ret)
-        {
-            LOG(ERROR) << "Failed to unlock mutex in Extractor Track for getting frames ready status !" << std::endl;
-            return false;
-        }
-        return isFramesReady;
-    };
-
+    uint8_t GetViewportId() { return m_viewportIdx; };
 private:
-    //!
-    //! \brief  Get the data offset of the first byte within
-    //!         the sample of specified tile to copy
-    //!
-    //! \param  [in] data
-    //!         pointer to the whole bitstream data for current frame
-    //! \param  [in] dataSize
-    //!         the size of bitstream data for current frame
-    //! \param  [in] tileIdx
-    //!         the index of specified tile in the current frame
-    //!
-    //! \return uint32_t
-    //!         the data offset of the first byte within
-    //!         the sample of specified tile to copy
-    //!
-    //uint32_t GetSampleDataOffset(uint8_t *data, int32_t dataSize, uint16_t tileIdx);
-
-    //!
-    //! \brief  Get the number of bytes to copy within
-    //!         the sample of specified tile
-    //!
-    //! \param  [in] data
-    //!         pointer to the whole bitstream data for current frame
-    //! \param  [in] dataSize
-    //!         the size of bitstream data for current frame
-    //! \param  [in] tileIdx
-    //!         the index of specified tile in the current frame
-    //!
-    //! \return uint32_t
-    //!         the number of bytes to copy within
-    //!         the sample of specified tile
-    //!
-    //uint32_t GetSampleDataSize(uint8_t *data, int32_t dataSize, uint16_t tileIdx);
-
-    //!
-    //! \brief  Generate the new slice header for the specified tile
-    //!         in final packed frame corresponding to extractor track
-    //!
-    //! \param  [in] data
-    //!         the pointer to the bitstream data for current frame
-    //! \param  [in] dstTileIdx
-    //!         the index of specified tile in final packed frame
-    //! \param  [in] dstRwpk
-    //!         the pointer to the region wise packing information
-    //!         of packed frame
-    //! \param  [in] newHeader
-    //!         the pointer to the new slice header for the specified
-    //!         tile in packed frame
-    //!
-    //! \return void
-    //!
-    //void GenerateNewSliceHeader(uint8_t *data, uint8_t dstTileIdx, RegionWisePacking *dstRwpk, uint8_t *newHeader);
 
     //!
     //! \brief  Generate projection SEI
@@ -481,7 +351,6 @@ private:
     param_360SCVP                   *m_360scvpParam;     //!< 360SCVP library parameter
     std::map<MediaStream*, void*>   m_360scvpHandles;    //!< map of 360SCVP library handle and corresponding media stream
     uint64_t                        m_processedFrmNum;   //!< processed frames number in extractor track
-    bool                            m_isFramesReady;     //!< whether frames are ready for extractor track
     pthread_mutex_t                 m_mutex;             //!< thread mutex for extractor track segmentation thread
     int32_t                         m_dstWidth;
     int32_t                         m_dstHeight;
