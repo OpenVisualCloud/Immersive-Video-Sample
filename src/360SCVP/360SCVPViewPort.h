@@ -29,6 +29,10 @@
 #include "360SCVPGeometry.h"
 
 #define FACE_NUMBER 6
+#define ERP_HORZ_ANGLE 360
+#define ERP_VERT_ANGLE 180
+#define ERP_HORZ_START -180
+#define ERP_VERT_START 90
 
 // ====================================================================================================================
 // Class definition
