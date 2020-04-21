@@ -4037,7 +4037,7 @@ new file mode 100644
 index 0000000..0a66efa
 --- /dev/null
 +++ b/FFmpeg/libavformat/omaf_packing_enc.c
-@@ -0,0 +1,414 @@
+@@ -0,0 +1,427 @@
 +/*
 + * Intel tile Dash muxer
 + *
@@ -4089,6 +4089,12 @@ index 0000000..0a66efa
 +    InitialInfo    *initInfo;
 +    int            inStreamsNum;
 +
++    int            viewport_w;
++    int            viewport_h;
++    int            viewport_yaw;
++    int            viewport_pitch;
++    int            viewport_fov_hor;
++    int            viewport_fov_ver;
 +    int            window_size;
 +    int            extra_window_size;
 +    int            need_buffered_frames;
@@ -4170,12 +4176,13 @@ index 0000000..0a66efa
 +        return AVERROR(ENOMEM);
 +    }
 +    memset(initInfo->viewportInfo, 0, sizeof(ViewportInformation));
-+    initInfo->viewportInfo->viewportWidth = 1024;
-+    initInfo->viewportInfo->viewportHeight = 1024;
-+    initInfo->viewportInfo->viewportPitch = 0;
-+    initInfo->viewportInfo->viewportYaw = 90;
-+    initInfo->viewportInfo->horizontalFOVAngle = 80;
-+    initInfo->viewportInfo->verticalFOVAngle = 90;
++    printf("viewport_w %d, viewport_h %d \n", c->viewport_w, c->viewport_h);
++    initInfo->viewportInfo->viewportWidth = c->viewport_w;
++    initInfo->viewportInfo->viewportHeight = c->viewport_h;
++    initInfo->viewportInfo->viewportPitch = c->viewport_pitch;
++    initInfo->viewportInfo->viewportYaw = c->viewport_yaw;
++    initInfo->viewportInfo->horizontalFOVAngle = c->viewport_fov_hor;
++    initInfo->viewportInfo->verticalFOVAngle = c->viewport_fov_ver;
 +    initInfo->viewportInfo->outGeoType = E_SVIDEO_VIEWPORT;
 +    initInfo->viewportInfo->inGeoType = E_SVIDEO_EQUIRECT;
 +
@@ -4412,6 +4419,12 @@ index 0000000..0a66efa
 +#define OFFSET(x) offsetof(OMAFContext, x)
 +#define E AV_OPT_FLAG_ENCODING_PARAM
 +static const AVOption options[] = {
++    { "viewport_w", "set viewport width", OFFSET(viewport_w), AV_OPT_TYPE_INT, { .i64 = 1024 }, 0, INT_MAX, E },
++    { "viewport_h", "set viewport height", OFFSET(viewport_h), AV_OPT_TYPE_INT, { .i64 = 1024 }, 0, INT_MAX, E },
++    { "viewport_yaw", "set viewport yaw", OFFSET(viewport_yaw), AV_OPT_TYPE_INT, { .i64 = 90 }, 0, 180, E },
++    { "viewport_pitch", "set viewport pitch", OFFSET(viewport_pitch), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, 180, E },
++    { "viewport_fov_hor", "set viewport FOV horizontal angle", OFFSET(viewport_fov_hor), AV_OPT_TYPE_INT, { .i64 = 80 }, 0, 180, E },
++    { "viewport_fov_ver", "set viewport FOV vertical angle", OFFSET(viewport_fov_ver), AV_OPT_TYPE_INT, { .i64 = 90 }, 0, 180, E },
 +    { "window_size", "number of segments kept in the manifest", OFFSET(window_size), AV_OPT_TYPE_INT, { .i64 = 5 }, 0, INT_MAX, E },
 +    { "extra_window_size", "number of segments kept outside of the manifest before removing from disk", OFFSET(extra_window_size), AV_OPT_TYPE_INT, { .i64 = 15 }, 0, INT_MAX, E },
 +    { "split_tile", "need split the stream to tiles if input is tile-based hevc stream", OFFSET(split_tile), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, 2, E },
