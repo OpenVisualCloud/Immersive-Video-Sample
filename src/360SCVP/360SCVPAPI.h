@@ -298,8 +298,8 @@ typedef struct PARAM_VIEWPORT_OUTPUT
 //!
 //! \param    ViewportWidth,      input,    the width for the viewport
 //! \param    ViewportHeight,     input,    the height for the viewport
-//! \param    viewPortPitch,      input,    the angle rotated aroud z
-//! \param    viewPortYaw,        input,    the angle rotated aroud x
+//! \param    viewPortPitch,      input,    the angle rotated aroud x(-90 ~ 90)
+//! \param    viewPortYaw,        input,    the angle rotated aroud z(-180 ~ 180)
 //! \param    viewPortFOVH,       input,    the horizontal FOV angle
 //! \param    viewPortFOVV,       input,    the vertical FOV angle
 //! \param    geoTypeOutput,      input,    the type for the output projection(viewport)

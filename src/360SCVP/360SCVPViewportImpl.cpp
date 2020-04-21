@@ -666,8 +666,8 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
             {
                 m_srd[idx].faceId = faceid;
                 m_srd[idx].isOccupy = 0;
-                if (fPitch >= m_srd[idx].horzPos && fPitch <= m_srd[idx].horzPos + stepHorzPos
-                  && fYaw <= m_srd[idx].vertPos && fYaw >= m_srd[idx].vertPos - stepVertPos)
+                if (fYaw >= m_srd[idx].horzPos && fYaw <= m_srd[idx].horzPos + stepHorzPos
+                  && fPitch <= m_srd[idx].vertPos && fPitch >= m_srd[idx].vertPos - stepVertPos)
                      break;
 		idx++;
             }

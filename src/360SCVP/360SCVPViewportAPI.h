@@ -47,8 +47,8 @@ typedef struct POINTDEF
 //!
 //! \param    m_iViewportWidth,      input,    the width for the viewport
 //! \param    m_iViewportHeight,     input,    the height for the viewport
-//! \param    m_viewPort_fPitch,      input,    the angle rotated aroud z
-//! \param    m_viewPort_fYaw,       input,    the angle rotated aroud x
+//! \param    m_viewPort_fYaw,       input,    the angle rotated aroud z(-180 ~ 180)
+//! \param    m_viewPort_fPitch,     input,    the angle rotated aroud x(-90 ~ 90)
 //! \param    m_viewPort_hFOV,       input,    the horizontal FOV angle
 //! \param    m_viewPort_vFOV,       input,    the vertical FOV angle
 //! \param    m_output_geoType,      input,    the type for the output projection(viewport)
