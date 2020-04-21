@@ -11,6 +11,7 @@ AUX_SOURCE_DIRECTORY(. DIR_SRC)
 AUX_SOURCE_DIRECTORY(../utils UTIL_SRC)
 AUX_SOURCE_DIRECTORY(OmafDashDownload/. DOWN_SRC)
 AUX_SOURCE_DIRECTORY(OmafDashParser/. PARSE_SRC)
+AUX_SOURCE_DIRECTORY(OmafViewportPredict/. PREDICT_SRC)
 
 if(NOT USE_ANDROID_NDK)
 ADD_DEFINITIONS("-g -c -fPIC -lstdc++fs -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 -z noexecstack -z relro -z now -fstack-protector-strong -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wl,-S -Wall -Werror")
@@ -35,6 +36,7 @@ set(DIR_SRC
     ${UTIL_SRC}
     ${DOWN_SRC}
     ${PARSE_SRC}
+    ${PREDICT_SRC}
     )
 
 ADD_LIBRARY(OmafDashAccess SHARED  ${DIR_SRC})
