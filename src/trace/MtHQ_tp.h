@@ -145,8 +145,10 @@ TRACEPOINT_EVENT(
         char*,        dash_mode,
         int,          segment_duration,
         float,        total_duration,
-        float,        frame_rate,
-        int,          frame_num
+	    float,        frame_rate,
+        int,          frame_num,
+        uint32_t,     highreso_width,
+        uint32_t,     highreso_height
     ),
 
     TP_FIELDS(
@@ -155,6 +157,8 @@ TRACEPOINT_EVENT(
         ctf_float(float, total_duration_field, total_duration)
         ctf_float(float, frame_rate_field, frame_rate)
         ctf_integer(int, frame_num_field, frame_num)
+        ctf_integer(uint32_t, highreso_width_field, highreso_width)
+        ctf_integer(uint32_t, highreso_height_field, highreso_height)
     )
 )
 

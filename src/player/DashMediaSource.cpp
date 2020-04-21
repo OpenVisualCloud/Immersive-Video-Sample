@@ -454,7 +454,7 @@ RenderStatus DashMediaSource::SetMediaSourceInfo(void *mediaInfo)
     }
     const char * dash_mode = (dashMediaInfo->streaming_type == 1) ? "static" : "dynamic";
     tracepoint(mthq_tp_provider, stream_information, dash_mode, dashMediaInfo->stream_info[0].segmentDuration, dashMediaInfo->duration, \
-                m_mediaSourceInfo.frameRate, m_mediaSourceInfo.frameNum);
+                m_mediaSourceInfo.frameRate, m_mediaSourceInfo.frameNum, m_mediaSourceInfo.sourceWH->width[0], m_mediaSourceInfo.sourceWH->height[0]);
     return RENDER_STATUS_OK;
 }
 
