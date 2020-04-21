@@ -34,6 +34,7 @@
 #ifndef _ANDROID_NDK_OPTION_
 #include <sys/time.h>
 #include "../trace/Bandwidth_tp.h"
+#include "../trace/MtHQ_tp.h"
 #endif
 
 VCD_OMAF_BEGIN
@@ -343,6 +344,7 @@ int OmafDashSource::GetMediaInfo( DashMediaInfo* media_info )
         media_info->stream_info[i].mime_type = new char[1024];
         media_info->stream_info[i].source_number = pStreamInfo->source_number;
         media_info->stream_info[i].source_resolution = pStreamInfo->source_resolution;
+        media_info->stream_info[i].segmentDuration = pStreamInfo->segmentDuration;
         memcpy( const_cast<char*>(media_info->stream_info[i].codec),
                 pStreamInfo->codec,
                 1024);
@@ -370,6 +372,7 @@ int OmafDashSource::TimedDownloadSegment( bool bFirst )
     gettimeofday(&currTime, NULL);
     uint64_t timeUs = currTime.tv_sec * 1000000 + currTime.tv_usec;
     tracepoint(bandwidth_tp_provider, download_info, timeUs, dcount);
+    tracepoint(mthq_tp_provider, T3_start_download_time, dcount);
 #endif
 
     std::map<int, OmafMediaStream*>::iterator it;

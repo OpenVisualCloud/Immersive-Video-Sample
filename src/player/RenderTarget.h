@@ -72,7 +72,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus Update(RenderBackend *renderBackend, struct RegionInfo *regionInfo);
+    RenderStatus Update(RenderBackend *renderBackend, struct RegionInfo *regionInfo, float yaw, float pitch);
     //! \brief Get the Fbo R2T Handle
     //!
     //! \return uint32_t
@@ -139,6 +139,8 @@ private:
     uint32_t m_fboOnScreenHandle; //output
     uint32_t m_textureOfR2S;      //render to screen
     struct SourceWH m_targetWH;   //ScreenTexture size
+    bool m_isAllHighResoInView;   //isAllHighResoInView
+    float m_avgChangedTime;      //average time to change from blur to clear
 
     //! \brief transfer RegionInfo to a pair vectors describing the relationship between index and packedRegion information.
     //!
@@ -190,6 +192,8 @@ private:
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
     RenderStatus TransferTileIdToRegion(uint32_t tileId, SourceInfo *sourceInfo, SphereRegion *sphereRegion);
+
+    RenderStatus GetTilesInViewport(float yaw, float pitch, float hFOV, float vFOV, uint32_t row, uint32_t col, std::vector<uint32_t>& TilesInViewport);
 };
 
 VCD_NS_END

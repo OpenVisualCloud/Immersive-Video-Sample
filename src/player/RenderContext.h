@@ -46,6 +46,8 @@
 
 VCD_NS_BEGIN
 
+#define FOV 80.0f
+
 class RenderContext
 {
 public:

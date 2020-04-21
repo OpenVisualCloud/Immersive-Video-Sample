@@ -43,7 +43,7 @@ RenderContext::RenderContext()
     // Initial vertical angle : none
     m_verticalAngle     = 0.0f;
     // Initial Field of View
-    m_initialFoV        = 40.0f;//need to adjust according to viewport
+    m_initialFoV        = FOV;//need to adjust according to viewport
     m_speed             = 0.005f; // 3 units / second
     m_mouseSpeed        = 0.005f;
     m_window            = NULL;

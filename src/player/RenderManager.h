@@ -105,6 +105,17 @@ public:
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
     RenderStatus SetViewport(float yaw, float pitch);
+    //! \brief get yaw and pitch
+    //!
+    //! \param  [out] float
+    //!         yaw angle
+    //!         [out] pitch
+    //!         pitch angle
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus GetViewport(float *yaw, float *pitch);
     //!
     //! \brief  Thread functionality Pure virtual function  , it will be re implemented in derived classes
     //!

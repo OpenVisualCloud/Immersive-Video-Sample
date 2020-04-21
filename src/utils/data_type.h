@@ -121,6 +121,7 @@ typedef struct DASHPACKET{
     uint64_t  size;
     char*     buf;
     RegionWisePacking *rwpk;
+    int       segID;
 }DashPacket;
 
 #ifdef __cplusplus

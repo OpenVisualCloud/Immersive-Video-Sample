@@ -181,12 +181,16 @@ public:
     void SetRwpk(RegionWisePacking *rwpk) { m_rwpk = rwpk; };
     RegionWisePacking* GetRwpk() { return m_rwpk; };
 
+    int GetSegID() { return m_segID; };
+    void SetSegID(int id){ m_segID = id; };
+
 private:
     char* m_pPayload;                    //!<the payload buffer of the packet
     int   m_nAllocSize;                  //!<the allocated size of packet
     uint64_t m_nRealSize;                //!< real size of packet
     int   m_type;                        //!<the type of the payload
     uint64_t mPts;
+    int   m_segID;
     RegionWisePacking *m_rwpk;
 
     void deleteRwpk()

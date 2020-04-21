@@ -32,6 +32,7 @@
 //!
 
 #include "RenderTarget.h"
+#include "RenderContext.h"
 
 #include <GL/glu.h>
 #include <GL/glu_mangle.h>
@@ -43,6 +44,9 @@
 #include <GLES3/gl3ext.h>
 #include <GLES3/gl3platform.h>
 #include <algorithm>
+#include <iostream>
+#include <chrono>
+#include "../trace/MtHQ_tp.h"
 
 VCD_NS_BEGIN
 
@@ -53,6 +57,7 @@ RenderTarget::RenderTarget()
     m_textureOfR2S      = 0;
     m_targetWH.width    = NULL;
     m_targetWH.height   = NULL;
+    m_isAllHighResoInView = true;
 }
 
 RenderTarget::~RenderTarget()
@@ -70,6 +75,7 @@ RenderTarget::~RenderTarget()
         delete [] m_targetWH.height;
         m_targetWH.height = NULL;
     }
+    std::cout<<"AVG CHANGED TIME COST : "<<m_avgChangedTime<<"ms"<<std::endl;
 }
 
 RenderStatus RenderTarget::Initialize(struct MediaSourceInfo *mediaSourceInfo, uint32_t fboR2T)
@@ -125,7 +131,7 @@ RenderStatus RenderTarget::CreateRenderTarget(RenderBackend *renderBackend)
     return RENDER_STATUS_OK;
 }
 
-RenderStatus RenderTarget::Update(RenderBackend *renderBackend, struct RegionInfo *regionInfo)
+RenderStatus RenderTarget::Update(RenderBackend *renderBackend, struct RegionInfo *regionInfo, float yaw, float pitch)
 {
     if (NULL == renderBackend || NULL == regionInfo)
     {
@@ -154,6 +160,43 @@ RenderStatus RenderTarget::Update(RenderBackend *renderBackend, struct RegionInf
     uint16_t lowRow = regionInfoTransfer[1][0].second[11];//low resolution tile row
     float ratioW = (float)highWidth * highCol / lowWidth / lowCol;// the scale ratio for width
     float ratioH = (float)highHeight * highRow / lowHeight / lowRow;// the sacle ratio for height
+
+    std::vector<uint32_t> TilesInViewport;
+    std::chrono::high_resolution_clock clock;
+    GetTilesInViewport(yaw, pitch, FOV, FOV, highRow, highCol, TilesInViewport);
+    bool isAllHighFlag = true;
+    static uint64_t start = 0;
+    static uint64_t totalChangedTime = 0;
+    static uint32_t changedCount = 0;
+    for (uint32_t i = 0; i < TilesInViewport.size(); i++)
+    {
+        if (find(hasHighTileIds.begin(), hasHighTileIds.end(), TilesInViewport[i]) == hasHighTileIds.end())
+        {
+            isAllHighFlag = false;
+            if (m_isAllHighResoInView) // firt time to be blur
+            {
+                start = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+                LOG(INFO)<<"low resolution part occurs!"<<std::endl;
+                //trace
+                tracepoint(mthq_tp_provider, T1_change_to_lowQ, changedCount+1);
+            }
+            break;
+        }
+    }
+    if (isAllHighFlag && !m_isAllHighResoInView) // first time to be clear
+    {
+        uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+        LOG(INFO)<<"T9' All high resolution part!"<<std::endl<<"cost time : "<<(end-start)<<"ms"<<std::endl;
+        //trace
+        tracepoint(mthq_tp_provider, T9n_change_to_highQ, changedCount+1);
+
+        totalChangedTime += end - start;
+        changedCount++;
+        m_avgChangedTime = (float)totalChangedTime / changedCount;
+
+    }
+    m_isAllHighResoInView = isAllHighFlag;
+
     for (uint32_t j = 0; j < regionInfoTransfer[1].size(); j++) // blit order : low first.
     {
         if (find(hasLowTileIds.begin(), hasLowTileIds.end(), regionInfoTransfer[1][j].first) != hasLowTileIds.end())
@@ -318,6 +361,27 @@ RenderStatus RenderTarget::TransferTileIdToRegion(uint32_t tileId, SourceInfo *s
     sphereRegion->elevationRange = uint32_t(float(sphereRegion->elevationRange) / sourceInfo->sourceHeight * 180) << 16;
     sphereRegion->centreAzimuth = int32_t(float(sphereRegion->centreAzimuth) / sourceInfo->sourceWidth * 360 - 180) << 16;
     sphereRegion->centreElevation = int32_t(float(sphereRegion->centreElevation) / sourceInfo->sourceHeight * 180 - 90) << 16;
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus RenderTarget::GetTilesInViewport(float yaw, float pitch, float hFOV, float vFOV, uint32_t row, uint32_t col, std::vector<uint32_t>& TilesInViewport)
+{
+    if (hFOV <= 0 || vFOV <= 0)
+    {
+        LOG(ERROR)<<"FOV input invalid!"<<std::endl;
+        return RENDER_ERROR;
+    }
+    struct SphereRegion region;
+    region.azimuthRange = uint32_t(hFOV) << 16;
+    region.elevationRange = uint32_t(vFOV) << 16;
+    region.centreAzimuth = uint32_t(yaw) << 16;
+    region.centreElevation = uint32_t(pitch) << 16;
+    struct SourceInfo info;
+    info.sourceWidth = m_targetWH.width[0];
+    info.sourceHeight = m_targetWH.height[0];
+    info.tileRowNumber = row;
+    info.tileColumnNumber = col;
+    TilesInViewport = GetRegionTileId(&region, &info);
     return RENDER_STATUS_OK;
 }
 

@@ -37,6 +37,7 @@
 #include "RenderType.h"
 #include "DashMediaSource.h"
 #include "OmafDashAccessApi.h"
+#include "../trace/MtHQ_tp.h"
 
 #define MAX_LIST_NUMBER 30
 #define MIN_LIST_REMAIN 2
@@ -98,6 +99,9 @@ RenderStatus DashMediaSource::GetPacket(AVPacket *pkt, RegionWisePacking *rwpk)
     {
         return RENDER_ERROR;
     }
+    LOG(INFO)<<"Get packet has done! and segment id is "<<dashPkt[0].segID<<std::endl;
+    //trace
+    tracepoint(mthq_tp_provider, T7_get_packet, dashPkt[0].segID);
     if (NULL != dashPkt[0].buf && dashPkt[0].size && dashPktNum != 0)
     {
         int size = dashPkt[0].size;
@@ -443,6 +447,14 @@ RenderStatus DashMediaSource::SetMediaSourceInfo(void *mediaInfo)
     LOG(INFO)<<"Player [config]: packed resolution "<<m_mediaSourceInfo.width<<"x"<<m_mediaSourceInfo.height<<std::endl;
     LOG(INFO)<<"------------------------------------------"<<std::endl;
     std::cout<<"--Please press 's' key to start--"<<std::endl;
+    //trace
+    if (dashMediaInfo->streaming_type != 1 && dashMediaInfo->streaming_type != 2)
+    {
+        LOG(ERROR)<<"dash mode is invalid!"<<std::endl;
+    }
+    const char * dash_mode = (dashMediaInfo->streaming_type == 1) ? "static" : "dynamic";
+    tracepoint(mthq_tp_provider, stream_information, dash_mode, dashMediaInfo->stream_info[0].segmentDuration, dashMediaInfo->duration, \
+                m_mediaSourceInfo.frameRate, m_mediaSourceInfo.frameNum);
     return RENDER_STATUS_OK;
 }
 
@@ -576,6 +588,13 @@ void DashMediaSource::Run()
         // av_free_packet(m_dashSourceData.packet);
         av_packet_unref(m_dashSourceData.packet);
         LOG(INFO)<<"rwpkList.size: "<<m_rwpkList.size()<<std::endl;
+        static int trace_flag = 1;
+        if (trace_flag)
+        {
+            //trace first occurs
+            tracepoint(mthq_tp_provider, decode_fifo, m_rwpkList.size());
+            trace_flag = 0;
+        }
         if (0 != m_rwpkList.size())//just for DASH Source.
         {
             regionInfo->regionWisePacking = new RegionWisePacking;
@@ -636,6 +655,8 @@ void DashMediaSource::Run()
                 LOG(INFO)<<"!!!!!=========full===========!!!!!"<<std::endl;
             }
         }
+        //trace
+        tracepoint(mthq_tp_provider, T8_decode_finish, m_frameBuffer.size());
         LOG(INFO)<<"======push_back frameBuffer size:=============:"<<m_frameBuffer.size()<<std::endl;
         pthread_mutex_unlock(&m_frameMutex);
     }

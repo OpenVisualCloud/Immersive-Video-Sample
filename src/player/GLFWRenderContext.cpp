@@ -132,7 +132,7 @@ RenderStatus GLFWRenderContext::GetStatusAndPose(float *yaw, float *pitch, uint3
     glm::vec3 up = glm::cross(right, direction);
     float FoV = m_initialFoV; // - 5 * glfwGetMouseWheel();
     float aspect = float(m_windowWidth) / m_windowHeight;
-    m_projectionMatrix = glm::perspective(glm::radians(-2 * FoV), aspect, 0.01f, 1000.0f);
+    m_projectionMatrix = glm::perspective(glm::radians(-FoV), aspect, 0.01f, 1000.0f);
     m_viewModelMatrix = glm::lookAt(
         //        position,           // Camera is here
         glm::vec3(0, 0, 0),

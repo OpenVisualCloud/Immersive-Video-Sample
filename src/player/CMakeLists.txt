@@ -20,9 +20,17 @@ if(USE_WEBRTC)
 ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -fpermissive -DLOW_LATENCY_USAGE")
 endif()
 
+if(USE_OMAF)
+INCLUDE_DIRECTORIES(/usr/local/include ../utils ../trace)
+
+LINK_DIRECTORIES(/usr/local/lib ../trace)
+endif()
+
+if(USE_WEBRTC)
 INCLUDE_DIRECTORIES(/usr/local/include ../utils)
 
 LINK_DIRECTORIES(/usr/local/lib)
+endif()
 
 if(USE_WEBRTC)
     if(NOT DEFINED WEBRTC_LINUX_SDK)
@@ -45,7 +53,7 @@ set(DIR_SRC
 ADD_EXECUTABLE(render ${DIR_SRC})
 
 if(USE_OMAF)
-	set(LINK_LIB ${LINK_LIB} OmafDashAccess)
+	set(LINK_LIB ${LINK_LIB} OmafDashAccess trace lttng-ust)
 endif()
 
 if(USE_WEBRTC)

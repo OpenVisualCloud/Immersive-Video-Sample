@@ -177,7 +177,10 @@ RenderStatus RenderManager::PrepareRender()
         return RENDER_ERROR;
     }
     //3.tile copy and render to FBO from m_renderTarget
-    RenderStatus renderTargetStatus = m_renderTarget->Update(m_renderBackend, &regionInfo);
+    float yaw = 0;
+    float pitch = 0;
+    GetViewport(&yaw, &pitch);
+    RenderStatus renderTargetStatus = m_renderTarget->Update(m_renderBackend, &regionInfo, yaw, pitch);
     if (RENDER_ERROR == renderTargetStatus)
     {
         return RENDER_ERROR;
@@ -345,6 +348,18 @@ RenderStatus RenderManager::SetViewport(float yaw, float pitch)
     m_viewPortManager->SetViewPort(pose);
     res = pthread_mutex_unlock(&m_poseMutex);
     if (res != 0) {return RENDER_ERROR;}
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus RenderManager::GetViewport(float *yaw, float *pitch)
+{
+    int32_t res = pthread_mutex_lock(&m_poseMutex);
+    if (res != 0) {return RENDER_ERROR;}
+    struct Pose pose = m_viewPortManager->GetViewPort();
+    res = pthread_mutex_unlock(&m_poseMutex);
+    if (res != 0) {return RENDER_ERROR;}
+    *yaw = pose.yaw;
+    *pitch = pose.pitch;
     return RENDER_STATUS_OK;
 }
 

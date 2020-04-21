@@ -44,6 +44,7 @@
 
 #include "GLFWRenderContext.h"
 #include "EGLRenderContext.h"
+#include "../trace/MtHQ_tp.h"
 // #include <time.h>
 
 glm::mat4 ProjectionMatrix;
@@ -115,8 +116,10 @@ RenderStatus Player::Play()
             }
 
             lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-            LOG(INFO)<<"===========renderTime==============:"<<lastTime<<std::endl;
             m_renderManager->Render();
+            LOG(INFO)<<"===========renderTime==============:"<<lastTime<<std::endl;
+            //trace
+            tracepoint(mthq_tp_provider, T9_render, renderCount + 1);
             renderCount++;
         }
         else if (READY == GetStatus() || PAUSE == GetStatus())
