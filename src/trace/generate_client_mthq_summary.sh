@@ -17,8 +17,20 @@ total_dur=$(echo $total_dur | awk -F "," '{print $1}')
 total_dur=`awk 'BEGIN{printf "%.2f\n", '$total_dur/1000'}'`
 
 # seg_num=`expr $total_dur / $seg_dur / 1000`
+#tmp_seg_num=`awk 'BEGIN{printf "%.2f\n", '$total_dur/$seg_dur'}'`
+#seg_num=$((${tmp_seg_num//.*/+1}))
+abs() { echo ${1#-};}
 tmp_seg_num=`awk 'BEGIN{printf "%.2f\n", '$total_dur/$seg_dur'}'`
-seg_num=$((${tmp_seg_num//.*/+1}))
+tmp_seg_num_arr=(${tmp_seg_num//./ })
+tmp_seg_num_int=${tmp_seg_num_arr[0]}
+diff=`awk 'BEGIN{printf "%.2f\n", '$tmp_seg_num-$tmp_seg_num_int'}'`
+diff=`abs $diff`
+if [ `echo "$diff < 0.01" | bc` -eq 1 ]
+then
+    seg_num=$tmp_seg_num_int
+else
+    seg_num=$(($tmp_seg_num_int+1))
+fi
 
 frame_rate=`cat mthq_trace.txt | grep "frame_rate_field" | awk -F " " '{print $22}'`
 frame_rate=$(echo $frame_rate | awk -F "," '{print $1}')
@@ -169,7 +181,7 @@ echo "(T1) change to low quality                        - player :    ${T1Array[
 in_flag=0 # if [T2,T9] in [T1,T9']
 is_quit_finding=0 # if quiting finding [T2,T9] in [T1,T9']
 nochangedTimes=0 # pose change but FOV quality remains high quality
-
+detectInChanged=0
 for iter in $(seq 0 $((${#total_T2toT9[@]}-1)))
 do
     # 1.calc elem time in totalArray
@@ -208,6 +220,7 @@ do
         then
             echo "(T2) pose changed                         - OmafDashAccess :    ${total_T2toT9[$iter]}" >> "$summary_file_name".txt
             detectTimeAverage=`awk 'BEGIN{printf "%.9f\n", '$detectTimeAverage+$elem_time-$T1_time'}'`
+	    detectInChanged=$(($detectInChanged+1))
         elif [ $category -eq 1 ]
         then
             echo "(T3) start to download segment $segID          - OmafDashAccess :    ${total_T2toT9[$iter]}" >> "$summary_file_name".txt
@@ -261,7 +274,7 @@ echo "Motion from low quality to high quality average time cost  :  $changedAVGT
 totalAVGTime=`awk 'BEGIN{printf "%.9f\n", '$changedAVGTime\*$changedTimes/$(($changedTimes+$nochangedTimes))'}'`
 echo "Total motion to high quality average time cost             :  $totalAVGTime s" >> "$summary_file_name".txt
 echo "--------------------------------[Average Time Cost in sub modules]--------------------------------" >> "$summary_file_name".txt
-detectTimeAverage=`awk 'BEGIN{printf "%.9f\n", '$detectTimeAverage/$changedTimes'}'`
+detectTimeAverage=`awk 'BEGIN{printf "%.9f\n", '$detectTimeAverage/$detectInChanged'}'`
 echo "Detect pose change time cost                               :  $detectTimeAverage s" >> "$summary_file_name".txt
 echo "Download segment time cost                                 :  ${timeAverageArray[1]} s" >> "$summary_file_name".txt
 echo "Parse segment time cost                                    :  ${timeAverageArray[2]} s" >> "$summary_file_name".txt
