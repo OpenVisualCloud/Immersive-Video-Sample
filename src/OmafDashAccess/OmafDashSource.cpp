@@ -99,7 +99,7 @@ int OmafDashSource::SyncTime(std::string url)
     return ret;
 }
 
-int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enablePredictor)
+int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enablePredictor, std::string predictPluginName, std::string libPath)
 {
     DIR* dir = opendir(cacheDir.c_str());
     if(dir)
@@ -186,7 +186,7 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enable
         id++;
     }
 
-    if(enablePredictor) mSelector->EnablePosePrediction();
+    if(enablePredictor) mSelector->EnablePosePrediction(predictPluginName, libPath);
     // Setup initial Viewport and select Adaption Set
     auto it = mMapStream.begin();
     if (it == mMapStream.end())
@@ -360,6 +360,7 @@ void OmafDashSource::Run()
 {
     if(mMPDinfo->type == TYPE_LIVE){
         thread_dynamic();
+        return;
     }
     thread_static();
 }

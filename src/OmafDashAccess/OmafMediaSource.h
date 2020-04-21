@@ -73,7 +73,7 @@ public:
     //! \return
     //!         ERROR_NONE if success, else fail reason
     //!
-    virtual int OpenMedia(std::string url, std::string cacheDir, bool enablePredictor=false) = 0;
+    virtual int OpenMedia(std::string url, std::string cacheDir, bool enablePredictor=false, std::string predictPluginName="", std::string dllPath="") = 0;
 
     //!
     //! \brief  Close the media. it's pure interface

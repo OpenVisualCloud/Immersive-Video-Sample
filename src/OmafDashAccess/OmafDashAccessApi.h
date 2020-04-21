@@ -79,9 +79,11 @@ Handler OmafAccess_Init( DashStreamingClient* pCtx);
  * params: hdl - [in] handler created with DashStreaming_Init
  *         pCtx - [in] the structure for the necessary parameters to handle an dash stream
  *         enablePredictor - [in] flag for use predictor or not
+ *         predictPluginName - [in] name of predict plugin
+ *         libPath - [in] plugin library path
  * return: the error return from the API
  */
-int OmafAccess_OpenMedia( Handler hdl, DashStreamingClient* pCtx, bool enablePredictor);
+int OmafAccess_OpenMedia( Handler hdl, DashStreamingClient* pCtx, bool enablePredictor, char *predictPluginName, char *libPath);
 
 /*
  * description: API to seek a stream. only work with static mode. not implement yet.

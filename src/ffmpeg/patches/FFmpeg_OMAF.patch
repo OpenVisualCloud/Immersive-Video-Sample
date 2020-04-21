@@ -4644,7 +4644,7 @@ index 0000000..8e469af
 +    ret = SetupHeadSetInfo(&(c->HSInfo));
 +    ret = OmafAccess_SetupHeadSetInfo(c->hdl, &(c->HSInfo));
 +
-+    ret = OmafAccess_OpenMedia(c->hdl, c->client, false);
++    ret = OmafAccess_OpenMedia(c->hdl, c->client, false, NULL, NULL);
 +
 +    c->lastPose.yaw = c->HSInfo.pose->yaw;
 +    c->lastPose.pitch = c->HSInfo.pose->pitch;

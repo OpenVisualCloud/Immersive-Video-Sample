@@ -132,6 +132,21 @@ int main(int32_t argc, char *argv[])
             return RENDER_ERROR;
         }
     }
+    //predictor option
+    XMLElement *predictor = info->FirstChildElement("predict");
+    if (NULL == predictor)
+    {
+        return RENDER_ERROR;
+    }
+    const XMLAttribute *enable = predictor->FirstAttribute();
+    renderConfig.enablePredictor = atoi(enable->Value());
+    renderConfig.predictPluginName = "";
+    renderConfig.libPath = "";
+    if (renderConfig.enablePredictor)
+    {
+        renderConfig.predictPluginName = predictor->FirstChildElement("plugin")->GetText();
+        renderConfig.libPath = predictor->FirstChildElement("path")->GetText();
+    }
     //2.initial player
     Player *player = new Player(renderConfig);
     //3.open process

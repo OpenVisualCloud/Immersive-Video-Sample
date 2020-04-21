@@ -52,11 +52,11 @@ Handler OmafAccess_Init( DashStreamingClient* pCtx)
     return (Handler)((long)pSource);
 }
 
-int OmafAccess_OpenMedia( Handler hdl, DashStreamingClient* pCtx, bool enablePredictor)
+int OmafAccess_OpenMedia( Handler hdl, DashStreamingClient* pCtx, bool enablePredictor, char *predictPluginName, char *libPath)
 {
     OmafMediaSource* pSource = (OmafMediaSource*)hdl;
     pSource->SetLoop(false);
-    return pSource->OpenMedia(pCtx->media_url, pCtx->cache_path, enablePredictor);
+    return pSource->OpenMedia(pCtx->media_url, pCtx->cache_path, enablePredictor, predictPluginName, libPath);
 }
 
 int OmafAccess_CloseMedia( Handler hdl )
