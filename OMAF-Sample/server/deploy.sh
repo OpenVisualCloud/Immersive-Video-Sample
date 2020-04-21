@@ -15,6 +15,7 @@ cp -r src/player OMAF-Sample/server/src
 cp -r src/utils OMAF-Sample/server/src
 cp -r src/isolib OMAF-Sample/server/src
 cp -r src/trace OMAF-Sample/server/src
+cp -r src/plugins OMAF-Sample/server/src
 cp -r src/VROmafPacking OMAF-Sample/server/src
 cp -r src/OmafDashAccess OMAF-Sample/server/src
 cp -r src/CMakeLists.txt OMAF-Sample/server/src
