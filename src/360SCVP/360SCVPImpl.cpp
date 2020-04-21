@@ -327,6 +327,12 @@ int32_t TstitchStream::init(param_360SCVP* pParamStitchStream)
     {
         return ret;
     }
+    if (m_usedType == E_VIEWPORT_ONLY)
+    {
+        // Init the viewport library
+        ret = initViewport(&pParamStitchStream->paramViewPort, pParamStitchStream->paramViewPort.tileNumCol, pParamStitchStream->paramViewPort.tileNumRow);
+        return ret;
+    }
     if (m_usedType == E_STREAM_STITCH_ONLY)
     {
         m_streamStitch.AUD_enable = pParamStitchStream->paramStitchInfo.AUD_enable;
@@ -750,10 +756,9 @@ int TstitchStream::GenerateRwpkInfo(RegionWisePacking *dstRwpk)
     int lowRes_tile_height = m_mergeStreamParam.lowRes.height / m_tileHeightCountOri[1];
     dstRwpk->constituentPicMatching = 0;
 
-    dstRwpk->packedPicWidth = highRes_tile_width * m_tileWidthCountSel[0] + lowRes_tile_width * m_tileHeightCountSel[1];
-    dstRwpk->packedPicHeight = highRes_tile_height * m_tileHeightCountSel[0];
-
     uint8_t highTilesNum = m_tileWidthCountSel[0] * m_tileHeightCountSel[0];
+    dstRwpk->packedPicWidth = highRes_tile_width * m_tileWidthCountSel[0] + lowRes_tile_width * ((dstRwpk->numRegions- highTilesNum) / m_lrTilesInCol);
+    dstRwpk->packedPicHeight = highRes_tile_height * m_tileHeightCountSel[0];
 
     for (uint8_t regionIdx = 0; regionIdx < dstRwpk->numRegions; regionIdx++)
     {
@@ -1156,6 +1161,14 @@ int32_t  TstitchStream::setViewportSEI(OMNIViewPort* pSeiViewport)
     return ret;
 }
 
+int32_t  TstitchStream::getContentCoverage(CCDef* pOutCC)
+{
+    int32_t ret = 0;
+    if (pOutCC == NULL)
+        return -1;
+    ret = genViewport_getContentCoverage(m_pViewport, pOutCC);
+    return ret;
+}
 
 int32_t  TstitchStream::GeneratePPS(param_360SCVP* pParamStitchStream, TileArrangement* pTileArrange)
 {

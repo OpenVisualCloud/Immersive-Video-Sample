@@ -216,6 +216,21 @@ int32_t I360SCVP_ParseRWPK(void* p360SCVPHandle, RegionWisePacking* pRWPK, uint8
     return ret;
 }
 
+// output is the centre and range of Azimuth and Elevation of 3D sphere
+int32_t I360SCVP_getContentCoverage(void* p360SCVPHandle, CCDef* pOutCC)
+{
+    int32_t ret = 0;
+    TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
+    if (!pStitch)
+        return -1;
+
+    if (!pOutCC)
+        return -1;
+
+    ret = pStitch->getContentCoverage(pOutCC);
+        return ret;
+}
+
 int32_t I360SCVP_GetParameter(void* p360SCVPHandle, int32_t paramID, void** pValue)
 {
     int32_t ret = 0;

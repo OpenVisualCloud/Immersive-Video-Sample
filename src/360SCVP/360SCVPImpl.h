@@ -121,6 +121,7 @@ public:
     int32_t  GenerateRwpkInfo(RegionWisePacking *dstRwpk);
     int32_t  EncRWPKSEI(RegionWisePacking* pRWPK, uint8_t *pRWPKBits, uint32_t* pRWPKBitsSize);
     int32_t  DecRWPKSEI(RegionWisePacking* pRWPK, uint8_t *pRWPKBits, uint32_t RWPKBitsSize);
+    int32_t  getContentCoverage(CCDef* pOutCC);
     TileDef* getSelectedTile();
 
 protected:
