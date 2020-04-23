@@ -11,26 +11,34 @@ WORKDIR /home/immersive
 ARG WORKDIR=/home/immersive
 
 # Install denpendency
-RUN yum install -y -q openssl centos-release-scl scl-utils gmp gmp-devel mpfr mpfr-devel libmpc libmpc-devel patch autoconf libtool automake libcurl-devel wget git bzip2 xz sudo -y && \
-    rm -rf /var/cache/yum/* && \
+RUN yum install -y centos-release-scl-rh && \
+    yum install -y wget git bzip2 xz sudo devtoolset-7-gcc* && \
+    wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-12.noarch.rpm && \
+    rpm -Uvh epel-release*rpm && \
+    yum install -y openssl centos-release-scl scl-utils gmp gmp-devel && \
+    yum install -y mpfr mpfr-devel libmpc libmpc-devel patch autoconf && \
+    yum install -y libtool automake libcurl-devel libxml2-devel && \
+    yum install -y libevent-devel.x86_64 openssl-devel bc redhat-lsb && \
+    yum install -y libXrandr libXrandr-devel libXinerama libXinerama-devel && \
+    yum install -y libXcursor libXcursor-devel libXi libXi-devel glm-devel && \
+    yum install -y mesa-libGL mesa-libGL-devel mesa-libGLU && \
+    yum install -y mesa-libGLU-devel mesa-libGLES-devel mesa-libEGL-devel && \
+    yum install -y SDL2 SDL2-devel libcurl4-openssl-dev libglfw3 && \
+    yum install -y libXv-devel glfw glfw-devel xz-devel lzma -y && \
+    yum install -y uuid.x86_64 uuid-devel.x86_64 popt-devel.x86_64 -y && \
+    yum install -y numactl.x86_64 numactl-devel.x86_64 numactl-libs.x86_64 -y && \
+    rm -rf /var/cache/yum/* && rm -rf * && \
     if [ -n "${http_proxy}" ]; then \
     git config --global http.proxy ${http_proxy} && \
     git config --global https.proxy ${https_proxy} ; \
     fi
 
-RUN yum install -y yum install devtoolset-7-gcc* libevent-devel.x86_64 openssl-devel bc numactl redhat-lsb libXrandr libXrandr-devel libXinerama libXinerama-devel libXcursor libXcursor-devel libXi libXi-devel mesa-libGL mesa-libGL-devel mesa-libGLU mesa-libGLU-devel mesa-libGLES-devel glm-devel mesa-libEGL-devel SDL2 SDL2-devel libcurl4-openssl-dev libglfw3 libglfw3-dev -y && \
-    rm -rf /var/cache/yum/*
-
-Run yum -y install ruby rubygems ruby-devel rpm-build && \
+RUN yum -y install ruby rubygems ruby-devel rpm-build && \
     if [ -n "${http_proxy}" ]; then \
     gem install -p ${http_proxy} fpm ; \
     else \
     gem install fpm ; \
-    fi && \
-    wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-12.noarch.rpm && \
-    rpm -Uvh epel-release*rpm && \
-    yum install glfw glfw-devel xz-devel lzma -y && \
-    rm -rf /var/cache/yum/* && rm -rf *
+    fi
 
 # Build zlib
 ARG ZLIB_VER=1.2.11
@@ -66,17 +74,6 @@ RUN  wget -O - ${YASM_REPO} | tar xz && \
      make install && \
      cd ${WORKDIR} && rm -rf ./*
 
-# Build libxml2
-ARG LIBXML2_VER=2.9.6
-ARG LIBXML2_REPO=http://www.xmlsoft.org/sources/libxml2-${LIBXML2_VER}.tar.gz
-RUN wget -O - ${LIBXML2_REPO} | tar xz && \
-    cd libxml2-${LIBXML2_VER} && \
-    source /opt/rh/devtoolset-7/enable && \
-    ././configure --with-python=no && \
-    make -j $(nproc) && \
-    make install && \
-    cd ${WORKDIR} && rm -rf ./*
-
 # Build CURL
 ARG CURL_VER=7.66.0
 ARG CURL_REPO=https://curl.haxx.se/download/curl-${CURL_VER}.tar.xz
@@ -88,8 +85,6 @@ RUN wget ${CURL_REPO} && \
     ./configure --with-darwinssl && \
     make -j $(nproc) && \
     make install && \
-    cd /usr/local/include/libxml2 && \
-    mv libxml ../ && \
     cd ${WORKDIR} && rm -rf ./*
 
 # Install BOOST
@@ -160,6 +155,23 @@ RUN git clone https://github.com/intel/libva.git && \
     make -j $(nproc) && \
     make install && \
     cd ${WORKDIR} && rm -rf *
+
+# Install lttng
+RUN source /opt/rh/devtoolset-7/enable && \
+    wget -c https://lttng.org/files/urcu/userspace-rcu-latest-0.11.tar.bz2 && \
+    tar -xjf userspace-rcu-latest-0.11.tar.bz2 && \
+    cd userspace-rcu-0.11.* && \
+    ./configure && \
+    make -j $(nproc) && \
+    make install && ldconfig && \
+    cd ../ && rm -rf userspace-rcu-0.11.* && \
+    wget -c http://lttng.org/files/lttng-ust/lttng-ust-latest-2.11.tar.bz2 && \
+    tar -xjf lttng-ust-latest-2.11.tar.bz2 && \
+    cd lttng-ust-2.11.* && \
+    ./configure --disable-man-pages && \
+    make -j $(nproc) && \
+    make install && ldconfig && \
+    cd ../ && rm -rf lttng-ust-2.11.*
 
 # Unset proxy if necessary
 RUN if [ -n "${http_proxy}" ]; then \
