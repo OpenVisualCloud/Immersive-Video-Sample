@@ -33,6 +33,7 @@
 #include <math.h>
 #include <iomanip>
 #include <cfloat>
+#include <algorithm>
 #include "360SCVPViewPort.h"
 #include "360SCVPViewportImpl.h"
 #include "360SCVPViewportAPI.h"
@@ -141,7 +142,9 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
             pDownRight++;
         }
 
-        if (pParamGenViewport->m_usageType == E_PARSER_ONENAL)
+        if (pParamGenViewport->m_usageType == E_PARSER_ONENAL
+            || pParamGenViewport->m_usageType == E_VIEWPORT_ONLY
+            || pParamGenViewport->m_usageType == E_MERGE_AND_VIEWPORT)
         {
             viewPortWidth = floor((float)(viewPortWidth) / (float)(cTAppConvCfg->m_srd[0].tilewidth) + 0.499) * cTAppConvCfg->m_srd[0].tilewidth;
             viewPortHeightmax = floor((float)(viewPortHeightmax) / (float)(cTAppConvCfg->m_srd[0].tileheight) + 0.499) * cTAppConvCfg->m_srd[0].tileheight;
@@ -377,19 +380,42 @@ int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile)
     {
         tileNum = tileNum + additionalTilesNum;
     }
-    for (uint32_t col = 0; col < cTAppConvCfg->m_tileNumCol; col++)
+    if (cTAppConvCfg->m_srd[cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow-1].isOccupy == 1)
     {
-        for (uint32_t row = 0; row < cTAppConvCfg->m_tileNumRow; row++)
+        idx = cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow -1;
+        for (uint32_t col = cTAppConvCfg->m_tileNumCol; col > 0 ; col--)
         {
-            if (cTAppConvCfg->m_srd[idx].isOccupy == 1)
+            for (uint32_t row = cTAppConvCfg->m_tileNumRow; row > 0 ; row--)
             {
-                pOutTileTmp->faceId = cTAppConvCfg->m_srd[idx].faceId;
-                pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
-                pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
-                pOutTileTmp->idx = idx;
-                pOutTileTmp++;
+                if (cTAppConvCfg->m_srd[idx].isOccupy == 1)
+                {
+                    pOutTileTmp->faceId = cTAppConvCfg->m_srd[idx].faceId;
+                    pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
+                    pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
+                    pOutTileTmp->idx = idx;
+                    pOutTileTmp++;
+                }
+                idx--;
             }
-            idx++;
+        }
+
+    }
+    else
+    {
+        for (uint32_t col = 0; col < cTAppConvCfg->m_tileNumCol; col++)
+        {
+            for (uint32_t row = 0; row < cTAppConvCfg->m_tileNumRow; row++)
+            {
+                if (cTAppConvCfg->m_srd[idx].isOccupy == 1)
+                {
+                    pOutTileTmp->faceId = cTAppConvCfg->m_srd[idx].faceId;
+                    pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
+                    pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
+                    pOutTileTmp->idx = idx;
+                    pOutTileTmp++;
+                }
+                idx++;
+            }
         }
     }
     return tileNum;
@@ -663,15 +689,6 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     uint32_t opt_idx = m_tileNumRow * m_tileNumCol;
     for (int32_t faceid = 0; faceid < faceNum; faceid++)
     {
-        for (uint32_t i = 0; i < m_tileNumRow; i++)
-        {
-            for (uint32_t j = 0; j < m_tileNumCol; j++)
-            {
-                m_srd[idx].faceId = faceid;
-                m_srd[idx].isOccupy = 0;
-		        idx++;
-            }
-        }
         // select optimization
         float cal_yaw = fYaw + ERP_HORZ_ANGLE / 2;
         float cal_pitch = ERP_VERT_ANGLE / 2 - fPitch;
@@ -722,6 +739,8 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     }
     SPos*pTmpUpLeft = m_pUpLeft;
     SPos*pTmpDownRight = m_pDownRight;
+    pTmpUpLeft->faceIdx = 0;
+    pTmpDownRight->faceIdx = 0;
     pTmpUpLeft->x = centerX - halfVPhorz;
     pTmpDownRight->x = centerX + halfVPhorz;
     pTmpUpLeft->y = centerY - halfVPvert;
@@ -858,24 +877,24 @@ bool TgenViewport::isInside(int32_t x, int32_t y, int32_t width, int32_t height,
         return ret;
 
     if ((x >= pUpLeft->x)
-        && (x <= pDownRight->x)
+        && (x < pDownRight->x)
         && (y >= pUpLeft->y)
-        && (y <= pDownRight->y))
+        && (y < pDownRight->y))
         ret = 1;
     else if ((x + width >= pUpLeft->x)
-        && (x + width <= pDownRight->x)
+        && (x + width < pDownRight->x)
         && (y + height >= pUpLeft->y)
-        && (y + height <= pDownRight->y))
+        && (y + height < pDownRight->y))
         ret = 1;
     else if ((x + width >= pUpLeft->x)
-        && (x + width <= pDownRight->x)
+        && (x + width < pDownRight->x)
         && (y >= pUpLeft->y)
-        && (y <= pDownRight->y))
+        && (y < pDownRight->y))
         ret = 1;
     else if ((x >= pUpLeft->x)
-        && (x <= pDownRight->x)
+        && (x < pDownRight->x)
         && (y + height >= pUpLeft->y)
-        && (y + height <= pDownRight->y))
+        && (y + height < pDownRight->y))
         ret = 1;
 
     //for erp format source, need to judge the boudary
