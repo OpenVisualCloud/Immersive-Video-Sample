@@ -1,6 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.12)
 PROJECT(immersive-media)
 
+IF(NOT DE_FLAG)
+  SET(DE_FLAG false)
+ENDIF()
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
 ENDIF()
@@ -19,17 +22,20 @@ IF(${TARGET} STREQUAL "server")
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/360SCVP)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking)
   ADD_SUBDIRECTORY(360SCVP)
+  IF(${DE_FLAG} STREQUAL "true")
+    ADD_SUBDIRECTORY(distributed_encoder)
+  ENDIF()
   ADD_SUBDIRECTORY(VROmafPacking)
   ADD_CUSTOM_TARGET(ffmpeg ALL
       COMMAND echo "Target ffmpeg"
       VERBATIM
   )
   ADD_CUSTOM_COMMAND(TARGET ffmpeg
-      COMMAND export PKG_CONFIG_PATH=${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/:/usr/local/lib/pkgconfig/:$PKG_CONFIG_PATH && mkdir -p ${FFMPEG_DIR} && cd ${FFMPEG_DIR} && ${CMAKE_CURRENT_SOURCE_DIR}/FFmpeg/configure ${FFMPEG_FLAG} --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/" --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP/" --extra-ldflags="-L${CMAKE_BINARY_DIR}/VROmafPacking/" --extra-ldflags="-L${CMAKE_BINARY_DIR}/360SCVP" && make -j $(nproc)
+      COMMAND export PKG_CONFIG_PATH=${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/main_encoder/:${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/:/usr/local/lib/pkgconfig/:$PKG_CONFIG_PATH && mkdir -p ${FFMPEG_DIR} && cd ${FFMPEG_DIR} && ${CMAKE_CURRENT_SOURCE_DIR}/FFmpeg/configure ${FFMPEG_FLAG} --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/" --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP/" --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/main_encoder/" --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/util/" --extra-ldflags="-L${CMAKE_BINARY_DIR}/VROmafPacking/" --extra-ldflags="-L${CMAKE_BINARY_DIR}/360SCVP/" --extra-ldflags="-L${CMAKE_BINARY_DIR}/distributed_encoder/main_encoder/" && make -j $(nproc)
       COMMENT "Building ffmpeg..."
       VERBATIM
   )
-  ADD_DEPENDENCIES( ffmpeg VROmafPacking )
+  ADD_DEPENDENCIES(ffmpeg VROmafPacking)
 
 ELSEIF(${TARGET} STREQUAL "client")
   SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -z noexecstack -z relro -z now -fstack-protector-strong -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wl,-S -Wall -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 -I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP -g")
@@ -54,11 +60,10 @@ ELSEIF(${TARGET} STREQUAL "client")
       COMMENT "Building player..."
       VERBATIM
   )
-  ADD_DEPENDENCIES( player OmafDashAccess )
+  ADD_DEPENDENCIES(player OmafDashAccess)
 
 ELSE()
 
   MESSAGE(SEND_ERROR "\Set TARGET_BUILD_TYPE : server , client")
 
 ENDIF()
-

@@ -15,15 +15,23 @@ build_server(){
     if [ "${PREBUILD_FLAG}" == "y" ] ; then
         ./prebuild.sh server
     fi
-    sudo cp ../ffmpeg/dependency/*.so /usr/local/lib/
-    sudo cp ../ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
-    sudo cp ../ffmpeg/dependency/*.h /usr/local/include/
-    sudo cp ../ffmpeg/dependency/WorkerServer /root
 
     mkdir -p ../build/server
     cd ../build/server
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
-    cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server ../..
+    if [ "$1" == "oss" ] ; then
+        cd ${EX_PATH}/../distributed_encoder/util
+        thrift -r --gen cpp shared.thrift
+        patch gen-cpp/shared_types.h Implement_operator_RegionInformation.patch
+        cd -
+        cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server -DDE_FLAG=true ../..
+    else
+        sudo cp ../../ffmpeg/dependency/*.so /usr/local/lib/
+        sudo cp ../../ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
+        sudo cp ../../ffmpeg/dependency/*.h /usr/local/include/
+        sudo cp ../../ffmpeg/dependency/WorkerServer /root
+        cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server ../..
+    fi
     make -j $(nproc)
     sudo make install
 }
@@ -47,21 +55,42 @@ build_ci(){
     PREBUILD_FLAG="n"
 
     # Build server
-    ./build_Nokia_omaf.sh
-    ./install_FFmpeg.sh server
-    cd ${EX_PATH}
+    if [ "$1" == "oss" ] ; then
+        ./install_FFmpeg.sh server "oss"
+        cd ${EX_PATH} && build_server "oss"
+        mkdir -p ${EX_PATH}/../ffmpeg/dependency/
+        cp /usr/local/lib/libDistributedEncoder.so ${EX_PATH}/../ffmpeg/dependency/
+        cp /usr/local/lib/libEncoder.so ${EX_PATH}/../ffmpeg/dependency/
+        cp /root/WorkerServer ${EX_PATH}/../ffmpeg/dependency/
+    else
+        ./install_FFmpeg.sh server
+        cd ${EX_PATH} && build_server
+    fi
 
-    build_server
-
-    cd ${EX_PATH} && ./fpm.sh server ${GIT_SHORT_HEAD} && rm -rf ../FFmpeg
+    cd ${EX_PATH}/../build/external && mkdir -p ffmpeg_server_so
+    sudo cp /usr/local/lib/libavcodec.so ffmpeg_server_so/libavcodec.so.58
+    sudo cp /usr/local/lib/libavutil.so ffmpeg_server_so/libavutil.so.56
+    sudo cp /usr/local/lib/libavformat.so ffmpeg_server_so/libavformat.so.58
+    sudo cp /usr/local/lib/libavfilter.so ffmpeg_server_so/libavfilter.so.7
+    sudo cp /usr/local/lib/libswresample.so ffmpeg_server_so/libswresample.so.3
+    sudo cp /usr/local/lib/libpostproc.so ffmpeg_server_so/libpostproc.so.55
+    sudo cp /usr/local/lib/libswscale.so ffmpeg_server_so/libswscale.so.5
+    cd ${EX_PATH} && ./fpm.sh server ${GIT_SHORT_HEAD}
 
     # Build client
     ./install_FFmpeg.sh client
-    cd ${EX_PATH}
+    cd ${EX_PATH} && build_client
 
-    build_client 
-
-    cd ${EX_PATH} && ./fpm.sh client ${GIT_SHORT_HEAD} && rm -rf ../FFmpeg
+    cd ${EX_PATH}/../build/external && mkdir -p ffmpeg_client_so
+    sudo cp ffmpeg_client/libavcodec/libavcodec.so.58 ffmpeg_client_so/libavcodec.so.58
+    sudo cp ffmpeg_client/libavutil/libavutil.so.56 ffmpeg_client_so/libavutil.so.56
+    sudo cp ffmpeg_client/libavformat/libavformat.so.58 ffmpeg_client_so/libavformat.so.58
+    sudo cp ffmpeg_client/libavfilter/libavfilter.so.7 ffmpeg_client_so/libavfilter.so.7
+    sudo cp ffmpeg_client/libavdevice/libavdevice.so.58 ffmpeg_client_so/libavdevice.so.58
+    sudo cp ffmpeg_client/libswscale/libswscale.so.5 ffmpeg_client_so/libswscale.so.5
+    sudo cp ffmpeg_client/libswresample/libswresample.so.3 ffmpeg_client_so/libswresample.so.3
+    sudo cp /usr/local/lib/libpostproc.so.55 ffmpeg_client_so/libpostproc.so.55
+    cd ${EX_PATH} && ./fpm.sh client ${GIT_SHORT_HEAD}
 }
 
 build_test(){
@@ -82,81 +111,164 @@ build_test(){
 
     cd ${EX_PATH}/..
     mkdir -p build/test/360SCVP
-    mkdir -p build/test/distributed_encoder
-    mkdir -p build/test/VROmafPacking
     mkdir -p build/test/OmafDashAccess
+    mkdir -p build/test/VROmafPacking
+    mkdir -p build/test/distributed_encoder
 
     # Compile 360SCVP test
     cd build/test/360SCVP && \
-       g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
-       ../../../360SCVP/test/testI360SCVP.cpp \
-       -D_GLIBCXX_USE_CXX11_ABI=0 && \
-       g++ -L/usr/local/lib testI360SCVP.o \
-       ../googletest/googletest/build/libgtest.a -o \
-       testI360SCVP -I/usr/local/include/ -l360SCVP \
-       -lstdc++ -lpthread -lm -L/usr/local/lib
+        g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
+          ../../../360SCVP/test/testI360SCVP.cpp \
+          -D_GLIBCXX_USE_CXX11_ABI=0 && \
+        g++ -L/usr/local/lib testI360SCVP.o \
+          ../googletest/googletest/build/libgtest.a -o \
+          testI360SCVP -I/usr/local/include/ -l360SCVP \
+          -lstdc++ -lpthread -lm -L/usr/local/lib
 
     # Compile OmafDashAccess test
     cd ../OmafDashAccess && \
-       g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
-         ../../../OmafDashAccess/test/testMediaSource.cpp \
-         -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
-       g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
-         ../../../OmafDashAccess/test/testMPDParser.cpp \
-         -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
-       g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
-         ../../../OmafDashAccess/test/testOmafReader.cpp \
-         -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
-       g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
-         ../../../OmafDashAccess/test/testOmafReaderManager.cpp \
-         -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
-       g++ -L/usr/local/lib testMediaSource.o \
-         ../googletest/googletest/build/libgtest.a -o \
-         testMediaSource -I/usr/local/include/ -lOmafDashAccess \
-         -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib && \
-       g++ -L/usr/local/lib testMPDParser.o \
-         ../googletest/googletest/build/libgtest.a -o \
-         testMPDParser -I/usr/local/include/ -lOmafDashAccess \
-         -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib && \
-       g++ -L/usr/local/lib testOmafReader.o \
-         ../googletest/googletest/build/libgtest.a -o \
-         testOmafReader -I/usr/local/include/ -lOmafDashAccess \
-         -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib && \
-       g++ -L/usr/local/lib testOmafReaderManager.o \
-         ../googletest/googletest/build/libgtest.a -o \
-         testOmafReaderManager -I/usr/local/include/ -lOmafDashAccess\
-         -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib
+        g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
+          ../../../OmafDashAccess/test/testMediaSource.cpp \
+          -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
+        g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
+          ../../../OmafDashAccess/test/testMPDParser.cpp \
+          -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
+        g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
+          ../../../OmafDashAccess/test/testOmafReader.cpp \
+          -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
+        g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
+          ../../../OmafDashAccess/test/testOmafReaderManager.cpp \
+          -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
+        g++ -L/usr/local/lib testMediaSource.o \
+          ../googletest/googletest/build/libgtest.a -o \
+          testMediaSource -I/usr/local/include/ -lOmafDashAccess \
+          -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib && \
+        g++ -L/usr/local/lib testMPDParser.o \
+          ../googletest/googletest/build/libgtest.a -o \
+          testMPDParser -I/usr/local/include/ -lOmafDashAccess \
+          -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib && \
+        g++ -L/usr/local/lib testOmafReader.o \
+          ../googletest/googletest/build/libgtest.a -o \
+          testOmafReader -I/usr/local/include/ -lOmafDashAccess \
+          -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib && \
+        g++ -L/usr/local/lib testOmafReaderManager.o \
+          ../googletest/googletest/build/libgtest.a -o \
+          testOmafReaderManager -I/usr/local/include/ -lOmafDashAccess\
+          -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib
 
     # Compile VROmafPacking test
     cd ../VROmafPacking && \
-       g++ -I../../../google_test -std=c++11 -g -c \
-         ../../../VROmafPacking/test/testHevcNaluParser.cpp \
-         -D_GLIBCXX_USE_CXX11_ABI=0 && \
-       g++ -I../../../google_test -std=c++11 -g -c \
-         ../../../VROmafPacking/test/testVideoStream.cpp \
-         -D_GLIBCXX_USE_CXX11_ABI=0 && \
-       g++ -I../../../google_test -std=c++11 -g -c \
-         ../../../VROmafPacking/test/testExtractorTrack.cpp \
-         -D_GLIBCXX_USE_CXX11_ABI=0 && \
-       g++ -I../../../google_test -std=c++11 -g -c \
-         ../../../VROmafPacking/test/testDefaultSegmentation.cpp \
-         -D_GLIBCXX_USE_CXX11_ABI=0 && \
-       g++ -L/usr/local/lib testHevcNaluParser.o \
-         ../googletest/googletest/build/libgtest.a -o \
-         testHevcNaluParser -I/usr/local/lib -lVROmafPacking \
-         -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib && \
-       g++ -L/usr/local/lib testVideoStream.o \
-         ../googletest/googletest/build/libgtest.a -o \
-         testVideoStream -I/usr/local/lib -lVROmafPacking \
-         -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib && \
-       g++ -L/usr/local/lib testExtractorTrack.o \
-         ../googletest/googletest/build/libgtest.a -o \
-         testExtractorTrack -I/usr/local/lib -lVROmafPacking \
-         -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib && \
-       g++ -L/usr/local/lib testDefaultSegmentation.o \
-         ../googletest/googletest/build/libgtest.a -o \
-         testDefaultSegmentation -I/usr/local/lib -lVROmafPacking \
-         -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib
+        g++ -I../../../google_test -std=c++11 -g -c \
+          ../../../VROmafPacking/test/testHevcNaluParser.cpp \
+          -D_GLIBCXX_USE_CXX11_ABI=0 && \
+        g++ -I../../../google_test -std=c++11 -g -c \
+          ../../../VROmafPacking/test/testVideoStream.cpp \
+          -D_GLIBCXX_USE_CXX11_ABI=0 && \
+        g++ -I../../../google_test -std=c++11 -g -c \
+          ../../../VROmafPacking/test/testExtractorTrack.cpp \
+          -D_GLIBCXX_USE_CXX11_ABI=0 && \
+        g++ -I../../../google_test -std=c++11 -g -c \
+          ../../../VROmafPacking/test/testDefaultSegmentation.cpp \
+          -D_GLIBCXX_USE_CXX11_ABI=0 && \
+        g++ -L/usr/local/lib testHevcNaluParser.o \
+          ../googletest/googletest/build/libgtest.a -o \
+          testHevcNaluParser -I/usr/local/lib -lVROmafPacking \
+          -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib && \
+        g++ -L/usr/local/lib testVideoStream.o \
+          ../googletest/googletest/build/libgtest.a -o \
+          testVideoStream -I/usr/local/lib -lVROmafPacking \
+          -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib && \
+        g++ -L/usr/local/lib testExtractorTrack.o \
+          ../googletest/googletest/build/libgtest.a -o \
+          testExtractorTrack -I/usr/local/lib -lVROmafPacking \
+          -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib && \
+        g++ -L/usr/local/lib testDefaultSegmentation.o \
+          ../googletest/googletest/build/libgtest.a -o \
+          testDefaultSegmentation -I/usr/local/lib -lVROmafPacking \
+          -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib
+
+    if [ "$1" == "oss" ] ; then
+        # Compile distributed_encoder test
+        cd ../distributed_encoder && \
+            g++ -I../../../google_test -std=c++11 \
+              -I../../../distributed_encoder/util/ -g -c \
+              ../../../distributed_encoder/test/testMainEncoder.cpp \
+              -D_GLIBCXX_USE_CXX11_ABI=0 && \
+            g++ -I../../../google_test -std=c++11 \
+              -I../../../distributed_encoder/util/ -g -c \
+              ../../../distributed_encoder/test/testWorkSession.cpp \
+              -D_GLIBCXX_USE_CXX11_ABI=0 && \
+            g++ -I../../../google_test -std=c++11 \
+              -I../../../distributed_encoder/util/ -g -c \
+              ../../../distributed_encoder/test/testDecoder.cpp \
+              -D_GLIBCXX_USE_CXX11_ABI=0 && \
+            g++ -I../../../google_test -std=c++11 \
+              -I../../../distributed_encoder/util/ -g -c \
+              ../../../distributed_encoder/test/testSubEncoder.cpp \
+              -D_GLIBCXX_USE_CXX11_ABI=0 -I/usr/local/include/svt-hevc && \
+            g++ -I../../../google_test -std=c++11 \
+              -I../../../distributed_encoder/util/ -g -c \
+              ../../../distributed_encoder/test/testSubEncoderManager.cpp \
+              -D_GLIBCXX_USE_CXX11_ABI=0 && \
+            g++ -I../../../google_test -std=c++11 \
+              -I../../../distributed_encoder/util/ -g -c \
+              ../../../distributed_encoder/test/testEncoder.cpp \
+              -D_GLIBCXX_USE_CXX11_ABI=0 && \
+            g++ -L/usr/local/lib testMainEncoder.o \
+              ../googletest/googletest/build/libgtest.a -o testMainEncoder \
+              -I/usr/local/include/thrift -I/usr/local/include/svt-hevc \
+              -lDistributedEncoder -lEncoder -lstdc++ -lpthread -lthrift \
+              -lSvtHevcEnc -lopenhevc -lthriftnb -levent -lglog -pthread \
+              -lavdevice -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -lavfilter \
+              -lswscale -lavformat -lavcodec -llzma -lz -lswresample -lavutil \
+              -lva-drm -lva-x11 -lm -lva -lXv -lX11 -lXext -l360SCVP \
+              -L/usr/local/lib && \
+            g++ -L/usr/local/lib testWorkSession.o \
+              ../googletest/googletest/build/libgtest.a -o testWorkSession \
+              -I/usr/local/include/thrift -I/usr/local/include/svt-hevc \
+              -lDistributedEncoder -lEncoder -lstdc++ -lpthread -lthrift \
+              -lSvtHevcEnc -lopenhevc -lthriftnb -levent -lglog -pthread \
+              -lavdevice -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -lavfilter \
+              -lswscale -lavformat -lavcodec -llzma -lz -lswresample -lavutil \
+              -lva-drm -lva-x11 -lm -lva -lXv -lX11 -lXext -l360SCVP \
+              -L/usr/local/lib && \
+            g++ -L/usr/local/lib testDecoder.o \
+              ../googletest/googletest/build/libgtest.a -o testDecoder \
+              -I/usr/local/include/thrift -I/usr/local/include/svt-hevc \
+              -lDistributedEncoder -lEncoder -lstdc++ -lpthread -lthrift \
+              -lSvtHevcEnc -lopenhevc -lthriftnb -levent -lglog -pthread \
+              -lavdevice -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -lavfilter \
+              -lswscale -lavformat -lavcodec -llzma -lz -lswresample -lavutil \
+              -lva-drm -lva-x11 -lm -lva -lXv -lX11 -lXext -l360SCVP \
+              -L/usr/local/lib && \
+            g++ -L/usr/local/lib testSubEncoder.o \
+              ../googletest/googletest/build/libgtest.a -o testSubEncoder \
+              -I/usr/local/include/thrift -I/usr/local/include/svt-hevc \
+              -lDistributedEncoder -lEncoder -lstdc++ -lpthread -lthrift \
+              -lSvtHevcEnc -lopenhevc -lthriftnb -levent -lglog -pthread \
+              -lavdevice -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -lavfilter \
+              -lswscale -lavformat -lavcodec -llzma -lz -lswresample -lavutil \
+              -lva-drm -lva-x11 -lm -lva -lXv -lX11 -lXext -l360SCVP \
+              -L/usr/local/lib && \
+            g++ -L/usr/local/lib testEncoder.o \
+              ../googletest/googletest/build/libgtest.a -o testEncoder \
+              -I/usr/local/include/thrift -I/usr/local/include/svt-hevc \
+              -lDistributedEncoder -lEncoder -lstdc++ -lpthread -lthrift \
+              -lSvtHevcEnc -lopenhevc -lthriftnb -levent -lglog -pthread \
+              -lavdevice -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -lavfilter \
+              -lswscale -lavformat -lavcodec -llzma -lz -lswresample -lavutil \
+              -lva-drm -lva-x11 -lm -lva -lXv -lX11 -lXext -l360SCVP \
+              -L/usr/local/lib && \
+            g++ -L/usr/local/lib testSubEncoderManager.o \
+              ../googletest/googletest/build/libgtest.a -o testSubEncoderManager \
+              -I/usr/local/include/thrift -I/usr/local/include/svt-hevc \
+              -lDistributedEncoder -lEncoder -lstdc++ -lpthread -lthrift \
+              -lSvtHevcEnc -lopenhevc -lthriftnb -levent -lglog -pthread \
+              -lavdevice -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -lavfilter \
+              -lswscale -lavformat -lavcodec -llzma -lz -lswresample -lavutil \
+              -lva-drm -lva-x11 -lm -lva -lXv -lX11 -lXext -l360SCVP \
+              -L/usr/local/lib
+    fi
 }
 
 if [ $# == 2 ] ; then
@@ -183,8 +295,12 @@ elif [ $# == 1 ] ; then
 
     if [ "${TARGET}" == "ci" ] ; then
         build_ci
+    elif [ "${TARGET}" == "ci_oss" ] ; then
+        build_ci "oss"
     elif [ "${TARGET}" == "test" ] ; then
         build_test
+    elif [ "${TARGET}" == "test_oss" ] ; then
+        build_test "oss"
     else
         parameters_usage
     fi

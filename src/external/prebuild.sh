@@ -99,6 +99,8 @@ install_dependencies() {
         ./build_Nokia_omaf.sh
         ./prebuild_player.sh
         ./install_FFmpeg.sh client
+    elif [ $1 == "android" ] ; then
+        ./prebuild_android.sh
     fi
 }
 
