@@ -25,43 +25,44 @@
  */
 
 //!
-//! \file:   OneVideoRegionWisePackingGenerator.h
-//! \brief:  One video region wise packing generator class definition
-//! \detail: Define the operation of one video region wise packing generator.
+//! \file:   HighResPlusFullLowResPacking.h
+//! \brief:  Region wise packing generator class definition for packing of high
+//!          resolution video plus full low resolution video
+//! \detail: Define the operation of region wise packing generator for packing of
+//!          high resolution video plus full low resolution video
 //!
 //! Created on April 30, 2019, 6:04 AM
 //!
 
-#ifndef _ONEVIDEOREGIONWISEPACKINGGENERATOR_H_
-#define _ONEVIDEOREGIONWISEPACKINGGENERATOR_H_
+#ifndef _HIGHRESPLUSFULLLOWRESPACKING_H_
+#define _HIGHRESPLUSFULLLOWRESPACKING_H_
 
-#include "RegionWisePackingGenerator.h"
-
-VCD_NS_BEGIN
+#include "OMAFPackingPluginAPI.h"
 
 //!
-//! \class OneVideoRegionWisePackingGenerator
-//! \brief Define the operation of one video region wise packing generator
+//! \class HighPlusFullLowRegionWisePackingGenerator
+//! \brief Define the operation of region wise packing generator for packing of
+//!        high resolution video plus full low resolution video
 //!
 
-class OneVideoRegionWisePackingGenerator : public RegionWisePackingGenerator
+class HighPlusFullLowRegionWisePackingGenerator : public RegionWisePackingGeneratorBase
 {
 public:
     //!
     //! \brief  Constructor
     //!
-    OneVideoRegionWisePackingGenerator();
+    HighPlusFullLowRegionWisePackingGenerator();
 
     //!
     //! \brief  Destructor
     //!
-    ~OneVideoRegionWisePackingGenerator();
+    ~HighPlusFullLowRegionWisePackingGenerator();
 
     //!
     //! \brief  Initialize the region wise packing generator
     //!
     //! \param  [in] streams
-    //!         pointer to the media streams map set up in OmafPackage
+    //!         pointer to the map of video stream index and info
     //! \param  [in] videoIdxInMedia
     //!         pointer to the index of each video in media streams
     //! \param  [in] tilesNumInViewport
@@ -77,7 +78,7 @@ public:
     //!         ERROR_NONE if success, else failed reason
     //!
     int32_t Initialize(
-        std::map<uint8_t, MediaStream*> *streams,
+        std::map<uint8_t, VideoStreamInfo*> *streams,
         uint8_t *videoIdxInMedia,
         uint8_t tilesNumInViewport,
         TileDef *tilesInViewport,
@@ -132,13 +133,38 @@ public:
     //!
     uint8_t GetTileRowNumInViewport() { return m_tileRowNumInView; };
 
+    //!
+    //! \brief  Get the width of tiles merged picture
+    //!
+    //! \return uint32_t
+    //!         the width of tiles merged picture
+    //!
+    uint32_t GetPackedPicWidth() { return m_packedPicWidth; };
+
+    //!
+    //! \brief  Get the height of tiles merged picture
+    //!
+    //! \return uint32_t
+    //!         the height of tiles merged picture
+    //!
+    uint32_t GetPackedPicHeight() { return m_packedPicHeight; };
+
+    //!
+    //! \brief  Get the tiles arrangement information in tiles
+    //!         merged picture
+    //!
+    //! \return TileArrangement*
+    //!         the pointer to the tiles arrangement information
+    //!
+    TileArrangement* GetMergedTilesArrange() { return m_mergedTilesArrange; };
+
 private:
     //!
-    //! \brief  Get the original tiles arrangement
+    //! \brief  Get the original high resolution tiles arrangement
     //!         in viewport
     //!
     //! \param  [in] tilesNumInViewport
-    //!         the number of tiles in viewport
+    //!         the number of high resolution tiles in viewport
     //! \param  [in] tilesInViewport
     //!         pointer to the tile information of all tiles
     //!         in viewport
@@ -150,7 +176,7 @@ private:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t GetTilesArrangeInViewport(
+    int32_t GetOrigHighResTilesArrange(
         uint8_t tilesNumInViewport,
         TileDef *tilesInViewport,
         int32_t finalViewportWidth,
@@ -165,24 +191,31 @@ private:
     int32_t GenerateMergedTilesArrange();
 
 private:
-    uint8_t                  m_streamIdxInMedia[1]; //!< array for video index in media streams
-    TilesMergeDirectionInRow *m_origTilesInView;    //!< pointer to original high resolution tiles arrangement in viewport
-    uint8_t                  m_tilesNumInViewRow;   //!< the number of high resolution tiles in one row in viewport
-    uint8_t                  m_tileRowNumInView;    //!< the number of high resolution tile rows in viewport
-    uint8_t                  m_origHRTilesInRow;    //!< the number of tiles in one row in high resolution video stream
-    uint8_t                  m_origHRTilesInCol;    //!< the number of tiles in one column in high resolution video stream
-    uint16_t                 m_highTileWidth;       //!< the width of high resolution tile
-    uint16_t                 m_highTileHeight;      //!< the height of high resolution tile
-    //uint8_t                  m_origLRTilesInRow;    //!< the number of tiles in one row in low resolution video stream
-    //uint8_t                  m_origLRTilesInCol;    //!< the number of tiles in one column in low resolution video stream
-    //uint16_t                 m_lowTileWidth;        //!< the width of low resolution tile
-    //uint16_t                 m_lowTileHeight;       //!< the height of low resolution tile
+    std::map<uint8_t, RegionWisePacking*> m_rwpkMap;             //!< map of original region wise packing information of all video streams
+    uint32_t                              m_packedPicWidth;      //!< the width of tiles merged picture
+    uint32_t                              m_packedPicHeight;     //!< the height of tiles merged picture
+    TileArrangement                       *m_mergedTilesArrange; //!< pointer to the tiles arrangement information
+    uint8_t                               m_streamIdxInMedia[2]; //!< array for video index in media streams
+    TilesMergeDirectionInRow              *m_highResTilesInView; //!< pointer to original high resolution tiles arrangement in viewport
+    uint8_t                               m_tilesNumInViewRow;   //!< the number of high resolution tiles in one row in viewport
+    uint8_t                               m_tileRowNumInView;    //!< the number of high resolution tile rows in viewport
+    uint8_t                               m_origHRTilesInRow;    //!< the number of tiles in one row in high resolution video stream
+    uint8_t                               m_origHRTilesInCol;    //!< the number of tiles in one column in high resolution video stream
+    uint16_t                              m_highTileWidth;       //!< the width of high resolution tile
+    uint16_t                              m_highTileHeight;      //!< the height of high resolution tile
+    uint8_t                               m_origLRTilesInRow;    //!< the number of tiles in one row in low resolution video stream
+    uint8_t                               m_origLRTilesInCol;    //!< the number of tiles in one column in low resolution video stream
+    uint16_t                              m_lowTileWidth;        //!< the width of low resolution tile
+    uint16_t                              m_lowTileHeight;       //!< the height of low resolution tile
 
-    uint8_t                  m_hrTilesInRow;        //!< the number of high resolution tiles in one row in tiles merged picture
-    uint8_t                  m_hrTilesInCol;        //!< the number of high resolution tiles in one column in tiles merged picture
-    //uint8_t                  m_lrTilesInRow;        //!< the number of low resolution tiles in one row in tiles merged picture
-    //uint8_t                  m_lrTilesInCol;        //!< the number of low resolution tiles in one column in tiles merged picture
+    uint8_t                               m_hrTilesInRow;        //!< the number of high resolution tiles in one row in tiles merged picture
+    uint8_t                               m_hrTilesInCol;        //!< the number of high resolution tiles in one column in tiles merged picture
+    uint8_t                               m_lrTilesInRow;        //!< the number of low resolution tiles in one row in tiles merged picture
+    uint8_t                               m_lrTilesInCol;        //!< the number of low resolution tiles in one column in tiles merged picture
 };
 
-VCD_NS_END;
-#endif /* _ONEVIDEOREGIONWISEPACKING_H_ */
+extern "C" RegionWisePackingGeneratorBase* Create();
+
+extern "C" void Destroy(RegionWisePackingGeneratorBase* rwpkGen);
+
+#endif /* _HIGHRESPLUSFULLLOWRESPACKING_H_ */

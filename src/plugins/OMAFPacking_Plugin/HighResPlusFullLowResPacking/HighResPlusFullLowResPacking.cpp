@@ -25,21 +25,23 @@
  */
 
 //!
-//! \file:   TwoResRegionWisePackingGenerator.cpp
-//! \brief:  Two resolutions region wise packing generator class implementation
+//! \file:   HighResPlusFullLowResPacking.cpp
+//! \brief:  Region wise packing generator class implementation for packing of
+//!          high resolution video plus full low resolution video
 //!
 //! Created on April 30, 2019, 6:04 AM
 //!
 
 #include <math.h>
+#include <string.h>
 
-#include "TwoResRegionWisePackingGenerator.h"
-#include "VideoStream.h"
+#include "../../../utils/error.h"
+#include "HighResPlusFullLowResPacking.h"
 
-VCD_NS_BEGIN
-
-TwoResRegionWisePackingGenerator::TwoResRegionWisePackingGenerator()
+HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGenerator()
 {
+    m_packedPicWidth  = 0;
+    m_packedPicHeight = 0;
     m_streamIdxInMedia[0] = 0;
     m_streamIdxInMedia[1] = 0;
     m_tilesNumInViewRow   = 0;
@@ -68,7 +70,7 @@ TwoResRegionWisePackingGenerator::TwoResRegionWisePackingGenerator()
         return;
 }
 
-TwoResRegionWisePackingGenerator::~TwoResRegionWisePackingGenerator()
+HighPlusFullLowRegionWisePackingGenerator::~HighPlusFullLowRegionWisePackingGenerator()
 {
     if (m_highResTilesInView)
     {
@@ -80,7 +82,7 @@ TwoResRegionWisePackingGenerator::~TwoResRegionWisePackingGenerator()
             for (itTile = tileRow->begin(); itTile != tileRow->end();)
             {
                 SingleTile *tile = *itTile;
-                DELETE_MEMORY(tile);
+                SAFE_DELETE_MEMORY(tile);
                 itTile = tileRow->erase(itTile);
             }
 
@@ -96,15 +98,15 @@ TwoResRegionWisePackingGenerator::~TwoResRegionWisePackingGenerator()
 
     if (m_mergedTilesArrange)
     {
-        DELETE_ARRAY(m_mergedTilesArrange->tileRowHeight);
-        DELETE_ARRAY(m_mergedTilesArrange->tileColWidth);
+        SAFE_DELETE_ARRAY(m_mergedTilesArrange->tileRowHeight);
+        SAFE_DELETE_ARRAY(m_mergedTilesArrange->tileColWidth);
 
         delete m_mergedTilesArrange;
         m_mergedTilesArrange = NULL;
     }
 }
 
-int32_t TwoResRegionWisePackingGenerator::GetOrigHighResTilesArrange(
+int32_t HighPlusFullLowRegionWisePackingGenerator::GetOrigHighResTilesArrange(
     uint8_t tilesNumInViewport,
     TileDef *tilesInViewport,
     int32_t finalViewportWidth,
@@ -136,7 +138,7 @@ int32_t TwoResRegionWisePackingGenerator::GetOrigHighResTilesArrange(
             SingleTile *tile = new SingleTile;
             if (!tile)
             {
-                DELETE_MEMORY(currRow);
+                SAFE_DELETE_MEMORY(currRow);
                 return OMAF_ERROR_NULL_PTR;
             }
 
@@ -146,68 +148,7 @@ int32_t TwoResRegionWisePackingGenerator::GetOrigHighResTilesArrange(
         }
         m_highResTilesInView->tilesArrangeInRow.push_back(currRow);
     }
-/*
-    TileDef *prevTileDef = NULL;
-    TilesInRow *currRow  = NULL;
-    for (uint8_t tileIdx = 0; tileIdx < tilesNumInViewport; tileIdx++)
-    {
-        TileDef *tileDef = &(tilesInViewport[tileIdx]);
-        if (tileIdx == 0)
-        {
-            SingleTile *tile = new SingleTile;
-            if (!tile)
-                return OMAF_ERROR_NULL_PTR;
 
-            tile->streamIdxInMedia = m_streamIdxInMedia[0];
-
-            TilesInRow *tilesRow = new TilesInRow;
-            if (!tilesRow)
-                return OMAF_ERROR_NULL_PTR;
-
-            tilesRow->push_back(tile);
-
-            prevTileDef = tileDef;
-            currRow     = tilesRow;
-        }
-        else
-        {
-            if ((tileDef->y) == (prevTileDef->y))
-            {
-                SingleTile *tile = new SingleTile;
-                if (!tile)
-                    return OMAF_ERROR_NULL_PTR;
-
-                tile->streamIdxInMedia = m_streamIdxInMedia[0];
-
-                currRow->push_back(tile);
-                prevTileDef = tileDef;
-            }
-            else
-            {
-                m_highResTilesInView->tilesArrangeInRow.push_back(currRow);
-
-                SingleTile *tile = new SingleTile;
-                if (!tile)
-                    return OMAF_ERROR_NULL_PTR;
-
-                tile->streamIdxInMedia = m_streamIdxInMedia[0];
-
-                TilesInRow *tilesRow = new TilesInRow;
-                if (!tilesRow)
-                    return OMAF_ERROR_NULL_PTR;
-
-                tilesRow->push_back(tile);
-
-                prevTileDef = tileDef;
-                currRow     = tilesRow;
-            }
-        }
-        if ((tileIdx + 1) == tilesNumInViewport)
-        {
-            m_highResTilesInView->tilesArrangeInRow.push_back(currRow);
-        }
-    }
-*/
     return ERROR_NONE;
 }
 
@@ -229,7 +170,7 @@ static uint32_t lcm(uint32_t a, uint32_t b)
     return temp ? (a / temp * b) : 0;
 }
 
-int32_t TwoResRegionWisePackingGenerator::GenerateMergedTilesArrange()
+int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateMergedTilesArrange()
 {
     uint16_t highResTilesNum = m_tilesNumInViewRow * m_tileRowNumInView;
     uint16_t lowResTilesNum  = m_origLRTilesInRow * m_origLRTilesInCol;
@@ -286,8 +227,8 @@ int32_t TwoResRegionWisePackingGenerator::GenerateMergedTilesArrange()
     return ERROR_NONE;
 }
 
-int32_t TwoResRegionWisePackingGenerator::Initialize(
-    std::map<uint8_t, MediaStream*> *streams,
+int32_t HighPlusFullLowRegionWisePackingGenerator::Initialize(
+    std::map<uint8_t, VideoStreamInfo*> *streams,
     uint8_t *videoIdxInMedia,
     uint8_t tilesNumInViewport,
     TileDef *tilesInViewport,
@@ -298,15 +239,15 @@ int32_t TwoResRegionWisePackingGenerator::Initialize(
         return OMAF_ERROR_NULL_PTR;
 
     uint8_t videoStreamIdx = 0;
-    std::map<uint8_t, MediaStream*>::iterator it;
+    std::map<uint8_t, VideoStreamInfo*>::iterator it;
     it = streams->find(videoIdxInMedia[0]);
     if (it == streams->end())
         return OMAF_ERROR_STREAM_NOT_FOUND;
 
-    VideoStream *vs1 = (VideoStream*)(it->second);
-    m_origHRTilesInRow = vs1->GetTileInRow();
-    m_origHRTilesInCol = vs1->GetTileInCol();
-    RegionWisePacking *rwpk1 = vs1->GetSrcRwpk();
+    VideoStreamInfo *vs1 = (VideoStreamInfo*)(it->second);
+    m_origHRTilesInRow = vs1->tilesNumInRow;
+    m_origHRTilesInCol = vs1->tilesNumInCol;
+    RegionWisePacking *rwpk1 = vs1->srcRWPK;
     m_rwpkMap.insert(std::make_pair(videoStreamIdx, rwpk1));
     RectangularRegionWisePacking *rectRwpk = &(rwpk1->rectRegionPacking[0]);
     m_highTileWidth = rectRwpk->projRegWidth;
@@ -314,10 +255,10 @@ int32_t TwoResRegionWisePackingGenerator::Initialize(
 
     videoStreamIdx++;
     it = streams->find(videoIdxInMedia[1]);
-    VideoStream *vs2 = (VideoStream*)(it->second);
-    m_origLRTilesInRow = vs2->GetTileInRow();
-    m_origLRTilesInCol = vs2->GetTileInCol();
-    RegionWisePacking *rwpk2 = vs2->GetSrcRwpk();
+    VideoStreamInfo *vs2 = (VideoStreamInfo*)(it->second);
+    m_origLRTilesInRow = vs2->tilesNumInRow;
+    m_origLRTilesInCol = vs2->tilesNumInCol;
+    RegionWisePacking *rwpk2 = vs2->srcRWPK;
     m_rwpkMap.insert(std::make_pair(videoStreamIdx, rwpk2));
     rectRwpk = &(rwpk2->rectRegionPacking[0]);
     m_lowTileWidth = rectRwpk->projRegWidth;
@@ -350,7 +291,7 @@ int32_t TwoResRegionWisePackingGenerator::Initialize(
     return ERROR_NONE;
 }
 
-int32_t TwoResRegionWisePackingGenerator::GenerateTilesMergeDirection(
+int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateTilesMergeDirection(
     uint8_t viewportIdx,
     TilesMergeDirectionInCol *tilesMergeDir)
 {
@@ -375,7 +316,6 @@ int32_t TwoResRegionWisePackingGenerator::GenerateTilesMergeDirection(
         }
         else
         {
-            //highTilesIdx[i] = highTilesIdx[i-1] + m_origHRTilesInRow - (m_tilesNumInViewRow - 1);
             highTilesIdx[i] = (i / m_tilesNumInViewRow) * m_origHRTilesInRow + highTilesIdx[0];
             if (highTilesIdx[i] >= m_origHRTilesInRow * m_origHRTilesInCol)
             {
@@ -392,7 +332,7 @@ int32_t TwoResRegionWisePackingGenerator::GenerateTilesMergeDirection(
         TilesInCol *tileCol = new TilesInCol;
         if (!tileCol)
         {
-            DELETE_ARRAY(highTilesIdx);
+            SAFE_DELETE_ARRAY(highTilesIdx);
             return OMAF_ERROR_NULL_PTR;
         }
 
@@ -403,8 +343,8 @@ int32_t TwoResRegionWisePackingGenerator::GenerateTilesMergeDirection(
                 SingleTile *tile = new SingleTile;
                 if (!tile)
                 {
-                    DELETE_MEMORY(tileCol);
-                    DELETE_ARRAY(highTilesIdx);
+                    SAFE_DELETE_MEMORY(tileCol);
+                    SAFE_DELETE_ARRAY(highTilesIdx);
                     return OMAF_ERROR_NULL_PTR;
                 }
 
@@ -429,8 +369,8 @@ int32_t TwoResRegionWisePackingGenerator::GenerateTilesMergeDirection(
                 SingleTile *tile = new SingleTile;
                 if (!tile)
                 {
-                    DELETE_MEMORY(tileCol);
-                    DELETE_ARRAY(highTilesIdx);
+                    SAFE_DELETE_MEMORY(tileCol);
+                    SAFE_DELETE_ARRAY(highTilesIdx);
                     return OMAF_ERROR_NULL_PTR;
                 }
 
@@ -451,12 +391,12 @@ int32_t TwoResRegionWisePackingGenerator::GenerateTilesMergeDirection(
         }
     }
 
-    DELETE_ARRAY(highTilesIdx);
+    SAFE_DELETE_ARRAY(highTilesIdx);
 
     return ERROR_NONE;
 }
 
-int32_t TwoResRegionWisePackingGenerator::GenerateDstRwpk(
+int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateDstRwpk(
     uint8_t viewportIdx,
     RegionWisePacking *dstRwpk)
 {
@@ -507,14 +447,14 @@ int32_t TwoResRegionWisePackingGenerator::GenerateDstRwpk(
     it = m_rwpkMap.find(0);
     if (it == m_rwpkMap.end())
     {
-        DELETE_ARRAY(highTilesIdx);
+        SAFE_DELETE_ARRAY(highTilesIdx);
         return OMAF_ERROR_STREAM_NOT_FOUND;
     }
     RegionWisePacking *rwpkHighRes = it->second;
     it = m_rwpkMap.find(1);
     if (it == m_rwpkMap.end())
     {
-        DELETE_ARRAY(highTilesIdx);
+        SAFE_DELETE_ARRAY(highTilesIdx);
         return OMAF_ERROR_STREAM_NOT_FOUND;
     }
     RegionWisePacking *rwpkLowRes = it->second;
@@ -574,9 +514,19 @@ int32_t TwoResRegionWisePackingGenerator::GenerateDstRwpk(
         }
     }
 
-    DELETE_ARRAY(highTilesIdx);
+    SAFE_DELETE_ARRAY(highTilesIdx);
 
     return ERROR_NONE;
 }
 
-VCD_NS_END
+extern "C" RegionWisePackingGeneratorBase* Create()
+{
+    HighPlusFullLowRegionWisePackingGenerator *rwpkGen = new HighPlusFullLowRegionWisePackingGenerator;
+    return (RegionWisePackingGeneratorBase*)(rwpkGen);
+}
+
+extern "C" void Destroy(RegionWisePackingGeneratorBase* rwpkGen)
+{
+    delete rwpkGen;
+    rwpkGen = NULL;
+}

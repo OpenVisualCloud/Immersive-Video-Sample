@@ -234,7 +234,8 @@ public:
         memset(m_initInfo, 0, sizeof(InitialInfo));
         m_initInfo->bsNumVideo = 2;
         m_initInfo->bsNumAudio = 0;
-        m_initInfo->tilesMergingType = TilesMergingType::TwoResTilesMerging;
+        m_initInfo->pluginPath = "/usr/local/lib";
+        m_initInfo->pluginName = "HighResPlusFullLowResPacking";
         m_initInfo->bsBuffers = new BSBuffer[2];
         if (!m_initInfo->bsBuffers)
         {

@@ -79,31 +79,28 @@ int32_t ExtractorTrackManager::Initialize(std::map<uint8_t, MediaStream*> *media
 
     m_streams = mediaStreams;
 
-    if (m_initInfo->tilesMergingType == OnlyOneVideo)
+    if (m_initInfo->pluginName)
     {
-        m_extractorTrackGen = new OneVideoExtractorTrackGenerator(m_initInfo, m_streams);
-
+        LOG(INFO) << "Appoint plugin  " << (m_initInfo->pluginName) << " for extractor track generation !" << std::endl;
+        m_extractorTrackGen = new ExtractorTrackGenerator(m_initInfo, m_streams);
         if (!m_extractorTrackGen)
+        {
+            LOG(ERROR) << "Failed to create extractor track generator !" << std::endl;
             return OMAF_ERROR_NULL_PTR;
+        }
+
+        int32_t ret = m_extractorTrackGen->Initialize();
+        if (ret)
+            return ret;
+
+        ret = AddExtractorTracks();
+        if (ret)
+            return ret;
     }
-    else if (m_initInfo->tilesMergingType == TwoResTilesMerging)
+    else
     {
-        m_extractorTrackGen = new TwoResExtractorTrackGenerator(m_initInfo, m_streams);
-
-        if (!m_extractorTrackGen)
-            return OMAF_ERROR_NULL_PTR;
-
-    } else {
-        return OMAF_ERROR_UNDEFINED_OPERATION; //after adding other tiles merging strategy than TwoResTilesMerging, change here.
+        LOG(INFO) << "No plugin appointed, so extractor track will not be generated !" << std::endl;
     }
-
-    int32_t ret = m_extractorTrackGen->Initialize();
-    if (ret)
-        return ret;
-
-    ret = AddExtractorTracks();
-    if (ret)
-        return ret;
 
     return ERROR_NONE;
 }

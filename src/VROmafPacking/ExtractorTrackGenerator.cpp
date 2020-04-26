@@ -25,21 +25,22 @@
  */
 
 //!
-//! \file:   OneVideoExtractorTrackGenerator.cpp
-//! \brief:  One video extractor track generator class implementation
+//! \file:   ExtractorTrackGenerator.cpp
+//! \brief:  Extractor track generator class implementation
 //!
 //! Created on April 30, 2019, 6:04 AM
 //!
 
-#include "OneVideoExtractorTrackGenerator.h"
+#include <set>
+
+#include "ExtractorTrackGenerator.h"
 #include "VideoStream.h"
-#include "OneVideoRegionWisePackingGenerator.h"
 
 #include "../trace/Bandwidth_tp.h"
 
 VCD_NS_BEGIN
 
-OneVideoExtractorTrackGenerator::~OneVideoExtractorTrackGenerator()
+ExtractorTrackGenerator::~ExtractorTrackGenerator()
 {
     DELETE_ARRAY(m_videoIdxInMedia);
     DELETE_ARRAY(m_tilesInViewport);
@@ -48,7 +49,7 @@ OneVideoExtractorTrackGenerator::~OneVideoExtractorTrackGenerator()
     DELETE_MEMORY(m_newPPSNalu);
 }
 
-uint16_t OneVideoExtractorTrackGenerator::CalculateViewportNum()
+uint16_t ExtractorTrackGenerator::CalculateViewportNum()
 {
     if (!m_videoIdxInMedia)
         return 0;
@@ -65,12 +66,12 @@ uint16_t OneVideoExtractorTrackGenerator::CalculateViewportNum()
     return viewportNum;
 }
 
-int32_t OneVideoExtractorTrackGenerator::FillDstRegionWisePacking(
+int32_t ExtractorTrackGenerator::FillDstRegionWisePacking(
     uint8_t viewportIdx,
     RegionWisePacking *dstRwpk)
 {
-    dstRwpk->projPicWidth  = m_videoWidth;
-    dstRwpk->projPicHeight = m_videoHeight;
+    dstRwpk->projPicWidth  = m_origResWidth;
+    dstRwpk->projPicHeight = m_origResHeight;
 
     int32_t ret = m_rwpkGen->GenerateDstRwpk(viewportIdx, dstRwpk);
     if (ret)
@@ -82,7 +83,7 @@ int32_t OneVideoExtractorTrackGenerator::FillDstRegionWisePacking(
     return ERROR_NONE;
 }
 
-int32_t OneVideoExtractorTrackGenerator::FillTilesMergeDirection(
+int32_t ExtractorTrackGenerator::FillTilesMergeDirection(
     uint8_t viewportIdx,
     TilesMergeDirectionInCol *tilesMergeDir)
 {
@@ -96,22 +97,22 @@ int32_t OneVideoExtractorTrackGenerator::FillTilesMergeDirection(
     return ERROR_NONE;
 }
 
-int32_t OneVideoExtractorTrackGenerator::FillDstContentCoverage(
+int32_t ExtractorTrackGenerator::FillDstContentCoverage(
     uint8_t viewportIdx,
     ContentCoverage *dstCovi)
 {
     uint8_t tilesNumInViewRow = m_rwpkGen->GetTilesNumInViewportRow();
     uint8_t tileRowNumInView  = m_rwpkGen->GetTileRowNumInViewport();
 
-    uint32_t projRegLeft = (viewportIdx % m_tileInRow) * m_tileWidth;
-    uint32_t projRegTop  = (viewportIdx / m_tileInRow) * m_tileHeight;
+    uint32_t projRegLeft = (viewportIdx % m_origTileInRow) * m_origTileWidth;
+    uint32_t projRegTop  = (viewportIdx / m_origTileInRow) * m_origTileHeight;
     uint32_t projRegWidth  = 0;
     uint32_t projRegHeight = 0;
 
-    uint8_t viewIdxInRow = viewportIdx % m_tileInRow;
-    uint8_t viewIdxInCol = viewportIdx / m_tileInRow;
+    uint8_t viewIdxInRow = viewportIdx % m_origTileInRow;
+    uint8_t viewIdxInCol = viewportIdx / m_origTileInRow;
 
-    if ((m_tileInRow - viewIdxInRow) >= tilesNumInViewRow)
+    if ((m_origTileInRow - viewIdxInRow) >= tilesNumInViewRow)
     {
         for (uint8_t i = viewportIdx; i < (viewportIdx + tilesNumInViewRow); i++)
         {
@@ -120,35 +121,35 @@ int32_t OneVideoExtractorTrackGenerator::FillDstContentCoverage(
     }
     else
     {
-        for (uint8_t i = viewportIdx; i < (viewportIdx + (m_tileInRow - viewIdxInRow)); i++)
+        for (uint8_t i = viewportIdx; i < (viewportIdx + (m_origTileInRow - viewIdxInRow)); i++)
         {
             projRegWidth += m_tilesInfo[i].tileWidth;
         }
-        for (uint8_t i = (viewIdxInCol*m_tileInRow); i < (viewIdxInCol*m_tileInRow + (tilesNumInViewRow-(m_tileInRow-viewIdxInRow))); i++)
+        for (uint8_t i = (viewIdxInCol*m_origTileInRow); i < (viewIdxInCol*m_origTileInRow + (tilesNumInViewRow-(m_origTileInRow-viewIdxInRow))); i++)
         {
             projRegWidth += m_tilesInfo[i].tileWidth;
         }
     }
 
-    if ((m_tileInCol - viewIdxInCol) >= tileRowNumInView)
+    if ((m_origTileInCol - viewIdxInCol) >= tileRowNumInView)
     {
-        for (uint8_t i = viewportIdx; i < (viewportIdx+m_tileInRow*tileRowNumInView); )
+        for (uint8_t i = viewportIdx; i < (viewportIdx+m_origTileInRow*tileRowNumInView); )
         {
             projRegHeight += m_tilesInfo[i].tileHeight;
-            i += m_tileInRow;
+            i += m_origTileInRow;
         }
     }
     else
     {
-        for (uint8_t i = viewportIdx; i < (viewportIdx+(m_tileInCol-viewIdxInCol)*m_tileInRow);)
+        for (uint8_t i = viewportIdx; i < (viewportIdx+(m_origTileInCol-viewIdxInCol)*m_origTileInRow);)
         {
             projRegHeight += m_tilesInfo[i].tileHeight;
-            i += m_tileInRow;
+            i += m_origTileInRow;
         }
-        for (uint8_t i = viewIdxInRow; i < (viewIdxInRow+(tileRowNumInView-(m_tileInCol-viewIdxInCol))*m_tileInRow); )
+        for (uint8_t i = viewIdxInRow; i < (viewIdxInRow+(tileRowNumInView-(m_origTileInCol-viewIdxInCol))*m_origTileInRow); )
         {
             projRegHeight += m_tilesInfo[i].tileHeight;
-            i += m_tileInRow;
+            i += m_origTileInRow;
         }
     }
 
@@ -172,27 +173,23 @@ int32_t OneVideoExtractorTrackGenerator::FillDstContentCoverage(
     SphereRegion *sphereRegion    = &(dstCovi->sphereRegions[0]);
     memset(sphereRegion, 0, sizeof(SphereRegion));
     sphereRegion->viewIdc         = 0;
-    sphereRegion->centreAzimuth   = (int32_t)((((m_videoWidth / 2) - (float)(projRegLeft + projRegWidth / 2)) * 360 * 65536) / m_videoWidth);
-    sphereRegion->centreElevation = (int32_t)((((m_videoHeight / 2) - (float)(projRegTop + projRegHeight / 2)) * 180 * 65536) / m_videoHeight);
+    sphereRegion->centreAzimuth   = (int32_t)((((m_origResWidth / 2) - (float)(projRegLeft + projRegWidth / 2)) * 360 * 65536) / m_origResWidth);
+    sphereRegion->centreElevation = (int32_t)((((m_origResHeight / 2) - (float)(projRegTop + projRegHeight / 2)) * 180 * 65536) / m_origResHeight);
     sphereRegion->centreTilt      = 0;
-    sphereRegion->azimuthRange    = (uint32_t)((projRegWidth * 360.f * 65536) / m_videoWidth);
-    sphereRegion->elevationRange  = (uint32_t)((projRegHeight * 180.f * 65536) / m_videoHeight);
+    sphereRegion->azimuthRange    = (uint32_t)((projRegWidth * 360.f * 65536) / m_origResWidth);
+    sphereRegion->elevationRange  = (uint32_t)((projRegHeight * 180.f * 65536) / m_origResHeight);
     sphereRegion->interpolate     = 0;
 
     return ERROR_NONE;
 }
 
-int32_t OneVideoExtractorTrackGenerator::CheckAndFillInitInfo()
+int32_t ExtractorTrackGenerator::CheckAndFillInitInfo()
 {
     if (!m_initInfo)
         return OMAF_ERROR_NULL_PTR;
 
-    if (m_initInfo->bsNumVideo != 1)
-        return OMAF_ERROR_VIDEO_NUM;
-
     uint8_t actualVideoNum = 0;
     uint8_t totalStreamNum = m_initInfo->bsNumVideo + m_initInfo->bsNumAudio;
-    uint8_t vsIdx = 0;
     m_videoIdxInMedia = new uint8_t[totalStreamNum];
     if (!m_videoIdxInMedia)
         return OMAF_ERROR_NULL_PTR;
@@ -202,8 +199,6 @@ int32_t OneVideoExtractorTrackGenerator::CheckAndFillInitInfo()
         BSBuffer *bs = &(m_initInfo->bsBuffers[streamIdx]);
         if (bs->mediaType == VIDEOTYPE)
         {
-            m_videoIdxInMedia[vsIdx] = streamIdx;
-            vsIdx++;
             actualVideoNum++;
         }
     }
@@ -211,43 +206,77 @@ int32_t OneVideoExtractorTrackGenerator::CheckAndFillInitInfo()
     if (actualVideoNum != m_initInfo->bsNumVideo)
         return OMAF_ERROR_VIDEO_NUM;
 
+    std::set<uint64_t> bitRateRanking;
 
     std::map<uint8_t, MediaStream*>::iterator it;
-    it = m_streams->find(m_videoIdxInMedia[0]);
+    for (it = m_streams->begin(); it != m_streams->end(); it++)
+    {
+        MediaStream *stream = it->second;
+        if (stream->GetMediaType() == VIDEOTYPE)
+        {
+            VideoStream *vs = (VideoStream*)stream;
+            uint64_t bitRate = vs->GetBitRate();
+            bitRateRanking.insert(bitRate);
+        }
+    }
+
+    std::set<uint64_t>::reverse_iterator rateIter = bitRateRanking.rbegin();
+    uint8_t vsIdx = 0;
+    for ( ; rateIter != bitRateRanking.rend(); rateIter++)
+    {
+        uint64_t bitRate = *rateIter;
+        printf("bitRate is %ld \n", bitRate);
+        for (it = m_streams->begin(); it != m_streams->end(); it++)
+        {
+            MediaStream *stream = it->second;
+            if (stream->GetMediaType() == VIDEOTYPE)
+            {
+                VideoStream *vs = (VideoStream*)stream;
+                uint64_t videoBitRate = vs->GetBitRate();
+                if (videoBitRate == bitRate)
+                {
+                    m_videoIdxInMedia[vsIdx] = it->first; //rank video index from largest bitrate to smallest bitrate
+                    //printf("m_videoIdxInMedia[%d] is %d \n", vsIdx, m_videoIdxInMedia[vsIdx]);
+                    break;
+                }
+            }
+        }
+        vsIdx++;
+    }
+
+    uint8_t mainVSId = m_videoIdxInMedia[0];
+    it = m_streams->find(mainVSId);
     if (it == m_streams->end())
         return OMAF_ERROR_STREAM_NOT_FOUND;
 
-    VideoStream *vs1 = (VideoStream*)(it->second);
-    uint16_t width1 = vs1->GetSrcWidth();
-    uint16_t height1 = vs1->GetSrcHeight();
+    VideoStream *mainVS = (VideoStream*)(it->second);
+    m_origResWidth = mainVS->GetSrcWidth();
+    m_origResHeight = mainVS->GetSrcHeight();
+    m_origTileInRow = mainVS->GetTileInRow();
+    m_origTileInCol = mainVS->GetTileInCol();
+    m_tilesInfo = mainVS->GetAllTilesInfo();
+    m_origTileWidth = m_tilesInfo[0].tileWidth;
+    m_origTileHeight = m_tilesInfo[0].tileHeight;
+    m_projType = (VCD::OMAF::ProjectionFormat)(mainVS->GetProjType());
 
-    (m_initInfo->viewportInfo)->inWidth    = width1;
-    (m_initInfo->viewportInfo)->inHeight   = height1;
-    (m_initInfo->viewportInfo)->tileInRow  = vs1->GetTileInRow();
-    (m_initInfo->viewportInfo)->tileInCol  = vs1->GetTileInCol();
+    (m_initInfo->viewportInfo)->inWidth    = m_origResWidth;
+    (m_initInfo->viewportInfo)->inHeight   = m_origResHeight;
+    (m_initInfo->viewportInfo)->tileInRow  = m_origTileInRow;
+    (m_initInfo->viewportInfo)->tileInCol  = m_origTileInCol;
     (m_initInfo->viewportInfo)->outGeoType = 2; //viewport
-    (m_initInfo->viewportInfo)->inGeoType  = vs1->GetProjType();
-
-    m_videoWidth  = width1;
-    m_videoHeight = height1;
-    m_tileInRow   = vs1->GetTileInRow();
-    m_tileInCol   = vs1->GetTileInCol();
-    m_tilesInfo   = vs1->GetAllTilesInfo();
-    m_tileWidth   = m_tilesInfo[0].tileWidth;
-    m_tileHeight  = m_tilesInfo[0].tileHeight;
-    m_projType    = (VCD::OMAF::ProjectionFormat)(vs1->GetProjType());
+    (m_initInfo->viewportInfo)->inGeoType  = mainVS->GetProjType();
 
     if ((m_initInfo->segmentationInfo)->extractorTracksPerSegThread == 0)
     {
-        if ((m_tileInRow * m_tileInCol) % 4 == 0)
+        if ((m_origTileInRow * m_origTileInCol) % 4 == 0)
         {
             (m_initInfo->segmentationInfo)->extractorTracksPerSegThread = 4;
         }
-        else if ((m_tileInRow * m_tileInCol) % 3 == 0)
+        else if ((m_origTileInRow * m_origTileInCol) % 3 == 0)
         {
             (m_initInfo->segmentationInfo)->extractorTracksPerSegThread = 3;
         }
-        else if ((m_tileInRow * m_tileInCol) % 2 == 0)
+        else if ((m_origTileInRow * m_origTileInCol) % 2 == 0)
         {
             (m_initInfo->segmentationInfo)->extractorTracksPerSegThread = 2;
         }
@@ -260,7 +289,7 @@ int32_t OneVideoExtractorTrackGenerator::CheckAndFillInitInfo()
     return ERROR_NONE;
 }
 
-int32_t OneVideoExtractorTrackGenerator::Initialize()
+int32_t ExtractorTrackGenerator::Initialize()
 {
     if (!m_initInfo)
         return OMAF_ERROR_NULL_PTR;
@@ -346,7 +375,6 @@ int32_t OneVideoExtractorTrackGenerator::Initialize()
     m_360scvpParam->paramViewPort.tileNumRow     = (m_initInfo->viewportInfo)->tileInCol;
     m_360scvpParam->paramViewPort.tileNumCol     = (m_initInfo->viewportInfo)->tileInRow;
     m_360scvpParam->paramViewPort.usageType      = E_PARSER_ONENAL;
-
     ret = I360SCVP_process(m_360scvpParam, m_360scvpHandle);
     if (ret)
         return OMAF_ERROR_SCVP_PROCESS_FAILED;
@@ -361,23 +389,27 @@ int32_t OneVideoExtractorTrackGenerator::Initialize()
     m_finalViewportHeight = paramViewportOutput.dstHeightAlignTile;
 
     //trace
-    uint16_t tileWidth = (vs->GetSrcWidth()) / (vs->GetTileInRow());
-    uint16_t tileHeight = (vs->GetSrcHeight()) / (vs->GetTileInCol());
-    int32_t  selectedTileCols = paramViewportOutput.dstWidthAlignTile / (int32_t)(tileWidth);
-    int32_t  selectedTileRows = paramViewportOutput.dstHeightAlignTile / (int32_t)(tileHeight);
+    uint16_t highResTileWidth = (vs->GetSrcWidth()) / (vs->GetTileInRow());
+    uint16_t highResTileHeight = (vs->GetSrcHeight()) / (vs->GetTileInCol());
+    int32_t  selectedTileCols = paramViewportOutput.dstWidthAlignTile / (int32_t)(highResTileWidth);
+    int32_t  selectedTileRows = paramViewportOutput.dstHeightAlignTile / (int32_t)(highResTileHeight);
     tracepoint(bandwidth_tp_provider, tiles_selection_redundancy,
                 paramViewportOutput.dstWidthNet, paramViewportOutput.dstHeightNet,
                 paramViewportOutput.dstWidthAlignTile, paramViewportOutput.dstHeightAlignTile,
                 selectedTileRows, selectedTileCols);
 
+    LOG(INFO) << "Calculated Viewport has width " << m_finalViewportWidth << " and height " << m_finalViewportHeight << " ! " << std::endl;
+
     if (!m_tilesNumInViewport || m_tilesNumInViewport > 1024)
         return OMAF_ERROR_SCVP_INCORRECT_RESULT;
 
-    m_rwpkGen = new OneVideoRegionWisePackingGenerator();
+    m_rwpkGen = new RegionWisePackingGenerator();
     if (!m_rwpkGen)
         return OMAF_ERROR_NULL_PTR;
 
-    ret = m_rwpkGen->Initialize(m_streams, m_videoIdxInMedia,
+    ret = m_rwpkGen->Initialize(
+         m_initInfo->pluginPath, m_initInfo->pluginName,
+         m_streams, m_videoIdxInMedia,
          m_tilesNumInViewport, m_tilesInViewport,
          m_finalViewportWidth, m_finalViewportHeight);
     if (ret)
@@ -386,7 +418,9 @@ int32_t OneVideoExtractorTrackGenerator::Initialize()
     return ERROR_NONE;
 }
 
-int32_t OneVideoExtractorTrackGenerator::GenerateExtractorTracks(std::map<uint8_t, ExtractorTrack*>& extractorTrackMap, std::map<uint8_t, MediaStream*> *streams)
+int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
+    std::map<uint8_t, ExtractorTrack*>& extractorTrackMap,
+    std::map<uint8_t, MediaStream*> *streams)
 {
     if (!streams)
         return OMAF_ERROR_NULL_PTR;
@@ -445,24 +479,44 @@ int32_t OneVideoExtractorTrackGenerator::GenerateExtractorTracks(std::map<uint8_
     if (ret)
         return ret;
 
+    std::list<PicResolution> picResolution;
+    std::map<uint8_t, MediaStream*>::iterator itStr;
+    uint8_t videoNum = m_initInfo->bsNumVideo;
+    for (uint8_t vsIdx = 0; vsIdx < videoNum; vsIdx++)
+    {
+        itStr = m_streams->find(m_videoIdxInMedia[vsIdx]);
+        if (itStr == m_streams->end())
+            return OMAF_ERROR_STREAM_NOT_FOUND;
+
+        VideoStream *vs = (VideoStream*)(itStr->second);
+
+        PicResolution resolution = { vs->GetSrcWidth(), vs->GetSrcHeight() };
+        //printf("one video has res %d x %d \n", resolution.width, resolution.height);
+        picResolution.push_back(resolution);
+    }
+
     std::map<uint8_t, ExtractorTrack*>::iterator it;
     for (it = extractorTrackMap.begin(); it != extractorTrackMap.end(); it++)
     {
         ExtractorTrack *extractorTrack = it->second;
+
         extractorTrack->SetNalu(m_origVPSNalu, extractorTrack->GetVPS());
         extractorTrack->SetNalu(m_newSPSNalu, extractorTrack->GetSPS());
         extractorTrack->SetNalu(m_newPPSNalu, extractorTrack->GetPPS());
 
-        PicResolution highRes = { m_videoWidth, m_videoHeight };
-
         std::list<PicResolution>* picResList = extractorTrack->GetPicRes();
-        picResList->push_back(highRes);
+        std::list<PicResolution>::iterator itRes;
+        for (itRes = picResolution.begin(); itRes != picResolution.end(); itRes++)
+        {
+            PicResolution picRes = *itRes;
+            picResList->push_back(picRes);
+        }
     }
 
     return ERROR_NONE;
 }
 
-int32_t OneVideoExtractorTrackGenerator::GenerateNewSPS()
+int32_t ExtractorTrackGenerator::GenerateNewSPS()
 {
     if (!m_packedPicWidth || !m_packedPicHeight)
         return OMAF_ERROR_BAD_PARAM;
@@ -498,7 +552,7 @@ int32_t OneVideoExtractorTrackGenerator::GenerateNewSPS()
     return ERROR_NONE;
 }
 
-int32_t OneVideoExtractorTrackGenerator::GenerateNewPPS()
+int32_t ExtractorTrackGenerator::GenerateNewPPS()
 {
     TileArrangement *tileArray = m_rwpkGen->GetMergedTilesArrange();
     if (!tileArray)

@@ -100,5 +100,7 @@
 #define OMAF_INVALID_ITEM_ID                     -94
 #define OMAF_UNSUPPORTED_DASH_CODECS_TYPE        -95
 #define OMAF_INVALID_PROPERTY_INDEX              -96
-
+#define OMAF_INVALID_PLUGIN_PARAM                -97
+#define OMAF_ERROR_DLOPEN                        -98
+#define OMAF_ERROR_DLSYM                         -99
 #endif /* ERROR_H */

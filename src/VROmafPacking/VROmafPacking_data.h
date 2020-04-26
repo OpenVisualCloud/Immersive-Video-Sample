@@ -120,11 +120,11 @@ typedef struct ViewportInformation
 //! \brief: define the tiles merging type, like two resolutions
 //!         tiles merging type
 //
-typedef enum
-{
-    OnlyOneVideo       = 0,
-    TwoResTilesMerging = 1
-}TilesMergingType;
+//typedef enum
+//{
+//    OnlyOneVideo       = 0,
+//    TwoResTilesMerging = 1
+//}TilesMergingType;
 
 //!
 //! \struct: SegmentationInfo
@@ -161,7 +161,9 @@ typedef struct InitialInfo
 {
     uint8_t                 bsNumVideo; //mandatory
     uint8_t                 bsNumAudio; //mandatory
-    TilesMergingType        tilesMergingType; //mandatory
+    //TilesMergingType        tilesMergingType; //mandatory
+    const char              *pluginPath; //needed if extractor track will be generated
+    const char              *pluginName; //needed if extractor track will be generated
     BSBuffer                *bsBuffers; //mandatory
 
     ViewportInformation     *viewportInfo; //mandatory

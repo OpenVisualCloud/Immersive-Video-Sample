@@ -26,8 +26,9 @@
 
 //!
 //! \file:   ExtractorTrackGenerator.h
-//! \brief:  Extractor track generator base class definition
-//! \detail: Define the basic operation of extractor track generator.
+//! \brief:  Extractor track generator class definition
+//! \detail: Define the operation of extractor track generator for various
+//!          input video streams scenarios
 //!
 //! Created on April 30, 2019, 6:04 AM
 //!
@@ -40,12 +41,14 @@
 #include "MediaStream.h"
 #include "ExtractorTrack.h"
 #include "RegionWisePackingGenerator.h"
+#include "../utils/OmafStructure.h"
 
 VCD_NS_BEGIN
 
 //!
 //! \class ExtractorTrackGenerator
-//! \brief Define the basic operation of extractor track generator
+//! \brief Define the operation of extractor track generator
+//!        for various input video streams scenarios
 //!
 
 class ExtractorTrackGenerator
@@ -62,6 +65,27 @@ public:
         m_rwpkGen     = NULL;
         m_newSPSNalu  = NULL;
         m_newPPSNalu  = NULL;
+        m_videoIdxInMedia = NULL;
+        m_360scvpParam    = NULL;
+        m_360scvpHandle   = NULL;
+        m_tilesInViewport = NULL;
+        m_viewInfo        = NULL;
+        m_tilesNumInViewport  = 0;
+        m_finalViewportWidth  = 0;
+        m_finalViewportHeight = 0;
+        m_origResWidth    = 0;
+        m_origResHeight   = 0;
+        m_origTileInRow     = 0;
+        m_origTileInCol     = 0;
+        m_origTileWidth     = 0;
+        m_origTileHeight    = 0;
+        m_tilesInfo       = NULL;
+        m_projType        = VCD::OMAF::ProjectionFormat::PF_ERP;
+        m_packedPicWidth  = 0;
+        m_packedPicHeight = 0;
+        m_origVPSNalu     = NULL;
+        m_origSPSNalu     = NULL;
+        m_origPPSNalu     = NULL;
     };
 
     //!
@@ -80,20 +104,42 @@ public:
         m_rwpkGen     = NULL;
         m_newSPSNalu  = NULL;
         m_newPPSNalu  = NULL;
+        m_videoIdxInMedia = NULL;
+        m_360scvpParam    = NULL;
+        m_360scvpHandle   = NULL;
+        m_tilesInViewport = NULL;
+        m_viewInfo        = NULL;
+        m_tilesNumInViewport  = 0;
+        m_finalViewportWidth  = 0;
+        m_finalViewportHeight = 0;
+        m_origResWidth    = 0;
+        m_origResHeight   = 0;
+        m_origTileInRow     = 0;
+        m_origTileInCol     = 0;
+        m_origTileWidth     = 0;
+        m_origTileHeight    = 0;
+        m_tilesInfo       = NULL;
+        m_projType        = VCD::OMAF::ProjectionFormat::PF_ERP;
+        m_packedPicWidth  = 0;
+        m_packedPicHeight = 0;
+        m_origVPSNalu     = NULL;
+        m_origSPSNalu     = NULL;
+        m_origPPSNalu     = NULL;
     };
 
     //!
     //! \brief  Destructor
     //!
-    virtual ~ExtractorTrackGenerator() {};
+    ~ExtractorTrackGenerator();
 
     //!
     //! \brief  Initialize the extractor track generator
+    //!         for various input video streams scenarios
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    virtual int32_t Initialize() = 0;
+    int32_t Initialize();
 
     //!
     //! \brief  Generate all extractor tracks
@@ -107,7 +153,9 @@ public:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    virtual int32_t GenerateExtractorTracks(std::map<uint8_t, ExtractorTrack*>& extractorTrackMap, std::map<uint8_t, MediaStream*> *streams) = 0;
+    int32_t GenerateExtractorTracks(
+        std::map<uint8_t, ExtractorTrack*>& extractorTrackMap,
+        std::map<uint8_t, MediaStream*> *streams);
 
     //!
     //! \brief  Get the new SPS nalu for tiles merged bitstream
@@ -133,7 +181,7 @@ private:
     //! \return uint16_t
     //!         the total viewport number
     //!
-    virtual uint16_t CalculateViewportNum() = 0;
+    uint16_t CalculateViewportNum();
 
     //!
     //! \brief  Fill the region wise packing information
@@ -144,12 +192,12 @@ private:
     //! \param  [in] dstRwpk
     //!         pointer to the region wise packing information for the
     //!         specified viewport generated according to srcRwpk and
-    //!         detailed tiles merging strategy
+    //!         tiles merging strategy
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    virtual int32_t FillDstRegionWisePacking(uint8_t viewportIdx, RegionWisePacking *dstRwpk) = 0;
+    int32_t FillDstRegionWisePacking(uint8_t viewportIdx, RegionWisePacking *dstRwpk);
 
     //!
     //! \brief  Fill the tiles merging direction information
@@ -157,17 +205,17 @@ private:
     //!
     //! \param  [in] viewportIdx
     //!         the index of the specified viewport
-    //! \param  [out] tilesMergeDir
-    //!         pointer to the tiles merging direction information for the
-    //!         specified viewport generated according to the detailed
+    //! \param  [in] tilesMergeDir
+    //!         pointer to the tiles merging direction information
+    //!         for the specified viewport generated according to
     //!         tiles merging strategy
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    virtual int32_t FillTilesMergeDirection(
+    int32_t FillTilesMergeDirection(
         uint8_t viewportIdx,
-        TilesMergeDirectionInCol *tilesMergeDir) = 0;
+        TilesMergeDirectionInCol *tilesMergeDir);
 
     //!
     //! \brief  Fill the content coverage information
@@ -178,48 +226,68 @@ private:
     //! \param  [in] dstCovi
     //!         pointer to the content coverage information for the
     //!         specified viewport generated according to srcCovi and
-    //!         detailed tiles merging strategy
+    //!         tiles merging strategy
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    virtual int32_t FillDstContentCoverage(uint8_t viewportIdx, ContentCoverage *dstCovi) = 0;
+    int32_t FillDstContentCoverage(uint8_t viewportIdx, ContentCoverage *dstCovi);
 
     //!
     //! \brief  Check the validation of initial information
-    //!         input by library interface, like whether the
-    //!         TilesMergingType is correct compared to actual
-    //!         streams information, meanwhile fill the lacked
+    //!         input by library interface, meanwhile fill the lacked
     //!         information according to actual streams information
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    virtual int32_t CheckAndFillInitInfo() = 0;
+    int32_t CheckAndFillInitInfo();
 
     //!
-    //! \brief  Generate the new SPS nalu for tiles merged bitstream
+    //! \brief  Generate the new SPS for tiles merged bitstream
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    virtual int32_t GenerateNewSPS() = 0;
+    int32_t GenerateNewSPS();
 
     //!
-    //! \brief  Generate the new PPS nalu for tiles merged bitstream
+    //! \brief  Generate the new PPS for tiles merged bitstream
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    virtual int32_t GenerateNewPPS() = 0;
+    int32_t GenerateNewPPS();
 
-protected:
+private:
     InitialInfo                     *m_initInfo;   //!< initial information input by library interface
     std::map<uint8_t, MediaStream*> *m_streams;    //!< media streams map set up in OmafPackage
     uint16_t                        m_viewportNum; //!< viewport number calculated according to initial information
     RegionWisePackingGenerator      *m_rwpkGen;    //!< pointer to region wise packing generator
     Nalu                            *m_newSPSNalu; //!< pointer to the new SPS nalu
     Nalu                            *m_newPPSNalu; //!< pointer to the new PPS nalu
+    uint8_t                         *m_videoIdxInMedia;   //!< pointer to index of video streams in media streams
+    param_360SCVP                   *m_360scvpParam;      //!< 360SCVP library initial parameter
+    void                            *m_360scvpHandle;     //!< 360SCVP library handle
+    TileDef                         *m_tilesInViewport;   //!< the list of tiles inside the viewport
+    Param_ViewPortInfo              *m_viewInfo;          //!< pointer to the viewport information for 360SCVP library
+    int32_t                         m_tilesNumInViewport; //!< tiles number in viewport
+    int32_t                         m_finalViewportWidth;  //!< the final viewport width calculated by 360SCVP library
+    int32_t                         m_finalViewportHeight; //!< the final viewport height calculated by 360SCVP library
+
+    uint16_t                        m_origResWidth;       //!< frame width of high resolution video stream
+    uint16_t                        m_origResHeight;      //!< frame height of high resolution video stream
+    uint8_t                         m_origTileInRow;        //!< the number of high resolution tiles in one row in original picture
+    uint8_t                         m_origTileInCol;        //!< the number of high resolution tiles in one column in original picture
+    uint16_t                        m_origTileWidth;        //!< the width of high resolution tile
+    uint16_t                        m_origTileHeight;       //!< the height of high resolution tile
+    TileInfo                        *m_tilesInfo;         //!< pointer to tile information of all tiles in high resolution video stream
+    VCD::OMAF::ProjectionFormat     m_projType;           //!< the projection type
+    uint32_t                        m_packedPicWidth;     //!< the width of tiles merged picture
+    uint32_t                        m_packedPicHeight;    //!< the height of tiles merged picture
+    Nalu                            *m_origVPSNalu;       //!< the pointer to original VPS nalu of high resolution video stream
+    Nalu                            *m_origSPSNalu;       //!< the pointer to original SPS nalu of high resolution video stream
+    Nalu                            *m_origPPSNalu;       //!< the pointer to original PPS nalu of high resolution video stream
 };
 
 VCD_NS_END;

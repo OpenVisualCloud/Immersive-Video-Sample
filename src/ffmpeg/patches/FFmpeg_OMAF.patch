@@ -4037,7 +4037,7 @@ new file mode 100644
 index 0000000..0a66efa
 --- /dev/null
 +++ b/FFmpeg/libavformat/omaf_packing_enc.c
-@@ -0,0 +1,427 @@
+@@ -0,0 +1,431 @@
 +/*
 + * Intel tile Dash muxer
 + *
@@ -4097,6 +4097,8 @@ index 0000000..0a66efa
 +    float          viewport_fov_ver;
 +    int            window_size;
 +    int            extra_window_size;
++    const char     *pluginPath;
++    const char     *pluginName;
 +    int            need_buffered_frames;
 +    uint16_t       extractors_per_thread;
 +    int64_t        seg_duration;
@@ -4148,13 +4150,14 @@ index 0000000..0a66efa
 +        }
 +    }
 +
++    initInfo->pluginName = "SingleVideoPacking";
 +    if (s->nb_streams == 1)
 +    {
-+        initInfo->tilesMergingType = OnlyOneVideo;
++        initInfo->pluginName = "SingleVideoPacking";
 +    }
 +    else if (s->nb_streams == 2)
 +    {
-+        initInfo->tilesMergingType = TwoResTilesMerging;
++        initInfo->pluginName = c->pluginName;
 +    }
 +    else
 +    {
@@ -4176,7 +4179,6 @@ index 0000000..0a66efa
 +        return AVERROR(ENOMEM);
 +    }
 +    memset(initInfo->viewportInfo, 0, sizeof(ViewportInformation));
-+    printf("viewport_w %d, viewport_h %d \n", c->viewport_w, c->viewport_h);
 +    initInfo->viewportInfo->viewportWidth = c->viewport_w;
 +    initInfo->viewportInfo->viewportHeight = c->viewport_h;
 +    initInfo->viewportInfo->viewportPitch = c->viewport_pitch;
@@ -4438,6 +4440,8 @@ index 0000000..0a66efa
 +    { "out_name", "name prefix for all dash output files", OFFSET(out_name), AV_OPT_TYPE_STRING, {.str = "dash-stream"}, 0, 0, E },
 +    { "need_buffered_frames", "needed buffered frames number before packing starts", OFFSET(need_buffered_frames), AV_OPT_TYPE_INT, { .i64 = 15 }, 0, INT_MAX, E },
 +    { "extractors_per_thread", "extractor tracks per segmentation thread", OFFSET(extractors_per_thread), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, INT_MAX, E },
++    { "plugin_path", "OMAF Packing plugin path", OFFSET(pluginPath), AV_OPT_TYPE_STRING, {.str = "/usr/local/lib"}, 0, 0, E },
++    { "plugin_name", "OMAF Packing plugin name", OFFSET(pluginName), AV_OPT_TYPE_STRING, {.str = "HighResPlusFullLowResPacking"}, 0, 0, E },
 +    { NULL },
 +};
 +
