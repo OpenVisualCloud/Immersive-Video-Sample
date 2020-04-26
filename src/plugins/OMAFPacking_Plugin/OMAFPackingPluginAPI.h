@@ -25,54 +25,91 @@
  */
 
 //!
-//! \file:   RegionWisePackingGenerator.h
-//! \brief:  Region wise packing generator wrapper class definition
-//! \detail: Define the basic operation of region wise packing generator.
+//! \file:  OMAFPackingPluginAPI.h
+//! \brief: VR OMAF packing plugin interfaces
 //!
 //! Created on April 30, 2019, 6:04 AM
 //!
 
-#ifndef _REGIONWISEPACKINGGENERATOR_H_
-#define _REGIONWISEPACKINGGENERATOR_H_
+#ifndef _OMAFPACKINGPLUGINAPI_H_
+#define _OMAFPACKINGPLUGINAPI_H_
 
 #include <list>
 #include <map>
+#include <iostream>
 
-#include "OmafPackingCommon.h"
-#include "VROmafPacking_data.h"
-#include "definitions.h"
-#include "MediaStream.h"
-#include "OMAFPackingPluginAPI.h"
-
-VCD_NS_BEGIN
+#include "360SCVPAPI.h"
+#include "error.h"
 
 //!
-//! \class RegionWisePackingGenerator
-//! \brief Define the basic operation of region wise packing generator
+//! \struct: SingleTile
+//! \brief:  define tile information for tiles merging
+//!
+typedef struct SingleTile
+{
+    uint8_t  streamIdxInMedia; //the index of video stream in all media streams
+    uint8_t  origTileIdx;      //the index of tile in original video frame
+    uint16_t dstCTUIndex;      //the index of first CTU of tile in merged video frame
+}SingleTile;
+
+using TilesInRow = std::list<SingleTile*>;
+using TilesInCol = std::list<SingleTile*>;
+
+//!
+//! \struct: TilesMergeDirectionInRow
+//! \brief:  define tiles merging direction information
+//!          constructed in tile row
+//!
+typedef struct TilesMergeDirectionInRow
+{
+    std::list<TilesInRow*> tilesArrangeInRow;
+}TilesMergeDirectionInRow;
+
+//!
+//! \struct: TilesMergeDirectionInCol
+//! \brief:  define tiles merging direction information
+//!          constructed in tile column
+//!
+typedef struct TilesMergeDirectionInCol
+{
+    std::list<TilesInCol*> tilesArrangeInCol;
+}TilesMergeDirectionInCol;
+
+//!
+//! \struct: VideoStreamInfo
+//! \brief:  define tiles split information and region
+//!          wise packing information for video stream
+//!
+typedef struct VideoStreamInfo
+{
+    uint8_t           tilesNumInRow;
+    uint8_t           tilesNumInCol;
+    RegionWisePacking *srcRWPK;
+}VideoStreamInfo;
+
+//!
+//! \class RegionWisePackingGeneratorBase
+//! \brief Define the interface class for region wise packing generator plugin
 //!
 
-class RegionWisePackingGenerator
+class RegionWisePackingGeneratorBase
 {
 public:
     //!
     //! \brief  Constructor
     //!
-    RegionWisePackingGenerator();
+    RegionWisePackingGeneratorBase() {};
 
     //!
     //! \brief  Destructor
     //!
-    ~RegionWisePackingGenerator();
+    virtual ~RegionWisePackingGeneratorBase() {};
 
     //!
     //! \brief  Initialize the region wise packing generator
     //!
-    //! \param  [in] rwpkGenPluginPath
-    //!         pointer to the OMAF packing plugin path
-    //! \param  [in] rwpkGenPluginName
-    //!         pointer to the OMAF packing plugin name
     //! \param  [in] streams
-    //!         pointer to the media streams map set up in OmafPackage
+    //!         pointer to the map of video stream index and info
     //! \param  [in] videoIdxInMedia
     //!         pointer to the index of each video in media streams
     //! \param  [in] tilesNumInViewport
@@ -87,15 +124,13 @@ public:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t Initialize(
-        const char *rwpkGenPluginPath,
-        const char *rwpkGenPluginName,
-        std::map<uint8_t, MediaStream*> *streams,
+    virtual int32_t Initialize(
+        std::map<uint8_t, VideoStreamInfo*> *streams,
         uint8_t *videoIdxInMedia,
         uint8_t tilesNumInViewport,
         TileDef *tilesInViewport,
         int32_t finalViewportWidth,
-        int32_t finalViewportHeight);
+        int32_t finalViewportHeight) = 0;
 
     //!
     //! \brief  Generate the region wise packing information for
@@ -110,9 +145,9 @@ public:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t GenerateDstRwpk(
+    virtual int32_t GenerateDstRwpk(
         uint8_t viewportIdx,
-        RegionWisePacking *dstRwpk);
+        RegionWisePacking *dstRwpk) = 0;
 
     //!
     //! \brief  Generate the tiles merging direction information for
@@ -127,9 +162,9 @@ public:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t GenerateTilesMergeDirection(
+    virtual int32_t GenerateTilesMergeDirection(
         uint8_t viewportIdx,
-        TilesMergeDirectionInCol *tilesMergeDir);
+        TilesMergeDirectionInCol *tilesMergeDir) = 0;
 
     //!
     //! \brief  Get the number of tiles in one row in viewport
@@ -137,7 +172,7 @@ public:
     //! \return uint8_t
     //!         the number of tiles in one row in viewport
     //!
-    uint8_t GetTilesNumInViewportRow();
+    virtual uint8_t GetTilesNumInViewportRow() = 0;
 
     //!
     //! \brief  Get the number of tile rows in viewport
@@ -145,7 +180,7 @@ public:
     //! \return uint8_t
     //!         the number of tile rows in viewport
     //!
-    uint8_t GetTileRowNumInViewport();
+    virtual uint8_t GetTileRowNumInViewport() = 0;
 
     //!
     //! \brief  Get the width of tiles merged picture
@@ -153,7 +188,7 @@ public:
     //! \return uint32_t
     //!         the width of tiles merged picture
     //!
-    uint32_t GetPackedPicWidth();
+    virtual uint32_t GetPackedPicWidth() = 0;
 
     //!
     //! \brief  Get the height of tiles merged picture
@@ -161,7 +196,7 @@ public:
     //! \return uint32_t
     //!         the height of tiles merged picture
     //!
-    uint32_t GetPackedPicHeight();
+    virtual uint32_t GetPackedPicHeight() = 0;
 
     //!
     //! \brief  Get the tiles arrangement information in tiles
@@ -170,12 +205,26 @@ public:
     //! \return TileArrangement*
     //!         the pointer to the tiles arrangement information
     //!
-    TileArrangement* GetMergedTilesArrange();
+    virtual TileArrangement* GetMergedTilesArrange() = 0;
 
 protected:
-    void                                    *m_pluginHdl;          //!< pointer to OMAF packing plugin handle
-    RegionWisePackingGeneratorBase          *m_rwpkGen;            //!< pointer to detailed RWPK generator class instance corresponding to selected plugin
 };
 
-VCD_NS_END;
-#endif /* _REGIONWISEPACKINGGENERATOR_H_ */
+typedef RegionWisePackingGeneratorBase* CreateRWPKGenerator();
+typedef void DestroyRWPKGenerator(RegionWisePackingGeneratorBase*);
+
+#define SAFE_DELETE_MEMORY(x) \
+    if (x)               \
+    {                    \
+        delete x;        \
+        x = NULL;        \
+    }
+
+#define SAFE_DELETE_ARRAY(x)  \
+    if (x)               \
+    {                    \
+        delete[] x;      \
+        x = NULL;        \
+    }
+
+#endif /* _OMAFPACKINGPLUGINAPI_H_ */

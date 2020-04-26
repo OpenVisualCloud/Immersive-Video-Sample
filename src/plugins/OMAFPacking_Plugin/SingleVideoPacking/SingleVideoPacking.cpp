@@ -25,21 +25,23 @@
  */
 
 //!
-//! \file:   OneVideoRegionWisePackingGenerator.cpp
-//! \brief:  One video region wise packing generator class implementation
+//! \file:   SingleVideoPacking.cpp
+//! \brief:  Single video region wise packing generator class implementation
 //!
 //! Created on April 30, 2019, 6:04 AM
 //!
 
 #include <math.h>
+#include <string.h>
 
-#include "OneVideoRegionWisePackingGenerator.h"
-#include "VideoStream.h"
+#include "../../../utils/error.h"
+#include "SingleVideoPacking.h"
 
-VCD_NS_BEGIN
-
-OneVideoRegionWisePackingGenerator::OneVideoRegionWisePackingGenerator()
+SingleVideoRegionWisePackingGenerator::SingleVideoRegionWisePackingGenerator()
 {
+
+    m_packedPicWidth  = 0;
+    m_packedPicHeight = 0;
     m_streamIdxInMedia[0] = 0;
     m_tilesNumInViewRow   = 0;
     m_tileRowNumInView    = 0;
@@ -61,7 +63,7 @@ OneVideoRegionWisePackingGenerator::OneVideoRegionWisePackingGenerator()
         return;
 }
 
-OneVideoRegionWisePackingGenerator::~OneVideoRegionWisePackingGenerator()
+SingleVideoRegionWisePackingGenerator::~SingleVideoRegionWisePackingGenerator()
 {
     if (m_origTilesInView)
     {
@@ -73,7 +75,7 @@ OneVideoRegionWisePackingGenerator::~OneVideoRegionWisePackingGenerator()
             for (itTile = tileRow->begin(); itTile != tileRow->end();)
             {
                 SingleTile *tile = *itTile;
-                DELETE_MEMORY(tile);
+                SAFE_DELETE_MEMORY(tile);
                 itTile = tileRow->erase(itTile);
             }
 
@@ -89,15 +91,15 @@ OneVideoRegionWisePackingGenerator::~OneVideoRegionWisePackingGenerator()
 
     if (m_mergedTilesArrange)
     {
-        DELETE_ARRAY(m_mergedTilesArrange->tileRowHeight);
-        DELETE_ARRAY(m_mergedTilesArrange->tileColWidth);
+        SAFE_DELETE_ARRAY(m_mergedTilesArrange->tileRowHeight);
+        SAFE_DELETE_ARRAY(m_mergedTilesArrange->tileColWidth);
 
         delete m_mergedTilesArrange;
         m_mergedTilesArrange = NULL;
     }
 }
 
-int32_t OneVideoRegionWisePackingGenerator::GetTilesArrangeInViewport(
+int32_t SingleVideoRegionWisePackingGenerator::GetTilesArrangeInViewport(
     uint8_t tilesNumInViewport,
     TileDef *tilesInViewport,
     int32_t finalViewportWidth,
@@ -129,7 +131,7 @@ int32_t OneVideoRegionWisePackingGenerator::GetTilesArrangeInViewport(
             SingleTile *tile = new SingleTile;
             if (!tile)
             {
-                DELETE_MEMORY(currRow);
+                SAFE_DELETE_MEMORY(currRow);
                 return OMAF_ERROR_NULL_PTR;
             }
 
@@ -143,18 +145,18 @@ int32_t OneVideoRegionWisePackingGenerator::GetTilesArrangeInViewport(
     return ERROR_NONE;
 }
 
-int32_t OneVideoRegionWisePackingGenerator::GenerateMergedTilesArrange()
+int32_t SingleVideoRegionWisePackingGenerator::GenerateMergedTilesArrange()
 {
     m_hrTilesInRow = m_tilesNumInViewRow;
     m_hrTilesInCol = m_tileRowNumInView;
 
     m_mergedTilesArrange->tileRowsNum = 1;
-    m_mergedTilesArrange->tileColsNum = m_hrTilesInRow;// + m_lrTilesInRow;
+    m_mergedTilesArrange->tileColsNum = m_hrTilesInRow;
     m_mergedTilesArrange->tileRowHeight = new uint16_t[m_mergedTilesArrange->tileRowsNum];
     if (!(m_mergedTilesArrange->tileRowHeight))
         return OMAF_ERROR_NULL_PTR;
 
-    m_mergedTilesArrange->tileRowHeight[0] = m_hrTilesInCol * m_highTileHeight;//height;
+    m_mergedTilesArrange->tileRowHeight[0] = m_hrTilesInCol * m_highTileHeight;
 
     m_mergedTilesArrange->tileColWidth = new uint16_t[m_mergedTilesArrange->tileColsNum];
     if (!(m_mergedTilesArrange->tileColWidth))
@@ -170,8 +172,8 @@ int32_t OneVideoRegionWisePackingGenerator::GenerateMergedTilesArrange()
     return ERROR_NONE;
 }
 
-int32_t OneVideoRegionWisePackingGenerator::Initialize(
-    std::map<uint8_t, MediaStream*> *streams,
+int32_t SingleVideoRegionWisePackingGenerator::Initialize(
+    std::map<uint8_t, VideoStreamInfo*> *streams,
     uint8_t *videoIdxInMedia,
     uint8_t tilesNumInViewport,
     TileDef *tilesInViewport,
@@ -182,15 +184,15 @@ int32_t OneVideoRegionWisePackingGenerator::Initialize(
         return OMAF_ERROR_NULL_PTR;
 
     uint8_t videoStreamIdx = 0;
-    std::map<uint8_t, MediaStream*>::iterator it;
+    std::map<uint8_t, VideoStreamInfo*>::iterator it;
     it = streams->find(videoIdxInMedia[0]);
     if (it == streams->end())
         return OMAF_ERROR_STREAM_NOT_FOUND;
 
-    VideoStream *vs1 = (VideoStream*)(it->second);
-    m_origHRTilesInRow = vs1->GetTileInRow();
-    m_origHRTilesInCol = vs1->GetTileInCol();
-    RegionWisePacking *rwpk1 = vs1->GetSrcRwpk();
+    VideoStreamInfo *vs1 = (VideoStreamInfo*)(it->second);
+    m_origHRTilesInRow = vs1->tilesNumInRow;
+    m_origHRTilesInCol = vs1->tilesNumInCol;
+    RegionWisePacking *rwpk1 = vs1->srcRWPK;
     m_rwpkMap.insert(std::make_pair(videoStreamIdx, rwpk1));
     RectangularRegionWisePacking *rectRwpk = &(rwpk1->rectRegionPacking[0]);
     m_highTileWidth = rectRwpk->projRegWidth;
@@ -222,7 +224,7 @@ int32_t OneVideoRegionWisePackingGenerator::Initialize(
     return ERROR_NONE;
 }
 
-int32_t OneVideoRegionWisePackingGenerator::GenerateTilesMergeDirection(
+int32_t SingleVideoRegionWisePackingGenerator::GenerateTilesMergeDirection(
     uint8_t viewportIdx,
     TilesMergeDirectionInCol *tilesMergeDir)
 {
@@ -256,14 +258,14 @@ int32_t OneVideoRegionWisePackingGenerator::GenerateTilesMergeDirection(
     }
 #define LCU_SIZE 64
 
-    uint8_t tileColsNum = m_hrTilesInRow;// + m_lrTilesInRow;
+    uint8_t tileColsNum = m_hrTilesInRow;
     uint16_t tileIdx = 0;
     for (uint8_t i = 0; i < tileColsNum; i++)
     {
         TilesInCol *tileCol = new TilesInCol;
         if (!tileCol)
         {
-            DELETE_ARRAY(highTilesIdx);
+            SAFE_DELETE_ARRAY(highTilesIdx);
             return OMAF_ERROR_NULL_PTR;
         }
 
@@ -274,8 +276,8 @@ int32_t OneVideoRegionWisePackingGenerator::GenerateTilesMergeDirection(
                 SingleTile *tile = new SingleTile;
                 if (!tile)
                 {
-                    DELETE_MEMORY(tileCol);
-                    DELETE_ARRAY(highTilesIdx);
+                    SAFE_DELETE_MEMORY(tileCol);
+                    SAFE_DELETE_ARRAY(highTilesIdx);
                     return OMAF_ERROR_NULL_PTR;
                 }
 
@@ -295,12 +297,12 @@ int32_t OneVideoRegionWisePackingGenerator::GenerateTilesMergeDirection(
         }
     }
 
-    DELETE_ARRAY(highTilesIdx);
+    SAFE_DELETE_ARRAY(highTilesIdx);
 
     return ERROR_NONE;
 }
 
-int32_t OneVideoRegionWisePackingGenerator::GenerateDstRwpk(
+int32_t SingleVideoRegionWisePackingGenerator::GenerateDstRwpk(
     uint8_t viewportIdx,
     RegionWisePacking *dstRwpk)
 {
@@ -308,9 +310,9 @@ int32_t OneVideoRegionWisePackingGenerator::GenerateDstRwpk(
         return OMAF_ERROR_NULL_PTR;
 
     dstRwpk->constituentPicMatching = 0;
-    dstRwpk->numRegions             = m_tilesNumInViewRow * m_tileRowNumInView;// + m_origLRTilesInRow * m_origLRTilesInCol;
+    dstRwpk->numRegions             = m_tilesNumInViewRow * m_tileRowNumInView;
 
-    dstRwpk->packedPicWidth         = m_highTileWidth * m_hrTilesInRow;// + m_lowTileWidth * m_lrTilesInRow;
+    dstRwpk->packedPicWidth         = m_highTileWidth * m_hrTilesInRow;
     dstRwpk->packedPicHeight        = m_highTileHeight * m_hrTilesInCol;
 
     m_packedPicWidth                = dstRwpk->packedPicWidth;
@@ -350,7 +352,7 @@ int32_t OneVideoRegionWisePackingGenerator::GenerateDstRwpk(
     it = m_rwpkMap.find(0);
     if (it == m_rwpkMap.end())
     {
-        DELETE_ARRAY(highTilesIdx);
+        SAFE_DELETE_ARRAY(highTilesIdx);
         return OMAF_ERROR_STREAM_NOT_FOUND;
     }
 
@@ -388,9 +390,18 @@ int32_t OneVideoRegionWisePackingGenerator::GenerateDstRwpk(
         }
     }
 
-    DELETE_ARRAY(highTilesIdx);
+    SAFE_DELETE_ARRAY(highTilesIdx);
 
     return ERROR_NONE;
 }
 
-VCD_NS_END
+extern "C" RegionWisePackingGeneratorBase* Create()
+{
+    return new SingleVideoRegionWisePackingGenerator;
+}
+
+extern "C" void Destroy(RegionWisePackingGeneratorBase* rwpkGen)
+{
+    delete rwpkGen;
+    rwpkGen = NULL;
+}

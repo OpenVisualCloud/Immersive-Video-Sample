@@ -40,8 +40,7 @@
 #include "MediaStream.h"
 #include "VideoStream.h"
 #include "ExtractorTrack.h"
-#include "OneVideoExtractorTrackGenerator.h"
-#include "TwoResExtractorTrackGenerator.h"
+#include "ExtractorTrackGenerator.h"
 
 VCD_NS_BEGIN
 
