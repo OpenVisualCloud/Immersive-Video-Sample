@@ -38,6 +38,10 @@
 #define VIEWPORTPREDICT_LR_H_
 
 #include "../predict_Base/ViewportPredict.h"
+#include <vector>
+#include <list>
+
+using namespace std;
 
 VCD_OMAF_BEGIN
 
@@ -68,7 +72,7 @@ public:
     virtual ViewportAngle* PredictPose(std::list<ViewportAngle> pose_history);
 
 private:
-
+    void PredictModel(std::list<ViewportAngle> pose_history, float *yaw, float *pitch);
 };
 
 VCD_OMAF_END;

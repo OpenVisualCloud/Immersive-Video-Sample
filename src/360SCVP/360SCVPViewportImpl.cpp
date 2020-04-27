@@ -725,8 +725,8 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     //select all of the tiles to cover the whole viewport
     short centerX = m_srd[idx].x;
     short centerY = m_srd[idx].y;
-    short halfVPhorz = (dstWidth) >> 1;
-    short halfVPvert = (dstHeight) >> 1;
+    short halfVPhorz = (dstWidth - m_srd[idx].tilewidth) >> 1;
+    short halfVPvert = (dstHeight - m_srd[idx].tileheight) >> 1;
 
     for (uint32_t i=0;i<FACE_NUMBER;i++)
     {
