@@ -46,8 +46,6 @@
 
 VCD_NS_BEGIN
 
-#define FOV 80.0f
-
 class RenderContext
 {
 public:
@@ -111,6 +109,8 @@ protected:
     void *m_window;
     uint32_t m_windowWidth;
     uint32_t m_windowHeight;
+    float m_hFOV;
+    float m_vFOV;
 
     glm::mat4 m_projectionMatrix;
     glm::mat4 m_viewModelMatrix;
@@ -118,8 +118,6 @@ protected:
     float m_horizontalAngle;
     // Initial vertical angle : none
     float m_verticalAngle;
-    // Initial Field of View
-    float m_initialFoV;//need to adjust according to viewport
 
     float m_speed; // 3 units / second
     float m_mouseSpeed;

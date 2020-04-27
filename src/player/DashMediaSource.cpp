@@ -41,6 +41,7 @@
 
 #define MAX_LIST_NUMBER 30
 #define MIN_LIST_REMAIN 2
+#define DECODE_THREAD_COUNT 16
 
 VCD_NS_BEGIN
 
@@ -381,7 +382,6 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig)
         return RENDER_ERROR;
     }
     m_dashSourceData.codec_ctx = avcodec_alloc_context3(m_dashSourceData.decoder);
-    m_dashSourceData.codec_ctx->thread_count = 16;
     if (NULL == m_dashSourceData.codec_ctx)
     {
         LOG(ERROR)<<"avcodec alloc context failed!"<<std::endl;
@@ -391,6 +391,7 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig)
         clientInfo.pose = NULL;
         return RENDER_ERROR;
     }
+    m_dashSourceData.codec_ctx->thread_count = DECODE_THREAD_COUNT;
     m_dashSourceData.av_frame = av_frame_alloc();
     // may not available in bitstream.
     // m_dashSourceData.codec_ctx->width = mediaInfo->stream_info[0].width;

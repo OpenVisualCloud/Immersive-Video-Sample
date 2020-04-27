@@ -54,7 +54,7 @@ class EGLRenderContext
 {
 public:
     EGLRenderContext();
-    EGLRenderContext(uint32_t width, uint32_t height);
+    EGLRenderContext(struct RenderConfig config);
     virtual ~EGLRenderContext();
     //! \brief swap buffer
     //!

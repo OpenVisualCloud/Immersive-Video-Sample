@@ -38,6 +38,13 @@
 #include "Player.h"
 #include "../utils/tinyxml2.h"
 
+#define MAXFOV 140
+#define MINFOV 50
+#define MAXVIEWPORTLEN 1200
+#define MINVIEWPORTLEN 800
+#define MAXWINDOWLEN   2000
+#define MINWINDOWLEN   500
+
 using namespace tinyxml2;
 
 VCD_USE_VRVIDEO;
@@ -53,9 +60,9 @@ int main(int32_t argc, char *argv[])
 
     renderConfig.windowWidth     = atoi(info->FirstChildElement("windowWidth")->GetText());
     renderConfig.windowHeight    = atoi(info->FirstChildElement("windowHeight")->GetText());
-    if (renderConfig.windowWidth < 500 || renderConfig.windowWidth > 2000 || renderConfig.windowHeight < 500 || renderConfig.windowHeight > 2000)
+    if (renderConfig.windowWidth < MINWINDOWLEN || renderConfig.windowWidth > MAXWINDOWLEN || renderConfig.windowHeight < MINWINDOWLEN || renderConfig.windowHeight > MAXWINDOWLEN)
     {
-        LOG(ERROR)<<"---XML input invalid--- window width or height must be in range (500-2000)!"<<std::endl;
+        LOG(ERROR)<<"---XML input invalid--- window width or height must be in range ("<<MINWINDOWLEN<<"-"<<MAXWINDOWLEN<<")!"<<std::endl;
         return RENDER_ERROR;
     }
     renderConfig.url = info->FirstChildElement("url")->GetText();
@@ -103,14 +110,14 @@ int main(int32_t argc, char *argv[])
     }
     renderConfig.viewportHFOV = atoi(info->FirstChildElement("viewportHFOV")->GetText());
     renderConfig.viewportVFOV = atoi(info->FirstChildElement("viewportVFOV")->GetText());
-    if (renderConfig.viewportHFOV < 80 || renderConfig.viewportHFOV > 120 || renderConfig.viewportVFOV < 80 || renderConfig.viewportVFOV > 120)
+    if (renderConfig.viewportHFOV < MINFOV || renderConfig.viewportHFOV > MAXFOV || renderConfig.viewportVFOV < MINFOV || renderConfig.viewportVFOV > MAXFOV)
     {
-        LOG(ERROR)<<"---INVALID viewportHFOV or viewportVFOV input!(reference-80/80 or 90/90)---"<<std::endl;
+        LOG(ERROR)<<"---INVALID viewportHFOV or viewportVFOV input!---"<<std::endl;
         return RENDER_ERROR;
     }
     renderConfig.viewportWidth = atoi(info->FirstChildElement("viewportWidth")->GetText());
     renderConfig.viewportHeight = atoi(info->FirstChildElement("viewportHeight")->GetText());
-    if (renderConfig.viewportWidth < 800 || renderConfig.viewportWidth > 1200 || renderConfig.viewportHeight < 800 || renderConfig.viewportHeight > 1200)
+    if (renderConfig.viewportWidth < MINVIEWPORTLEN || renderConfig.viewportWidth > MAXVIEWPORTLEN || renderConfig.viewportHeight < MINVIEWPORTLEN || renderConfig.viewportHeight > MAXVIEWPORTLEN)
     {
         LOG(ERROR)<<"---INVALID viewportWidth or viewportHeight input! (reference-960/960 or 1024/1024)---"<<std::endl;
         return RENDER_ERROR;
