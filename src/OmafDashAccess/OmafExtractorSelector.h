@@ -45,7 +45,7 @@ using namespace VCD::OMAF;
 
 VCD_OMAF_BEGIN
 
-#define POSE_SIZE 20
+#define POSE_SIZE 10
 
 typedef std::list<OmafExtractor*> ListExtractor;
 

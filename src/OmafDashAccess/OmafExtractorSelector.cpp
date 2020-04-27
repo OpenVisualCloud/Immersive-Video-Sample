@@ -90,7 +90,24 @@ OmafExtractorSelector::~OmafExtractorSelector()
 
 int OmafExtractorSelector::SelectExtractors(OmafMediaStream* pStream)
 {
-    OmafExtractor* pSelectedExtrator = GetExtractorByPose( pStream );
+    OmafExtractor* pSelectedExtrator = NULL;
+    if(mUsePrediction)
+    {
+        ListExtractor predict_extractors = GetExtractorByPosePrediction( pStream );
+        if (predict_extractors.empty())
+        {
+            if (mPoseHistory.size() < POSE_SIZE) // at the beginning
+            {
+                pSelectedExtrator = GetExtractorByPose( pStream );
+            }
+        }
+        else
+            pSelectedExtrator = predict_extractors.front();
+    }
+    else
+    {
+        pSelectedExtrator = GetExtractorByPose( pStream );
+    }
 
     if(NULL == pSelectedExtrator && !mCurrentExtractor)
         return ERROR_NULL_PTR;
@@ -105,11 +122,6 @@ int OmafExtractorSelector::SelectExtractors(OmafMediaStream* pStream)
     mCurrentExtractor = pSelectedExtrator ? pSelectedExtrator : mCurrentExtractor;
 
     ListExtractor extractors;
-
-    if(mUsePrediction)
-    {
-        extractors = GetExtractorByPosePrediction( pStream );
-    }
 
     extractors.push_front(mCurrentExtractor);
 
@@ -316,10 +328,6 @@ ListExtractor OmafExtractorSelector::GetExtractorByPosePrediction( OmafMediaStre
         pthread_mutex_unlock(&mMutex);
         return extractors;
     }
-
-    PoseInfo pf, pb;
-    pf = mPoseHistory.front();
-    pb = mPoseHistory.back();
     pthread_mutex_unlock(&mMutex);
     if (mPredictPluginMap.size() == 0)
     {
@@ -332,31 +340,60 @@ ListExtractor OmafExtractorSelector::GetExtractorByPosePrediction( OmafMediaStre
     uint32_t predict_interval = 1000;
     plugin->Intialize(pose_interval, pre_pose_count, predict_interval);
     std::list<ViewportAngle> pose_history;
+    pthread_mutex_lock(&mMutex);
+    for (auto it=mPoseHistory.begin(); it!=mPoseHistory.end(); it++)
+    {
+        ViewportAngle angle;
+        angle.yaw = it->pose->yaw;
+        angle.pitch = it->pose->pitch;
+        pose_history.push_front(angle);
+    }
+    pthread_mutex_unlock(&mMutex);
     ViewportAngle* predict_angle = plugin->Predict(pose_history);
     if (predict_angle == NULL)
     {
         LOG(ERROR)<<"predictPose_func return an invalid value!"<<endl;
         return extractors;
     }
-    HeadPose* pose = new HeadPose;
-    pose->yaw = predict_angle->yaw;
-    pose->pitch = predict_angle->pitch;
-
-    // std::chrono::high_resolution_clock clock;
-    // uint64_t time = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-
-    // // simple prediction, assuming the move is uniform
-    // float yaw = (pb.pose->yaw - pf.pose->yaw)/(pb.time - pf.time) * (time - pb.time + 1000) + pb.pose->yaw;
-    // float pitch = (pb.pose->pitch - pf.pose->pitch)/(pb.time - pf.time) * (time - pb.time + 1000) + pb.pose->pitch;
-    // HeadPose* pose = new HeadPose;
-    // pose->yaw = yaw;
-    // pose->pitch = pitch;
-
+    HeadPose* previousPose = mPose;
+    pthread_mutex_lock(&mMutex);
+    mPose = mPoseHistory.front().pose;
+    mPoseHistory.pop_front();
+    if(!mPose)
+    {
+        pthread_mutex_unlock(&mMutex);
+        return extractors;
+    }
+    pthread_mutex_unlock(&mMutex);
+    // won't get viewport if pose hasn't changed
+    if( previousPose && mPose && !IsDifferentPose( previousPose, mPose ) && pose_history.size() > 1)
+    {
+        LOG(INFO)<<"pose hasn't changed!"<<endl;
+#ifndef _ANDROID_NDK_OPTION_
+        //trace
+        tracepoint(mthq_tp_provider, T2_detect_pose_change, 0);
+#endif
+        SAFE_DELETE(previousPose);
+        SAFE_DELETE(predict_angle);
+        return extractors;
+    }
     // to select extractor;
-    OmafExtractor *selectedExtractor = SelectExtractor(pStream, pose);
-    if(selectedExtractor)
+    HeadPose *predictPose = new HeadPose;
+    predictPose->yaw = predict_angle->yaw;
+    predictPose->pitch = predict_angle->pitch;
+    OmafExtractor *selectedExtractor = SelectExtractor(pStream, predictPose);
+    if(selectedExtractor && previousPose)
+    {
         extractors.push_back(selectedExtractor);
-    SAFE_DELETE(pose);
+        LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") ! extractor id is: "<<selectedExtractor->GetID()<<endl;
+#ifndef _ANDROID_NDK_OPTION_
+        //trace
+        tracepoint(mthq_tp_provider, T2_detect_pose_change, 1);
+#endif
+    }
+    SAFE_DELETE(previousPose);
+    SAFE_DELETE(predictPose);
+    SAFE_DELETE(predict_angle);
     return extractors;
 }
 
