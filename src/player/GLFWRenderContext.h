@@ -50,7 +50,7 @@ class GLFWRenderContext
 {
 public:
     GLFWRenderContext();
-    GLFWRenderContext(uint32_t width, uint32_t height);
+    GLFWRenderContext(struct RenderConfig config);
     virtual ~GLFWRenderContext();
     //! \brief swap buffer
     //!

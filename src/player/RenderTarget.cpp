@@ -132,7 +132,7 @@ RenderStatus RenderTarget::CreateRenderTarget(RenderBackend *renderBackend)
     return RENDER_STATUS_OK;
 }
 
-RenderStatus RenderTarget::Update(RenderBackend *renderBackend, struct RegionInfo *regionInfo, float yaw, float pitch)
+RenderStatus RenderTarget::Update(RenderBackend *renderBackend, struct RegionInfo *regionInfo, float yaw, float pitch, float hFOV, float vFOV)
 {
     if (NULL == renderBackend || NULL == regionInfo)
     {
@@ -164,7 +164,7 @@ RenderStatus RenderTarget::Update(RenderBackend *renderBackend, struct RegionInf
 
     std::vector<uint32_t> TilesInViewport;
     std::chrono::high_resolution_clock clock;
-    GetTilesInViewport(yaw, pitch, FOV, FOV, highRow, highCol, TilesInViewport);
+    GetTilesInViewport(yaw, pitch, hFOV, vFOV, highRow, highCol, TilesInViewport);
     bool isAllHighFlag = true;
     static uint64_t start = 0;
     static uint64_t totalChangedTime = 0;

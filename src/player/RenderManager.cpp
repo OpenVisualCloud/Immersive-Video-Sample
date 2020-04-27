@@ -61,10 +61,10 @@ RenderManager::RenderManager(struct RenderConfig config)
     switch(m_renderConfig.contextType)
     {
     case GLFW_CONTEXT:
-        m_renderContext = new GLFWRenderContext(m_renderConfig.windowWidth, m_renderConfig.windowHeight);
+        m_renderContext = new GLFWRenderContext(m_renderConfig);
         break;
     case EGL_CONTEXT:
-        m_renderContext = new EGLRenderContext(m_renderConfig.windowWidth, m_renderConfig.windowHeight);
+        m_renderContext = new EGLRenderContext(m_renderConfig);
         break;
     default:
         m_renderContext = new EGLRenderContext();
@@ -179,7 +179,7 @@ RenderStatus RenderManager::PrepareRender()
     float yaw = 0;
     float pitch = 0;
     GetViewport(&yaw, &pitch);
-    RenderStatus renderTargetStatus = m_renderTarget->Update(m_renderBackend, &regionInfo, yaw, pitch);
+    RenderStatus renderTargetStatus = m_renderTarget->Update(m_renderBackend, &regionInfo, yaw, pitch, m_renderConfig.viewportHFOV, m_renderConfig.viewportVFOV);
     if (RENDER_ERROR == renderTargetStatus)
     {
         return RENDER_ERROR;

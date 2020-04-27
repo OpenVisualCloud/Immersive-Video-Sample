@@ -46,11 +46,13 @@ GLFWRenderContext::GLFWRenderContext()
     m_motionConfig.mode = NULL;
 }
 
-GLFWRenderContext::GLFWRenderContext(uint32_t width, uint32_t height)
+GLFWRenderContext::GLFWRenderContext(struct RenderConfig config)
 {
     m_renderContextType = GLFW_CONTEXT;
-    m_windowWidth  = width;
-    m_windowHeight = height;
+    m_windowWidth  = config.windowWidth;
+    m_windowHeight = config.windowHeight;
+    m_hFOV         = config.viewportHFOV;
+    m_vFOV         = config.viewportVFOV;
     m_motionConfig.mode = NULL;
     m_needMotionTest = (RENDER_STATUS_OK == GetMotionOptionParams()) ? true : false;
 }
@@ -189,9 +191,8 @@ RenderStatus GLFWRenderContext::GetStatusAndPose(float *yaw, float *pitch, uint3
         cos(m_horizontalAngle - RENDER_PI / 2.0f));
     //    glm::vec3 right = glm::cross( direction, glm::vec3(0.0,1.0,0.0));
     glm::vec3 up = glm::cross(right, direction);
-    float FoV = m_initialFoV; // - 5 * glfwGetMouseWheel();
-    float aspect = float(m_windowWidth) / m_windowHeight;
-    m_projectionMatrix = glm::perspective(glm::radians(-FoV), aspect, 0.01f, 1000.0f);
+    float aspect = m_hFOV / m_vFOV;
+    m_projectionMatrix = glm::perspective(glm::radians(-m_vFOV), aspect, 0.01f, 1000.0f);
     m_viewModelMatrix = glm::lookAt(
         //        position,           // Camera is here
         glm::vec3(0, 0, 0),

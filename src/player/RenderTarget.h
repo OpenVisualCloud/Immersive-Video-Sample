@@ -72,7 +72,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus Update(RenderBackend *renderBackend, struct RegionInfo *regionInfo, float yaw, float pitch);
+    RenderStatus Update(RenderBackend *renderBackend, struct RegionInfo *regionInfo, float yaw, float pitch, float hFOV, float vFOV);
     //! \brief Get the Fbo R2T Handle
     //!
     //! \return uint32_t
