@@ -4,24 +4,23 @@
 
 ### 1. How to get libOmafDashAccess and its dependent libraries using NDK compile
 ```bash
-git clone https://gitlab.devtools.intel.com/vcdp/tids.git
-cd tids
-git checkout OMAF_Compliance
-cd external && prebuild.sh android
-cd .. && make android
+git clone from the repo
+cd src/external
+./prebuild_android.sh
+./make_android.sh
 ```
 And then you can get libs at the following path:
 | LIB name        | path   |
 | --------   | -----:  |
-| libglog.so     | tids/build/external/android/glog/build/ |
-| libssl.so        | tids/build/external/android/openssl-output/lib/ |
-| libcrypto.so        | tids/build/external/android/openssl-output/lib/ |
-| libcurl.so        | tids/build/external/android/curl-output/arm64-v8a/lib/ |
-| lib360SCVP.so        | tids/build/android/360SCVP/ |
-| libdashparser.a  | tids/build/android/isolib/dash_parser/ |
-| libOmafDashAccess.so | tids/build/android/OmafDashAccess/ |
+| libglog.so     | src/build/external/android/glog/build/ |
+| libssl.so        | src/build/external/android/openssl-output/lib/ |
+| libcrypto.so        | src/build/external/android/openssl-output/lib/ |
+| libcurl.so        | src/build/external/android/curl-output/arm64-v8a/lib/ |
+| lib360SCVP.so        | src/build/android/360SCVP/ |
+| libdashparser.a  | src/build/android/isolib/dash_parser/ |
+| libOmafDashAccess.so | src/build/android/OmafDashAccess/ |
 
-Copy libs to the path "tids/JNIOmafDashAccess/omafdashaccesslibrary/libs/arm64-v8a/".
+Copy libs to the path "src/JNIOmafDashAccess/omafdashaccesslibrary/libs/arm64-v8a/".
 ### 2. Prerequistes
 To build the whole JNI project, there are some prerequistes must be ready.
 ```bash
