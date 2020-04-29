@@ -6,18 +6,38 @@ RUN if [ -n "${http_proxy}" ] ; then \
     echo "https_proxy=${https_proxy}" >> /etc/wgetrc ; \
     fi
 
-RUN yum install -y -q openssl centos-release-scl scl-utils gmp gmp-devel mpfr mpfr-devel libmpc libmpc-devel patch autoconf libtool automake libcurl-devel wget git -y && \
-    rm -rf /var/cache/yum/* && \
+WORKDIR /home/immersive
+ARG WORKDIR=/home/immersive
+
+# Install denpendency
+RUN yum install -y centos-release-scl-rh && \
+    yum install -y wget git bzip2 xz sudo devtoolset-7-gcc* && \
+    wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-12.noarch.rpm && \
+    rpm -Uvh epel-release*rpm && \
+    yum install -y openssl centos-release-scl scl-utils gmp gmp-devel && \
+    yum install -y mpfr mpfr-devel libmpc libmpc-devel patch autoconf && \
+    yum install -y libtool automake libcurl-devel libxml2-devel && \
+    yum install -y libevent-devel.x86_64 openssl-devel bc redhat-lsb && \
+    yum install -y libXrandr libXrandr-devel libXinerama libXinerama-devel && \
+    yum install -y libXcursor libXcursor-devel libXi libXi-devel glm-devel && \
+    yum install -y mesa-libGL mesa-libGL-devel mesa-libGLU && \
+    yum install -y mesa-libGLU-devel mesa-libGLES-devel mesa-libEGL-devel && \
+    yum install -y SDL2 SDL2-devel libcurl4-openssl-dev libglfw3 && \
+    yum install -y libXv-devel glfw glfw-devel xz-devel lzma -y && \
+    yum install -y uuid.x86_64 uuid-devel.x86_64 popt-devel.x86_64 -y && \
+    yum install -y numactl.x86_64 numactl-devel.x86_64 numactl-libs.x86_64 -y && \
+    rm -rf /var/cache/yum/* && rm -rf * && \
     if [ -n "${http_proxy}" ]; then \
     git config --global http.proxy ${http_proxy} && \
     git config --global https.proxy ${https_proxy} ; \
     fi
 
-RUN yum install -y yum install devtoolset-7-gcc* libevent-devel.x86_64 openssl-devel bc numactl -y && \
-    rm -rf /var/cache/yum/*
-
-WORKDIR /home/immersive
-ARG WORKDIR=/home/immersive
+RUN yum -y install ruby rubygems ruby-devel rpm-build && \
+    if [ -n "${http_proxy}" ]; then \
+    gem install -p ${http_proxy} fpm ; \
+    else \
+    gem install fpm ; \
+    fi
 
 # Build zlib
 ARG ZLIB_VER=1.2.11
@@ -53,20 +73,6 @@ RUN  wget -O - ${YASM_REPO} | tar xz && \
      make install && \
      cd ${WORKDIR} && rm -rf ./*
 
-# Build libxml2
-ARG LIBXML2_VER=2.9.6
-ARG LIBXML2_REPO=http://www.xmlsoft.org/sources/libxml2-${LIBXML2_VER}.tar.gz
-RUN wget -O - ${LIBXML2_REPO} | tar xz && \
-    cd libxml2-${LIBXML2_VER} && \
-    source /opt/rh/devtoolset-7/enable && \
-    ././configure --with-python=no && \
-    make -j$(nproc) && \
-    make install && \
-    cd ${WORKDIR} && rm -rf ./*
-
-RUN yum install -y xz && \
-    rm -rf /var/cache/yum/*
-
 # Build CURL
 ARG CURL_VER=7.66.0
 ARG CURL_REPO=https://curl.haxx.se/download/curl-${CURL_VER}.tar.xz
@@ -78,8 +84,6 @@ RUN wget ${CURL_REPO} && \
     ./configure --with-darwinssl && \
     make -j$(nproc) && \
     make install && \
-    cd /usr/local/include/libxml2 && \
-    mv libxml ../ && \
     cd ${WORKDIR} && rm -rf ./*
 
 # Install BOOST
@@ -113,19 +117,29 @@ RUN git clone https://github.com/google/glog.git && \
     make install && \
     cd ${WORKDIR} && rm -rf ./glog
 
+# Install lttng
+RUN source /opt/rh/devtoolset-7/enable && \
+    wget -c https://lttng.org/files/urcu/userspace-rcu-latest-0.11.tar.bz2 && \
+    tar -xjf userspace-rcu-latest-0.11.tar.bz2 && \
+    cd userspace-rcu-0.11.* && \
+    ./configure && \
+    make -j $(nproc) && \
+    make install && ldconfig && \
+    cd ../ && rm -rf userspace-rcu-0.11.* && \
+    wget -c http://lttng.org/files/lttng-ust/lttng-ust-latest-2.11.tar.bz2 && \
+    tar -xjf lttng-ust-latest-2.11.tar.bz2 && \
+    cd lttng-ust-2.11.* && \
+    ./configure --disable-man-pages && \
+    make -j $(nproc) && \
+    make install && ldconfig && \
+    cd ../ && rm -rf lttng-ust-2.11.*
+
 # Copy source
 COPY ./src ${WORKDIR}
-
-# Install openHEVC
-RUN git clone https://github.com/OpenHEVC/openHEVC.git && \
-    cd openHEVC && \
-    source /opt/rh/devtoolset-7/enable && \
-    git checkout ffmpeg_update && \
-    patch -p1 < ../external/ffmpeg_update_add_circle_list_for_to_free_frame.patch && \
-    ./configure --libdir=/usr/lib64 --disable-sdl2 && \
-    make -j `nproc` && \
-    make install && \
-    cd ${WORKDIR} && rm -rf ./openHEVC
+COPY src/ffmpeg/dependency/*.so /usr/local/lib/
+COPY src/ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
+COPY src/ffmpeg/dependency/*.h /usr/local/include/
+COPY src/ffmpeg/dependency/WorkerServer /root
 
 # Install Thrift
 ARG THRIFT_VER=0.12.0
@@ -140,23 +154,6 @@ RUN wget -O - ${THRIFT_REPO} | tar xz && \
     make install && \
     cd ${WORKDIR} && rm -rf ./thrift-${THRIFT_VER}*
 
-# Install OMAF
-RUN git clone https://github.com/nokiatech/omaf.git && \
-    ln -s ${PWD}/omaf/Mp4/srcs ${PWD}/OmafDashAccess/mp4lib && \
-    cd omaf && \
-    source /opt/rh/devtoolset-7/enable && \
-    patch -p1 < ../external/nokia_omaf_patch_for_extrator_reader.diff && \
-    cd Mp4/srcs && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
-    make -j`nproc` && \
-    cp -r ../api/streamsegmenter ../../../../VROmafPacking/ && \
-    cp lib/libstreamsegmenter_static_fpic.a /usr/local/lib/ && \
-    cp lib/libstreamsegmenter_static.a /usr/local/lib/ && \
-    cp lib/libmp4vr_static_fpic.a /usr/local/lib/ && \
-    cp lib/libmp4vr_static.a /usr/local/lib/
-
 # Install Server FFmpeg Dependency
 RUN git clone https://github.com/FFmpeg/FFmpeg.git && \
     cd FFmpeg && \
@@ -169,6 +166,17 @@ RUN git clone https://github.com/FFmpeg/FFmpeg.git && \
     make -j `nproc` && \
     make install && \
     cd ${WORKDIR} && rm -rf ./external/FFmpeg
+
+# Install openHEVC
+RUN git clone https://github.com/OpenHEVC/openHEVC.git && \
+    cd openHEVC && \
+    source /opt/rh/devtoolset-7/enable && \
+    git checkout ffmpeg_update && \
+    patch -p1 < ../external/ffmpeg_update_add_circle_list_for_to_free_frame.patch && \
+    ./configure --libdir=/usr/lib64 --disable-sdl2 && \
+    make -j `nproc` && \
+    make install && \
+    cd ${WORKDIR} && rm -rf ./openHEVC
 
 # Build Nginx
 ARG NGINX_VER=1.13.1
@@ -185,19 +193,23 @@ EXPOSE 8080
 
 # Configure And Run Nginx
 COPY nginx_conf /usr/local/nginx/conf
-COPY src/ffmpeg/dependency/*.so /usr/local/lib/
-COPY src/ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
-COPY src/ffmpeg/dependency/*.h /usr/local/include/
-COPY src/ffmpeg/dependency/WorkerServer /root
 
 # Build Server
-RUN mkdir build && cd build && \
+RUN mkdir -p build/server && cd build/server && \
     source /opt/rh/devtoolset-7/enable && \
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH && \
-    cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET=server .. && \
-    make -j100 && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server ../.. && \
+    make -j `nproc` && \
     make install && \
-    mv ffmpeg/ffmpeg ../Sample-Videos && \
-    cd .. && rm -rf `ls | grep -v Sample-Videos`
+    mv ffmpeg/ffmpeg ../../Sample-Videos && \
+    cd ../.. && rm -rf `ls | grep -v Sample-Videos`
 
 COPY run.sh ${WORKDIR}/Sample-Videos
+
+# Unset proxy if necessary
+RUN if [ -n "${http_proxy}" ]; then \
+    sed -i '$d' /etc/yum.conf && \
+    sed -i '1,$d' /etc/wgetrc && \
+    git config --global --unset http.proxy && \
+    git config --global --unset https.proxy ; \
+    fi

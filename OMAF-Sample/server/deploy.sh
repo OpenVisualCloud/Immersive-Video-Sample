@@ -13,21 +13,22 @@ cp -r src/external OMAF-Sample/server/src
 cp -r src/ffmpeg OMAF-Sample/server/src
 cp -r src/player OMAF-Sample/server/src
 cp -r src/utils OMAF-Sample/server/src
+cp -r src/isolib OMAF-Sample/server/src
+cp -r src/trace OMAF-Sample/server/src
 cp -r src/VROmafPacking OMAF-Sample/server/src
+cp -r src/OmafDashAccess OMAF-Sample/server/src
 cp -r src/CMakeLists.txt OMAF-Sample/server/src
 cp -r Sample-Videos OMAF-Sample/server/src
-mkdir -p OMAF-Sample/server/src/OmafDashAccess
-ls src/OmafDashAccess/ | grep -v mp4lib | xargs -i cp -r src/OmafDashAccess/{} OMAF-Sample/server/src/OmafDashAccess
-cd OMAF-Sample/server
 
+cd OMAF-Sample/server
 if [ $# = 0 ] ; then
-    docker build -t immersive_server:v0.1 .
+    docker build -t immersive_server:v1 .
 elif [ $# = 1 ] ; then
     if [ "$1" = "-h" ] ; then
         parameters_usage
     else
         PROXY=$1
-        docker build -t immersive_server:v0.1 --build-arg http_proxy=${PROXY} --build-arg https_proxy=${PROXY} .
+        docker build -t immersive_server:v1 --build-arg http_proxy=${PROXY} --build-arg https_proxy=${PROXY} .
         echo "PROXY:${PROXY}"
     fi
 else
