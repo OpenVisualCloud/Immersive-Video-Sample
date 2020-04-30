@@ -38,4 +38,9 @@ elif [ "${TARGET}" == "client" ] ; then
     make -j $(nproc)
     sudo make install
 
+    cd ../../../FFmpeg
+    patch -R -p1 < ../ffmpeg/patches/0001-Add-avcodec_receive_frame2-for-vaapi-hardware-decodi.patch
+    cd libavcodec
+    rm -rf *.orig
+
 fi
