@@ -65,25 +65,28 @@ DefaultSegmentation::~DefaultSegmentation()
     }
     m_streamSegCtx.clear();
 
-    std::map<ExtractorTrack*, TrackSegmentCtx*>::iterator itExtractorCtx;
-    for (itExtractorCtx = m_extractorSegCtx.begin();
-        itExtractorCtx != m_extractorSegCtx.end();
-        itExtractorCtx++)
+    if (m_extractorSegCtx.size())
     {
-        TrackSegmentCtx *trackSegCtx = itExtractorCtx->second;
-        if (trackSegCtx->extractorTrackNalu.data)
+        std::map<ExtractorTrack*, TrackSegmentCtx*>::iterator itExtractorCtx;
+        for (itExtractorCtx = m_extractorSegCtx.begin();
+            itExtractorCtx != m_extractorSegCtx.end();
+            itExtractorCtx++)
         {
-            free(trackSegCtx->extractorTrackNalu.data);
-            trackSegCtx->extractorTrackNalu.data = NULL;
+            TrackSegmentCtx *trackSegCtx = itExtractorCtx->second;
+            if (trackSegCtx->extractorTrackNalu.data)
+            {
+                free(trackSegCtx->extractorTrackNalu.data);
+                trackSegCtx->extractorTrackNalu.data = NULL;
+            }
+
+            DELETE_MEMORY(trackSegCtx->initSegmenter);
+            DELETE_MEMORY(trackSegCtx->dashSegmenter);
+
+            DELETE_MEMORY(trackSegCtx);
         }
 
-        DELETE_MEMORY(trackSegCtx->initSegmenter);
-        DELETE_MEMORY(trackSegCtx->dashSegmenter);
-
-        DELETE_MEMORY(trackSegCtx);
+        m_extractorSegCtx.clear();
     }
-
-    m_extractorSegCtx.clear();
 
     DELETE_ARRAY(m_videosBitrate);
 
@@ -419,184 +422,187 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
 int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
 {
     std::map<uint8_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
-    std::map<uint8_t, ExtractorTrack*>::iterator it1;
-    for (it1 = extractorTracks->begin(); it1 != extractorTracks->end(); it1++)
+    if (extractorTracks->size())
     {
-        ExtractorTrack *extractorTrack = it1->second;
-        Nalu *vpsNalu = extractorTrack->GetVPS();
-        Nalu *spsNalu = extractorTrack->GetSPS();
-        Nalu *ppsNalu = extractorTrack->GetPPS();
-
-        std::vector<uint8_t> vpsData(
-            static_cast<const uint8_t*>(vpsNalu->data),
-            static_cast<const uint8_t*>(vpsNalu->data) + vpsNalu->dataSize);
-        std::vector<uint8_t> spsData(
-            static_cast<const uint8_t*>(spsNalu->data),
-            static_cast<const uint8_t*>(spsNalu->data) + spsNalu->dataSize);
-        std::vector<uint8_t> ppsData(
-            static_cast<const uint8_t*>(ppsNalu->data),
-            static_cast<const uint8_t*>(ppsNalu->data) + ppsNalu->dataSize);
-
-        RegionWisePacking *rwpk = extractorTrack->GetRwpk();
-        ContentCoverage   *covi = extractorTrack->GetCovi();
-        std::list<PicResolution> *picResList = extractorTrack->GetPicRes();
-        Nalu *projSEI = extractorTrack->GetProjectionSEI();
-        Nalu *rwpkSEI = extractorTrack->GetRwpkSEI();
-
-        TrackSegmentCtx *trackSegCtx = new TrackSegmentCtx;
-        if (!trackSegCtx)
-            return OMAF_ERROR_NULL_PTR;
-
-        trackSegCtx->isExtractorTrack = true;
-        trackSegCtx->extractorTrackIdx = it1->first;
-        trackSegCtx->extractors = extractorTrack->GetAllExtractors();
-        memset(&(trackSegCtx->extractorTrackNalu), 0, sizeof(Nalu));
-        trackSegCtx->extractorTrackNalu.dataSize = projSEI->dataSize + rwpkSEI->dataSize;
-        trackSegCtx->extractorTrackNalu.data = new uint8_t[trackSegCtx->extractorTrackNalu.dataSize];
-        if (!(trackSegCtx->extractorTrackNalu.data))
+        std::map<uint8_t, ExtractorTrack*>::iterator it1;
+        for (it1 = extractorTracks->begin(); it1 != extractorTracks->end(); it1++)
         {
-            DELETE_MEMORY(trackSegCtx);
-            return OMAF_ERROR_NULL_PTR;
-        }
+            ExtractorTrack *extractorTrack = it1->second;
+            Nalu *vpsNalu = extractorTrack->GetVPS();
+            Nalu *spsNalu = extractorTrack->GetSPS();
+            Nalu *ppsNalu = extractorTrack->GetPPS();
 
-        memcpy(trackSegCtx->extractorTrackNalu.data, projSEI->data, projSEI->dataSize);
-        memcpy(trackSegCtx->extractorTrackNalu.data + projSEI->dataSize, rwpkSEI->data, rwpkSEI->dataSize);
+            std::vector<uint8_t> vpsData(
+                static_cast<const uint8_t*>(vpsNalu->data),
+                static_cast<const uint8_t*>(vpsNalu->data) + vpsNalu->dataSize);
+            std::vector<uint8_t> spsData(
+                static_cast<const uint8_t*>(spsNalu->data),
+                static_cast<const uint8_t*>(spsNalu->data) + spsNalu->dataSize);
+            std::vector<uint8_t> ppsData(
+                static_cast<const uint8_t*>(ppsNalu->data),
+                static_cast<const uint8_t*>(ppsNalu->data) + ppsNalu->dataSize);
 
-        TilesMergeDirectionInCol *tilesMergeDir = extractorTrack->GetTilesMergeDir();
-        std::list<TilesInCol*>::iterator itCol;
-        for (itCol = tilesMergeDir->tilesArrangeInCol.begin();
-            itCol != tilesMergeDir->tilesArrangeInCol.end(); itCol++)
-        {
-            TilesInCol *tileCol = *itCol;
-            std::list<SingleTile*>::iterator itTile;
-            for (itTile = tileCol->begin(); itTile != tileCol->end(); itTile++)
+            RegionWisePacking *rwpk = extractorTrack->GetRwpk();
+            ContentCoverage   *covi = extractorTrack->GetCovi();
+            std::list<PicResolution> *picResList = extractorTrack->GetPicRes();
+            Nalu *projSEI = extractorTrack->GetProjectionSEI();
+            Nalu *rwpkSEI = extractorTrack->GetRwpkSEI();
+
+            TrackSegmentCtx *trackSegCtx = new TrackSegmentCtx;
+            if (!trackSegCtx)
+                return OMAF_ERROR_NULL_PTR;
+
+            trackSegCtx->isExtractorTrack = true;
+            trackSegCtx->extractorTrackIdx = it1->first;
+            trackSegCtx->extractors = extractorTrack->GetAllExtractors();
+            memset(&(trackSegCtx->extractorTrackNalu), 0, sizeof(Nalu));
+            trackSegCtx->extractorTrackNalu.dataSize = projSEI->dataSize + rwpkSEI->dataSize;
+            trackSegCtx->extractorTrackNalu.data = new uint8_t[trackSegCtx->extractorTrackNalu.dataSize];
+            if (!(trackSegCtx->extractorTrackNalu.data))
             {
-                SingleTile *tile = *itTile;
-                uint8_t vsIdx    = tile->streamIdxInMedia;
-                uint8_t origTileIdx  = tile->origTileIdx;
-
-                std::map<uint8_t, std::map<uint32_t, VCD::MP4::TrackId>>::iterator itTilesIdxs;
-                itTilesIdxs = m_tilesTrackIdxs.find(vsIdx);
-                if (itTilesIdxs == m_tilesTrackIdxs.end())
-                {
-                    DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
-                    DELETE_MEMORY(trackSegCtx);
-                    return OMAF_ERROR_STREAM_NOT_FOUND;
-                }
-                std::map<uint32_t, VCD::MP4::TrackId> tilesIndex = itTilesIdxs->second;
-                VCD::MP4::TrackId foundTrackId = tilesIndex[origTileIdx];
-                trackSegCtx->refTrackIdxs.push_back(foundTrackId);
+                DELETE_MEMORY(trackSegCtx);
+                return OMAF_ERROR_NULL_PTR;
             }
+
+            memcpy(trackSegCtx->extractorTrackNalu.data, projSEI->data, projSEI->dataSize);
+            memcpy(trackSegCtx->extractorTrackNalu.data + projSEI->dataSize, rwpkSEI->data, rwpkSEI->dataSize);
+
+            TilesMergeDirectionInCol *tilesMergeDir = extractorTrack->GetTilesMergeDir();
+            std::list<TilesInCol*>::iterator itCol;
+            for (itCol = tilesMergeDir->tilesArrangeInCol.begin();
+                itCol != tilesMergeDir->tilesArrangeInCol.end(); itCol++)
+            {
+                TilesInCol *tileCol = *itCol;
+                std::list<SingleTile*>::iterator itTile;
+                for (itTile = tileCol->begin(); itTile != tileCol->end(); itTile++)
+                {
+                    SingleTile *tile = *itTile;
+                    uint8_t vsIdx    = tile->streamIdxInMedia;
+                    uint8_t origTileIdx  = tile->origTileIdx;
+
+                    std::map<uint8_t, std::map<uint32_t, VCD::MP4::TrackId>>::iterator itTilesIdxs;
+                    itTilesIdxs = m_tilesTrackIdxs.find(vsIdx);
+                    if (itTilesIdxs == m_tilesTrackIdxs.end())
+                    {
+                        DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
+                        DELETE_MEMORY(trackSegCtx);
+                        return OMAF_ERROR_STREAM_NOT_FOUND;
+                    }
+                    std::map<uint32_t, VCD::MP4::TrackId> tilesIndex = itTilesIdxs->second;
+                    VCD::MP4::TrackId foundTrackId = tilesIndex[origTileIdx];
+                    trackSegCtx->refTrackIdxs.push_back(foundTrackId);
+                }
+            }
+
+            trackSegCtx->trackIdx = DEFAULT_EXTRACTORTRACK_TRACKIDBASE + trackSegCtx->extractorTrackIdx;
+
+            //set up InitSegConfig
+            std::set<VCD::MP4::TrackId> allTrackIds;
+            std::map<VCD::MP4::TrackId, TrackConfig>::iterator itTrack;
+            for (itTrack = m_allTileTracks.begin(); itTrack != m_allTileTracks.end(); itTrack++)
+            {
+                trackSegCtx->dashInitCfg.tracks.insert(std::make_pair(itTrack->first, itTrack->second));
+                allTrackIds.insert(itTrack->first);
+            }
+
+            TrackConfig trackConfig{};
+            trackConfig.meta.trackId = trackSegCtx->trackIdx;
+            trackConfig.meta.timescale = VCD::MP4::FractU64(m_frameRate.den, m_frameRate.num * 1000); //?
+            trackConfig.meta.type = VCD::MP4::TypeOfMedia::Video;
+            trackConfig.trackReferences.insert(std::make_pair("scal", allTrackIds));
+            trackConfig.pipelineOutput = DataInputFormat::VideoMono;
+            trackSegCtx->dashInitCfg.tracks.insert(std::make_pair(trackSegCtx->trackIdx, trackConfig));
+
+            trackSegCtx->dashInitCfg.fragmented = true;
+            trackSegCtx->dashInitCfg.writeToBitstream = true;
+            trackSegCtx->dashInitCfg.packedSubPictures = true;
+            trackSegCtx->dashInitCfg.mode = OperatingMode::OMAF;
+            trackSegCtx->dashInitCfg.streamIds.push_back(trackSegCtx->trackIdx.GetIndex());
+            std::set<VCD::MP4::TrackId>::iterator itId;
+            for (itId = allTrackIds.begin(); itId != allTrackIds.end(); itId++)
+            {
+                trackSegCtx->dashInitCfg.streamIds.push_back((*itId).GetIndex());
+            }
+            snprintf(trackSegCtx->dashInitCfg.initSegName, 1024, "%s%s_track%d.init.mp4", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
+
+            //set up GeneralSegConfig
+            trackSegCtx->dashCfg.sgtDuration = VCD::MP4::FractU64(m_videoSegInfo->segDur, 1); //?
+            trackSegCtx->dashCfg.subsgtDuration = trackSegCtx->dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
+            trackSegCtx->dashCfg.needCheckIDR = true;
+
+            VCD::MP4::TrackMeta trackMeta{};
+            trackMeta.trackId = trackSegCtx->trackIdx;
+            trackMeta.timescale = VCD::MP4::FractU64(m_frameRate.den, m_frameRate.num * 1000); //?
+            trackMeta.type = VCD::MP4::TypeOfMedia::Video;
+            trackSegCtx->dashCfg.tracks.insert(std::make_pair(trackSegCtx->trackIdx, trackMeta));
+
+            trackSegCtx->dashCfg.useSeparatedSidx = false;
+            trackSegCtx->dashCfg.streamsIdx.push_back(trackSegCtx->trackIdx.GetIndex());
+            snprintf(trackSegCtx->dashCfg.tileSegBaseName, 1024, "%s%s_track%d", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
+
+            //set up DashInitSegmenter
+            trackSegCtx->initSegmenter = new DashInitSegmenter(&(trackSegCtx->dashInitCfg));
+            if (!(trackSegCtx->initSegmenter))
+            {
+                DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
+                DELETE_MEMORY(trackSegCtx);
+                return OMAF_ERROR_NULL_PTR;
+            }
+
+            //set up DashSegmenter
+            trackSegCtx->dashSegmenter = new DashSegmenter(&(trackSegCtx->dashCfg), true);
+            if (!(trackSegCtx->dashSegmenter))
+            {
+                DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
+                DELETE_MEMORY(trackSegCtx->initSegmenter);
+                DELETE_MEMORY(trackSegCtx);
+                return OMAF_ERROR_NULL_PTR;
+            }
+
+            //set up CodedMeta
+            trackSegCtx->codedMeta.presIndex = 0;
+            trackSegCtx->codedMeta.codingIndex = 0;
+            trackSegCtx->codedMeta.codingTime = VCD::MP4::FrameTime{ 0, 1 };
+            trackSegCtx->codedMeta.presTime = VCD::MP4::FrameTime{ 0, 1000 };
+            trackSegCtx->codedMeta.duration = VCD::MP4::FrameDuration{ m_frameRate.den * 1000, m_frameRate.num * 1000};
+            trackSegCtx->codedMeta.trackId = trackSegCtx->trackIdx;
+            trackSegCtx->codedMeta.inCodingOrder = true;
+            trackSegCtx->codedMeta.format = CodedFormat::H265Extractor;
+            trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(ConfigType::VPS, vpsData));
+            trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(ConfigType::SPS, spsData));
+            trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(ConfigType::PPS, ppsData));
+            trackSegCtx->codedMeta.width = rwpk->packedPicWidth;//tilesInfo[i].tileWidth;
+            trackSegCtx->codedMeta.height = rwpk->packedPicHeight;//tilesInfo[i].tileHeight;
+            trackSegCtx->codedMeta.bitrate.avgBitrate = 0;
+            trackSegCtx->codedMeta.bitrate.maxBitrate = 0;
+            trackSegCtx->codedMeta.type = FrameType::IDR;
+            trackSegCtx->codedMeta.segmenterMeta.segmentDuration = VCD::MP4::FrameDuration{ 0, 1 }; //?
+            ConvertRwpk(rwpk, &(trackSegCtx->codedMeta));
+            ConvertCovi(covi->sphereRegions, &(trackSegCtx->codedMeta));
+
+            FillQualityRank(&(trackSegCtx->codedMeta), picResList);
+
+            if (m_projType == VCD::OMAF::ProjectionFormat::PF_ERP)
+            {
+                trackSegCtx->codedMeta.projection = OmafProjectionType::EQUIRECTANGULAR;
+            }
+            else if (m_projType == VCD::OMAF::ProjectionFormat::PF_CUBEMAP)
+            {
+                trackSegCtx->codedMeta.projection = OmafProjectionType::CUBEMAP;
+            }
+            else
+            {
+                DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
+                DELETE_MEMORY(trackSegCtx->initSegmenter);
+                DELETE_MEMORY(trackSegCtx->dashSegmenter);
+                DELETE_MEMORY(trackSegCtx);
+                return OMAF_ERROR_INVALID_PROJECTIONTYPE;
+            }
+
+            trackSegCtx->codedMeta.isEOS = false;
+
+            m_extractorSegCtx.insert(std::make_pair(extractorTrack, trackSegCtx));
         }
-
-        trackSegCtx->trackIdx = DEFAULT_EXTRACTORTRACK_TRACKIDBASE + trackSegCtx->extractorTrackIdx;
-
-        //set up InitSegConfig
-        std::set<VCD::MP4::TrackId> allTrackIds;
-        std::map<VCD::MP4::TrackId, TrackConfig>::iterator itTrack;
-        for (itTrack = m_allTileTracks.begin(); itTrack != m_allTileTracks.end(); itTrack++)
-        {
-            trackSegCtx->dashInitCfg.tracks.insert(std::make_pair(itTrack->first, itTrack->second));
-            allTrackIds.insert(itTrack->first);
-        }
-
-        TrackConfig trackConfig{};
-        trackConfig.meta.trackId = trackSegCtx->trackIdx;
-        trackConfig.meta.timescale = VCD::MP4::FractU64(m_frameRate.den, m_frameRate.num * 1000); //?
-        trackConfig.meta.type = VCD::MP4::TypeOfMedia::Video;
-        trackConfig.trackReferences.insert(std::make_pair("scal", allTrackIds));
-        trackConfig.pipelineOutput = DataInputFormat::VideoMono;
-        trackSegCtx->dashInitCfg.tracks.insert(std::make_pair(trackSegCtx->trackIdx, trackConfig));
-
-        trackSegCtx->dashInitCfg.fragmented = true;
-        trackSegCtx->dashInitCfg.writeToBitstream = true;
-        trackSegCtx->dashInitCfg.packedSubPictures = true;
-        trackSegCtx->dashInitCfg.mode = OperatingMode::OMAF;
-        trackSegCtx->dashInitCfg.streamIds.push_back(trackSegCtx->trackIdx.GetIndex());
-        std::set<VCD::MP4::TrackId>::iterator itId;
-        for (itId = allTrackIds.begin(); itId != allTrackIds.end(); itId++)
-        {
-            trackSegCtx->dashInitCfg.streamIds.push_back((*itId).GetIndex());
-        }
-        snprintf(trackSegCtx->dashInitCfg.initSegName, 1024, "%s%s_track%d.init.mp4", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
-
-        //set up GeneralSegConfig
-        trackSegCtx->dashCfg.sgtDuration = VCD::MP4::FractU64(m_videoSegInfo->segDur, 1); //?
-        trackSegCtx->dashCfg.subsgtDuration = trackSegCtx->dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
-        trackSegCtx->dashCfg.needCheckIDR = true;
-
-        VCD::MP4::TrackMeta trackMeta{};
-        trackMeta.trackId = trackSegCtx->trackIdx;
-        trackMeta.timescale = VCD::MP4::FractU64(m_frameRate.den, m_frameRate.num * 1000); //?
-        trackMeta.type = VCD::MP4::TypeOfMedia::Video;
-        trackSegCtx->dashCfg.tracks.insert(std::make_pair(trackSegCtx->trackIdx, trackMeta));
-
-        trackSegCtx->dashCfg.useSeparatedSidx = false;
-        trackSegCtx->dashCfg.streamsIdx.push_back(trackSegCtx->trackIdx.GetIndex());
-        snprintf(trackSegCtx->dashCfg.tileSegBaseName, 1024, "%s%s_track%d", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
-
-        //set up DashInitSegmenter
-        trackSegCtx->initSegmenter = new DashInitSegmenter(&(trackSegCtx->dashInitCfg));
-        if (!(trackSegCtx->initSegmenter))
-        {
-            DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
-            DELETE_MEMORY(trackSegCtx);
-            return OMAF_ERROR_NULL_PTR;
-        }
-
-        //set up DashSegmenter
-        trackSegCtx->dashSegmenter = new DashSegmenter(&(trackSegCtx->dashCfg), true);
-        if (!(trackSegCtx->dashSegmenter))
-        {
-            DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
-            DELETE_MEMORY(trackSegCtx->initSegmenter);
-            DELETE_MEMORY(trackSegCtx);
-            return OMAF_ERROR_NULL_PTR;
-        }
-
-        //set up CodedMeta
-        trackSegCtx->codedMeta.presIndex = 0;
-        trackSegCtx->codedMeta.codingIndex = 0;
-        trackSegCtx->codedMeta.codingTime = VCD::MP4::FrameTime{ 0, 1 };
-        trackSegCtx->codedMeta.presTime = VCD::MP4::FrameTime{ 0, 1000 };
-        trackSegCtx->codedMeta.duration = VCD::MP4::FrameDuration{ m_frameRate.den * 1000, m_frameRate.num * 1000};
-        trackSegCtx->codedMeta.trackId = trackSegCtx->trackIdx;
-        trackSegCtx->codedMeta.inCodingOrder = true;
-        trackSegCtx->codedMeta.format = CodedFormat::H265Extractor;
-        trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(ConfigType::VPS, vpsData));
-        trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(ConfigType::SPS, spsData));
-        trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(ConfigType::PPS, ppsData));
-        trackSegCtx->codedMeta.width = rwpk->packedPicWidth;//tilesInfo[i].tileWidth;
-        trackSegCtx->codedMeta.height = rwpk->packedPicHeight;//tilesInfo[i].tileHeight;
-        trackSegCtx->codedMeta.bitrate.avgBitrate = 0;
-        trackSegCtx->codedMeta.bitrate.maxBitrate = 0;
-        trackSegCtx->codedMeta.type = FrameType::IDR;
-        trackSegCtx->codedMeta.segmenterMeta.segmentDuration = VCD::MP4::FrameDuration{ 0, 1 }; //?
-        ConvertRwpk(rwpk, &(trackSegCtx->codedMeta));
-        ConvertCovi(covi->sphereRegions, &(trackSegCtx->codedMeta));
-
-        FillQualityRank(&(trackSegCtx->codedMeta), picResList);
-
-        if (m_projType == VCD::OMAF::ProjectionFormat::PF_ERP)
-        {
-            trackSegCtx->codedMeta.projection = OmafProjectionType::EQUIRECTANGULAR;
-        }
-        else if (m_projType == VCD::OMAF::ProjectionFormat::PF_CUBEMAP)
-        {
-            trackSegCtx->codedMeta.projection = OmafProjectionType::CUBEMAP;
-        }
-        else
-        {
-            DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
-            DELETE_MEMORY(trackSegCtx->initSegmenter);
-            DELETE_MEMORY(trackSegCtx->dashSegmenter);
-            DELETE_MEMORY(trackSegCtx);
-            return OMAF_ERROR_INVALID_PROJECTIONTYPE;
-        }
-
-        trackSegCtx->codedMeta.isEOS = false;
-
-        m_extractorSegCtx.insert(std::make_pair(extractorTrack, trackSegCtx));
     }
 
     return ERROR_NONE;
@@ -991,51 +997,56 @@ int32_t DefaultSegmentation::VideoSegmentation()
         }
     }
 
-    std::map<ExtractorTrack*, TrackSegmentCtx*>::iterator itExtractorTrack;
-    for (itExtractorTrack = m_extractorSegCtx.begin();
-        itExtractorTrack != m_extractorSegCtx.end();
-        itExtractorTrack++)
+    if (m_extractorSegCtx.size())
     {
-        TrackSegmentCtx *trackSegCtx =  itExtractorTrack->second;
+        std::map<ExtractorTrack*, TrackSegmentCtx*>::iterator itExtractorTrack;
+        for (itExtractorTrack = m_extractorSegCtx.begin();
+            itExtractorTrack != m_extractorSegCtx.end();
+            itExtractorTrack++)
+        {
+            TrackSegmentCtx *trackSegCtx =  itExtractorTrack->second;
 
-        DashInitSegmenter *initSegmenter = trackSegCtx->initSegmenter;
-        if (!initSegmenter)
-            return OMAF_ERROR_NULL_PTR;
+            DashInitSegmenter *initSegmenter = trackSegCtx->initSegmenter;
+            if (!initSegmenter)
+                return OMAF_ERROR_NULL_PTR;
 
-        ret = initSegmenter->GenerateInitSegment(trackSegCtx, m_trackSegCtx);
-        if (ret)
-            return ret;
+            ret = initSegmenter->GenerateInitSegment(trackSegCtx, m_trackSegCtx);
+            if (ret)
+                return ret;
 
-        //trace
-        uint64_t initSegSize = initSegmenter->GetInitSegmentSize();
-        uint32_t trackIndex  = trackSegCtx->trackIdx.GetIndex();
-        const char *trackType = "init_track";
-        char tileRes[128] = { 0 };
-        snprintf(tileRes, 128, "%s", "none");
+            //trace
+            uint64_t initSegSize = initSegmenter->GetInitSegmentSize();
+            uint32_t trackIndex  = trackSegCtx->trackIdx.GetIndex();
+            const char *trackType = "init_track";
+            char tileRes[128] = { 0 };
+            snprintf(tileRes, 128, "%s", "none");
 
-        tracepoint(bandwidth_tp_provider, packed_segment_size,
-                    trackIndex, trackType, tileRes, 0, initSegSize);
+            tracepoint(bandwidth_tp_provider, packed_segment_size,
+                        trackIndex, trackType, tileRes, 0, initSegSize);
+        }
     }
-
     m_prevSegNum = m_segNum;
 
     uint16_t extractorTrackNum = m_extractorSegCtx.size();
-    if (extractorTrackNum % m_segInfo->extractorTracksPerSegThread == 0)
+    if (extractorTrackNum)
     {
-        m_aveETPerSegThread = m_segInfo->extractorTracksPerSegThread;
-        m_lastETPerSegThread = m_segInfo->extractorTracksPerSegThread;
-        m_threadNumForET = extractorTrackNum / m_segInfo->extractorTracksPerSegThread;
-    }
-    else
-    {
-        m_aveETPerSegThread = m_segInfo->extractorTracksPerSegThread;
-        m_lastETPerSegThread = extractorTrackNum % m_segInfo->extractorTracksPerSegThread;
-        m_threadNumForET = extractorTrackNum / m_segInfo->extractorTracksPerSegThread + 1;
-    }
+        if (extractorTrackNum % m_segInfo->extractorTracksPerSegThread == 0)
+        {
+            m_aveETPerSegThread = m_segInfo->extractorTracksPerSegThread;
+            m_lastETPerSegThread = m_segInfo->extractorTracksPerSegThread;
+            m_threadNumForET = extractorTrackNum / m_segInfo->extractorTracksPerSegThread;
+        }
+        else
+        {
+            m_aveETPerSegThread = m_segInfo->extractorTracksPerSegThread;
+            m_lastETPerSegThread = extractorTrackNum % m_segInfo->extractorTracksPerSegThread;
+            m_threadNumForET = extractorTrackNum / m_segInfo->extractorTracksPerSegThread + 1;
+        }
 
-    LOG(INFO) << "Lanuch  " << m_threadNumForET << " threads for Extractor Track segmentation!" << std::endl;
-    LOG(INFO) << "Average Extractor Track number per thread is  " << m_aveETPerSegThread << std::endl;
-    LOG(INFO) << "The last thread involves  " << m_lastETPerSegThread << " Extractor Tracks !" << std::endl;
+        LOG(INFO) << "Lanuch  " << m_threadNumForET << " threads for Extractor Track segmentation!" << std::endl;
+        LOG(INFO) << "Average Extractor Track number per thread is  " << m_aveETPerSegThread << std::endl;
+        LOG(INFO) << "The last thread involves  " << m_lastETPerSegThread << " Extractor Tracks !" << std::endl;
+    }
 
     while (1)
     {
@@ -1121,26 +1132,15 @@ int32_t DefaultSegmentation::VideoSegmentation()
         m_currSegedFrmNum++;
 
         std::map<uint8_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
-        std::map<uint8_t, ExtractorTrack*>::iterator itExtractorTrack = extractorTracks->begin();
-        for ( ; itExtractorTrack != extractorTracks->end(); /*itExtractorTrack++*/)
+        if (extractorTracks->size())
         {
-            ExtractorTrack *extractorTrack = itExtractorTrack->second;
-            if (m_extractorThreadIds.size() < m_threadNumForET)
+            std::map<uint8_t, ExtractorTrack*>::iterator itExtractorTrack = extractorTracks->begin();
+            for ( ; itExtractorTrack != extractorTracks->end(); /*itExtractorTrack++*/)
             {
-                if (m_aveETPerSegThread == m_lastETPerSegThread)
+                ExtractorTrack *extractorTrack = itExtractorTrack->second;
+                if (m_extractorThreadIds.size() < m_threadNumForET)
                 {
-                    int32_t retET = StartExtractorTrackSegmentation(extractorTrack);
-                    if (retET)
-                        return retET;
-
-                    for (uint16_t num = 0; num < m_aveETPerSegThread; num++)
-                    {
-                        itExtractorTrack++;
-                    }
-                }
-                else
-                {
-                    if ((uint16_t)(m_extractorThreadIds.size()) < (m_threadNumForET - 1))
+                    if (m_aveETPerSegThread == m_lastETPerSegThread)
                     {
                         int32_t retET = StartExtractorTrackSegmentation(extractorTrack);
                         if (retET)
@@ -1153,44 +1153,59 @@ int32_t DefaultSegmentation::VideoSegmentation()
                     }
                     else
                     {
-                        int32_t retET = StartLastExtractorTrackSegmentation(extractorTrack);
-                        if (retET)
-                            return retET;
-
-                        for ( ; itExtractorTrack != extractorTracks->end(); )
+                        if ((uint16_t)(m_extractorThreadIds.size()) < (m_threadNumForET - 1))
                         {
-                            itExtractorTrack++;
+                            int32_t retET = StartExtractorTrackSegmentation(extractorTrack);
+                            if (retET)
+                                return retET;
+
+                            for (uint16_t num = 0; num < m_aveETPerSegThread; num++)
+                            {
+                                itExtractorTrack++;
+                            }
+                        }
+                        else
+                        {
+                            int32_t retET = StartLastExtractorTrackSegmentation(extractorTrack);
+                            if (retET)
+                                return retET;
+
+                            for ( ; itExtractorTrack != extractorTracks->end(); )
+                            {
+                                itExtractorTrack++;
+                            }
                         }
                     }
                 }
-            }
-            else
-            {
-                break;
-            }
-        }
-        if (m_extractorThreadIds.size() != m_threadNumForET)
-        {
-            LOG(ERROR) << "Launched threads number  " << (m_extractorThreadIds.size()) << " doesn't match calculated threads number  " << m_threadNumForET << std::endl;
-        }
-
-        usleep(2000);
-
-        for (itExtractorTrack = extractorTracks->begin();
-            itExtractorTrack != extractorTracks->end();
-            itExtractorTrack++)
-        {
-            ExtractorTrack *extractorTrack = itExtractorTrack->second;
-            while (extractorTrack->GetProcessedFrmNum() == m_framesNum)
-            {
-                usleep(1);
-
-                if (extractorTrack->GetProcessedFrmNum() == (m_framesNum + 1))
+                else
                 {
                     break;
                 }
             }
+            if (m_extractorThreadIds.size() != m_threadNumForET)
+            {
+                LOG(ERROR) << "Launched threads number  " << (m_extractorThreadIds.size()) << " doesn't match calculated threads number  " << m_threadNumForET << std::endl;
+            }
+
+            usleep(2000);
+
+            for (itExtractorTrack = extractorTracks->begin();
+                itExtractorTrack != extractorTracks->end();
+                itExtractorTrack++)
+            {
+                ExtractorTrack *extractorTrack = itExtractorTrack->second;
+                while (extractorTrack->GetProcessedFrmNum() == m_framesNum)
+                {
+                    usleep(1);
+
+                    if (extractorTrack->GetProcessedFrmNum() == (m_framesNum + 1))
+                    {
+                        break;
+                    }
+                }
+            }
         }
+
         m_prevSegedFrmNum++;
         m_currProcessedFrmNum++;
 
@@ -1237,16 +1252,19 @@ int32_t DefaultSegmentation::VideoSegmentation()
                         snprintf(rmFile, 1024, "%s%s_track%d.%d.mp4", m_segInfo->dirName, m_segInfo->outName, trackIndex.GetIndex(), removeCnt);
                         remove(rmFile);
                     }
-                    std::map<ExtractorTrack*, TrackSegmentCtx*>::iterator itOneExtractorTrack;
-                    for (itOneExtractorTrack = m_extractorSegCtx.begin();
-                        itOneExtractorTrack != m_extractorSegCtx.end();
-                        itOneExtractorTrack++)
+                    if (m_extractorSegCtx.size())
                     {
-                        TrackSegmentCtx *trackSegCtx = itOneExtractorTrack->second;
-                        VCD::MP4::TrackId trackIndex = trackSegCtx->trackIdx;
-                        char rmFile[1024];
-                        snprintf(rmFile, 1024, "%s%s_track%d.%d.mp4", m_segInfo->dirName, m_segInfo->outName, trackIndex.GetIndex(), removeCnt);
-                        remove(rmFile);
+                        std::map<ExtractorTrack*, TrackSegmentCtx*>::iterator itOneExtractorTrack;
+                        for (itOneExtractorTrack = m_extractorSegCtx.begin();
+                            itOneExtractorTrack != m_extractorSegCtx.end();
+                            itOneExtractorTrack++)
+                        {
+                            TrackSegmentCtx *trackSegCtx = itOneExtractorTrack->second;
+                            VCD::MP4::TrackId trackIndex = trackSegCtx->trackIdx;
+                            char rmFile[1024];
+                            snprintf(rmFile, 1024, "%s%s_track%d.%d.mp4", m_segInfo->dirName, m_segInfo->outName, trackIndex.GetIndex(), removeCnt);
+                            remove(rmFile);
+                        }
                     }
                 }
             }

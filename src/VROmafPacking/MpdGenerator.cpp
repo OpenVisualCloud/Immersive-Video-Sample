@@ -445,18 +445,30 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
 
     if (m_segInfo->hasMainAS)
     {
-        std::map<ExtractorTrack*, TrackSegmentCtx*>::iterator it = m_extractorSegCtx->begin();
-        if (it == m_extractorSegCtx->end())
-            return OMAF_ERROR_EXTRACTORTRACK_NOT_FOUND;
+        uint16_t maxWidth = 0;
+        uint16_t maxHeight = 0;
+        uint64_t maxRes = 0;
+        std::map<MediaStream*, TrackSegmentCtx*>::iterator it = m_streamSegCtx->begin();
+        for ( ; it != m_streamSegCtx->end(); it++)
+        {
+            MediaStream *stream = it->first;
+            if (stream->GetMediaType() == VIDEOTYPE)
+            {
+                VideoStream *vs = (VideoStream*)stream;
+                uint16_t width = vs->GetSrcWidth();
+                uint16_t height = vs->GetSrcHeight();
+                uint64_t resolution = (uint64_t)(width) * (uint64_t)(height);
+                if (resolution > maxRes)
+                {
+                    maxRes = resolution;
+                    maxWidth = width;
+                    maxHeight = height;
+                }
+            }
+        }
 
-        ExtractorTrack *extractorTrack = it->first;
-        std::list<PicResolution> *picResList = extractorTrack->GetPicRes();
-        std::list<PicResolution>::iterator it1 = picResList->begin();
-        if (it1 == picResList->end())
-            return OMAF_ERROR_STREAM_NOT_FOUND;
-
-        uint16_t mainWidth = it1->width;
-        uint16_t mainHeight = it1->height;
+        uint16_t mainWidth = maxWidth;
+        uint16_t mainHeight = maxHeight;
 
         XMLElement *asEle = m_xmlDoc->NewElement(ADAPTATIONSET);
         asEle->SetAttribute(INDEX, 0); //?
@@ -517,13 +529,16 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
         }
     }
 
-    std::map<ExtractorTrack*, TrackSegmentCtx*>::iterator itExtractorCtx;
-    for (itExtractorCtx = m_extractorSegCtx->begin();
-        itExtractorCtx != m_extractorSegCtx->end();
-        itExtractorCtx++)
+    if (m_extractorSegCtx->size())
     {
-        TrackSegmentCtx *trackSegCtx = itExtractorCtx->second;
-        WriteExtractorTrackAS(periodEle, trackSegCtx);
+        std::map<ExtractorTrack*, TrackSegmentCtx*>::iterator itExtractorCtx;
+        for (itExtractorCtx = m_extractorSegCtx->begin();
+            itExtractorCtx != m_extractorSegCtx->end();
+            itExtractorCtx++)
+        {
+            TrackSegmentCtx *trackSegCtx = itExtractorCtx->second;
+            WriteExtractorTrackAS(periodEle, trackSegCtx);
+        }
     }
 
     m_xmlDoc->SaveFile(m_mpdFileName);
