@@ -15,7 +15,9 @@ parameters_usage(){
 
 package(){
     if [ ${ITEM} = "server" ] ; then
-        echo 'sudo ldconfig && sudo cp /usr/bin/immersive-server/WorkerServer /root' > post
+        echo 'sudo cp /usr/lib64/immersive-server/libHighResPlusFullLowResPacking.so /usr/local/lib' > post
+        echo 'sudo cp /usr/lib64/immersive-server/libSingleVideoPacking.so /usr/local/lib' >> post
+        echo 'sudo ldconfig && sudo cp /usr/bin/immersive-server/WorkerServer /root' >> post
     elif [ ${ITEM} = "client" ] ; then
         echo 'sudo ldconfig' > post
     fi
@@ -55,11 +57,14 @@ if [ ${ITEM} = "server" ] ; then
     cp external/ffmpeg_server_so/libswscale.so.5                      ${LIBDIR}
     cp external/ffmpeg_server_so/libswresample.so.3                   ${LIBDIR}
     cp external/ffmpeg_server_so/libpostproc.so.55                    ${LIBDIR}
+    cp /usr/local/lib/libHighResPlusFullLowResPacking.so              ${LIBDIR}
+    cp /usr/local/lib/libSingleVideoPacking.so                        ${LIBDIR}
     cp /usr/local/lib/libglog.so.0                                    ${LIBDIR}
     cp /usr/local/lib/libthrift-0.12.0.so                             ${LIBDIR}
     cp /usr/local/lib/libthriftnb-0.12.0.so                           ${LIBDIR}
     cp /usr/local/lib64/libSvtHevcEnc.so.1                            ${LIBDIR}
     cp /usr/lib64/libopenhevc.so.1                                    ${LIBDIR}
+    cp /usr/lib64/libSDL2-2.0.so.0                                    ${LIBDIR}
     cp server/360SCVP/lib360SCVP.so                                   ${LIBDIR}
     cp server/VROmafPacking/libVROmafPacking.so                       ${LIBDIR}
     cp ../ffmpeg/dependency/libEncoder.so                             ${LIBDIR}
@@ -89,6 +94,7 @@ if [ ${ITEM} = "client" ] ; then
     cp /usr/local/lib/libva-x11.so.2                                  ${LIBDIR}
     cp /usr/local/lib/libva.so.2                                      ${LIBDIR}
     cp /usr/local/lib/libglog.so.0                                    ${LIBDIR}
+    cp /usr/lib64/libSDL2-2.0.so.0                                    ${LIBDIR}
     cp client/360SCVP/lib360SCVP.so                                   ${LIBDIR}
     cp client/OmafDashAccess/libOmafDashAccess.so                     ${LIBDIR}
     cp client/player/render                                           ${BINDIR}
