@@ -7,20 +7,16 @@ cd ../build/external/lttng
 OS=$(awk -F= '/^NAME/{print $2}' /etc/os-release)
 
 # Install liburcu library
-if [ "${OS}" == \""Ubuntu"\" ];then
-    sudo apt-get install liburcu-dev -y
-elif [ "${OS}" == \""CentOS Linux"\" ];then
-    if [ ! -f "./userspace-rcu-latest-0.11.tar.bz2" ];then
-        wget -c https://lttng.org/files/urcu/userspace-rcu-latest-0.11.tar.bz2
-        tar -xjf userspace-rcu-latest-0.11.tar.bz2
-    fi
-    cd userspace-rcu-0.11.*
-    ./configure
-    make -j $(nproc)
-    sudo make install
-    sudo ldconfig
-    cd ../
+if [ ! -f "./userspace-rcu-latest-0.11.tar.bz2" ];then
+    wget -c https://lttng.org/files/urcu/userspace-rcu-latest-0.11.tar.bz2
+    tar -xjf userspace-rcu-latest-0.11.tar.bz2
 fi
+cd userspace-rcu-0.11.*
+./configure
+make -j $(nproc)
+sudo make install
+sudo ldconfig
+cd ../
 
 # Install uuid and popt libraries
 if [ "${OS}" == \""Ubuntu"\" ];then
