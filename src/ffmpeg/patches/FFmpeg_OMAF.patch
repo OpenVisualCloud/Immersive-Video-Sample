@@ -688,7 +688,7 @@ new file mode 100644
 index 0000000..332bf7b
 --- /dev/null
 +++ b/FFmpeg/libavcodec/distributed_encoder.c
-@@ -0,0 +1,539 @@
+@@ -0,0 +1,561 @@
 +/*
 +* Scalable Video Technology for distributed encoder library plugin
 +*
@@ -840,6 +840,8 @@ index 0000000..332bf7b
 +        {
 +            codecOption.decOption.decType = DecoderType_openHEVC;
 +            ohOption *oh = (ohOption*)malloc(sizeof(ohOption));
++            if(!oh)
++                return AVERROR(EINVAL);
 +            oh->threadCount = 16;
 +            oh->threadType = 4;
 +            codecOption.decOption.decSetting = (void*)oh;
@@ -849,6 +851,10 @@ index 0000000..332bf7b
 +            codecOption.decOption.decType = DecoderType_ffmpeg;
 +            ffmpegOption * fo = (ffmpegOption*)malloc(sizeof(ffmpegOption));
 +            fo->codecID = CodecID_H264;
++            if(!fo)
++            {
++                return AVERROR(EINVAL);
++            }
 +            codecOption.decOption.decSetting = (void*)fo;
 +        }
 +        else
@@ -889,14 +895,12 @@ index 0000000..332bf7b
 +    InputFrame* inFrame = *inputFrame;
 +    int data_num = isEncoded ? 1 : 3;
 +
-+    bool needMemCopy = DistributedEncoder_NeedMemCpyForInput(deCxt->handle);
-+
 +    for(int i = 0; i < data_num; i++)
 +    {
 +        int factor = i == 0 ? 1 : 2;
 +        int copy_size = deCxt->input_type == encoded ? frame->linesize[i] : (frame->linesize[i] * enc_params.streamInfo.frameHeight / factor);
 +
-+        if(isEncoded || needMemCopy)
++        if(isEncoded)
 +        {
 +            inFrame->data[i] = (char*)malloc(sizeof(char*) * copy_size);
 +            memcpy(inFrame->data[i], frame->data[i], copy_size);
@@ -920,6 +924,8 @@ index 0000000..332bf7b
 +
 +    if (!frame) {
 +        InputFrame* lastFrame = (InputFrame*)malloc(sizeof(InputFrame));
++        if(!lastFrame)
++            return AVERROR(EINVAL);
 +        memset(lastFrame, 0, sizeof(InputFrame));
 +        lastFrame->data[0] = NULL;
 +        lastFrame->stride[0] = 0;
@@ -928,6 +934,7 @@ index 0000000..332bf7b
 +        lastFrame->format = enc_params.encoderParams.format;
 +        lastFrame->picType = PictureType_NONE;
 +        DistributedEncoder_Process(deCxt->handle, lastFrame);
++        free(lastFrame);
 +
 +        deCxt->send_end = true;
 +        av_log(avctx, AV_LOG_DEBUG, "Finish sending frames!!!\n");
@@ -935,15 +942,18 @@ index 0000000..332bf7b
 +    }
 +
 +    InputFrame* inFrame = (InputFrame*)malloc(sizeof(InputFrame));
++    if(!inFrame)
++        return AVERROR(EINVAL);
 +    memset(inFrame, 0 , sizeof(InputFrame));
-+
 +    if(deCxt->input_type != encoded && deCxt->input_type != raw)
 +        return AVERROR(EINVAL);
 +
 +    bool isEncoded = (deCxt->input_type == encoded);
++    bool useSharedMem = (deCxt->input_type == raw);
 +
 +    prepare_input_frame(avctx, isEncoded, &inFrame, frame);
 +
++    inFrame->useSharedMem = useSharedMem;
 +    inFrame->width = enc_params.streamInfo.frameWidth;
 +    inFrame->height =enc_params.streamInfo.frameHeight ;
 +    inFrame->format = enc_params.encoderParams.format;
@@ -963,6 +973,8 @@ index 0000000..332bf7b
 +    }
 +    DistributedEncoder_Process(deCxt->handle, inFrame);
 +
++    if(inFrame)
++        free(inFrame);
 +    return 0;
 +}
 +
@@ -1006,6 +1018,10 @@ index 0000000..332bf7b
 +        return ret;
 +    }
 +
++    if(!data && !size)
++    {
++        return AVERROR(EAGAIN);
++    }
 +    memcpy(pkt->data, data, size);
 +
 +    pkt->size = size;
@@ -1032,12 +1048,18 @@ index 0000000..332bf7b
 +        if(ret == DE_STATUS_SUCCESS)
 +        {
 +            pkt->side_data = (AVPacketSideData*)malloc(sizeof(AVPacketSideData));
++            if(!pkt->side_data)
++            {
++                free(header);
++                return AVERROR(EINVAL);
++            }
 +            pkt->side_data->size = header->headerSize;
 +            pkt->side_data->data = av_malloc(pkt->side_data->size + AV_INPUT_BUFFER_PADDING_SIZE);
 +            if (!(pkt->side_data->data))
 +            {
 +                av_log(avctx, AV_LOG_ERROR,
 +                    "Cannot allocate HEVC header of size %d. \n", pkt->side_data->size);
++                free(header);
 +                return AVERROR(ENOMEM);
 +            }
 +            memcpy(pkt->side_data->data, header->headerData, pkt->side_data->size);
@@ -4150,7 +4172,7 @@ index 0000000..0a66efa
 +        }
 +    }
 +
-+    initInfo->pluginName = "SingleVideoPacking";
++    initInfo->pluginPath = c->pluginPath;
 +    if (s->nb_streams == 1)
 +    {
 +        initInfo->pluginName = "SingleVideoPacking";
