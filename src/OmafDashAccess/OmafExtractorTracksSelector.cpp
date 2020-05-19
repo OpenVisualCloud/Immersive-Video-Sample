@@ -27,13 +27,13 @@
  */
 
 /*
- * File:   OmafExtractorSelector.cpp
+ * File:   OmafExtractorTracksSelector.cpp
  * Author: media
  *
  * Created on May 28, 2019, 1:19 PM
  */
 
-#include "OmafExtractorSelector.h"
+#include "OmafExtractorTracksSelector.h"
 #include "OmafMediaStream.h"
 #include "OmafReaderManager.h"
 #include <cfloat>
@@ -46,49 +46,12 @@
 
 VCD_OMAF_BEGIN
 
-OmafExtractorSelector::OmafExtractorSelector( int size )
+OmafExtractorTracksSelector::~OmafExtractorTracksSelector()
 {
-    pthread_mutex_init(&mMutex, NULL);
-    mSize = size;
-    m360ViewPortHandle = nullptr;
-    mParamViewport = nullptr;
     mCurrentExtractor = nullptr;
-    mPose = nullptr;
-    mUsePrediction = false;
-    mPredictPluginName = "";
-    mLibPath = "";
 }
 
-OmafExtractorSelector::~OmafExtractorSelector()
-{
-    pthread_mutex_destroy( &mMutex );
-
-    if(m360ViewPortHandle)
-    {
-        I360SCVP_unInit(m360ViewPortHandle);
-        m360ViewPortHandle = nullptr;
-    }
-
-    SAFE_DELETE(mParamViewport);
-
-    if(mPoseHistory.size())
-    {
-        for(auto &p:mPoseHistory)
-        {
-            SAFE_DELETE(p.pose);
-        }
-    }
-    if (mPredictPluginMap.size())
-    {
-        for (auto &p:mPredictPluginMap)
-        {
-            SAFE_DELETE(p.second);
-        }
-    }
-    mUsePrediction = false;
-}
-
-int OmafExtractorSelector::SelectExtractors(OmafMediaStream* pStream)
+int OmafExtractorTracksSelector::SelectTracks(OmafMediaStream* pStream)
 {
     OmafExtractor* pSelectedExtrator = NULL;
     if(mUsePrediction)
@@ -96,10 +59,7 @@ int OmafExtractorSelector::SelectExtractors(OmafMediaStream* pStream)
         ListExtractor predict_extractors = GetExtractorByPosePrediction( pStream );
         if (predict_extractors.empty())
         {
-            if (mPoseHistory.size() < POSE_SIZE) // at the beginning
-            {
-                pSelectedExtrator = GetExtractorByPose( pStream );
-            }
+            pSelectedExtrator = GetExtractorByPose( pStream );
         }
         else
             pSelectedExtrator = predict_extractors.front();
@@ -125,7 +85,7 @@ int OmafExtractorSelector::SelectExtractors(OmafMediaStream* pStream)
 
     extractors.push_front(mCurrentExtractor);
 
-    if( isExtractorChanged || extractors.size() > 1)
+    if( isExtractorChanged || extractors.size() > 1) //?
     {
         list<int> trackIDs;
         for(auto &it: extractors)
@@ -140,65 +100,7 @@ int OmafExtractorSelector::SelectExtractors(OmafMediaStream* pStream)
     return ret;
 }
 
-int OmafExtractorSelector::UpdateViewport(HeadPose* pose)
-{
-    if (!pose)
-        return ERROR_NULL_PTR;
-
-    pthread_mutex_lock(&mMutex);
-
-    PoseInfo pi;
-    pi.pose = new HeadPose;
-    memcpy(pi.pose, pose, sizeof(HeadPose));
-    std::chrono::high_resolution_clock clock;
-    pi.time = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-    mPoseHistory.push_front(pi);
-    if( mPoseHistory.size() > (uint32_t)(this->mSize) )
-    {
-        auto pit = mPoseHistory.back();
-        SAFE_DELETE(pit.pose);
-        mPoseHistory.pop_back();
-    }
-
-    pthread_mutex_unlock(&mMutex);
-    return ERROR_NONE;
-}
-
-int OmafExtractorSelector::SetInitialViewport( std::vector<Viewport*>& pView, HeadSetInfo* headSetInfo, OmafMediaStream* pStream)
-{
-    if(!headSetInfo || !headSetInfo->viewPort_hFOV || !headSetInfo->viewPort_vFOV
-        || !headSetInfo->viewPort_Width || !headSetInfo->viewPort_Height)
-    {
-        return ERROR_INVALID;
-    }
-
-    mParamViewport = new param_360SCVP;
-    mParamViewport->usedType = E_VIEWPORT_ONLY;
-    mParamViewport->paramViewPort.viewportWidth = headSetInfo->viewPort_Width;
-    mParamViewport->paramViewPort.viewportHeight = headSetInfo->viewPort_Height;
-    mParamViewport->paramViewPort.viewPortPitch = headSetInfo->pose->pitch;
-    mParamViewport->paramViewPort.viewPortYaw = headSetInfo->pose->yaw;
-    mParamViewport->paramViewPort.viewPortFOVH = headSetInfo->viewPort_hFOV;
-    mParamViewport->paramViewPort.viewPortFOVV = headSetInfo->viewPort_vFOV;
-    mParamViewport->paramViewPort.geoTypeInput = (EGeometryType)headSetInfo->input_geoType;
-    mParamViewport->paramViewPort.geoTypeOutput = (EGeometryType)headSetInfo->output_geoType;
-    mParamViewport->paramViewPort.tileNumRow = pStream->GetRowSize();
-    mParamViewport->paramViewPort.tileNumCol = pStream->GetColSize();
-    mParamViewport->paramViewPort.usageType = E_VIEWPORT_ONLY;
-    mParamViewport->paramViewPort.faceWidth = pStream->GetStreamHighResWidth();
-    mParamViewport->paramViewPort.faceHeight = pStream->GetStreamHighResHeight();
-    m360ViewPortHandle = I360SCVP_Init(mParamViewport);
-    if(!m360ViewPortHandle)
-        return ERROR_NULL_PTR;
-
-    //set current Pose;
-    mPose = new HeadPose;
-    memcpy(mPose, headSetInfo->pose, sizeof(HeadPose));
-
-    return UpdateViewport(mPose);
-}
-
-bool OmafExtractorSelector::IsDifferentPose(HeadPose* pose1, HeadPose* pose2)
+bool OmafExtractorTracksSelector::IsDifferentPose(HeadPose* pose1, HeadPose* pose2)
 {
     // return false if two pose is same
     if(abs(pose1->yaw - pose2->yaw)<1e-3 && abs(pose1->pitch - pose2->pitch)<1e-3)
@@ -209,7 +111,7 @@ bool OmafExtractorSelector::IsDifferentPose(HeadPose* pose1, HeadPose* pose2)
     return true;
 }
 
-OmafExtractor* OmafExtractorSelector::GetExtractorByPose( OmafMediaStream* pStream )
+OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose( OmafMediaStream* pStream )
 {
     pthread_mutex_lock(&mMutex);
     if(mPoseHistory.size() == 0)
@@ -262,7 +164,9 @@ OmafExtractor* OmafExtractorSelector::GetExtractorByPose( OmafMediaStream* pStre
     return selectedExtractor;
 }
 
-OmafExtractor* OmafExtractorSelector::SelectExtractor(OmafMediaStream* pStream, HeadPose* pose)
+OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(
+    OmafMediaStream* pStream,
+    HeadPose* pose)
 {
     // to select extractor;
     int ret = I360SCVP_setViewPort(m360ViewPortHandle, pose->yaw, pose->pitch);
@@ -290,7 +194,9 @@ OmafExtractor* OmafExtractorSelector::SelectExtractor(OmafMediaStream* pStream, 
     return selectedExtractor;
 }
 
-OmafExtractor* OmafExtractorSelector::GetNearestExtractor(OmafMediaStream* pStream, CCDef* outCC)
+OmafExtractor* OmafExtractorTracksSelector::GetNearestExtractor(
+    OmafMediaStream* pStream,
+    CCDef* outCC)
 {
     // calculate which extractor should be chosen
     OmafExtractor *selectedExtractor = nullptr;
@@ -319,7 +225,7 @@ OmafExtractor* OmafExtractorSelector::GetNearestExtractor(OmafMediaStream* pStre
     return selectedExtractor;
 }
 
-ListExtractor OmafExtractorSelector::GetExtractorByPosePrediction( OmafMediaStream* pStream )
+ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction( OmafMediaStream* pStream )
 {
     ListExtractor extractors;
     pthread_mutex_lock(&mMutex);
@@ -331,13 +237,13 @@ ListExtractor OmafExtractorSelector::GetExtractorByPosePrediction( OmafMediaStre
     pthread_mutex_unlock(&mMutex);
     if (mPredictPluginMap.size() == 0)
     {
-        LOG(INFO)<<"predict plugin map is empty!"<<endl;
+        LOG(ERROR)<<"predict plugin map is empty!"<<endl;
         return extractors;
     }
     ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);
-    uint32_t pose_interval = 40;
-    uint32_t pre_pose_count = 25;
-    uint32_t predict_interval = 1000;
+    uint32_t pose_interval = POSE_INTERVAL;
+    uint32_t pre_pose_count = PREDICTION_POSE_COUNT;
+    uint32_t predict_interval = PREDICTION_INTERVAL;
     plugin->Intialize(pose_interval, pre_pose_count, predict_interval);
     std::list<ViewportAngle> pose_history;
     pthread_mutex_lock(&mMutex);
@@ -395,25 +301,6 @@ ListExtractor OmafExtractorSelector::GetExtractorByPosePrediction( OmafMediaStre
     SAFE_DELETE(predictPose);
     SAFE_DELETE(predict_angle);
     return extractors;
-}
-
-int OmafExtractorSelector::InitializePredictPlugins()
-{
-    if (mLibPath.empty() || mPredictPluginName.empty())
-    {
-        LOG(ERROR)<<"Viewport predict plugin path OR name is invalid!"<<endl;
-        return ERROR_INVALID;
-    }
-    ViewportPredictPlugin *plugin = new ViewportPredictPlugin();
-    std::string pluginPath = mLibPath + mPredictPluginName;
-    int ret = plugin->LoadPlugin(pluginPath.c_str());
-    if (ret != ERROR_NONE)
-    {
-        LOG(ERROR)<<"Load plugin failed!"<<endl;
-        return ret;
-    }
-    mPredictPluginMap.insert(std::pair<std::string, ViewportPredictPlugin*>(mPredictPluginName, plugin));
-    return ERROR_NONE;
 }
 
 VCD_OMAF_END

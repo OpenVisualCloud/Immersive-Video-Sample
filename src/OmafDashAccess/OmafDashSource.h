@@ -43,7 +43,7 @@
 #include "MediaPacket.h"
 #include "OmafMPDParser.h"
 #include "DownloadManager.h"
-#include "OmafExtractorSelector.h"
+#include "OmafTracksSelector.h"
 
 
 using namespace VCD::OMAF;
@@ -77,7 +77,10 @@ public:
     //!
     //! \brief Interface implementation from base class: OmafMediaSource
     //!
-    virtual int OpenMedia(std::string url, std::string cacheDir, bool enablePredictor=false, std::string predictPluginName="", std::string libPath="");
+    virtual int OpenMedia(
+        std::string url, std::string cacheDir,
+        bool enableExtractor=true, bool enablePredictor=false,
+        std::string predictPluginName="", std::string libPath="");
     virtual int CloseMedia();
     virtual int GetPacket( int streamID, std::list<MediaPacket*>* pkts, bool needParams, bool clearBuf );
     virtual int GetStatistic(DashStatisticInfo* dsInfo);
@@ -175,7 +178,8 @@ private:
 private:
     OmafMPDParser*             mMPDParser;                //<! the MPD parser
     DASH_STATUS                mStatus;                   //<! the status of the source
-    OmafExtractorSelector*     mSelector;                 //<! the selector for extractor selection
+    //OmafExtractorSelector*     mSelector;                 //<! the selector for extractor selection
+    OmafTracksSelector         *m_selector;               //<! tracks selector basing on viewport
     pthread_mutex_t            mMutex;                    //<! for synchronization
     MPDInfo                    *mMPDinfo;                  //<! MPD information
     int                        dcount;

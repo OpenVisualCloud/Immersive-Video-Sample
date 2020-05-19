@@ -26,17 +26,16 @@
  *
  */
 //!
-//! \file:   OmafExtractorSelector.h
-//! \brief:
-//! \detail:
+//! \file:   OmafTracksSelector.h
+//! \brief:  Tracks selector base class definition
+//! \detail: Define the operation of tracks selector base class based on viewport
 //! Created on May 28, 2019, 1:19 PM
 //!
 
-#ifndef OMAFEXTRACTORSELECTOR_H
-#define OMAFEXTRACTORSELECTOR_H
+#ifndef OMAFTRACKSSELECTOR_H
+#define OMAFTRACKSSELECTOR_H
 
 #include "general.h"
-#include "OmafExtractor.h"
 #include "OmafMediaStream.h"
 #include "360SCVPViewportAPI.h"
 #include "OmafViewportPredict/ViewportPredictPlugin.h"
@@ -47,79 +46,67 @@ VCD_OMAF_BEGIN
 
 #define POSE_SIZE 10
 
-typedef std::list<OmafExtractor*> ListExtractor;
-
 typedef struct POSEINFO{
     HeadPose  *pose;
     uint64_t  time;
 }PoseInfo;
 
-class OmafExtractorSelector {
+class OmafTracksSelector {
 public:
     //!
     //! \brief  construct
     //!
-    OmafExtractorSelector(int size = POSE_SIZE);
+    OmafTracksSelector(int size = POSE_SIZE);
 
     //!
     //! \brief  de-construct
     //!
-    virtual ~OmafExtractorSelector();
-
-public:
+    virtual ~OmafTracksSelector();
 
     //!
-    //! \brief  SelectExtractor for the stream which has extractors. each time
-    //!         the selector will select extractor based on the latest pose. the
+    //! \brief  Select tracks for the stream based on the latest pose. each time
+    //!         the selector will select tracks based on the latest pose. the
     //!         information stored in mPoseHistory can be used for prediction for
     //!         further movement
     //!
-    int SelectExtractors(OmafMediaStream* pStream);
-
-    //!
-    //! \brief  update Viewport; each time pose update will be recorded, but only
-    //!         the latest will be used when SelectExtractors is called.
-    //!
-    int UpdateViewport(HeadPose* pose);
+    virtual int SelectTracks(OmafMediaStream *pStream) = 0;
 
     //!
     //! \brief  Set Init viewport
     //!
-    int SetInitialViewport( std::vector<Viewport*>& pView, HeadSetInfo* headSetInfo, OmafMediaStream* pStream);
+    int SetInitialViewport(
+        std::vector<Viewport*>& pView,
+        HeadSetInfo* headSetInfo,
+        OmafMediaStream* pStream);
 
-    void EnablePosePrediction(std::string predictPluginName, std::string libPath)
-    {
-        mUsePrediction = true;
-        mPredictPluginName.assign(predictPluginName);
-        mLibPath.assign(libPath);
-        InitializePredictPlugins();
-    };
+    //!
+    //! \brief  Update Viewport; each time pose update will be recorded, but only
+    //!         the latest will be used when SelectTracks is called.
+    //!
+    int UpdateViewport(HeadPose* pose);
+
+    //!
+    //! \brief  Load viewport prediction plugin
+    //!
+    int EnablePosePrediction(std::string predictPluginName, std::string libPath);
+
+    //!
+    //! \brief  Get the priority of the segment
+    //!
+    //virtual int GetSegmentPriority(OmafSegment *segment) = 0;
 
 private:
-    //!
-    //! \brief  Get Extractor based on latest Pose
-    //!
-    OmafExtractor* GetExtractorByPose( OmafMediaStream* pStream );
 
     //!
-    //! \brief  predict Extractor based history Poses
+    //! \brief  Initialize viewport prediction plugin
     //!
-    ListExtractor GetExtractorByPosePrediction( OmafMediaStream* pStream );
-
-    bool IsDifferentPose(HeadPose* pose1, HeadPose* pose2);
-
-    OmafExtractor* GetNearestExtractor(OmafMediaStream* pStream, CCDef* outCC);
-
-    OmafExtractor* SelectExtractor(OmafMediaStream* pStream, HeadPose* pose);
-
     int InitializePredictPlugins();
 
-private:
-    std::list<PoseInfo>               mPoseHistory;               //<!
+protected:
+    std::list<PoseInfo>               mPoseHistory;
     int                               mSize;
-    pthread_mutex_t                   mMutex;                     //<! for synchronization
+    pthread_mutex_t                   mMutex;
     HeadPose                          *mPose;
-    OmafExtractor                     *mCurrentExtractor;
     void                              *m360ViewPortHandle;
     param_360SCVP                     *mParamViewport;
     bool                              mUsePrediction;
@@ -130,5 +117,4 @@ private:
 
 VCD_OMAF_END;
 
-#endif /* OMAFEXTRACTORSELECTOR_H */
-
+#endif /* OMAFTRACKSSELECTOR_H */

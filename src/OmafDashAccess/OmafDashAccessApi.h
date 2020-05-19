@@ -65,6 +65,7 @@ typedef struct DASHSTREAMINGCLIENT{
     const char*        media_url;
     SourceType         source_type;
     const char*        cache_path;
+    bool               enable_extractor;
 } DashStreamingClient;
 
 /*

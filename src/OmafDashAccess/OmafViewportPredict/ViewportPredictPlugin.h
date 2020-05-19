@@ -42,6 +42,10 @@
 
 VCD_OMAF_BEGIN
 
+#define POSE_INTERVAL         40
+#define PREDICTION_POSE_COUNT 25
+#define PREDICTION_INTERVAL   1000
+
 typedef void* Handler;
 typedef Handler (*INIT_FUNC)(uint32_t,uint32_t,uint32_t);
 typedef ViewportAngle* (*PREDICTPOSE_FUNC)(Handler, std::list<ViewportAngle>);

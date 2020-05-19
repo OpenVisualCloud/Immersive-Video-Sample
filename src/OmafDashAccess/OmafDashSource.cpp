@@ -29,6 +29,7 @@
 #include "OmafDashSource.h"
 #include <string.h>
 #include "OmafReaderManager.h"
+#include "OmafExtractorTracksSelector.h"
 #include <math.h>
 #include <dirent.h>
 #ifndef _ANDROID_NDK_OPTION_
@@ -51,7 +52,8 @@ OmafDashSource::OmafDashSource()
     memset(&mPose, 0, sizeof(mPose));
     mLoop = false;
     mEOS = false;
-    mSelector = new OmafExtractorSelector();
+    //mSelector = new OmafExtractorSelector();
+    m_selector = nullptr;
     mMPDinfo = nullptr;
     dcount = 1;
     m_glogWrapper = new GlogWrapper((char*)"glogAccess");
@@ -62,7 +64,8 @@ OmafDashSource::~OmafDashSource()
 {
     pthread_mutex_destroy( &mMutex );
     SAFE_DELETE(mMPDParser);
-    SAFE_DELETE(mSelector);
+    //SAFE_DELETE(mSelector);
+    SAFE_DELETE(m_selector);
     SAFE_DELETE(mMPDinfo);
     mViewPorts.clear();
     ClearStreams();
@@ -99,7 +102,10 @@ int OmafDashSource::SyncTime(std::string url)
     return ret;
 }
 
-int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enablePredictor, std::string predictPluginName, std::string libPath)
+int OmafDashSource::OpenMedia(
+    std::string url, std::string cacheDir,
+    bool enableExtractor, bool enablePredictor,
+    std::string predictPluginName, std::string libPath)
 {
     DIR* dir = opendir(cacheDir.c_str());
     if(dir)
@@ -183,17 +189,33 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enable
     for(auto it=listStream.begin(); it!=listStream.end(); it++){
         this->mMapStream[id] = (OmafMediaStream*)(*it);
         (*it)->SetStreamID(id);
+        (*it)->SetEnabledExtractor(enableExtractor);
         id++;
     }
 
-    if(enablePredictor) mSelector->EnablePosePrediction(predictPluginName, libPath);
+    if (enableExtractor)
+    {
+        m_selector = new OmafExtractorTracksSelector();
+        if (!m_selector)
+        {
+            LOG(ERROR) << "Failed to create extractor tracks selector !" << std::endl;
+            return ERROR_NULL_PTR;
+        }
+    }
+    else
+    {
+        LOG(ERROR) << "Can't create tile tracks selector now !" << std::endl;
+        return ERROR_INVALID;
+    }
+
+    if(enablePredictor) m_selector->EnablePosePrediction(predictPluginName, libPath);
     // Setup initial Viewport and select Adaption Set
     auto it = mMapStream.begin();
     if (it == mMapStream.end())
     {
         return ERROR_INVALID;
     }
-    ret = mSelector->SetInitialViewport(mViewPorts, &mHeadSetInfo, (it->second));
+    ret = m_selector->SetInitialViewport(mViewPorts, &mHeadSetInfo, (it->second));
     if(ret != ERROR_NONE) return ret;
 
     // set status
@@ -310,7 +332,7 @@ int OmafDashSource::SetupHeadSetInfo(HeadSetInfo* clientInfo)
 
 int OmafDashSource::ChangeViewport(HeadPose* pose)
 {
-    int ret = mSelector->UpdateViewport( pose );
+    int ret = m_selector->UpdateViewport( pose );
 
     return ret;
 }
@@ -432,12 +454,12 @@ int OmafDashSource::SelectSpecialSegments(int extractorTrackIdx)
 int OmafDashSource::TimedSelectSegements( )
 {
     int ret = ERROR_NONE;
-    if(NULL == mSelector) return ERROR_NULL_PTR;
+    if(NULL == m_selector) return ERROR_NULL_PTR;
 
     std::map<int, OmafMediaStream*>::iterator it;
     for(it=this->mMapStream.begin(); it!=this->mMapStream.end(); it++){
         OmafMediaStream* pStream = it->second;
-        ret = mSelector->SelectExtractors(pStream);
+        ret = m_selector->SelectTracks(pStream);
         if(ERROR_NONE != ret) break;
     }
     return ret;

@@ -69,7 +69,7 @@ public:
 
         std::string mpdUrl = "./segs_for_readertest/Test.mpd";
 
-        ret = m_source->OpenMedia(mpdUrl, "./cache", false);
+        ret = m_source->OpenMedia(mpdUrl, "./cache", true, false);
         if (ret)
         {
             printf("Failed to open media \n");

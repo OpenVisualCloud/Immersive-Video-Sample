@@ -31,12 +31,12 @@ VCD_OMAF_BEGIN
 
 OmafMediaStream::OmafMediaStream()
 {
-    //mCurrentExtractor      = NULL;
     mMainAdaptationSet     = NULL;
     mExtratorAdaptationSet = NULL;
     m_pStreamInfo          = NULL;
     m_bEOS                 = false;
     mStreamID              = 0;
+    m_enabledExtractor     = true;
     pthread_mutex_init(&mMutex, NULL);
     pthread_mutex_init(&mCurrentMutex, NULL);
 }
@@ -361,6 +361,38 @@ int OmafMediaStream::UpdateEnabledExtractors(std::list<OmafExtractor*> extractor
             OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
             pAS->Enable(true);
         }
+    }
+
+    pthread_mutex_unlock(&mCurrentMutex);
+    pthread_mutex_unlock(&mMutex);
+
+    return ret;
+}
+
+int OmafMediaStream::UpdateEnabledTileTracks(
+    std::map<int, OmafAdaptationSet*> selectedTiles)
+{
+    if (selectedTiles.empty()) return ERROR_INVALID;
+
+    int ret = ERROR_NONE;
+
+    pthread_mutex_lock(&mMutex);
+    for(auto as_it1 = mMediaAdaptationSet.begin(); as_it1 != mMediaAdaptationSet.end(); as_it1++){
+        OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it1->second);
+        pAS->Enable(false);
+    }
+    for(auto extrator_it = mExtractors.begin();
+             extrator_it != mExtractors.end();
+             extrator_it++ ){
+        OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
+        extractor->Enable(false);
+    }
+
+    pthread_mutex_lock(&mCurrentMutex);
+    for (auto itAS = selectedTiles.begin(); itAS != selectedTiles.end(); itAS++)
+    {
+        OmafAdaptationSet *adaptationSet = itAS->second;
+        adaptationSet->Enable(true);
     }
 
     pthread_mutex_unlock(&mCurrentMutex);
