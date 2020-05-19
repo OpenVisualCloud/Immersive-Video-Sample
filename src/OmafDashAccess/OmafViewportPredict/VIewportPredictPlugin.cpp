@@ -49,7 +49,11 @@ ViewportPredictPlugin::ViewportPredictPlugin()
 
 ViewportPredictPlugin::~ViewportPredictPlugin()
 {
-    dlclose(m_libHandler);
+    if (m_libHandler)
+    {
+        dlclose(m_libHandler);
+        m_libHandler = NULL;
+    }
 }
 
 int ViewportPredictPlugin::LoadPlugin(const char* lib_path)

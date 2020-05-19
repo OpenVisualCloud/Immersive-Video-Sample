@@ -134,6 +134,11 @@ public:
     int UpdateEnabledExtractors(std::list<OmafExtractor*> extractors);
 
     //!
+    //! \brief  Update selected tile tracks after viewport changed
+    //!
+    int UpdateEnabledTileTracks(std::map<int, OmafAdaptationSet*> selectedTiles);
+
+    //!
     //! \brief  Get count of tracks
     //!
     int GetTrackCount();
@@ -218,6 +223,10 @@ public:
 
     uint32_t GetColSize(){return m_pStreamInfo ? m_pStreamInfo->tileColNum : 0;};
 
+    bool     IsExtractorEnabled() { return m_enabledExtractor; };
+
+    void     SetEnabledExtractor(bool enabledExtractor) { m_enabledExtractor = enabledExtractor; };
+
 private:
     //!
     //! \brief  UpdateStreamInfo
@@ -240,6 +249,7 @@ private:
     pthread_mutex_t                   mMutex;                       //<! for synchronization
     pthread_mutex_t                   mCurrentMutex;                //<! for synchronization of mCurrentExtractors
     bool                              m_bEOS;                       //<! flag for end of stream
+    bool                              m_enabledExtractor;
 
 };
 
