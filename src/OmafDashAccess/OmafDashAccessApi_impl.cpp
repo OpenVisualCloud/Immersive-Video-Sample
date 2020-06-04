@@ -45,6 +45,8 @@ using namespace std;
 VCD_USE_VROMAF;
 VCD_USE_VRVIDEO;
 
+uint16_t frameNum = 0;
+
 Handler OmafAccess_Init( DashStreamingClient* pCtx)
 {
     OmafMediaSource* pSource = new OmafDashSource();
@@ -114,7 +116,7 @@ int OmafAccess_GetPacket(
             *size -= 1;
             continue;
         }
-        int outSize = pPkt->Size();
+        uint64_t outSize = pPkt->Size();
         char* buf = (char*)malloc(outSize * sizeof(char));
         memcpy(buf, pPkt->Payload(), outSize);
         RegionWisePacking *newRwpk = new RegionWisePacking;
@@ -126,6 +128,16 @@ int OmafAccess_GetPacket(
         packet[i].buf  = buf;
         packet[i].size = outSize;
         packet[i].segID = pPkt->GetSegID();
+        packet[i].videoID = pPkt->GetVideoID();
+        packet[i].video_codec = pPkt->GetCodecType();
+        packet[i].pts = pPkt->GetPTS();
+        packet[i].height = pPkt->GetVideoHeight();
+        packet[i].width = pPkt->GetVideoWidth();
+        packet[i].numQuality = pPkt->GetQualityNum();
+        packet[i].qtyResolution = pPkt->GetSourceResolutions();
+        packet[i].tileRowNum = pPkt->GetVideoTileRowNum();
+        packet[i].tileColNum = pPkt->GetVideoTileColNum();
+        packet[i].bEOS = pPkt->GetEOS();
         i++;
 
         delete pPkt;

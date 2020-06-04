@@ -34,6 +34,7 @@
  */
 
 #include "OmafAdaptationSet.h"
+#include "OmafExtractor.h"
 #include <sys/time.h>
 //#include <sys/timeb.h>
 
@@ -236,6 +237,18 @@ int OmafAdaptationSet::LoadLocalSegment()
 
     pSegment->SetInitSegID(this->mInitSegment->GetInitSegID());
 
+    if (typeid(*this) != typeid(OmafExtractor))
+    {
+        uint32_t qualityRanking = GetRepresentationQualityRanking();
+        pSegment->SetQualityRanking(qualityRanking);
+        SRDInfo srdInfo;
+        srdInfo.left = mSRD->get_X();
+        srdInfo.top  = mSRD->get_Y();
+        srdInfo.width = mSRD->get_W();
+        srdInfo.height = mSRD->get_H();
+        pSegment->SetSRDInfo(srdInfo);
+    }
+
     LOG(INFO)<<"Load OmafSegment for AdaptationSet "<<this->mID<<endl;
 
     mSegments.push_back(pSegment);
@@ -344,7 +357,6 @@ int OmafAdaptationSet::DownloadInitializeSegment()
 int OmafAdaptationSet::DownloadSegment( )
 {
     int ret = ERROR_NONE;
-
     if(!mEnable){
         mActiveSegNum++;
         mSegNum++;
@@ -382,6 +394,17 @@ int OmafAdaptationSet::DownloadSegment( )
     }
 
     pSegment->SetInitSegID(this->mInitSegment->GetInitSegID());
+    if (typeid(*this) != typeid(OmafExtractor))
+    {
+        uint32_t qualityRanking = GetRepresentationQualityRanking();
+        pSegment->SetQualityRanking(qualityRanking);
+        SRDInfo srdInfo;
+        srdInfo.left = mSRD->get_X();
+        srdInfo.top  = mSRD->get_Y();
+        srdInfo.width = mSRD->get_W();
+        srdInfo.height = mSRD->get_H();
+        pSegment->SetSRDInfo(srdInfo);
+    }
 
     ret = pSegment->Open();
 

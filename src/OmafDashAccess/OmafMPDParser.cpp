@@ -41,6 +41,7 @@ OmafMPDParser::OmafMPDParser()
     this->mLock = new ThreadLock();
     mMPDInfo = nullptr;
     mPF = PF_UNKNOWN;
+    mExtractorEnabled = true;
 }
 
 OmafMPDParser::~OmafMPDParser()
@@ -188,15 +189,19 @@ int OmafMPDParser::BuildStreams( TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAF
         std::string type = it->first;
 
         OmafMediaStream* pStream = new OmafMediaStream();
+        pStream->SetEnabledExtractor(mExtractorEnabled);
         auto mainASit = ASs.begin();
 
         for(auto as_it = ASs.begin(); as_it != ASs.end(); as_it++){
             OmafAdaptationSet* pOmafAs = (OmafAdaptationSet*)(*as_it);
             pOmafAs->SetBaseURL(mBaseUrls);
 	    if ( typeid(*pOmafAs) == typeid( OmafExtractor ) ){
-                OmafExtractor *tmpOmafAs = (OmafExtractor*)pOmafAs;
-                pStream->AddExtractor(tmpOmafAs);
-                pStream->SetExtratorAdaptationSet(tmpOmafAs);
+                if (mExtractorEnabled)
+                {
+                    OmafExtractor *tmpOmafAs = (OmafExtractor*)pOmafAs;
+                    pStream->AddExtractor(tmpOmafAs);
+                    pStream->SetExtratorAdaptationSet(tmpOmafAs);
+                }
             }else{
                 pStream->AddAdaptationSet(pOmafAs);
                 if(pOmafAs->IsMain())

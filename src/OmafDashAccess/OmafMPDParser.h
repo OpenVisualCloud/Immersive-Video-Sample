@@ -51,7 +51,7 @@ typedef enum{
     MPD_DYNAMIC,
 }MPD_TYPE;
 
-typedef std::vector<AdaptationSetElement*>           ADAPTATIONSETS;
+typedef std::vector<AdaptationSetElement*>         ADAPTATIONSETS;
 typedef std::vector<OmafMediaStream*>              OMAFSTREAMS;
 typedef std::vector<OmafAdaptationSet*>            OMAFADAPTATIONSETS;
 typedef std::map<std::string, OMAFADAPTATIONSETS>  TYPE_OMAFADAPTATIONSETS;
@@ -92,6 +92,10 @@ public:
     //! \brief  Set cache dir.
     //!
     void SetCacheDir(string cache_dir) {mCacheDir = cache_dir;};
+
+    void SetExtractorEnabled(bool isExtractorEnabled) { mExtractorEnabled = isExtractorEnabled; };
+
+    bool GetExtractorEnabled() { return mExtractorEnabled; };
 
 private:
 
@@ -137,6 +141,7 @@ private:
     std::vector<BaseUrlElement *>  mBaseUrls;
     ProjectionFormat               mPF;           //!< the projection format of the video content
     std::string                    mCacheDir;     //!< cache directory
+    bool                           mExtractorEnabled; //!< if extractor track is enabled
 };
 
 VCD_OMAF_END;

@@ -49,6 +49,8 @@ VCD_OMAF_BEGIN
 #define STATUS_STOPPING      3
 #define STATUS_SEEKING       4
 
+//static uint32_t frameNumber = 0;
+
 static uint16_t GetTrackId(uint32_t id)
 {
     return (id & 0xffff);
@@ -67,19 +69,65 @@ OmafReaderManager::OmafReaderManager()
     mStatus    = STATUS_UNKNOWN;
     mReader    = NULL;
     mInitSegParsed = false;
-    memset(mVPS, 0, 256);
+    //memset(mVPS, 0, 256);
     mVPSLen = 0;
-    memset(mSPS, 0, 256);
+    //memset(mSPS, 0, 256);
     mSPSLen = 0;
-    memset(mPPS, 0, 256);
+    //memset(mPPS, 0, 256);
     mPPSLen = 0;
     mWidth  = 0;
     mHeight = 0;
     mReadSync = false;
+    mExtractorEnabled = true;
 }
 
 OmafReaderManager::~OmafReaderManager()
 {
+    if (m_videoHeaders.size())
+    {
+        std::map<uint32_t, std::map<uint32_t, uint8_t*>>::iterator it;
+        for (it = m_videoHeaders.begin(); it != m_videoHeaders.end(); )
+        {
+            std::map<uint32_t, uint8_t*> oneHeader = it->second;
+            std::map<uint32_t, uint8_t*>::iterator itHrd;
+            for (itHrd = oneHeader.begin(); itHrd != oneHeader.end(); )
+            {
+                uint8_t *header = itHrd->second;
+                if (header)
+                {
+                    delete [] header;
+                    header = NULL;
+                }
+                oneHeader.erase(itHrd++);
+            }
+            oneHeader.clear();
+            m_videoHeaders.erase(it++);
+        }
+        m_videoHeaders.clear();
+    }
+
+    if (mPacketQueues.size())
+    {
+        std::map<int, PacketQueue>::iterator it;
+        for (it = mPacketQueues.begin(); it != mPacketQueues.end(); )
+        {
+            PacketQueue queue = it->second;
+            if (queue.size())
+            {
+                std::list<MediaPacket*>::iterator itPacket;
+                for (itPacket = queue.begin(); itPacket != queue.end(); )
+                {
+                    MediaPacket *packet = *itPacket;
+                    SAFE_DELETE(packet);
+                    queue.erase(itPacket++);
+                }
+                queue.clear();
+            }
+            mPacketQueues.erase(it++);
+        }
+        mPacketQueues.clear();
+    }
+
     Close();
 }
 
@@ -259,6 +307,7 @@ int OmafReaderManager::AddSegment( OmafSegment* pSeg, uint32_t nInitSegID, uint3
         tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, segSize);
     }
 #endif
+
     auto it = m_readSegMap.begin();
     for ( ; it != m_readSegMap.end(); it++)
     {
@@ -289,9 +338,18 @@ int OmafReaderManager::AddSegment( OmafSegment* pSeg, uint32_t nInitSegID, uint3
     return ERROR_NONE;
 }
 
-int OmafReaderManager::ParseSegment(uint32_t nSegID, uint32_t nInitSegID)
+int OmafReaderManager::ParseSegment(
+    uint32_t nSegID,
+    uint32_t nInitSegID,
+    uint32_t& qualityRanking,
+    SRDInfo *srd)
 {
-    if(NULL == mReader) return ERROR_NULL_PTR;
+    if (NULL == mReader) return ERROR_NULL_PTR;
+    if (!mExtractorEnabled && !srd)
+    {
+        LOG(ERROR) << "SRD can't be NULL !" << endl;
+        return ERROR_INVALID;
+    }
 
     int ret = ERROR_NONE;
 
@@ -304,6 +362,21 @@ int OmafReaderManager::ParseSegment(uint32_t nSegID, uint32_t nInitSegID)
         return ERROR_INVALID;
     }
 
+    if (!mExtractorEnabled)
+    {
+        qualityRanking = pSeg->GetQualityRanking();
+
+        SRDInfo srdInfo = pSeg->GetSRDInfo();
+        srd->left = srdInfo.left;
+        srd->top  = srdInfo.top;
+        srd->width = srdInfo.width;
+        srd->height = srdInfo.height;
+    }
+    else
+    {
+        qualityRanking = 0;
+    }
+
     ret = mReader->parseSegment(pSeg, nInitSegID, nSegID );
 
     if( 0 != ret )
@@ -312,31 +385,48 @@ int OmafReaderManager::ParseSegment(uint32_t nSegID, uint32_t nInitSegID)
         return ERROR_INVALID;
     }
 
-    for (int i = 0; i < mSource->GetStreamCount(); i++)
+    if (mExtractorEnabled)
     {
-        OmafMediaStream *pStream = mSource->GetStream(i);
-        if (pStream->HasExtractor())
+        for (int i = 0; i < mSource->GetStreamCount(); i++)
         {
-            std::list<OmafExtractor*> extractors = pStream->GetEnabledExtractor();
-            for (auto it = extractors.begin(); it != extractors.end(); it++)
+            OmafMediaStream *pStream = mSource->GetStream(i);
+            if (pStream->HasExtractor())
             {
-                OmafExtractor *pExt = (OmafExtractor*)(*it);
-
-                uint32_t extractorTrackId = pExt->GetTrackNumber();
-                OmafSegment *initSegment = pExt->GetInitSegment();
-                uint32_t initSegIndex = initSegment->GetInitSegID();
-                if (nInitSegID == initSegIndex)
+                std::list<OmafExtractor*> extractors = pStream->GetEnabledExtractor();
+                for (auto it = extractors.begin(); it != extractors.end(); it++)
                 {
-                    if ((uint32_t)(mMapSegStatus[extractorTrackId].segStatus[nSegID]) == (mMapSegStatus[extractorTrackId].depTrackIDs.size() + 1))
+                    OmafExtractor *pExt = (OmafExtractor*)(*it);
+
+                    uint32_t extractorTrackId = pExt->GetTrackNumber();
+                    OmafSegment *initSegment = pExt->GetInitSegment();
+                    uint32_t initSegIndex = initSegment->GetInitSegID();
+                    if (nInitSegID == initSegIndex)
                     {
-                        std::vector<TrackInformation*> readTrackInfos;
-                        mReader->getTrackInformations( readTrackInfos );
-                        mSegTrackInfos[nSegID] = readTrackInfos;
+                        if ((uint32_t)(mMapSegStatus[extractorTrackId].segStatus[nSegID]) == (mMapSegStatus[extractorTrackId].depTrackIDs.size() + 1))
+                        {
+                            std::vector<TrackInformation*> readTrackInfos;
+                            mReader->getTrackInformations( readTrackInfos );
+                            mSegTrackInfos[nSegID] = readTrackInfos;
+                        }
                     }
                 }
             }
         }
     }
+    else
+    {
+        std::vector<TrackInformation*> readTrackInfos;
+        mReader->getTrackInformations( readTrackInfos );
+        std::map<uint32_t, std::vector<TrackInformation*>>::iterator itTrackInfo;
+        itTrackInfo = mSegTrackInfos.find(nSegID);
+        if (itTrackInfo != mSegTrackInfos.end())
+        {
+            mSegTrackInfos.erase(itTrackInfo);
+        }
+
+        mSegTrackInfos[nSegID] = readTrackInfos;
+    }
+
     return ERROR_NONE;
 }
 
@@ -358,25 +448,43 @@ void OmafReaderManager::UpdateSegmentStatus(uint32_t nInitSegID, uint32_t nSegID
 {
     mLock.lock();
     int trackId = mMapInitTrk[nInitSegID];
-    if (mMapSegStatus[trackId].depTrackIDs.size())
+    if (mExtractorEnabled)
     {
-        if (nSegID > mMapSegStatus[trackId].segStatus.size())
+        if (mMapSegStatus[trackId].depTrackIDs.size())
         {
-            mMapSegStatus[trackId].segStatus[nSegID] = 0;
+            if (nSegID > mMapSegStatus[trackId].segStatus.size())
+            {
+                mMapSegStatus[trackId].segStatus[nSegID] = 0;
+            }
+            mMapSegStatus[trackId].segStatus[nSegID]++;
+            // only update mCurrentReadSegment if segCnt is updated with viewport changed
+            if(segCnt != -1)
+            {
+                mMapSegStatus[trackId].sampleIndex.mCurrentReadSegment = segCnt;
+            }
         }
-        mMapSegStatus[trackId].segStatus[nSegID]++;
-        // only update mCurrentReadSegment if segCnt is updated with viewport changed
-        if(segCnt != -1)
-        {
-            mMapSegStatus[trackId].sampleIndex.mCurrentReadSegment = segCnt;
+
+        for( auto it=mMapSegStatus.begin(); it!=mMapSegStatus.end(); it++ ){
+            for(auto id  = mMapSegStatus[it->first].depTrackIDs.begin();
+                     id != mMapSegStatus[it->first].depTrackIDs.end();
+                     id++ ){
+                if( *id == mMapInitTrk[nInitSegID] ){
+                    if (nSegID > mMapSegStatus[it->first].segStatus.size())
+                    {
+                        mMapSegStatus[it->first].segStatus[nSegID] = 0;
+                    }
+                    mMapSegStatus[it->first].segStatus[nSegID]++;
+                    mMapSegStatus[it->first].listActiveSeg.push_back(nSegID);
+                    mMapSegStatus[it->first].sampleIndex.mCurrentAddSegment = nSegID;
+                    break;
+                }
+            }
         }
     }
-
-    for( auto it=mMapSegStatus.begin(); it!=mMapSegStatus.end(); it++ ){
-        for(auto id  = mMapSegStatus[it->first].depTrackIDs.begin();
-                 id != mMapSegStatus[it->first].depTrackIDs.end();
-                 id++ ){
-            if( *id == mMapInitTrk[nInitSegID] ){
+    else
+    {
+        for( auto it = mMapSegStatus.begin(); it != mMapSegStatus.end(); it++ ){
+            if( (it->first) == trackId ){
                 if (nSegID > mMapSegStatus[it->first].segStatus.size())
                 {
                     mMapSegStatus[it->first].segStatus[nSegID] = 0;
@@ -431,15 +539,31 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
 {
     mPacketLock.lock();
     if( mPacketQueues[trackID].empty()){
-        pPacket = NULL;
-        mPacketLock.unlock();
-        return ERROR_NULL_PACKET;
+        DashMediaInfo info;
+        mSource->GetMediaInfo(&info);
+        if (info.streaming_type == 1)
+        {
+            mLock.lock();
+            while (!mEOS)
+            {
+                mLock.unlock();
+                usleep(1000);
+                mLock.lock();
+            }
+            mLock.unlock();
+            pPacket = new MediaPacket();
+            pPacket->SetEOS(true);
+            mPacketLock.unlock();
+            return ERROR_NONE;
+        }
+        else
+        {
+            pPacket = NULL;
+            mPacketLock.unlock();
+            return ERROR_NULL_PACKET;
+        }
     }
 
-    if( !mPacketQueues[trackID].size() ){
-        mPacketLock.unlock();
-        return OMAF_ERROR_END_OF_STREAM;
-    }
     pPacket = mPacketQueues[trackID].front();
     mPacketQueues[trackID].pop_front();
     LOG(INFO)<<"========mPacketQueues size========:"<<mPacketQueues[trackID].size()<<std::endl;
@@ -447,14 +571,19 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
 
     if (needParams)
     {
-        if (!mVPSLen || !mSPSLen || !mPPSLen)
+        uint32_t qualityRanking = pPacket->GetQualityRanking();
+        std::map<uint32_t, uint8_t*> header = m_videoHeaders[qualityRanking];
+        if (0 == header.size())
         {
             LOG(ERROR) << "Invalid VPS/SPS/PPS in getting packet ! " << endl;
             return OMAF_ERROR_INVALID_DATA;
         }
-
+        std::map<uint32_t, uint8_t*>::iterator itHrd;
+        itHrd = header.begin();
+        uint32_t headerSize = itHrd->first;
+        uint8_t *headerData = itHrd->second;
         MediaPacket *newPacket = new MediaPacket();
-        uint32_t newSize = mVPSLen + mSPSLen + mPPSLen + pPacket->Size();
+        uint32_t newSize = headerSize + pPacket->Size();
         newPacket->ReAllocatePacket(newSize);
         newPacket->SetRealSize(newSize);
 
@@ -465,10 +594,12 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
             SAFE_DELETE(newPacket);
             return OMAF_ERROR_NULL_PTR;
         }
-        memcpy(newData, mVPS, mVPSLen);
-        memcpy(newData + mVPSLen, mSPS, mSPSLen);
-        memcpy(newData + mVPSLen + mSPSLen, mPPS, mPPSLen);
-        memcpy(newData + mVPSLen + mSPSLen + mPPSLen, origData, pPacket->Size());
+        //memcpy(newData, mVPS, mVPSLen);
+        //memcpy(newData + mVPSLen, mSPS, mSPSLen);
+        //memcpy(newData + mVPSLen + mSPSLen, mPPS, mPPSLen);
+        //memcpy(newData + mVPSLen + mSPSLen + mPPSLen, origData, pPacket->Size());
+        memcpy(newData, headerData, headerSize);
+        memcpy(newData + headerSize, origData, pPacket->Size());
         RegionWisePacking *newRwpk = new RegionWisePacking;
         RegionWisePacking *pRwpk = pPacket->GetRwpk();
         if(!newRwpk || !pRwpk)
@@ -481,6 +612,21 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
         newRwpk->rectRegionPacking = new RectangularRegionWisePacking[newRwpk->numRegions];
         memcpy(newRwpk->rectRegionPacking, pRwpk->rectRegionPacking, pRwpk->numRegions * sizeof(RectangularRegionWisePacking));
         newPacket->SetRwpk(newRwpk);
+        newPacket->SetType(pPacket->GetType());
+        newPacket->SetPTS(pPacket->GetPTS());
+        newPacket->SetSegID(pPacket->GetSegID());
+        newPacket->SetQualityRanking(pPacket->GetQualityRanking());
+        newPacket->SetSRDInfo(pPacket->GetSRDInfo());
+        newPacket->SetCodecType(pPacket->GetCodecType());
+        newPacket->SetHasVideoHeader(true);
+        newPacket->SetVideoHeaderSize(headerSize);
+        if (qualityRanking == HIGHEST_QUALITY_RANKING)
+        {
+            newPacket->SetVPSLen(mVPSLen);
+            newPacket->SetSPSLen(mSPSLen);
+            newPacket->SetPPSLen(mPPSLen);
+        }
+
         delete pPacket;
         pPacket = newPacket;
     }
@@ -500,7 +646,9 @@ int OmafReaderManager::ReadNextSegment(
     uint16_t initSegID,
     bool isExtractor,
     std::vector<TrackInformation*> readTrackInfos,
-    bool& segmentChanged )
+    bool& segmentChanged,
+    uint32_t qualityRanking,
+    SRDInfo *srd)
 {
     if(NULL == mReader) return ERROR_NULL_PTR;
     int32_t ret = ERROR_NONE;
@@ -529,6 +677,18 @@ int OmafReaderManager::ReadNextSegment(
     if (sampleIdx->mCurrentReadSegment > sampleIdx->mCurrentAddSegment)
     {
         LOG(ERROR) << "Can't read not added segment ! " << endl;
+        return OMAF_ERROR_INVALID_DATA;
+    }
+
+    if (!isExtractor && (0 == qualityRanking))
+    {
+        LOG(ERROR) << "INCORRECT quality ranking for tile track !" << endl;
+        return OMAF_ERROR_INVALID_DATA;
+    }
+
+    if (!isExtractor && !srd)
+    {
+        LOG(ERROR) << "NULL SRD info for tile track !" << endl;
         return OMAF_ERROR_INVALID_DATA;
     }
 
@@ -594,14 +754,27 @@ int OmafReaderManager::ReadNextSegment(
         uint32_t packetSize = ((mWidth * mHeight * 3) / 2 ) / 2;
         packet->ReAllocatePacket(packetSize);
 
-        if (!mVPSLen || !mSPSLen || !mPPSLen)
+        std::map<uint32_t, std::map<uint32_t, uint8_t*>>::iterator itVideoHrd;
+        itVideoHrd = m_videoHeaders.find(qualityRanking);
+        //std::map<uint32_t, uint8_t*> *header = &(m_videoHeaders[qualityRanking]);
+        //if (0 == header->size())
+        if (itVideoHrd == m_videoHeaders.end())
         {
-            memset(mVPS, 0, 256);
-            memset(mSPS, 0, 256);
-            memset(mPPS, 0, 256);
-            mVPSLen = 0;
-            mSPSLen = 0;
-            mPPSLen = 0;
+            uint8_t vps[256];
+            uint8_t vpsLen = 0;
+            uint8_t sps[256];
+            uint8_t spsLen = 0;
+            uint8_t pps[256];
+            uint8_t ppsLen = 0;
+            memset(vps, 0, 256);
+            memset(sps, 0, 256);
+            memset(pps, 0, 256);
+            //memset(mVPS, 0, 256);
+            //memset(mSPS, 0, 256);
+            //memset(mPPS, 0, 256);
+            //mVPSLen = 0;
+            //mSPSLen = 0;
+            //mPPSLen = 0;
 
             std::vector<VCD::OMAF::DecoderSpecificInfo> parameterSets;
             ret = mReader->getDecoderConfiguration(combinedTrackId, sample, parameterSets);
@@ -615,34 +788,52 @@ int OmafReaderManager::ReadNextSegment(
             {
                 if (parameter.codecSpecInfoType == VCD::MP4::HEVC_VPS)
                 {
-                    mVPSLen = parameter.codecSpecInfoBits.size;
+                    vpsLen = parameter.codecSpecInfoBits.size;
                     for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
                     {
-                        mVPS[i] = parameter.codecSpecInfoBits[i];
+                        vps[i] = parameter.codecSpecInfoBits[i];
                     }
                 }
 
 
                 if (parameter.codecSpecInfoType == VCD::MP4::HEVC_SPS)
                 {
-                    mSPSLen = parameter.codecSpecInfoBits.size;
+                    spsLen = parameter.codecSpecInfoBits.size;
                     for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
                     {
-                        mSPS[i] = parameter.codecSpecInfoBits[i];
+                        sps[i] = parameter.codecSpecInfoBits[i];
                     }
                 }
 
                 if (parameter.codecSpecInfoType == VCD::MP4::HEVC_PPS)
                 {
-                    mPPSLen = parameter.codecSpecInfoBits.size;
+                    ppsLen = parameter.codecSpecInfoBits.size;
                     for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
                     {
-                        mPPS[i] = parameter.codecSpecInfoBits[i];
+                        pps[i] = parameter.codecSpecInfoBits[i];
                     }
                 }
             }
-        }
 
+            std::map<uint32_t, uint8_t*> oneHeader;
+            uint32_t headerSize = vpsLen + spsLen + ppsLen;
+            uint8_t *headerData = new uint8_t[headerSize];
+            if (!headerData)
+                return OMAF_ERROR_NULL_PTR;
+
+            memcpy(headerData, vps, vpsLen);
+            memcpy(headerData + vpsLen, sps, spsLen);
+            memcpy(headerData + vpsLen + spsLen, pps, ppsLen);
+            oneHeader.insert(std::make_pair(headerSize, headerData));
+            m_videoHeaders.insert(std::make_pair(qualityRanking, oneHeader));
+
+            if (qualityRanking == HIGHEST_QUALITY_RANKING)
+            {
+                mVPSLen = vpsLen;
+                mSPSLen = spsLen;
+                mPPSLen = ppsLen;
+            }
+        }
         if (isExtractor)
         {
             ret = mReader->getExtractorTrackSampleData(combinedTrackId, sample, (char *)(packet->Payload()), packetSize );
@@ -655,8 +846,13 @@ int OmafReaderManager::ReadNextSegment(
         RegionWisePacking *pRwpk = new RegionWisePacking;
 
         ret = mReader->getPropertyRegionWisePacking(combinedTrackId, sample, pRwpk);
-
         packet->SetRwpk(pRwpk);
+
+        packet->SetQualityRanking(qualityRanking);
+        if (!isExtractor)
+        {
+            packet->SetSRDInfo(*srd);
+        }
 
         if (ret == OMAF_MEMORY_TOO_SMALL_BUFFER )
         {
@@ -765,6 +961,7 @@ void OmafReaderManager::Run()
                 for(auto it=extractors.begin(); it!=extractors.end(); it++){
                     OmafExtractor* pExt = (OmafExtractor*)(*it);
                     SegStatus *st = &(mMapSegStatus[pExt->GetTrackNumber()]);
+                    uint32_t qualityRanking = 0;
 
                     ///if static mode, check EOS
                     if(type == 1){
@@ -874,13 +1071,13 @@ void OmafReaderManager::Run()
                                 }
                             }
 
-                            ParseSegment(st->sampleIndex.mCurrentReadSegment, initSegIndex);
+                            ParseSegment(st->sampleIndex.mCurrentReadSegment, initSegIndex, qualityRanking, NULL);
 
                         }
 
-                        ParseSegment(st->sampleIndex.mCurrentReadSegment, initSegID);
+                        ParseSegment(st->sampleIndex.mCurrentReadSegment, initSegID, qualityRanking, NULL);
                         std::vector<TrackInformation*> readTrackInfos = mSegTrackInfos[st->sampleIndex.mCurrentReadSegment];
-                        this->ReadNextSegment(trackID, initSegID, true, readTrackInfos, bSegChange);
+                        this->ReadNextSegment(trackID, initSegID, true, readTrackInfos, bSegChange, HIGHEST_QUALITY_RANKING, NULL);
                         mSegTrackInfos.erase(st->sampleIndex.mCurrentReadSegment - 1);
 
                         RemoveReadSegmentFromMap();
@@ -889,9 +1086,11 @@ void OmafReaderManager::Run()
                     }
                 }
             }else{
-                std::map<int, OmafAdaptationSet*> mapAS = pStream->GetMediaAdaptationSet();
-                for(auto as_it=mapAS.begin(); as_it!=mapAS.end(); as_it++){
+                //std::map<int, OmafAdaptationSet*> mapAS = pStream->GetMediaAdaptationSet();
+                std::map<int, OmafAdaptationSet*> mapAS = pStream->GetSelectedTileTracks();
+                for(auto as_it = mapAS.begin(); as_it != mapAS.end(); as_it++){
                     OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
+                    SRDInfo srdInfo;
                     SegStatus *st = &(mMapSegStatus[pAS->GetTrackNumber()]);
                     if(type == 1){
                         uint64_t segmentDur = pStream->GetSegmentDuration();
@@ -906,11 +1105,13 @@ void OmafReaderManager::Run()
                             mLock.lock();
                             this->mEOS = true;
                             mLock.unlock();
+                            printf("EOS has been gotten \n");
                             return;
                         }
                     }
                     uint16_t trackID = pAS->GetTrackNumber();
                     uint16_t initSegID = 0;
+                    uint32_t qualityRanking = 0;
                     for (auto& idPair : mMapInitTrk)
                     {
                         if (idPair.second == trackID)
@@ -919,7 +1120,6 @@ void OmafReaderManager::Run()
                             break;
                         }
                     }
-
                     // exit the waiting if segment downloaded or wait time is more than 10 mins
                     int64_t waitTime = 0;
                     mLock.lock();
@@ -938,8 +1138,13 @@ void OmafReaderManager::Run()
                           break;
                     }
 
+                    LOG(INFO) << "Now will parse Segment  " << st->sampleIndex.mCurrentReadSegment << endl;
+                    ParseSegment(st->sampleIndex.mCurrentReadSegment, initSegID, qualityRanking, &srdInfo);
+
                     std::vector<TrackInformation*> readTrackInfos = mSegTrackInfos[st->sampleIndex.mCurrentReadSegment];
-                    this->ReadNextSegment(trackID, initSegID, false, readTrackInfos, bSegChange);
+                    this->ReadNextSegment(trackID, initSegID, false, readTrackInfos, bSegChange, qualityRanking, &srdInfo);
+                    mSegTrackInfos.erase(st->sampleIndex.mCurrentReadSegment - 1);
+                    RemoveReadSegmentFromMap();
                 }
             }
         }
@@ -968,6 +1173,7 @@ void OmafReaderManager::RemoveReadSegmentFromMap()
             delete rmSeg;
             rmSeg = NULL;
         }
+        initSegNormalSeg.clear();
         m_readSegMap.erase(it.first);
     }
 }

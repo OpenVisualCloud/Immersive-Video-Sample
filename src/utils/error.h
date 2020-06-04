@@ -103,4 +103,8 @@
 #define OMAF_INVALID_PLUGIN_PARAM                -97
 #define OMAF_ERROR_DLOPEN                        -98
 #define OMAF_ERROR_DLSYM                         -99
+#define OMAF_ERROR_OPERATION                     -100
+#define OMAF_ERROR_TILES_MERGE_ARRANGEMENT       -101
+#define OMAF_ERROR_TILES_MERGE_RWPK              -102
+#define OMAF_ERROR_GENERATE_RWPK                 -103
 #endif /* ERROR_H */

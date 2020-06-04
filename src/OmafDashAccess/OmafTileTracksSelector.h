@@ -40,8 +40,6 @@
 
 #include "OmafTracksSelector.h"
 
-#define HIGHEST_QUALITY_RANKING 1
-
 using namespace VCD::OMAF;
 
 VCD_OMAF_BEGIN

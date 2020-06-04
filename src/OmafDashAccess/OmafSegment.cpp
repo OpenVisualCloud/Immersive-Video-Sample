@@ -56,6 +56,7 @@ OmafSegment::OmafSegment()
     mSegCnt      = 0;
     mInitSegID   = 0;
     mSegID       = 0;
+    mQualityRanking = HIGHEST_QUALITY_RANKING;
 }
 
 OmafSegment::~OmafSegment()
@@ -83,6 +84,7 @@ OmafSegment::OmafSegment(SegmentElement* pSeg, int segCnt, bool bInitSegment, bo
     mSegCnt      = segCnt;
     mInitSegID   = 0;
     mSegID       = 0;
+    mQualityRanking = HIGHEST_QUALITY_RANKING;
 }
 
 int OmafSegment::StartDownload()
@@ -106,7 +108,6 @@ int OmafSegment::WaitComplete()
 
     int64_t waitTime = 0;
 
-    //printf("wait download =======\n");
     /*pthread_mutex_lock(&m_mutex);
     pthread_cond_wait(&m_cond, &m_mutex);
 

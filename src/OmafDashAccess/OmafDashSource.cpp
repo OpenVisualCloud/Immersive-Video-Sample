@@ -30,6 +30,7 @@
 #include <string.h>
 #include "OmafReaderManager.h"
 #include "OmafExtractorTracksSelector.h"
+#include "OmafTileTracksSelector.h"
 #include <math.h>
 #include <dirent.h>
 #ifndef _ANDROID_NDK_OPTION_
@@ -58,6 +59,7 @@ OmafDashSource::OmafDashSource()
     dcount = 1;
     m_glogWrapper = new GlogWrapper((char*)"glogAccess");
     mPreExtractorID = 0;
+    m_stitch = NULL;
 }
 
 OmafDashSource::~OmafDashSource()
@@ -70,6 +72,7 @@ OmafDashSource::~OmafDashSource()
     mViewPorts.clear();
     ClearStreams();
     SAFE_DELETE(m_glogWrapper);
+    SAFE_DELETE(m_stitch);
 }
 
 int OmafDashSource::SyncTime(std::string url)
@@ -149,6 +152,7 @@ int OmafDashSource::OpenMedia(
     }
 
     mMPDParser = new OmafMPDParser( );
+    mMPDParser->SetExtractorEnabled(enableExtractor);
 
     if( NULL == mMPDParser ) return ERROR_NULL_PTR;
 
@@ -189,7 +193,7 @@ int OmafDashSource::OpenMedia(
     for(auto it=listStream.begin(); it!=listStream.end(); it++){
         this->mMapStream[id] = (OmafMediaStream*)(*it);
         (*it)->SetStreamID(id);
-        (*it)->SetEnabledExtractor(enableExtractor);
+        //(*it)->SetEnabledExtractor(enableExtractor);
         id++;
     }
 
@@ -204,8 +208,12 @@ int OmafDashSource::OpenMedia(
     }
     else
     {
-        LOG(ERROR) << "Can't create tile tracks selector now !" << std::endl;
-        return ERROR_INVALID;
+        m_selector = new OmafTileTracksSelector();
+        if (!m_selector)
+        {
+            LOG(ERROR) << "Failed to create tile tracks selector !" << std::endl;
+            return ERROR_NULL_PTR;
+        }
     }
 
     if(enablePredictor) m_selector->EnablePosePrediction(predictPluginName, libPath);
@@ -222,6 +230,7 @@ int OmafDashSource::OpenMedia(
     this->SetStatus( STATUS_READY );
 
     READERMANAGER::GetInstance()->Initialize(this);
+    READERMANAGER::GetInstance()->SetExtractorEnabled(enableExtractor);
 
     ///if MPD is static one, don't create thread to download
     if (!isLocalMedia)
@@ -305,11 +314,90 @@ int OmafDashSource::GetPacket(
         }
     }else{
         std::map<int, OmafAdaptationSet*> mapAS = pStream->GetMediaAdaptationSet();
-        for(auto as_it=mapAS.begin(); as_it!=mapAS.end(); as_it++){
-            OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
-            int ret = READERMANAGER::GetInstance()->GetNextFrame(pAS->GetTrackNumber(), pkt, needParams);
-            if(ret == ERROR_NONE)
-                pkts->push_back(pkt);
+        std::map<int, OmafAdaptationSet*> mapSelectedAS = pStream->GetSelectedTileTracks();
+        if (mapAS.size() == 1)
+        {
+            LOG(INFO) << "There is only one tile for the video stream !" << endl;
+            for(auto as_it=mapAS.begin(); as_it!=mapAS.end(); as_it++){
+                OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
+                int ret = READERMANAGER::GetInstance()->GetNextFrame(pAS->GetTrackNumber(), pkt, needParams);
+                if(ret == ERROR_NONE)
+                    pkts->push_back(pkt);
+            }
+        }
+        else
+        {
+            bool isEOS = false;
+            std::map<uint32_t, MediaPacket*> selectedPackets;
+            for (auto as_it = mapSelectedAS.begin(); as_it != mapSelectedAS.end(); as_it++)
+            {
+                OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
+                int32_t trackID = pAS->GetTrackNumber();
+                MediaPacket *onePacket = NULL;
+                int ret = READERMANAGER::GetInstance()->GetNextFrame(trackID, onePacket, needParams);
+
+                if (ret == ERROR_NONE)
+                {
+                    if (onePacket->GetEOS())
+                    {
+                        LOG(INFO) << "EOS has been gotten !" << std::endl;
+                        isEOS = true;
+                        selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
+                        break;
+                    }
+                    selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
+                }
+            }
+
+            if (!m_stitch)
+            {
+                m_stitch = new OmafTilesStitch();
+                if (!m_stitch)
+                    return OMAF_ERROR_NULL_PTR;
+
+                int32_t ret = m_stitch->Initialize(selectedPackets, needParams);
+                if (ret)
+                {
+                    LOG(ERROR) << "Failed to initialize stitch class !" << std::endl;
+                    return ret;
+                }
+            }
+            else
+            {
+                if (!isEOS)
+                {
+                    int32_t ret = m_stitch->UpdateSelectedTiles(selectedPackets, needParams);
+                    if (ret)
+                    {
+                        LOG(ERROR) << "Failed to update media packets for tiles merge !" << std::endl;
+                        return ret;
+                    }
+                }
+            }
+
+            std::list<MediaPacket*> mergedPackets;
+            if (isEOS)
+            {
+                std::map<uint32_t, MediaPacket*>::iterator itPacket1;
+                for (itPacket1 = selectedPackets.begin(); itPacket1 != selectedPackets.end(); itPacket1++)
+                {
+                    MediaPacket *packet = itPacket1->second;
+                    mergedPackets.push_back(packet);
+                }
+            }
+            else
+            {
+                mergedPackets = m_stitch->GetTilesMergedPackets();
+            }
+
+            std::list<MediaPacket*>::iterator itPacket;
+            for (itPacket = mergedPackets.begin(); itPacket != mergedPackets.end(); itPacket++)
+            {
+                MediaPacket *onePacket = *itPacket;
+                pkts->push_back(onePacket);
+            }
+            mergedPackets.clear();
+            selectedPackets.clear();
         }
     }
 
@@ -424,10 +512,17 @@ int OmafDashSource::StartReadThread()
         cnt = 0;
         for(auto it : mMapStream)
         {
-            int enableSize = it.second->GetExtractorSize();
-            int totalSize = it.second->GetTotalExtractorSize();
-            if( enableSize < totalSize)
+            if ((it.second)->IsExtractorEnabled())
+            {
+                int enableSize = it.second->GetExtractorSize();
+                int totalSize = it.second->GetTotalExtractorSize();
+                if( enableSize < totalSize)
+                    cnt++;
+            }
+            else
+            {
                 cnt++;
+            }
         }
     }
     READERMANAGER::GetInstance()->StartThread();
@@ -507,23 +602,26 @@ int OmafDashSource::DownloadInitSeg()
         return ERROR_NO_STREAM;
     }
 
+    int ret = ERROR_NONE;
     /// download initial mp4 for each stream
     for (int i=0; i<nStream; i++) {
         OmafMediaStream* pStream = GetStream( i );
-
-        std::list<OmafExtractor*> listExtarctors;
-        std::map<int, OmafExtractor*> mapExtractors = pStream->GetExtractors();
-        for(auto &it:mapExtractors)
+        bool isExtractorEnabled = pStream->IsExtractorEnabled();
+        if (isExtractorEnabled)
         {
-            listExtarctors.push_back(it.second);
-        }
+            std::list<OmafExtractor*> listExtarctors;
+            std::map<int, OmafExtractor*> mapExtractors = pStream->GetExtractors();
+            for(auto &it:mapExtractors)
+            {
+                listExtarctors.push_back(it.second);
+            }
 
-        int ret = pStream->UpdateEnabledExtractors(listExtarctors);
-        if( ERROR_NONE != ret )
-        {
-            return ERROR_INVALID;
+            ret = pStream->UpdateEnabledExtractors(listExtarctors);
+            if( ERROR_NONE != ret )
+            {
+                return ERROR_INVALID;
+            }
         }
-
         ret = pStream->DownloadInitSegment();
     }
 
