@@ -11,8 +11,8 @@
  * Created on January 15, 2019, 1:48 PM
  */
 
-#ifndef DATA_TYPE_H
-#define DATA_TYPE_H
+#ifndef _DATA_TYPE_H__
+#define _DATA_TYPE_H__
 
 #include "ns_def.h"
 #include <stdint.h>
@@ -21,6 +21,18 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef enum{
+    VideoCodec_NONE = 0,
+    VideoCodec_AVC,
+    VideoCodec_HEVC,
+    VideoCodec_AV1,
+
+    AudioCodec_NONE = 100,
+    AudioCodec_AAC,
+    AudioCodec_AV3,
+    AudioCodec_MP3,
+}Codec_Type;
 
 typedef enum{
    MediaType_NONE = 0,
@@ -59,9 +71,11 @@ typedef struct Viewport {
 }Viewport;
 
 typedef struct SOURCERESOLUTION {
-    int32_t  qualityRanking;
-    uint32_t width;
-    uint32_t height;
+    int32_t  qualityRanking;       // the quality ranking value
+    uint32_t top;
+    uint32_t left;                 // the pos of the quality stream relative to whole source
+    uint32_t width;                // the width of the quality stream in source
+    uint32_t height;               // the height of the quality stream in source
 }SourceResolution;
 
 /*
@@ -85,6 +99,7 @@ typedef struct DASHSTATISTICINFO{
  */
 typedef struct DASHSTREAMINFO{
     MediaType             stream_type;
+    Codec_Type            codec_type;
     int32_t               height;
     int32_t               width;
     uint32_t              tileRowNum;
@@ -118,10 +133,20 @@ typedef struct DASHMEDIAINFO{
 }DashMediaInfo;
 
 typedef struct DASHPACKET{
-    uint64_t  size;
-    char*     buf;
-    RegionWisePacking *rwpk;
-    int       segID;
+    uint32_t              videoID;
+    Codec_Type            video_codec;
+    uint32_t              pts;
+    uint64_t              size;
+    char*                 buf;
+    RegionWisePacking    *rwpk;
+    int                   segID;
+    int32_t               height;
+    int32_t               width;
+    int32_t               numQuality;       //! number of source from stream with different qualities
+    SourceResolution*     qtyResolution;    //! the resolution value of each stream int source
+    uint32_t              tileRowNum;       //! til row after aggregation
+    uint32_t              tileColNum;       //! til row after aggregation
+    bool                  bEOS;
 }DashPacket;
 
 typedef struct VIEWPORTANGLE{

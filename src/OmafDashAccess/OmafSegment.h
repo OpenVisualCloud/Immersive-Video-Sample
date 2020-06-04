@@ -38,6 +38,7 @@
 #define OMAFSEGMENT_H
 
 #include "general.h"
+#include "iso_structure.h"
 #include "OmafDashDownload/OmafDownloaderObserver.h"
 #include "OmafDashParser/SegmentElement.h"
 
@@ -124,6 +125,18 @@ public:
     int     GetSegCount(){return mSegCnt;};
     void     SetSegSize(uint64_t segSize) { mSegSize = segSize; };
     uint64_t GetSegSize() { return mSegSize; };
+    void     SetQualityRanking(uint32_t qualityRanking) { mQualityRanking = qualityRanking; };
+    uint32_t GetQualityRanking() { return mQualityRanking; };
+
+    void     SetSRDInfo(SRDInfo srdInfo)
+    {
+        mSRDInfo.left = srdInfo.left;
+        mSRDInfo.top  = srdInfo.top;
+        mSRDInfo.width = srdInfo.width;
+        mSRDInfo.height = srdInfo.height;
+    }
+
+    SRDInfo  GetSRDInfo() { return mSRDInfo; };
 
 private:
     //!
@@ -156,6 +169,8 @@ private:
     uint8_t                           *mData;             //<! memory for saving segment data
     bool                              mReEnabled;         //<! flag to indicate whether the segment is re-enabled
     int                               mSegCnt;            //<! the count for this segment
+    uint32_t                          mQualityRanking;    //<! quality ranking of the segment
+    SRDInfo                           mSRDInfo;           //<! top/left/width/height info for the tile track segment
 };
 
 VCD_OMAF_END

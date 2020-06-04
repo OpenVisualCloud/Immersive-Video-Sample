@@ -247,7 +247,6 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     ret = I360SCVP_process(mParamViewport, m360ViewPortHandle);
     if (ret)
         return selectedTracks;
-
     TileDef *tilesInViewport = new TileDef[1024];
     if (!tilesInViewport)
         return selectedTracks;
@@ -264,6 +263,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
 
     std::map<int, OmafAdaptationSet*> asMap = pStream->GetMediaAdaptationSet();
     std::map<int, OmafAdaptationSet*>::iterator itAS;
+
     // insert all tile tracks in viewport into selected tile tracks map
     for (int32_t index = 0; index < selectedTilesNum; index++)
     {
@@ -286,6 +286,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
             }
         }
     }
+
     // insert all tile tracks from low qulity video into selected tile tracks map
     for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
     {
@@ -297,7 +298,6 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
             selectedTracks.insert(make_pair(trackID, adaptationSet));
         }
     }
-
     return selectedTracks;
 }
 

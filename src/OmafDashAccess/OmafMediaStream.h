@@ -44,6 +44,12 @@
 
 VCD_OMAF_BEGIN
 
+typedef struct SourceInfo {
+    uint32_t qualityRanking;
+    int32_t  width;
+    int32_t  height;
+}SourceInfo;
+
 class OmafMediaStream{
 public:
     //!
@@ -165,6 +171,14 @@ public:
         return enabledExtractor;
     };
 
+    std::map<int, OmafAdaptationSet*> GetSelectedTileTracks()
+    {
+        pthread_mutex_lock(&mCurrentMutex);
+        std::map<int, OmafAdaptationSet*> selectedTileTracks = m_selectedTileTracks;
+        pthread_mutex_unlock(&mCurrentMutex);
+        return selectedTileTracks;
+    }
+
     int32_t GetExtractorSize()
     {
         int32_t ret = pthread_mutex_lock(&mCurrentMutex);
@@ -227,6 +241,8 @@ public:
 
     void     SetEnabledExtractor(bool enabledExtractor) { m_enabledExtractor = enabledExtractor; };
 
+    void     SetSources(std::map<uint32_t, SourceInfo> sources) { m_sources = sources; };
+
 private:
     //!
     //! \brief  UpdateStreamInfo
@@ -247,10 +263,12 @@ private:
     int                               mStreamID;                    //<! stream ID
     DashStreamInfo                   *m_pStreamInfo;                //<! the information of the stream
     pthread_mutex_t                   mMutex;                       //<! for synchronization
-    pthread_mutex_t                   mCurrentMutex;                //<! for synchronization of mCurrentExtractors
+    pthread_mutex_t                   mCurrentMutex;                //<! for synchronization of mCurrentExtractors and m_selectedTileTracks
     bool                              m_bEOS;                       //<! flag for end of stream
-    bool                              m_enabledExtractor;
+    bool                              m_enabledExtractor;           //<! flag for enabling/disabling extractor track
 
+    std::map<int, OmafAdaptationSet*> m_selectedTileTracks;         //<! map of selected tile tracks based on viewport when disabling extractor track
+    std::map<uint32_t, SourceInfo>    m_sources;                    //<! map of video sources for the media stream
 };
 
 VCD_OMAF_END;

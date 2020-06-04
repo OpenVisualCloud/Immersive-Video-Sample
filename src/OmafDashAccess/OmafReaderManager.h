@@ -92,7 +92,11 @@ public:
     //!
     int AddSegment( OmafSegment* pSeg, uint32_t nInitSegID, uint32_t& nSegID);
 
-    int ParseSegment(uint32_t nSegID, uint32_t nInitSegID);
+    int ParseSegment(
+        uint32_t nSegID,
+        uint32_t nInitSegID,
+        uint32_t& qualityRanking,
+        SRDInfo *srd);
 
     //!  \brief Get Next packet from packet queue. each track has a packet queue
     //!
@@ -111,6 +115,16 @@ public:
         isParsed = mInitSegParsed;
         mLock.unlock();
         return isParsed;
+    };
+
+    void SetExtractorEnabled(bool extractorEnabled) { mExtractorEnabled = extractorEnabled; };
+    bool isEOSGot()
+    {
+        bool isEOS = false;
+        mLock.lock();
+        isEOS = mEOS;
+        mLock.unlock();
+        return isEOS;
     };
 
 public:
@@ -133,7 +147,9 @@ private:
         uint16_t initSegID,
         bool isExtractor,
         std::vector<TrackInformation*> readTrackInfos,
-        bool& segmentChanged );
+        bool& segmentChanged,
+        uint32_t qualityRanking,
+        SRDInfo *srd);
 
     //!  \brief Setup Track information for each stream and relative adaptation set
     //!
@@ -183,15 +199,17 @@ private:
     int                             mStatus;          //<! thread status: 0: runing; 1: stopping, 2. stopped;
     bool                            mReadSync;        //<! need to read  the frame at the bound of I frame (GOP boundary)
     bool                            mInitSegParsed;   //<! flag for noting all initial segments have been parsed
-    uint8_t                         mVPS[256];        //<! VPS data
-    uint8_t                         mVPSLen;          //<! VPS size
-    uint8_t                         mSPS[256];        //<! SPS data
-    uint8_t                         mSPSLen;          //<! SPS size
-    uint8_t                         mPPS[256];        //<! PPS data
-    uint8_t                         mPPSLen;          //<! PPS size
+    //uint8_t                         mVPS[256];        //<! VPS data
+    uint8_t                         mVPSLen;          //<! VPS size for the main stream
+    //uint8_t                         mSPS[256];        //<! SPS data
+    uint8_t                         mSPSLen;          //<! SPS size for the main stream
+    //uint8_t                         mPPS[256];        //<! PPS data
+    uint8_t                         mPPSLen;          //<! PPS size for the main stream
     uint32_t                        mWidth;           //<! sample width
     uint32_t                        mHeight;          //<! sample height
     std::map<uint32_t, std::map<uint32_t, OmafSegment*>> m_readSegMap; //<! map of <segId, std::map<initSegId, Segment>>
+    bool                            mExtractorEnabled;
+    std::map<uint32_t, std::map<uint32_t, uint8_t*>>     m_videoHeaders; //<! map of <qualityRanking, <headerSize, headerData>> for streams
 };
 
 typedef Singleton<OmafReaderManager> READERMANAGER;

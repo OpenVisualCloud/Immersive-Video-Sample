@@ -298,7 +298,6 @@ int32_t OmafMP4VRReader::getTrackInformations(std::vector<VCD::OMAF::TrackInform
     for( uint32_t i=0; i<(*Infos).size; i++){
         TrackInformation *trackInfo = new TrackInformation;
         *trackInfo = (*Infos)[i];
-
         middleTrackInfos.push_back(trackInfo);
     }
     SelectedTrackInfos(trackInfos, middleTrackInfos);

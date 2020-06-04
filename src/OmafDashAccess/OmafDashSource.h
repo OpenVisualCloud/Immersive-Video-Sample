@@ -44,6 +44,7 @@
 #include "OmafMPDParser.h"
 #include "DownloadManager.h"
 #include "OmafTracksSelector.h"
+#include "OmafTilesStitch.h"
 
 
 using namespace VCD::OMAF;
@@ -178,13 +179,13 @@ private:
 private:
     OmafMPDParser*             mMPDParser;                //<! the MPD parser
     DASH_STATUS                mStatus;                   //<! the status of the source
-    //OmafExtractorSelector*     mSelector;                 //<! the selector for extractor selection
     OmafTracksSelector         *m_selector;               //<! tracks selector basing on viewport
     pthread_mutex_t            mMutex;                    //<! for synchronization
     MPDInfo                    *mMPDinfo;                  //<! MPD information
     int                        dcount;
     GlogWrapper                *m_glogWrapper;
     int                        mPreExtractorID;
+    OmafTilesStitch            *m_stitch;
 };
 
 VCD_OMAF_END;
