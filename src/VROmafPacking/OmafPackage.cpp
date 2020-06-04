@@ -49,7 +49,10 @@ OmafPackage::OmafPackage()
 
 OmafPackage::~OmafPackage()
 {
-    pthread_join(m_threadId, NULL);
+    if(m_threadId != 0)
+    {
+        pthread_join(m_threadId, NULL);
+    }
 
     DELETE_MEMORY(m_segmentation);
     DELETE_MEMORY(m_extractorTrackMan);
