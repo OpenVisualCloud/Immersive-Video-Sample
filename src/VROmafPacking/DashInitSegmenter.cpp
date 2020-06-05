@@ -310,11 +310,11 @@ void DashInitSegmenter::FillOmafStructures(
         if (m_config.packedSubPictures)
         {
             // viewport dependent
-            VCD::MP4::BrandSpec trackType = { string("hevd"), 0,{ "hevd" } };
+            VCD::MP4::BrandSpec trackType = { string("&apos;hevd&apos;"), 0,{ "&apos;hevd&apos;" } };
             inMeta.trackType = trackType;
             hevcEntry.compatibleSchemes.push_back({ "podv", 0, "" });
             hevcEntry.compatibleSchemes.push_back({ "ercm", 0, "" });
-            m_omafVideoTrackBrand = "hevd";
+            m_omafVideoTrackBrand = "&apos;hevd&apos;";
         }
         else
         {
