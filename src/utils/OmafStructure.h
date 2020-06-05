@@ -129,7 +129,7 @@ VCD_OMAF_BEGIN
 #define PUBLISHTIME                             "publishTime"
 
 //attribute values
-#define MIMETYPE_VALUE                          "video/mp4 profiles=hevd"
+#define MIMETYPE_VALUE                          "video/mp4 profiles=&apos;hevd&apos;"
 #define CODECS_VALUE                            "resv.podv+ercm.hvc1.2.4.L90.80"
 #define CODECS_VALUE_EXTRACTORTRACK             "resv.podv+ercm.hvc2.2.4.L120.80"
 #define TYPE_STATIC                             "static"
