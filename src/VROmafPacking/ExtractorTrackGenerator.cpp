@@ -36,7 +36,9 @@
 #include "ExtractorTrackGenerator.h"
 #include "VideoStream.h"
 
+#ifdef _USE_TRACE_
 #include "../trace/Bandwidth_tp.h"
+#endif
 
 VCD_NS_BEGIN
 
@@ -318,6 +320,7 @@ int32_t ExtractorTrackGenerator::Initialize()
     if (!m_viewInfo)
         return OMAF_ERROR_NULL_PTR;
 
+#ifdef _USE_TRACE_
     //trace
     if ((EGeometryType)((m_initInfo->viewportInfo)->inGeoType) == EGeometryType::E_SVIDEO_EQUIRECT)
     {
@@ -343,6 +346,7 @@ int32_t ExtractorTrackGenerator::Initialize()
             (m_initInfo->viewportInfo)->verticalFOVAngle,
             projType);
     }
+#endif
 
     m_viewInfo->viewportWidth  = (m_initInfo->viewportInfo)->viewportWidth;
     m_viewInfo->viewportHeight = (m_initInfo->viewportInfo)->viewportHeight;
@@ -388,6 +392,7 @@ int32_t ExtractorTrackGenerator::Initialize()
     m_finalViewportWidth = paramViewportOutput.dstWidthAlignTile;
     m_finalViewportHeight = paramViewportOutput.dstHeightAlignTile;
 
+#ifdef _USE_TRACE_
     //trace
     uint16_t highResTileWidth = (vs->GetSrcWidth()) / (vs->GetTileInRow());
     uint16_t highResTileHeight = (vs->GetSrcHeight()) / (vs->GetTileInCol());
@@ -397,6 +402,7 @@ int32_t ExtractorTrackGenerator::Initialize()
                 paramViewportOutput.dstWidthNet, paramViewportOutput.dstHeightNet,
                 paramViewportOutput.dstWidthAlignTile, paramViewportOutput.dstHeightAlignTile,
                 selectedTileRows, selectedTileCols);
+#endif
 
     LOG(INFO) << "Calculated Viewport has width " << m_finalViewportWidth << " and height " << m_finalViewportHeight << " ! " << std::endl;
 
