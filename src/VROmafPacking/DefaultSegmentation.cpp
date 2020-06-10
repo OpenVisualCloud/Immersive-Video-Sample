@@ -39,7 +39,9 @@
 #include <cstdint>
 #include <sys/time.h>
 
+#ifdef _USE_TRACE_
 #include "../trace/Bandwidth_tp.h"
+#endif
 
 VCD_NS_BEGIN
 
@@ -664,6 +666,7 @@ int32_t DefaultSegmentation::WriteSegmentForEachVideo(MediaStream *stream, bool 
 
         m_segNum = dashSegmenter->GetSegmentsNum();
 
+#ifdef _USE_TRACE_
         //trace
         if (m_segNum == (m_prevSegNum + 1))
         {
@@ -675,7 +678,7 @@ int32_t DefaultSegmentation::WriteSegmentForEachVideo(MediaStream *stream, bool 
 
             tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, m_segNum, segSize);
         }
-
+#endif
     }
 
     return ERROR_NONE;
@@ -718,6 +721,7 @@ int32_t DefaultSegmentation::WriteSegmentForEachExtractorTrack(
     trackSegCtx->codedMeta.presTime.m_num += 1000 / (m_frameRate.num / m_frameRate.den);
     trackSegCtx->codedMeta.presTime.m_den = 1000;
 
+#ifdef _USE_TRACE_
     uint64_t currSegNum = dashSegmenter->GetSegmentsNum();
     if (currSegNum == (m_prevSegNum + 1))
     {
@@ -729,6 +733,7 @@ int32_t DefaultSegmentation::WriteSegmentForEachExtractorTrack(
 
         tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, currSegNum, segSize);
     }
+#endif
 
     return ERROR_NONE;
 }
@@ -984,6 +989,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 if (ret)
                     return ret;
 
+#ifdef _USE_TRACE_
                 //trace
                 uint64_t initSegSize = initSegmenter->GetInitSegmentSize();
                 uint32_t trackIndex  = trackSegCtxs[tileIdx].trackIdx.GetIndex();
@@ -993,6 +999,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
                 tracepoint(bandwidth_tp_provider, packed_segment_size,
                             trackIndex, trackType, tileRes, 0, initSegSize);
+#endif
             }
         }
     }
@@ -1014,6 +1021,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
             if (ret)
                 return ret;
 
+#ifdef _USE_TRACE_
             //trace
             uint64_t initSegSize = initSegmenter->GetInitSegmentSize();
             uint32_t trackIndex  = trackSegCtx->trackIdx.GetIndex();
@@ -1023,6 +1031,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
             tracepoint(bandwidth_tp_provider, packed_segment_size,
                         trackIndex, trackType, tileRes, 0, initSegSize);
+#endif
         }
     }
     m_prevSegNum = m_segNum;
@@ -1082,6 +1091,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
                     m_framesIsKey[vs] = currFrame->isKeyFrame;
                     m_streamsIsEOS[vs] = false;
 
+#ifdef _USE_TRACE_
                     //trace
                     char resolution[1024] = { 0 };
                     snprintf(resolution, 1024, "%d x %d", vs->GetSrcWidth(), vs->GetSrcHeight());
@@ -1089,6 +1099,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
                     snprintf(tileSplit, 1024, "%d x %d", vs->GetTileInCol(), vs->GetTileInRow());
                     tracepoint(bandwidth_tp_provider, encoded_frame_size,
                                 &resolution[0], &tileSplit[0], m_framesNum, currFrame->dataSize);
+#endif
 
                     vs->UpdateTilesNalu();
                     WriteSegmentForEachVideo(vs, currFrame->isKeyFrame, false);
@@ -1278,6 +1289,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 if (ret)
                     return ret;
             } else {
+#ifdef _USE_TRACE_
                 //trace
                 const char *dashMode = "static";
                 float currFrameRate = (float)(m_frameRate.num) / (float)(m_frameRate.den);
@@ -1285,6 +1297,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
                     dashMode, m_segInfo->segDuration, currFrameRate,
                     m_videosNum, m_videosBitrate,
                     m_framesNum, m_segNum);
+#endif
 
                 int32_t ret = m_mpdGen->WriteMpd(m_framesNum);
                 if (ret)

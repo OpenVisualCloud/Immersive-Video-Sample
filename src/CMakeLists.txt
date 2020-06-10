@@ -1,6 +1,14 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.12)
 PROJECT(immersive-media)
 
+OPTION(USE_TRACE
+       "Use trace"
+       OFF)
+
+IF(USE_TRACE)
+  ADD_DEFINITIONS("-D_USE_TRACE_")
+ENDIF()
+
 IF(NOT DE_FLAG)
   SET(DE_FLAG false)
 ENDIF()
@@ -14,17 +22,32 @@ IF(NOT TARGET)
 ENDIF()
 
 IF(${TARGET} STREQUAL "server")
-  SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -z noexecstack -z relro -z now -fstack-protector-strong -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wl,-S  -Wall -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 -lpthread -g")
-  SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -z noexecstack -z relro -z now -fstack-protector-strong -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wl,-S  -Wall -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 -lpthread")
+  SET(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} \
+                               -z noexecstack -z relro -z now \
+                               -fstack-protector-strong -fPIE -fPIC -pie -g \
+                               -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security \
+                               -Wl,-S -Wall -std=c++11 -lpthread \
+                               -D_GLIBCXX_USE_CXX11_ABI=0")
+  SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} \
+                               -z noexecstack -z relro -z now \
+                               -fstack-protector-strong -fPIE -fPIC -pie -O2 \
+                               -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security \
+                               -Wl,-S -Wall -std=c++11 -lpthread \
+                               -D_GLIBCXX_USE_CXX11_ABI=0")
   SET(FFMPEG_DIR "ffmpeg")
   SET(FFMPEG_FILE "ffmpeg.txt")
-  SET(FFMPEG_FLAG --prefix=/usr --libdir=/usr/lib --enable-static --disable-shared --enable-gpl --enable-nonfree --disable-optimizations --disable-vaapi --enable-libDistributedEncoder --enable-libVROmafPacking)
+  SET(FFMPEG_FLAG --prefix=/usr --libdir=/usr/lib --enable-static
+                  --disable-shared --enable-gpl --enable-nonfree
+                  --disable-optimizations --disable-vaapi
+                  --enable-libDistributedEncoder --enable-libVROmafPacking)
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/360SCVP)
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking)
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/plugins/OMAFPacking_Plugin)
   ADD_SUBDIRECTORY(360SCVP)
   ADD_SUBDIRECTORY(isolib)
-  ADD_SUBDIRECTORY(trace)
+  IF(USE_TRACE)
+    ADD_SUBDIRECTORY(trace)
+  ENDIF()
   ADD_SUBDIRECTORY(plugins/OMAFPacking_Plugin)
   IF(${DE_FLAG} STREQUAL "true")
     ADD_SUBDIRECTORY(distributed_encoder)
@@ -35,7 +58,17 @@ IF(${TARGET} STREQUAL "server")
       VERBATIM
   )
   ADD_CUSTOM_COMMAND(TARGET ffmpeg
-      COMMAND export PKG_CONFIG_PATH=${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/main_encoder/:${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/:/usr/local/lib/pkgconfig/:$PKG_CONFIG_PATH && mkdir -p ${FFMPEG_DIR} && cd ${FFMPEG_DIR} && ${CMAKE_CURRENT_SOURCE_DIR}/FFmpeg/configure ${FFMPEG_FLAG} --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/" --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP/" --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/main_encoder/" --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/util/" --extra-ldflags="-L${CMAKE_BINARY_DIR}/VROmafPacking/" --extra-ldflags="-L${CMAKE_BINARY_DIR}/360SCVP/" --extra-ldflags="-L${CMAKE_BINARY_DIR}/distributed_encoder/main_encoder/" && make -j $(nproc)
+      COMMAND export PKG_CONFIG_PATH=${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/main_encoder/:${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/:$PKG_CONFIG_PATH &&
+              mkdir -p ${FFMPEG_DIR} && cd ${FFMPEG_DIR} &&
+              ${CMAKE_CURRENT_SOURCE_DIR}/FFmpeg/configure ${FFMPEG_FLAG}
+                  --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/"
+                  --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP/"
+                  --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/main_encoder/"
+                  --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/util/"
+                  --extra-ldflags="-L${CMAKE_BINARY_DIR}/VROmafPacking/"
+                  --extra-ldflags="-L${CMAKE_BINARY_DIR}/360SCVP/"
+                  --extra-ldflags="-L${CMAKE_BINARY_DIR}/distributed_encoder/main_encoder/" &&
+              make -j $(nproc)
       COMMENT "Building ffmpeg..."
       VERBATIM
   )
