@@ -34,9 +34,11 @@
 #include <math.h>
 #include <dirent.h>
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
 #include <sys/time.h>
 #include "../trace/Bandwidth_tp.h"
 #include "../trace/MtHQ_tp.h"
+#endif
 #endif
 
 VCD_OMAF_BEGIN
@@ -478,12 +480,14 @@ void OmafDashSource::Run()
 int OmafDashSource::TimedDownloadSegment( bool bFirst )
 {
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
     //trace
     struct timeval currTime;
     gettimeofday(&currTime, NULL);
     uint64_t timeUs = currTime.tv_sec * 1000000 + currTime.tv_usec;
     tracepoint(bandwidth_tp_provider, download_info, timeUs, dcount);
     tracepoint(mthq_tp_provider, T3_start_download_time, dcount);
+#endif
 #endif
 
     std::map<int, OmafMediaStream*>::iterator it;

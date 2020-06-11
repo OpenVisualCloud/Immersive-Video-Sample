@@ -15,6 +15,7 @@ ENDIF()
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
 ENDIF()
+
 MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
 
 IF(NOT TARGET)
@@ -55,8 +56,7 @@ IF(${TARGET} STREQUAL "server")
   ADD_SUBDIRECTORY(VROmafPacking)
   ADD_CUSTOM_TARGET(ffmpeg ALL
       COMMAND echo "Target ffmpeg"
-      VERBATIM
-  )
+      VERBATIM)
   ADD_CUSTOM_COMMAND(TARGET ffmpeg
       COMMAND export PKG_CONFIG_PATH=${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/main_encoder/:${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/:$PKG_CONFIG_PATH &&
               mkdir -p ${FFMPEG_DIR} && cd ${FFMPEG_DIR} &&
@@ -70,35 +70,51 @@ IF(${TARGET} STREQUAL "server")
                   --extra-ldflags="-L${CMAKE_BINARY_DIR}/distributed_encoder/main_encoder/" &&
               make -j $(nproc)
       COMMENT "Building ffmpeg..."
-      VERBATIM
-  )
+      VERBATIM)
   ADD_DEPENDENCIES(ffmpeg VROmafPacking)
 
 ELSEIF(${TARGET} STREQUAL "client")
-  SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -z noexecstack -z relro -z now -fstack-protector-strong -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wl,-S -Wall -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 -I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP -g")
-  SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -z noexecstack -z relro -z now -fstack-protector-strong -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wl,-S -Wall -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 -I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP")
+  SET(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} \
+                               -z noexecstack -z relro -z now \
+                               -fstack-protector-strong -fPIE -fPIC -pie -O2 \
+                               -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security \
+                               -Wl,-S -Wall -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 \
+                               -I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP")
+  SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} \
+                               -z noexecstack -z relro -z now \
+                               -fstack-protector-strong -fPIE -fPIC -pie -g \
+                               -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security \
+                               -Wl,-S -Wall -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 \
+                               -I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP")
   SET(UTILS_DIR "utils")
   SET(PLAYER_DIR "player")
   ADD_SUBDIRECTORY(360SCVP)
   ADD_SUBDIRECTORY(isolib)
-  ADD_SUBDIRECTORY(trace)
+  IF(USE_TRACE)
+    ADD_SUBDIRECTORY(trace)
+  ENDIF()
   ADD_SUBDIRECTORY(OmafDashAccess)
 
   ADD_CUSTOM_TARGET(player ALL
       COMMAND echo "Target player"
-      VERBATIM
-  )
+      VERBATIM)
   ADD_CUSTOM_COMMAND(TARGET player
-      COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/${UTILS_DIR}/data_type.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR}
-      COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/${UTILS_DIR}/ns_def.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR}
-      COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/${UTILS_DIR}/error.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR}
-      COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/${UTILS_DIR}/OmafStructure.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR}
-      COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/360SCVP/360SCVPAPI.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR}
-      COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/OmafDashAccess/OmafDashAccessApi.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR}
-      COMMAND mkdir -p ${PLAYER_DIR} && cd ${PLAYER_DIR} && cmake -DUSE_OMAF=ON -DUSE_WEBRTC=OFF "-DCMAKE_CXX_FLAGS=-L${CMAKE_BINARY_DIR}/OmafDashAccess -L${CMAKE_BINARY_DIR}/360SCVP" ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR} && make -j $(nproc)
+      COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/${UTILS_DIR}/data_type.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR} &&
+              cp ${CMAKE_CURRENT_SOURCE_DIR}/${UTILS_DIR}/ns_def.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR} &&
+              cp ${CMAKE_CURRENT_SOURCE_DIR}/${UTILS_DIR}/error.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR} &&
+              cp ${CMAKE_CURRENT_SOURCE_DIR}/${UTILS_DIR}/OmafStructure.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR} &&
+              cp ${CMAKE_CURRENT_SOURCE_DIR}/360SCVP/360SCVPAPI.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR} &&
+              cp ${CMAKE_CURRENT_SOURCE_DIR}/OmafDashAccess/OmafDashAccessApi.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR} &&
+              mkdir -p ${PLAYER_DIR} && cd ${PLAYER_DIR} &&
+              cmake -DUSE_OMAF=ON
+                    -DUSE_WEBRTC=OFF
+                    "-DCMAKE_CXX_FLAGS= \
+                     -L${CMAKE_BINARY_DIR}/OmafDashAccess \
+                     -L${CMAKE_BINARY_DIR}/360SCVP"
+                    ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR} &&
+              make -j $(nproc)
       COMMENT "Building player..."
-      VERBATIM
-  )
+      VERBATIM)
   ADD_DEPENDENCIES(player OmafDashAccess)
 
 ELSE()

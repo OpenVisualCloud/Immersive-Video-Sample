@@ -37,8 +37,10 @@
 #include "OmafMP4VRReader.h"
 #include <math.h>
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
 #include "../trace/Bandwidth_tp.h"
 #include "../trace/MtHQ_tp.h"
+#endif
 #endif
 
 VCD_OMAF_BEGIN
@@ -176,12 +178,14 @@ int OmafReaderManager::AddInitSegment( OmafSegment* pInitSeg, uint32_t& nInitSeg
 
     ScopeLock readerLock(mReaderLock);
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
     //trace
     const char *trackType = "init_track";
     uint64_t segSize = pInitSeg->GetSegSize();
     char tileRes[128] = { 0 };
     snprintf(tileRes, 128, "%s", "none");
     tracepoint(bandwidth_tp_provider, packed_segment_size, 0, trackType, tileRes, 0, segSize);
+#endif
 #endif
 
     nInitSegID = mCurTrkCnt++;
@@ -288,6 +292,7 @@ int OmafReaderManager::AddSegment( OmafSegment* pSeg, uint32_t nInitSegID, uint3
     nSegID = ++(mMapSegCnt[nInitSegID]);
     //LOG(INFO)<<"now nSegID = "<<nSegID<<", pSeg->IsReEnabled() = "<<pSeg->IsReEnabled()<<", segCnt = "<<segCnt<<endl;
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
     //trace
     int trackIndex = mMapInitTrk[nInitSegID];
     if (mMapSegStatus[trackIndex].depTrackIDs.size())
@@ -306,6 +311,7 @@ int OmafReaderManager::AddSegment( OmafSegment* pSeg, uint32_t nInitSegID, uint3
         snprintf(tileRes, 128, "%s", "none");
         tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, segSize);
     }
+#endif
 #endif
 
     auto it = m_readSegMap.begin();
@@ -657,7 +663,9 @@ int OmafReaderManager::ReadNextSegment(
 
     LOG(INFO) << "Begin to read segment " << sampleIdx->mCurrentReadSegment <<" for track "<<trackID<< endl;
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
     tracepoint(mthq_tp_provider, T5_read_start_time, sampleIdx->mCurrentReadSegment);
+#endif
 #endif
     TrackInformation *trackInfo = nullptr;
     for ( auto &itTrack : readTrackInfos)
@@ -873,7 +881,9 @@ int OmafReaderManager::ReadNextSegment(
 
     LOG(INFO) << "Segment " << trackInfo->sampleProperties[beginSampleId - 1].segmentId << " for track " << trackID << " has been read !" << endl;
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
     tracepoint(mthq_tp_provider, T6_read_end_time, trackInfo->sampleProperties[beginSampleId - 1].segmentId);
+#endif
 #endif
     sampleIdx->mCurrentReadSegment++;
     sampleIdx->mGlobalSampleIndex += beginSampleId;
@@ -975,6 +985,7 @@ void OmafReaderManager::Run()
                         if (st->sampleIndex.mCurrentReadSegment > totalSegNum)
                         {
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
                             //trace
                             uint32_t dependentTracksNum = st->depTrackIDs.size();
                             uint32_t *dependentTracksIdx = new uint32_t[dependentTracksNum];
@@ -1013,6 +1024,7 @@ void OmafReaderManager::Run()
                             streamBitrate = NULL;
                             printf("Run here ~~~~~~\n");
 #endif
+#endif
 
                             mLock.lock();
                             this->mEOS = true;
@@ -1042,7 +1054,9 @@ void OmafReaderManager::Run()
                     if((uint32_t)(st->segStatus[st->sampleIndex.mCurrentReadSegment]) == (st->depTrackIDs.size() + 1)){
                         LOG(INFO)<<"Now will parse Segment "<<st->sampleIndex.mCurrentReadSegment<<endl;
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
                         tracepoint(mthq_tp_provider, T4_parse_start_time, st->sampleIndex.mCurrentReadSegment);
+#endif
 #endif
                         uint16_t trackID = pExt->GetTrackNumber();
                         uint16_t initSegID = 0;

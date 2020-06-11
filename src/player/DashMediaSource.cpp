@@ -37,7 +37,9 @@
 #include "RenderType.h"
 #include "DashMediaSource.h"
 #include "OmafDashAccessApi.h"
+#ifdef _USE_TRACE_
 #include "../trace/MtHQ_tp.h"
+#endif
 
 #define MAX_LIST_NUMBER 30
 #define MIN_LIST_REMAIN 2
@@ -101,8 +103,10 @@ RenderStatus DashMediaSource::GetPacket(AVPacket *pkt, RegionWisePacking *rwpk)
         return RENDER_ERROR;
     }
     LOG(INFO)<<"Get packet has done! and segment id is "<<dashPkt[0].segID<<std::endl;
+#ifdef _USE_TRACE_
     //trace
     tracepoint(mthq_tp_provider, T7_get_packet, dashPkt[0].segID);
+#endif
     if (NULL != dashPkt[0].buf && dashPkt[0].size && dashPktNum != 0)
     {
         int size = dashPkt[0].size;
@@ -454,9 +458,11 @@ RenderStatus DashMediaSource::SetMediaSourceInfo(void *mediaInfo)
     {
         LOG(ERROR)<<"dash mode is invalid!"<<std::endl;
     }
+#ifdef _USE_TRACE_
     const char * dash_mode = (dashMediaInfo->streaming_type == 1) ? "static" : "dynamic";
     tracepoint(mthq_tp_provider, stream_information, (char *)dash_mode, dashMediaInfo->stream_info[0].segmentDuration, dashMediaInfo->duration, \
                 m_mediaSourceInfo.frameRate, m_mediaSourceInfo.frameNum, m_mediaSourceInfo.sourceWH->width[0], m_mediaSourceInfo.sourceWH->height[0]);
+#endif
     return RENDER_STATUS_OK;
 }
 
@@ -593,9 +599,11 @@ void DashMediaSource::Run()
         static int trace_flag = 1;
         if (trace_flag)
         {
+#ifdef _USE_TRACE_
             //trace first occurs
             tracepoint(mthq_tp_provider, decode_fifo, m_rwpkList.size());
             trace_flag = 0;
+#endif
         }
         if (0 != m_rwpkList.size())//just for DASH Source.
         {
@@ -657,8 +665,10 @@ void DashMediaSource::Run()
                 LOG(INFO)<<"!!!!!=========full===========!!!!!"<<std::endl;
             }
         }
+#ifdef _USE_TRACE_
         //trace
         tracepoint(mthq_tp_provider, T8_decode_finish, m_frameBuffer.size());
+#endif
         LOG(INFO)<<"======push_back frameBuffer size:=============:"<<m_frameBuffer.size()<<std::endl;
         pthread_mutex_unlock(&m_frameMutex);
     }

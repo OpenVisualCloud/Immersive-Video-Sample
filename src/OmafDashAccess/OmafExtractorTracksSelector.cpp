@@ -41,7 +41,9 @@
 #include <chrono>
 #include <cstdint>
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
 #include "../trace/MtHQ_tp.h"
+#endif
 #endif
 
 VCD_OMAF_BEGIN
@@ -141,8 +143,10 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose( OmafMediaStream*
     {
         LOG(INFO)<<"pose hasn't changed!"<<endl;
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
         //trace
         tracepoint(mthq_tp_provider, T2_detect_pose_change, 0);
+#endif
 #endif
         return NULL;
     }
@@ -153,8 +157,10 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose( OmafMediaStream*
     {
         LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") ! extractor id is: "<<selectedExtractor->GetID()<<endl;
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
         //trace
         tracepoint(mthq_tp_provider, T2_detect_pose_change, 1);
+#endif
 #endif
     }
 
@@ -276,8 +282,10 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction( OmafMed
     {
         LOG(INFO)<<"pose hasn't changed!"<<endl;
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
         //trace
         tracepoint(mthq_tp_provider, T2_detect_pose_change, 0);
+#endif
 #endif
         SAFE_DELETE(previousPose);
         SAFE_DELETE(predict_angle);
@@ -293,8 +301,10 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction( OmafMed
         extractors.push_back(selectedExtractor);
         LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") ! extractor id is: "<<selectedExtractor->GetID()<<endl;
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
         //trace
         tracepoint(mthq_tp_provider, T2_detect_pose_change, 1);
+#endif
 #endif
     }
     SAFE_DELETE(previousPose);
