@@ -46,7 +46,9 @@
 #include <algorithm>
 #include <iostream>
 #include <chrono>
+#ifdef _USE_TRACE_
 #include "../trace/MtHQ_tp.h"
+#endif
 
 VCD_NS_BEGIN
 
@@ -178,8 +180,10 @@ RenderStatus RenderTarget::Update(RenderBackend *renderBackend, struct RegionInf
             {
                 start = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
                 LOG(INFO)<<"low resolution part occurs!"<<std::endl;
+#ifdef _USE_TRACE_
                 //trace
                 tracepoint(mthq_tp_provider, T1_change_to_lowQ, changedCount+1);
+#endif
             }
             break;
         }
@@ -188,8 +192,10 @@ RenderStatus RenderTarget::Update(RenderBackend *renderBackend, struct RegionInf
     {
         uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
         LOG(INFO)<<"T9' All high resolution part!"<<std::endl<<"cost time : "<<(end-start)<<"ms"<<std::endl;
+#ifdef _USE_TRACE_
         //trace
         tracepoint(mthq_tp_provider, T9n_change_to_highQ, changedCount+1);
+#endif
 
         totalChangedTime += end - start;
         changedCount++;

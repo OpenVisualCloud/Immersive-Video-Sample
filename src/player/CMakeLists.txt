@@ -1,46 +1,58 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-option(USE_OMAF
-	"Use omaf"
-	OFF
+OPTION(USE_OMAF
+       "Use omaf"
+       OFF
 )
 
-option(USE_WEBRTC
-	"Use webrtc"
-	OFF
+OPTION(USE_WEBRTC
+       "Use webrtc"
+       OFF
+)
+
+OPTION(USE_TRACE
+       "Use trace"
+       OFF
 )
 
 PROJECT(player)
 
-if(USE_OMAF)
-ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -fpermissive")
-endif()
+IF(USE_OMAF)
+  ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -fpermissive")
+ENDIF()
 
-if(USE_WEBRTC)
-ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -fpermissive -DLOW_LATENCY_USAGE")
-endif()
+IF(USE_WEBRTC)
+  ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -fpermissive -DLOW_LATENCY_USAGE")
+ENDIF()
 
-if(USE_OMAF)
-INCLUDE_DIRECTORIES(/usr/local/include ../utils ../trace)
+IF(USE_TRACE)
+  ADD_DEFINITIONS("-D_USE_TRACE_")
+ENDIF()
 
-LINK_DIRECTORIES(/usr/local/lib ../trace)
-endif()
+IF(USE_OMAF)
+  IF(USE_TRACE)
+    INCLUDE_DIRECTORIES(/usr/local/include ../utils ../trace)
+    LINK_DIRECTORIES(/usr/local/lib ../trace)
+  ELSE()
+    INCLUDE_DIRECTORIES(/usr/local/include ../utils)
+    LINK_DIRECTORIES(/usr/local/lib)
+  ENDIF()
+ENDIF()
 
-if(USE_WEBRTC)
-INCLUDE_DIRECTORIES(/usr/local/include ../utils)
+IF(USE_WEBRTC)
+  INCLUDE_DIRECTORIES(/usr/local/include ../utils)
+  LINK_DIRECTORIES(/usr/local/lib)
+ENDIF()
 
-LINK_DIRECTORIES(/usr/local/lib)
-endif()
-
-if(USE_WEBRTC)
-    if(NOT DEFINED WEBRTC_LINUX_SDK)
+IF(USE_WEBRTC)
+    IF(NOT DEFINED WEBRTC_LINUX_SDK)
         message(SEND_ERROR "WEBRTC_LINUX_SDK is required")
-    endif()
+    ENDIF()
 
     ADD_DEFINITIONS("-D_ENABLE_WEBRTC_SOURCE_ -DWEBRTC_LINUX -DWEBRTC_POSIX")
     INCLUDE_DIRECTORIES("${WEBRTC_LINUX_SDK}/include")
     LINK_DIRECTORIES("${WEBRTC_LINUX_SDK}/lib")
-endif()
+ENDIF()
 
 AUX_SOURCE_DIRECTORY(. DIR_SRC)
 AUX_SOURCE_DIRECTORY(../utils/ UTIL_SRC)
@@ -52,14 +64,22 @@ set(DIR_SRC
 
 ADD_EXECUTABLE(render ${DIR_SRC})
 
-if(USE_OMAF)
-	set(LINK_LIB ${LINK_LIB} OmafDashAccess trace lttng-ust)
-endif()
+IF(USE_OMAF)
+  IF(USE_TRACE)
+    SET(LINK_LIB ${LINK_LIB} OmafDashAccess trace lttng-ust)
+  ELSE()
+    SET(LINK_LIB ${LINK_LIB} OmafDashAccess)
+  ENDIF()
+ENDIF()
 
-if(USE_WEBRTC)
-	set(LINK_LIB ${LINK_LIB} owt sioclient_tls ssl crypto boost_system dl)
-endif()
+IF(USE_WEBRTC)
+  SET(LINK_LIB ${LINK_LIB}
+      owt sioclient_tls ssl crypto boost_system dl)
+ENDIF()
 
-set(LINK_LIB ${LINK_LIB} avfilter avformat avcodec avdevice avutil swscale swresample va va-drm va-x11 360SCVP glfw GL GLU X11 pthread lzma z glog EGL GLESv2 dl)
+SET(LINK_LIB ${LINK_LIB}
+    avfilter avformat avcodec avdevice avutil swscale swresample
+    va va-drm va-x11 360SCVP glfw GL GLU X11 pthread lzma z glog
+    EGL GLESv2 dl)
 
-TARGET_LINK_LIBRARIES( render ${LINK_LIB} )
+TARGET_LINK_LIBRARIES(render ${LINK_LIB})

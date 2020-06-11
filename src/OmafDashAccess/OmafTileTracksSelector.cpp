@@ -40,7 +40,9 @@
 #include <chrono>
 #include <cstdint>
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
 #include "../trace/MtHQ_tp.h"
+#endif
 #endif
 
 VCD_OMAF_BEGIN
@@ -210,8 +212,10 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
     {
         LOG(INFO)<<"pose hasn't changed!"<<endl;
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
         //trace
         tracepoint(mthq_tp_provider, T2_detect_pose_change, 0);
+#endif
 #endif
         return selectedTracks;
     }
@@ -222,8 +226,10 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
     {
         LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") !"<<endl;
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
         // trace
         tracepoint(mthq_tp_provider, T2_detect_pose_change, 1);
+#endif
 #endif
     }
 
@@ -356,8 +362,10 @@ std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
     {
         LOG(INFO)<<"pose hasn't changed!"<<endl;
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
         //trace
         tracepoint(mthq_tp_provider, T2_detect_pose_change, 0);
+#endif
 #endif
         SAFE_DELETE(previousPose);
         SAFE_DELETE(predict_angle);
@@ -378,8 +386,10 @@ std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
         LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") !"<<endl;
 
 #ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
         //trace
         tracepoint(mthq_tp_provider, T2_detect_pose_change, 1);
+#endif
 #endif
     }
     SAFE_DELETE(previousPose);

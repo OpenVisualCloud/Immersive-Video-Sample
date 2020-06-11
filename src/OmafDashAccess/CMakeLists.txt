@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 2.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-option(USE_ANDROID_NDK
+OPTION(USE_ANDROID_NDK
 	"Use android ndk"
 	OFF
 )
 
-project(OmafDashAccess)
+PROJECT(OmafDashAccess)
 
 AUX_SOURCE_DIRECTORY(. DIR_SRC)
 AUX_SOURCE_DIRECTORY(../utils UTIL_SRC)
@@ -13,23 +13,37 @@ AUX_SOURCE_DIRECTORY(OmafDashDownload/. DOWN_SRC)
 AUX_SOURCE_DIRECTORY(OmafDashParser/. PARSE_SRC)
 AUX_SOURCE_DIRECTORY(OmafViewportPredict/. PREDICT_SRC)
 
-if(NOT USE_ANDROID_NDK)
-ADD_DEFINITIONS("-g -c -fPIC -lstdc++fs -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 -z noexecstack -z relro -z now -fstack-protector-strong -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wl,-S -Wall -Werror")
-else()
-ADD_DEFINITIONS("-g -c -fPIC -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 -fPIE -fPIC -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wall -Werror")
-endif()
+IF(NOT USE_ANDROID_NDK)
+  ADD_DEFINITIONS("-g -c -fPIC -lstdc++fs -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0
+                   -z noexecstack -z relro -z now -fstack-protector-strong
+                   -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat
+                   -Wformat-security -Wl,-S -Wall -Werror")
+ELSE()
+  ADD_DEFINITIONS("-g -c -fPIC -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0
+                   -fPIE -fPIC -O2 -D_FORTIFY_SOURCE=2 -Wformat
+                   -Wformat-security -Wall -Werror")
+ENDIF()
 
-if(USE_ANDROID_NDK)
-ADD_DEFINITIONS("-D_ANDROID_NDK_OPTION_")
-endif()
+IF(USE_ANDROID_NDK)
+  ADD_DEFINITIONS("-D_ANDROID_NDK_OPTION_")
+ENDIF()
 
-if(NOT USE_ANDROID_NDK)
-INCLUDE_DIRECTORIES(/usr/local/include ../utils ../isolib ../trace)
-LINK_DIRECTORIES(/usr/local/lib ../isolib/dash_parser ../trace)
-else()
-INCLUDE_DIRECTORIES(/usr/local/include ../utils ../isolib)
-LINK_DIRECTORIES(/usr/local/lib ../isolib/dash_parser)
-endif()
+IF(USE_TRACE)
+  ADD_DEFINITIONS("-D_USE_TRACE_")
+ENDIF()
+
+IF(NOT USE_ANDROID_NDK)
+  IF(USE_TRACE)
+    INCLUDE_DIRECTORIES(/usr/local/include ../utils ../isolib ../trace)
+    LINK_DIRECTORIES(/usr/local/lib ../isolib/dash_parser ../trace)
+  ELSE()
+    INCLUDE_DIRECTORIES(/usr/local/include ../utils ../isolib)
+    LINK_DIRECTORIES(/usr/local/lib ../isolib/dash_parser)
+  ENDIF()
+ELSE()
+  INCLUDE_DIRECTORIES(/usr/local/include ../utils ../isolib)
+  LINK_DIRECTORIES(/usr/local/lib ../isolib/dash_parser)
+ENDIF()
 
 set(DIR_SRC
     ${DIR_SRC}
@@ -45,21 +59,22 @@ TARGET_LINK_LIBRARIES(OmafDashAccess glog)
 TARGET_LINK_LIBRARIES(OmafDashAccess curl)
 TARGET_LINK_LIBRARIES(OmafDashAccess dashparser)
 TARGET_LINK_LIBRARIES(OmafDashAccess 360SCVP)
-if(NOT USE_ANDROID_NDK)
-TARGET_LINK_LIBRARIES(OmafDashAccess trace)
-TARGET_LINK_LIBRARIES(OmafDashAccess lttng-ust)
-TARGET_LINK_LIBRARIES(OmafDashAccess dl)
-endif()
+IF(NOT USE_ANDROID_NDK)
+  IF(USE_TRACE)
+    TARGET_LINK_LIBRARIES(OmafDashAccess trace)
+    TARGET_LINK_LIBRARIES(OmafDashAccess lttng-ust)
+  ENDIF()
+  TARGET_LINK_LIBRARIES(OmafDashAccess dl)
+ENDIF()
 
-install(TARGETS OmafDashAccess
+INSTALL(TARGETS OmafDashAccess
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib/static)
 
-install(FILES ${PROJECT_SOURCE_DIR}/../utils/error.h DESTINATION include)
-install(FILES ${PROJECT_SOURCE_DIR}/../utils/data_type.h DESTINATION include)
-install(FILES ${PROJECT_SOURCE_DIR}/../utils/ns_def.h DESTINATION include)
-install(FILES ${PROJECT_SOURCE_DIR}/../utils/OmafStructure.h DESTINATION include)
-install(FILES ${PROJECT_SOURCE_DIR}/OmafDashAccessApi.h DESTINATION include)
-install(FILES ${PROJECT_SOURCE_DIR}/OmafDashAccess.pc DESTINATION lib/pkgconfig)
-
+INSTALL(FILES ${PROJECT_SOURCE_DIR}/../utils/error.h DESTINATION include)
+INSTALL(FILES ${PROJECT_SOURCE_DIR}/../utils/data_type.h DESTINATION include)
+INSTALL(FILES ${PROJECT_SOURCE_DIR}/../utils/ns_def.h DESTINATION include)
+INSTALL(FILES ${PROJECT_SOURCE_DIR}/../utils/OmafStructure.h DESTINATION include)
+INSTALL(FILES ${PROJECT_SOURCE_DIR}/OmafDashAccessApi.h DESTINATION include)
+INSTALL(FILES ${PROJECT_SOURCE_DIR}/OmafDashAccess.pc DESTINATION lib/pkgconfig)
