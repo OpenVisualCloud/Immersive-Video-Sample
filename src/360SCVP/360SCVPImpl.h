@@ -101,6 +101,7 @@ public:
     int32_t  setViewPort(float yaw, float pitch);
     int32_t  doMerge(param_360SCVP* pParamStitchStream);
     int32_t  getFixedNumTiles(TileDef* pOutTile);
+    int32_t  getTilesInViewport(TileDef* pOutTile);
     int32_t  parseNals(param_360SCVP* pParamStitchStream, int32_t parseType, Nalu* pNALU, int32_t streamIdx);
     int32_t  GenerateRWPK(RegionWisePacking* pRWPK, uint8_t *pRWPKBits, int32_t* pRWPKBitsSize);
     int32_t  GenerateProj(int32_t projType, uint8_t *pProjBits, int32_t* pProjBitsSize);

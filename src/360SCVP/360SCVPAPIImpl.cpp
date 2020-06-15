@@ -133,6 +133,22 @@ int32_t I360SCVP_getFixedNumTiles(TileDef* pOutTile, Param_ViewportOutput* pPara
     return ret;
 }
 
+int32_t I360SCVP_getTilesInViewport(TileDef* pOutTile, Param_ViewportOutput* pParamViewPortOutput, void* p360SCVPHandle)
+{
+    int32_t ret = 0;
+    TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
+    if (!pStitch || !pOutTile || !pParamViewPortOutput)
+        return 1;
+    ret = pStitch->getTilesInViewport(pOutTile);
+    pParamViewPortOutput->dstWidthAlignTile = pStitch->m_viewportDestWidth;
+    pParamViewPortOutput->dstHeightAlignTile = pStitch->m_viewportDestHeight;
+    pParamViewPortOutput->dstWidthNet = pStitch->m_dstWidthNet;
+    pParamViewPortOutput->dstHeightNet = pStitch->m_dstHeightNet;
+    pParamViewPortOutput->xTopLeftNet = pStitch->m_xTopLeftNet;
+    pParamViewPortOutput->yTopLeftNet = pStitch->m_yTopLeftNet;
+    return ret;
+}
+
 int32_t I360SCVP_ParseNAL(Nalu* pNALU, void* p360SCVPHandle)
 {
     TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
