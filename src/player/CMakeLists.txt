@@ -56,13 +56,21 @@ ENDIF()
 
 AUX_SOURCE_DIRECTORY(. DIR_SRC)
 AUX_SOURCE_DIRECTORY(../utils/ UTIL_SRC)
+AUX_SOURCE_DIRECTORY(./Decoder DEC_SRC)
+AUX_SOURCE_DIRECTORY(./MediaSource MEDSRC_SRC)
+AUX_SOURCE_DIRECTORY(./Render RNDR_SRC)
+AUX_SOURCE_DIRECTORY(./Mesh MESH_SRC)
 
 set(DIR_SRC
     ${DIR_SRC}
+    ${DEC_SRC}
+    ${MEDSRC_SRC}
+    ${RNDR_SRC}
+    ${MESH_SRC}
     ${UTIL_SRC}
     )
 
-ADD_EXECUTABLE(render ${DIR_SRC})
+ADD_EXECUTABLE(render ${DIR_SRC} ${DEC_SRC} ${MEDSRC_SRC} ${RNDR_SRC} ${MESH_SRC})
 
 IF(USE_OMAF)
   IF(USE_TRACE)
@@ -79,7 +87,6 @@ ENDIF()
 
 SET(LINK_LIB ${LINK_LIB}
     avfilter avformat avcodec avdevice avutil swscale swresample
-    va va-drm va-x11 360SCVP glfw GL GLU X11 pthread lzma z glog
-    EGL GLESv2 dl)
+    360SCVP glfw GL GLU X11 pthread lzma z glog EGL GLESv2 dl)
 
 TARGET_LINK_LIBRARIES(render ${LINK_LIB})

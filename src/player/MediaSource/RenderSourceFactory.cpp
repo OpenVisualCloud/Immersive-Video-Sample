@@ -27,55 +27,60 @@
  */
 
 //!
-//! \file     Player.h
-//! \brief    Define Player.
+//! \file     RenderSourceFactory.cpp
+//! \brief    Implement class for RenderSourceFactory.
 //!
-#ifndef _PLAYER_H_
-#define _PLAYER_H_
 
-#include "Common.h"
-#include "Render/RenderManager.h"
+#include "RenderSourceFactory.h"
+#include "SWRenderSource.h"
 #include <GLFW/glfw3.h>
-#include "Render/RenderContext.h"
 
 VCD_NS_BEGIN
 
-class Player
-{
-public:
-    Player(struct RenderConfig config);
-    virtual ~Player();
-    //! \brief main loop in player control and playback
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus Play();
-    //! \brief open media and initialize
-    //!
-    //! \param  [in] struct RenderConfig
-    //!         render configuration
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus Open();
-    //! \brief get player status
-    //!
-    //! \return uint32_t
-    //!         status
-    //!
-    uint32_t GetStatus();
 
-private:
-    uint32_t                  m_status;
-    RenderManager            *m_renderManager;
-    MediaSource              *m_mediaSource;
-    RenderSourceFactory      *m_rsFactory;
-    RenderContext            *m_renderContext;
-    RenderConfig              m_renderConfig;
-    MediaInfo                 m_mediaInfo;
-};
+RenderSourceFactory::RenderSourceFactory(void *window)
+{
+    mMapRenderSource.clear();
+    share_window = window;
+}
+
+RenderSourceFactory::~RenderSourceFactory()
+{
+    RemoveAll();
+}
+
+FrameHandler* RenderSourceFactory::CreateHandler(uint32_t video_id)
+{
+    glfwMakeContextCurrent((GLFWwindow*)share_window); // share context in multiple thread
+    SWRenderSource* rs = new SWRenderSource();
+    rs->SetVideoID(video_id);
+    this->mMapRenderSource[video_id] = rs;
+
+    return rs;
+}
+
+RenderStatus RenderSourceFactory::RemoveHandler(uint32_t video_id)
+{
+    if(mMapRenderSource.find(video_id)==mMapRenderSource.end()) return RENDER_NOT_FOUND;
+    for(auto it=mMapRenderSource.begin(); it!=mMapRenderSource.end(); ++it){
+        if(video_id == it->first){
+            it->second->DestroyRenderSource();
+            SAFE_DELETE(it->second);
+            it=mMapRenderSource.erase(it);
+            break;
+        }
+    }
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus RenderSourceFactory::RemoveAll()
+{
+    for(auto it=mMapRenderSource.begin(); it!=mMapRenderSource.end(); ++it){
+        it->second->DestroyRenderSource();
+        SAFE_DELETE(it->second);
+        // it=mMapRenderSource.erase(it);
+    }
+    return RENDER_STATUS_OK;
+}
 
 VCD_NS_END
-#endif /* _PLAYER_H_ */

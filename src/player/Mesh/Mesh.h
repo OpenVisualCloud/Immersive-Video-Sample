@@ -26,27 +26,55 @@
  *
  */
 
-
 //!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
+//! \file     Mesh.h
+//! \brief    Defines class for Mesh.
 //!
-//! Created on April 30, 2019, 6:04 AM
-//!
+#ifndef _MESH_H_
+#define _MESH_H_
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#include "../Common.h"
 
-#include "../utils/ns_def.h"
-#include "RenderType.h"
-#ifndef LOW_LATENCY_USAGE
-#include "data_type.h"
-#endif
-#include "../utils/OmafStructure.h"
-#include "../utils/GlogWrapper.h"
+VCD_NS_BEGIN
 
-#define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
-#define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
-#define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete [] (x); (x)=NULL; };
+class Mesh
+{
+public:
+    Mesh(){
+         m_vertices = NULL;
+         m_texCoords = NULL;
+         m_indices = NULL;
+         m_vertexNum = 0;
+         m_indexNum = 0;
+         m_VAOHandle = 0;
+         m_EBOHandle = 0;
+    };
 
-#endif /* _COMMON_H_ */
+    virtual ~Mesh()=default;
+
+    ///abstract interface
+    virtual RenderStatus Create() = 0;
+    virtual RenderStatus Destroy() = 0;
+    virtual RenderStatus Bind(uint32_t vertexAttrib, uint32_t texCoordAttrib) = 0;
+
+    ///get Methods
+    uint32_t GetVertexNum(){ return m_vertexNum; };
+    uint32_t GetIndexNum(){ return m_indexNum; };
+    float *GetVertices(){ return m_vertices; };
+    float *GetTexCoords(){ return m_texCoords; };
+    uint32_t *GetIndices(){ return m_indices; };
+    uint32_t GetVAOHandle(){return m_VAOHandle; };
+    uint32_t GetEBOHandle(){return m_EBOHandle; };
+
+protected:
+    float    *m_vertices;
+    float    *m_texCoords;
+    uint32_t *m_indices;
+    uint32_t  m_vertexNum;
+    uint32_t  m_indexNum;
+    uint32_t  m_VAOHandle;
+    uint32_t  m_EBOHandle;
+};
+
+VCD_NS_END
+#endif /* _MESH_H_ */

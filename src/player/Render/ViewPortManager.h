@@ -26,27 +26,44 @@
  *
  */
 
-
 //!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
-//!
-//! Created on April 30, 2019, 6:04 AM
+//! \file     ViewPortManager.h
+//! \brief    Defines class for ViewPortManager.
 //!
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#ifndef _VIEWPORTMANAGER_H_
+#define _VIEWPORTMANAGER_H_
 
-#include "../utils/ns_def.h"
-#include "RenderType.h"
-#ifndef LOW_LATENCY_USAGE
-#include "data_type.h"
-#endif
-#include "../utils/OmafStructure.h"
-#include "../utils/GlogWrapper.h"
+#include "../Common.h"
 
-#define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
-#define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
-#define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete [] (x); (x)=NULL; };
+VCD_NS_BEGIN
 
-#endif /* _COMMON_H_ */
+class ViewPortManager
+{
+public:
+    ViewPortManager();
+    virtual ~ViewPortManager();
+
+    //! \brief Get the viewport info
+    //!
+    //! \return Pose*
+    //!         return Pose
+    //!
+    struct Pose GetViewPort();
+
+    //! \brief The render function
+    //!
+    //! \param  [in] Pose *
+    //!         Set the viewport to the manager
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus SetViewPort(struct Pose pose);
+
+private:
+    struct Pose m_pose;
+
+};
+
+VCD_NS_END
+#endif /* _VIEWPORTMANAGER_H_ */

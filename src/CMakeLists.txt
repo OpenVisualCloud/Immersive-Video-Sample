@@ -88,6 +88,7 @@ ELSEIF(${TARGET} STREQUAL "client")
                                -I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP")
   SET(UTILS_DIR "utils")
   SET(PLAYER_DIR "player")
+  SET(PLAYER_MEDIASOURCE_DIR "player/MediaSource")
   ADD_SUBDIRECTORY(360SCVP)
   ADD_SUBDIRECTORY(isolib)
   IF(USE_TRACE)
@@ -104,7 +105,7 @@ ELSEIF(${TARGET} STREQUAL "client")
               cp ${CMAKE_CURRENT_SOURCE_DIR}/${UTILS_DIR}/error.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR} &&
               cp ${CMAKE_CURRENT_SOURCE_DIR}/${UTILS_DIR}/OmafStructure.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR} &&
               cp ${CMAKE_CURRENT_SOURCE_DIR}/360SCVP/360SCVPAPI.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR} &&
-              cp ${CMAKE_CURRENT_SOURCE_DIR}/OmafDashAccess/OmafDashAccessApi.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_DIR} &&
+              cp ${CMAKE_CURRENT_SOURCE_DIR}/OmafDashAccess/OmafDashAccessApi.h ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_MEDIASOURCE_DIR} &&
               mkdir -p ${PLAYER_DIR} && cd ${PLAYER_DIR} &&
               cmake -DUSE_OMAF=ON
                     -DUSE_WEBRTC=OFF

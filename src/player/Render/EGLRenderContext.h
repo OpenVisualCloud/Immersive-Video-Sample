@@ -27,55 +27,77 @@
  */
 
 //!
-//! \file     Player.h
-//! \brief    Define Player.
+//! \file     EGLRenderContext.h
+//! \brief    Defines class for EGLRenderContext.
 //!
-#ifndef _PLAYER_H_
-#define _PLAYER_H_
+#ifndef _EGLRenderContext_H_
+#define _EGLRenderContext_H_
 
-#include "Common.h"
-#include "Render/RenderManager.h"
-#include <GLFW/glfw3.h>
-#include "Render/RenderContext.h"
+#include "../Common.h"
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include <vector>
+
+#include "RenderContext.h"
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#include <X11/Xutil.h>
 
 VCD_NS_BEGIN
 
-class Player
+class EGLRenderContext
+ : public RenderContext
 {
 public:
-    Player(struct RenderConfig config);
-    virtual ~Player();
-    //! \brief main loop in player control and playback
+    EGLRenderContext();
+    EGLRenderContext(struct RenderConfig config);
+    virtual ~EGLRenderContext();
+    //! \brief swap buffer
+    //!
+    //! \param  [in] window
+    //          window handle
+    //!         [in] param
+    //!         parameter for the swap buffer
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus SwapBuffers(void * window, int param);
+    //! \brief get pose and status according to inputs
+    //!
+    //! \param  [out] yaw
+    //          current pose : yaw
+    //!         [out] pitch
+    //!         current pose : pitch
+    //!         [out] status
+    //!         player status
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus GetStatusAndPose(float *yaw, float *pitch, uint32_t* status);
+    //! \brief initialize render context
     //!
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus Play();
-    //! \brief open media and initialize
+    virtual void* InitContext();
+    //! \brief check whether the render is running
     //!
-    //! \param  [in] struct RenderConfig
-    //!         render configuration
+    //! \return bool
+    //!         isrunning or not
     //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus Open();
-    //! \brief get player status
-    //!
-    //! \return uint32_t
-    //!         status
-    //!
-    uint32_t GetStatus();
+    virtual bool isRunning();
 
-private:
-    uint32_t                  m_status;
-    RenderManager            *m_renderManager;
-    MediaSource              *m_mediaSource;
-    RenderSourceFactory      *m_rsFactory;
-    RenderContext            *m_renderContext;
-    RenderConfig              m_renderConfig;
-    MediaInfo                 m_mediaInfo;
+protected:
+    Window      m_win;
+    EGLDisplay  m_eglDisplay;
+    EGLContext  m_eglContext;
+    EGLSurface  m_eglSurface;
+
 };
 
 VCD_NS_END
-#endif /* _PLAYER_H_ */
+#endif /* _EGLRenderContext_H_ */
