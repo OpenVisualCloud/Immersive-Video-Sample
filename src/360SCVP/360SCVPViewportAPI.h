@@ -174,6 +174,18 @@ bool genViewport_isInside(void* pGenHandle, int32_t x, int32_t y, int32_t width,
 int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile);
 
 //!
+//! \brief    This function output the selected tiles according to the timely changed viewPort information,
+//!           especially these tiles are put in the original picture order.
+//!           for cube map source, currently support FOV range 100 ~70 degree
+//!
+//! \param    void*  pGenHandle,     input,  which is created by the genTiledStream_Init function
+//! \param    TileDef*   pOutTile,      output, the list for the tiles inside the viewport
+//!
+//! \return   int32_t, the number of the tiles inside the viewport.
+//!
+int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile);
+
+//!
 //! \brief    This function output the fixed number tiles according to the viewPort information in the initialization phase,
 //!           especially these tiles are put in the original picture order.
 //!           for cube map source, currently support FOV range 100 ~70 degree

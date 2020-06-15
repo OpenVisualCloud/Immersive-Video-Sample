@@ -828,6 +828,18 @@ int32_t TstitchStream::getFixedNumTiles(TileDef* pOutTile)
     return ret;
 }
 
+int32_t TstitchStream::getTilesInViewport(TileDef* pOutTile)
+{
+    int32_t ret = 0;
+    if (pOutTile == NULL)
+        return -1;
+    ret = genViewport_getTilesInViewport(m_pViewport, pOutTile);
+    m_viewportDestWidth = m_pViewportParam.m_viewportDestWidth;
+    m_viewportDestHeight = m_pViewportParam.m_viewportDestHeight;
+
+    return ret;
+}
+
 int32_t  TstitchStream::doStreamStitch(param_360SCVP* pParamStitchStream)
 {
     int32_t ret = 0;
@@ -1243,7 +1255,7 @@ int32_t  TstitchStream::GeneratePPS(param_360SCVP* pParamStitchStream, TileArran
             gts_bs_del(bs);
             bs = NULL;
         }
-        if (bsWrite) 
+        if (bsWrite)
         {
             gts_bs_del(bsWrite);
             bsWrite = NULL;
@@ -1256,7 +1268,7 @@ int32_t  TstitchStream::GeneratePPS(param_360SCVP* pParamStitchStream, TileArran
         gts_bs_del(bs);
         bs = NULL;
     }
-    if (bsWrite) 
+    if (bsWrite)
     {
         gts_bs_del(bsWrite);
         bsWrite = NULL;

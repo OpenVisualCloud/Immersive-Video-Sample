@@ -262,7 +262,7 @@ typedef struct PARAM_BSHEADER
 }Param_BSHeader;
 
 //!
-//! \brief  This structure is for the pitcure parameters 
+//! \brief  This structure is for the pitcure parameters
 //!
 typedef struct PARAM_PICTURE
 {
@@ -420,7 +420,7 @@ typedef struct PARAM_360SCVP
 void * I360SCVP_Init(param_360SCVP* pParam360SCVP);
 
 //!
-//! \brief      This function create a new handle based on one existed handle 
+//! \brief      This function create a new handle based on one existed handle
 //!             and return the new handle of the stitch stream library
 //! \param      void* p360SCVPHandle, input, one existed stitch library handle
 //!
@@ -477,6 +477,19 @@ int32_t   I360SCVP_unInit(void * p360SCVPHandle);
 //! \return   int32_t, the number of the tiles inside the viewport.
 //!
 int32_t I360SCVP_getFixedNumTiles(TileDef* pOutTile, Param_ViewportOutput* pParamViewPortOutput, void* p360SCVPHandle);
+
+//!
+//! \brief    This function output the selected tiles according to the timely changed viewPort information,
+//!           especially these tiles are put in the original picture order.
+//!           for cube map source, currently support FOV range 100 ~70 degree
+//!
+//! \param    TileDef*   pOutTile,              output, the list for the tiles inside the viewport
+//! \param    int32_t*   pParamViewPortOutput,  output, please refer to the structure Param_ViewportOutput
+//! \param    void*      p360SCVPHandle,        input,  which is created by the I360SVCP_Init function
+//!
+//! \return   int32_t, the number of the tiles inside the viewport.
+//!
+int32_t I360SCVP_getTilesInViewport(TileDef* pOutTile, Param_ViewportOutput* pParamViewPortOutput, void* p360SCVPHandle);
 
 //!
 //! \brief    This function provides the parsing NAL function, can give the slice type, tileCols number, tileRows number and nal information
