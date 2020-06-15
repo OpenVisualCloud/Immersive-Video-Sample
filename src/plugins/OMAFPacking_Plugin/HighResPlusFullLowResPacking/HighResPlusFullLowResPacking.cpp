@@ -40,6 +40,10 @@
 
 HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGenerator()
 {
+    m_highResWidth    = 0;
+    m_highResHeight   = 0;
+    m_lowResWidth     = 0;
+    m_lowResHeight    = 0;
     m_packedPicWidth  = 0;
     m_packedPicHeight = 0;
     m_streamIdxInMedia[0] = 0;
@@ -250,6 +254,8 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::Initialize(
     RegionWisePacking *rwpk1 = vs1->srcRWPK;
     m_rwpkMap.insert(std::make_pair(videoStreamIdx, rwpk1));
     RectangularRegionWisePacking *rectRwpk = &(rwpk1->rectRegionPacking[0]);
+    m_highResWidth  = rwpk1->projPicWidth;
+    m_highResHeight = rwpk1->projPicHeight;
     m_highTileWidth = rectRwpk->projRegWidth;
     m_highTileHeight = rectRwpk->projRegHeight;
 
@@ -261,6 +267,8 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::Initialize(
     RegionWisePacking *rwpk2 = vs2->srcRWPK;
     m_rwpkMap.insert(std::make_pair(videoStreamIdx, rwpk2));
     rectRwpk = &(rwpk2->rectRegionPacking[0]);
+    m_lowResWidth = rwpk2->projPicWidth;
+    m_lowResHeight = rwpk2->projPicHeight;
     m_lowTileWidth = rectRwpk->projRegWidth;
     m_lowTileHeight = rectRwpk->projRegHeight;
 
@@ -492,13 +500,14 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateDstRwpk(
         {
             RectangularRegionWisePacking *rectRwpkLow = &(rwpkLowRes->rectRegionPacking[regionIdx-highTilesNum]);
 
-            rwpk->projRegWidth  = rectRwpkLow->projRegWidth;
-            rwpk->projRegHeight = rectRwpkLow->projRegHeight;
-            rwpk->projRegTop    = rectRwpkLow->projRegTop;
-            rwpk->projRegLeft   = rectRwpkLow->projRegLeft;
+            rwpk->packedRegWidth  = rectRwpkLow->projRegWidth;
+            rwpk->packedRegHeight = rectRwpkLow->projRegHeight;;
 
-            rwpk->packedRegWidth  = rwpk->projRegWidth;
-            rwpk->packedRegHeight = rwpk->projRegHeight;
+            rwpk->projRegWidth  = (rectRwpkLow->projRegWidth * m_highResWidth) / m_lowResWidth;
+            rwpk->projRegHeight = (rectRwpkLow->projRegHeight * m_highResHeight) / m_lowResHeight;
+            rwpk->projRegTop    = (rectRwpkLow->projRegTop * m_highResHeight) / m_lowResHeight;
+            rwpk->projRegLeft   = (rectRwpkLow->projRegLeft * m_highResWidth) / m_lowResWidth;
+
             rwpk->packedRegTop    = ((regionIdx-highTilesNum) % m_lrTilesInCol) * m_lowTileHeight;
             rwpk->packedRegLeft   = ((regionIdx-highTilesNum) / m_lrTilesInCol) * m_lowTileWidth + m_highTileWidth * m_hrTilesInRow;
 

@@ -641,8 +641,8 @@ TEST_F(ExtractorTrackTest, AllProcess)
             memset(&(rwpk.rectRegionPacking[4]), 0, sizeof(RectangularRegionWisePacking));
             rwpk.rectRegionPacking[4].transformType = 0;
             rwpk.rectRegionPacking[4].guardBandFlag = false;
-            rwpk.rectRegionPacking[4].projRegWidth = 960;
-            rwpk.rectRegionPacking[4].projRegHeight = 960;
+            rwpk.rectRegionPacking[4].projRegWidth = 1920;
+            rwpk.rectRegionPacking[4].projRegHeight = 1920;
             rwpk.rectRegionPacking[4].projRegTop = 0;
             rwpk.rectRegionPacking[4].projRegLeft = 0;
             rwpk.rectRegionPacking[4].packedRegWidth = 960;
@@ -654,10 +654,10 @@ TEST_F(ExtractorTrackTest, AllProcess)
             memset(&(rwpk.rectRegionPacking[5]), 0, sizeof(RectangularRegionWisePacking));
             rwpk.rectRegionPacking[5].transformType = 0;
             rwpk.rectRegionPacking[5].guardBandFlag = false;
-            rwpk.rectRegionPacking[5].projRegWidth = 960;
-            rwpk.rectRegionPacking[5].projRegHeight = 960;
+            rwpk.rectRegionPacking[5].projRegWidth = 1920;
+            rwpk.rectRegionPacking[5].projRegHeight = 1920;
             rwpk.rectRegionPacking[5].projRegTop = 0;
-            rwpk.rectRegionPacking[5].projRegLeft = 960;
+            rwpk.rectRegionPacking[5].projRegLeft = 1920;
             rwpk.rectRegionPacking[5].packedRegWidth = 960;
             rwpk.rectRegionPacking[5].packedRegHeight = 960;
             rwpk.rectRegionPacking[5].packedRegTop = 960;

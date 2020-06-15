@@ -192,6 +192,10 @@ private:
 
 private:
     std::map<uint8_t, RegionWisePacking*> m_rwpkMap;             //!< map of original region wise packing information of all video streams
+    uint32_t                              m_highResWidth;
+    uint32_t                              m_highResHeight;
+    uint32_t                              m_lowResWidth;
+    uint32_t                              m_lowResHeight;
     uint32_t                              m_packedPicWidth;      //!< the width of tiles merged picture
     uint32_t                              m_packedPicHeight;     //!< the height of tiles merged picture
     TileArrangement                       *m_mergedTilesArrange; //!< pointer to the tiles arrangement information
