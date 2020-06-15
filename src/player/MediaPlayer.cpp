@@ -31,12 +31,8 @@
 //! \brief    Implement class for Player.
 //!
 
-#include "Player.h"
+#include "MediaPlayer.h"
 #include "Common.h"
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <stdlib.h>
 #include <unistd.h>
 #include <iostream>
@@ -48,11 +44,12 @@
 #include "../trace/MtHQ_tp.h"
 #endif
 #include "MediaSource/DashMediaSource.h"
+
 // #include <time.h>
 
 VCD_NS_BEGIN
 
-Player::Player(struct RenderConfig config)
+MediaPlayer::MediaPlayer(struct RenderConfig config)
 {
     m_renderConfig  = config;
     m_status        = STATUS_UNKNOWN;
@@ -61,15 +58,15 @@ Player::Player(struct RenderConfig config)
     m_renderManager = NULL;
 }
 
-Player::~Player()
+MediaPlayer::~MediaPlayer()
 {
     SAFE_DELETE(m_mediaSource);
     SAFE_DELETE(m_rsFactory);
     SAFE_DELETE(m_renderManager);
-    // SAFE_DELETE(m_renderContext); // was deleted in renderManager.
+    SAFE_DELETE(m_renderContext);
 }
 
-RenderStatus Player::Open()
+RenderStatus MediaPlayer::Open()
 {
     //initial renderContext
     switch(m_renderConfig.contextType)
@@ -118,13 +115,106 @@ RenderStatus Player::Open()
     {
         return RENDER_ERROR;
     }
-    m_status = PLAY;
+    m_status = STATUS_CREATED;
 
     return RENDER_STATUS_OK;
 }
 
-RenderStatus Player::Play()
+uint32_t MediaPlayer::GetStatus()
 {
+    return m_status;
+}
+
+RenderStatus MediaPlayer::Play()
+{
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus MediaPlayer::Pause()
+{
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus MediaPlayer::Resume()
+{
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus MediaPlayer::Stop()
+{
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus MediaPlayer::Seek()
+{
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus MediaPlayer::Close()
+{
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus UpdateUserInput()
+{
+
+}
+
+RenderStatus MediaPlayer::PlayOneVideo(int64_t pts)
+{
+    if(!HasVideo()) return RENDER_STATUS_OK;
+    float poseYaw, posePitch;
+    m_renderManager->GetStatusAndPose(&poseYaw, &posePitch, (uint32_t*)&m_status);
+    m_renderManager->SetViewport(poseYaw, posePitch);
+    m_renderManager->ChangeViewport(poseYaw, posePitch);
+
+    m_renderManager->Render(0);
+
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus MediaPlayer::PlayOneAudio(int64_t pts)
+{
+    if(!HasAudio()) return RENDER_STATUS_OK;
+    return RENDER_STATUS_OK;
+}
+
+bool MediaPlayer::HasAudio()
+{
+    if(m_mediaInfo.mAudioInfo.size() > 0) return true;
+    return false;
+}
+
+bool MediaPlayer::HasVideo()
+{
+    if(m_mediaInfo.mVideoInfo.size() > 0) return true;
+    return false;
+}
+
+void MediaPlayer::Run()
+{
+    while(1){
+        switch(this->m_status){
+            case STATUS_CREATED:
+                usleep(1000);
+                break;
+            case STATUS_PAUSED:
+                usleep(1000);
+                break;
+            case STATUS_PLAYING:
+                PlayOneAudio(0);
+                PlayOneVideo(0);
+                break;
+            case STATUS_STOPPED:
+                break;
+            case STATUS_CLOSED:
+                return;
+            default:
+                break;
+        }
+    }
+
+    /*
     float poseYaw, posePitch;
     std::chrono::high_resolution_clock clock;
     uint64_t lastTime = 0;
@@ -156,17 +246,15 @@ RenderStatus Player::Play()
             }
 
             lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-            RenderStatus renderStatus = m_renderManager->Render(renderCount);
-
-            LOG(INFO)<<"render count is"<<renderCount<<endl;
-            m_renderContext->SwapBuffers(NULL, 0);
+            PlayOneVideo(0);
             LOG(INFO)<<"===========renderTime==============:"<<lastTime<<std::endl;
-#ifdef _USE_TRACE_
             //trace
             tracepoint(mthq_tp_provider, T9_render, renderCount + 1);
-#endif
-            if (renderStatus != RENDER_NO_FRAME)
-                renderCount++;
+            renderCount++;
+        }
+        else if (READY == GetStatus() || PAUSE == GetStatus())
+        {
+            PlayOneVideo(0);
         }
         LOG(INFO)<<"status:"<<GetStatus()<<std::endl;
         if (m_renderManager->IsEOS())
@@ -181,12 +269,8 @@ RenderStatus Player::Play()
     LOG(INFO)<<"----[render frame count]:--- "<<renderCount<<std::endl;
     LOG(INFO)<<"----[actual render fps]:---- "<<renderCount / (float(end - start)/1000)<<std::endl;
     LOG(INFO)<<"-----------------------------"<<std::endl;
-    return RENDER_STATUS_OK;
-}
-
-uint32_t Player::GetStatus()
-{
-    return m_status;
+    return;
+    */
 }
 
 VCD_NS_END

@@ -26,27 +26,31 @@
  *
  */
 
-
 //!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
-//!
-//! Created on April 30, 2019, 6:04 AM
+//! \file     CubeMapRender.cpp
+//! \brief    Implement class for CubeMapRender.
 //!
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#include "CubeMapRender.h"
 
-#include "../utils/ns_def.h"
-#include "RenderType.h"
-#ifndef LOW_LATENCY_USAGE
-#include "data_type.h"
-#endif
-#include "../utils/OmafStructure.h"
-#include "../utils/GlogWrapper.h"
+VCD_NS_BEGIN
 
-#define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
-#define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
-#define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete [] (x); (x)=NULL; };
+CubeMapRender::CubeMapRender()
+{
+}
 
-#endif /* _COMMON_H_ */
+CubeMapRender::~CubeMapRender()
+{
+    if (m_meshOfOnScreen != NULL)
+    {
+        delete m_meshOfOnScreen;
+        m_meshOfOnScreen = NULL;
+    }
+}
+
+RenderStatus CubeMapRender::Render(uint32_t onScreenTexHandle, uint32_t width, uint32_t height, glm::mat4 ProjectionMatrix, glm::mat4 ViewModelMatrix)
+{
+    return RENDER_STATUS_OK;
+}
+
+VCD_NS_END

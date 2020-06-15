@@ -26,27 +26,45 @@
  *
  */
 
-
 //!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
+//! \file     ERPRender.h
+//! \brief    Defines base class for ERPRender.
 //!
-//! Created on April 30, 2019, 6:04 AM
-//!
+#ifndef _ERPRENDER_H_
+#define _ERPRENDER_H_
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#include "../Common.h"
+#include "SurfaceRender.h"
+#include "VideoShader.h"
+#include "../Mesh/ERPMesh.h"
 
-#include "../utils/ns_def.h"
-#include "RenderType.h"
-#ifndef LOW_LATENCY_USAGE
-#include "data_type.h"
-#endif
-#include "../utils/OmafStructure.h"
-#include "../utils/GlogWrapper.h"
+VCD_NS_BEGIN
 
-#define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
-#define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
-#define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete [] (x); (x)=NULL; };
+class ERPRender
+    : public SurfaceRender
+{
+public:
+    ERPRender();
+    virtual ~ERPRender();
 
-#endif /* _COMMON_H_ */
+    //! \brief The render function
+    //!
+    //! \param  [in] RenderTarget *renderTarget
+    //!         [in] uint32_t width
+    //!         render width
+    //!         [in] uint32_t height
+    //!         render height
+    //!         glm::mat4
+    //!         ProjectionMatrix
+    //!         glm::mat4
+    //!         ViewModelMatrix
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Render(uint32_t onScreenTexHandle, uint32_t width, uint32_t height, glm::mat4 ProjectionMatrix, glm::mat4 ViewModelMatrix);
+
+private:
+};
+
+VCD_NS_END
+#endif /* _ERPRENDER_H_ */

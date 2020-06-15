@@ -26,27 +26,55 @@
  *
  */
 
-
 //!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
+//! \file     ERPMesh.h
+//! \brief    Defines class for ERPMesh.
 //!
-//! Created on April 30, 2019, 6:04 AM
-//!
+#ifndef _ERPMESH_H_
+#define _ERPMESH_H_
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#include "Mesh.h"
 
-#include "../utils/ns_def.h"
-#include "RenderType.h"
-#ifndef LOW_LATENCY_USAGE
-#include "data_type.h"
-#endif
-#include "../utils/OmafStructure.h"
-#include "../utils/GlogWrapper.h"
+VCD_NS_BEGIN
 
-#define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
-#define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
-#define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete [] (x); (x)=NULL; };
+class ERPMesh
+    : public Mesh
+{
+public:
+    ERPMesh();
+    ERPMesh(uint32_t columns, uint32_t rows);
+    ~ERPMesh();
 
-#endif /* _COMMON_H_ */
+    //! \brief Create the ERP Mesh
+    //!
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Create();
+
+    //! \brief Destroy the ERP Mesh
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Destroy();
+
+    //! \brief bind the  Mesh
+    //!
+    //! \param  [in] uint32_t
+    //!              vertex Attrib
+    //!         [in] uint32_t
+    //!              texCoord Attrib
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Bind( uint32_t vertexAttrib, uint32_t texCoordAttrib);
+
+protected:
+    uint32_t m_columns;
+    uint32_t m_rows;
+};
+
+VCD_NS_END
+#endif /* _ERPMESH_H_ */

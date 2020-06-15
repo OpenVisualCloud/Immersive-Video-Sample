@@ -27,55 +27,59 @@
  */
 
 //!
-//! \file     Player.h
-//! \brief    Define Player.
+//! \file     SurfaceRender.h
+//! \brief    Defines class for SurfaceRender.
 //!
-#ifndef _PLAYER_H_
-#define _PLAYER_H_
 
-#include "Common.h"
-#include "Render/RenderManager.h"
-#include <GLFW/glfw3.h>
-#include "Render/RenderContext.h"
+#ifndef _SURFACERENDER_H_
+#define _SURFACERENDER_H_
+
+#include "ViewPortManager.h"
+#include "../Common.h"
+#include "VideoShader.h"
+#include "../Mesh/Mesh.h"
+#include "../MediaSource/RenderSource.h"
+#include "RenderTarget.h"
+#include "RenderBackend.h"
+#include "ShaderString.h"
 
 VCD_NS_BEGIN
 
-class Player
+class SurfaceRender
 {
 public:
-    Player(struct RenderConfig config);
-    virtual ~Player();
-    //! \brief main loop in player control and playback
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus Play();
-    //! \brief open media and initialize
-    //!
-    //! \param  [in] struct RenderConfig
-    //!         render configuration
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus Open();
-    //! \brief get player status
-    //!
-    //! \return uint32_t
-    //!         status
-    //!
-    uint32_t GetStatus();
+    SurfaceRender() : m_videoShaderOfOnScreen(shader_screen_vs, shader_screen_fs)
+    {
+        m_meshOfOnScreen = NULL;
+        m_renderType = 0;
+    };
+    virtual ~SurfaceRender()=default;
 
-private:
-    uint32_t                  m_status;
-    RenderManager            *m_renderManager;
-    MediaSource              *m_mediaSource;
-    RenderSourceFactory      *m_rsFactory;
-    RenderContext            *m_renderContext;
-    RenderConfig              m_renderConfig;
-    MediaInfo                 m_mediaInfo;
+    //! \brief The render function
+    //!
+    //! \param  [in] uint32_t width
+    //!         render width
+    //!         [in] uint32_t height
+    //!         render height
+    //!         glm::mat4
+    //!         ProjectionMatrix
+    //!         glm::mat4
+    //!         ViewModelMatrix
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Render(uint32_t onScreenTexHandle, uint32_t width, uint32_t height, glm::mat4 ProjectionMatrix, glm::mat4 ViewModelMatrix) = 0;
+
+    void SetUniformFrameTex(){
+        m_videoShaderOfOnScreen.Bind();
+        m_videoShaderOfOnScreen.SetUniform1i("frameTex_screen", 0);
+    };
+
+protected:
+    Mesh       *m_meshOfOnScreen;
+    int32_t     m_renderType;
+    VideoShader m_videoShaderOfOnScreen;
 };
 
 VCD_NS_END
-#endif /* _PLAYER_H_ */
+#endif /* _SURFACERENDER_H_ */

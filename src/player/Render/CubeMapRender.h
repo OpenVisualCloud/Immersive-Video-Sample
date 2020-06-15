@@ -26,27 +26,63 @@
  *
  */
 
-
 //!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
-//!
-//! Created on April 30, 2019, 6:04 AM
+//! \file     CubeMapRender.h
+//! \brief    Defines class for CubeMapRender.
 //!
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#ifndef _CUBEMAPRENDER_H_
+#define _CUBEMAPRENDER_H
 
-#include "../utils/ns_def.h"
-#include "RenderType.h"
-#ifndef LOW_LATENCY_USAGE
-#include "data_type.h"
-#endif
-#include "../utils/OmafStructure.h"
-#include "../utils/GlogWrapper.h"
+#include "../Common.h"
+#include "SurfaceRender.h"
+#include "VideoShader.h"
+#include "../Mesh/CubeMapMesh.h"
 
-#define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
-#define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
-#define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete [] (x); (x)=NULL; };
+VCD_NS_BEGIN
 
-#endif /* _COMMON_H_ */
+class CubeMapRender
+    : public SurfaceRender
+{
+public:
+    //! \brief Creator for the class
+    //!
+    //! \param  [in] RenderBackend*
+    //!         RenderBackend Interface
+    //!
+    //! \return N/A
+    //!
+    CubeMapRender();
+
+    //! \brief Destoryer for the class
+    //!
+    //! \param  [in]
+    //!         Description
+    //!
+    //! \return N/A
+    //!
+    //!
+    ~CubeMapRender();
+
+    //! \brief The render function
+    //!
+    //! \param  [in] RenderBackend *renderBackend
+    //!         renderBackend interface
+    //!         [in] uint32_t width
+    //!         render width
+    //!         [in] uint32_t height
+    //!         render height
+    //!         glm::mat4
+    //!         ProjectionMatrix
+    //!         glm::mat4
+    //!         ViewModelMatrix
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Render(uint32_t onScreenTexHandle, uint32_t width, uint32_t height, glm::mat4 ProjectionMatrix, glm::mat4 ViewModelMatrix);
+
+private:
+};
+
+VCD_NS_END
+#endif /* _CUBEMAPRENDER_H_ */

@@ -23,30 +23,57 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
 
- *
  */
 
-
-//!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
-//!
-//! Created on April 30, 2019, 6:04 AM
 //!
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+//! \file:   RegionData.h
+//! \brief:  the class for Region Info
+//! \detail: it's class to describe region info
+//!
+//! Created on May 21, 2020, 1:18 PM
+//!
 
-#include "../utils/ns_def.h"
-#include "RenderType.h"
-#ifndef LOW_LATENCY_USAGE
+#ifndef _REGIONDATA_H_
+#define _REGIONDATA_H_
+
+#include "ns_def.h"
+#include <stdint.h>
+#include <string>
 #include "data_type.h"
-#endif
-#include "../utils/OmafStructure.h"
-#include "../utils/GlogWrapper.h"
 
-#define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
-#define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
-#define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete [] (x); (x)=NULL; };
+VCD_NS_BEGIN
 
-#endif /* _COMMON_H_ */
+class RegionData {
+public:
+    //!
+    //! \brief  construct
+    //!
+    RegionData(){
+        m_sourceInRegion = 0;
+        m_regionWisePacking = NULL;
+        m_sourceInfo = NULL;
+    };
+    RegionData(RegionWisePacking* rwpk, uint32_t sourceNumber, SourceResolution* qtyRes);
+    //!
+    //! \brief  de-construct
+    //!
+    virtual ~RegionData();
+
+    uint32_t GetSourceInRegion() { return m_sourceInRegion; };
+    void SetSourceInRegion(uint32_t num){ m_sourceInRegion = num; };
+
+    RegionWisePacking* GetRegionWisePacking() { return m_regionWisePacking; };
+
+    SourceResolution* GetSourceInfo() { return m_sourceInfo; }
+
+private:
+
+    uint32_t m_sourceInRegion;
+    RegionWisePacking *m_regionWisePacking;
+    SourceResolution *m_sourceInfo;
+};
+
+VCD_NS_END;
+
+#endif /* _REGIONDATA_H_ */

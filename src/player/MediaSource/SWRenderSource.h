@@ -27,55 +27,77 @@
  */
 
 //!
-//! \file     Player.h
-//! \brief    Define Player.
+//! \file     SWRenderSource.h
+//! \brief    Defines class for SWRenderSource.
 //!
-#ifndef _PLAYER_H_
-#define _PLAYER_H_
+#ifndef _SWRENDERSOURCE_H_
+#define _SWRENDERSOURCE_H_
 
-#include "Common.h"
-#include "Render/RenderManager.h"
-#include <GLFW/glfw3.h>
-#include "Render/RenderContext.h"
+#include <vector>
+#include "../Common.h"
+#include "RenderSource.h"
+#include "../Render/RenderBackend.h"
+
 
 VCD_NS_BEGIN
 
-class Player
+class SWRenderSource
+    : public RenderSource
 {
 public:
-    Player(struct RenderConfig config);
-    virtual ~Player();
-    //! \brief main loop in player control and playback
+    SWRenderSource();
+    virtual ~SWRenderSource();
+    //! \brief Initialize RenderSource data according to mediaSource Info
+    //!
+    //! \param  [in] struct MediaSourceInfo *
+    //!         Media Source Info
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Initialize(struct MediaSourceInfo *mediaSourceInfo);
+    virtual RenderStatus Initialize( int32_t pix_fmt, int32_t width, int32_t height );
+
+    //! \brief Update the render source
+    //!
+    //! \param  [in] uint8_t** buffer
+    //!         frame buffers.
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus UpdateR2T(void **buffer);
+    //! \brief Destroy the render source
     //!
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus Play();
-    //! \brief open media and initialize
-    //!
-    //! \param  [in] struct RenderConfig
-    //!         render configuration
+    virtual RenderStatus DestroyRenderSource();
+
+    //! \brief Create a render source
     //!
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus Open();
-    //! \brief get player status
-    //!
-    //! \return uint32_t
-    //!         status
-    //!
-    uint32_t GetStatus();
+    virtual RenderStatus CreateRenderSource();
+
+    virtual RenderStatus process(BufferInfo* bufInfo, uint32_t id);
 
 private:
-    uint32_t                  m_status;
-    RenderManager            *m_renderManager;
-    MediaSource              *m_mediaSource;
-    RenderSourceFactory      *m_rsFactory;
-    RenderContext            *m_renderContext;
-    RenderConfig              m_renderConfig;
-    MediaInfo                 m_mediaInfo;
+
+    //! \brief Create Source Texture
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus CreateSourceTex();
+    //! \brief Create R2T FBO
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus CreateR2TFBO();
+private:
+    bool            bInited;
 };
 
 VCD_NS_END
-#endif /* _PLAYER_H_ */
+#endif /* _RENDERSOURCE_H_ */

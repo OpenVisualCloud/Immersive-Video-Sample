@@ -26,27 +26,53 @@
  *
  */
 
-
 //!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
-//!
-//! Created on April 30, 2019, 6:04 AM
+//! \file     CubeMapMesh.cpp
+//! \brief    Implement class for CubeMapMesh.
 //!
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#include "CubeMapMesh.h"
+#include "../Render/RenderBackend.h"
 
-#include "../utils/ns_def.h"
-#include "RenderType.h"
-#ifndef LOW_LATENCY_USAGE
-#include "data_type.h"
-#endif
-#include "../utils/OmafStructure.h"
-#include "../utils/GlogWrapper.h"
+VCD_NS_BEGIN
 
-#define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
-#define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
-#define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete [] (x); (x)=NULL; };
+CubeMapMesh::CubeMapMesh()
+{
 
-#endif /* _COMMON_H_ */
+}
+
+CubeMapMesh::~CubeMapMesh()
+{
+    if (m_vertices != NULL)
+    {
+        delete m_vertices;
+        m_vertices = NULL;
+    }
+    if (m_texCoords != NULL)
+    {
+        delete m_texCoords;
+        m_texCoords = NULL;
+    }
+    if (m_indices != NULL)
+    {
+        delete m_indices;
+        m_indices = NULL;
+    }
+}
+
+RenderStatus CubeMapMesh::Create()
+{
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus CubeMapMesh::Destroy()
+{
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus CubeMapMesh::Bind(uint32_t vertexAttrib, uint32_t texCoordAttrib)
+{
+    return RENDER_STATUS_OK;
+}
+
+VCD_NS_END

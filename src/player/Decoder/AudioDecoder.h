@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Intel Corporation
+ * Copyright (c) 2020, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,57 +25,59 @@
 
  *
  */
-
 //!
-//! \file     Player.h
-//! \brief    Define Player.
+//! \file     AudioDecoder.h
+//! \brief    Defines class for AudioDecoder derived from MediaDecoder.
 //!
-#ifndef _PLAYER_H_
-#define _PLAYER_H_
 
-#include "Common.h"
-#include "Render/RenderManager.h"
-#include <GLFW/glfw3.h>
-#include "Render/RenderContext.h"
+#ifndef _AUDIODEOCODER_H_
+#define _AUDIODEOCODER_H_
+
+#include "MediaDecoder.h"
 
 VCD_NS_BEGIN
 
-class Player
+class AudioDecoder : public MediaDecoder
 {
 public:
-    Player(struct RenderConfig config);
-    virtual ~Player();
-    //! \brief main loop in player control and playback
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus Play();
-    //! \brief open media and initialize
-    //!
-    //! \param  [in] struct RenderConfig
-    //!         render configuration
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus Open();
-    //! \brief get player status
-    //!
-    //! \return uint32_t
-    //!         status
-    //!
-    uint32_t GetStatus();
+     AudioDecoder();
+     virtual ~AudioDecoder();
+     //!
+     //! \brief initialize a video decoder based on input information
+     //!
+     virtual RenderStatus Initialize(int32_t id, Codec_Type codec, FrameHandler* handler){return RENDER_STATUS_OK;};
 
-private:
-    uint32_t                  m_status;
-    RenderManager            *m_renderManager;
-    MediaSource              *m_mediaSource;
-    RenderSourceFactory      *m_rsFactory;
-    RenderContext            *m_renderContext;
-    RenderConfig              m_renderConfig;
-    MediaInfo                 m_mediaInfo;
+     //!
+     //! \brief destroy a video decoder
+     //!
+     virtual RenderStatus Destroy(){return RENDER_STATUS_OK;};
+
+     //!
+     //! \brief  reset the decoder when decoding information changes
+     //!
+     virtual RenderStatus Reset(){return RENDER_STATUS_OK;};
+
+     //!
+     //! \brief  udpate frame to destination with the callback class FrameHandler
+     //!
+     virtual RenderStatus UpdateFrame(uint64_t pts){return RENDER_STATUS_OK;};
+
+     //!
+     //! \brief  send a coded packet to decoder
+     //!
+     virtual RenderStatus SendPacket(DashPacket* packet){return RENDER_STATUS_OK;};
+
+     //!
+     //! \brief  pending a decoder
+     //!
+     virtual void Pending(){};
+
+     //!
+     //! \brief  get status of a decoder
+     //!
+     virtual ThreadStatus GetDecoderStatus(){ return STATUS_UNKNOWN; };
 };
 
 VCD_NS_END
-#endif /* _PLAYER_H_ */
+
+#endif

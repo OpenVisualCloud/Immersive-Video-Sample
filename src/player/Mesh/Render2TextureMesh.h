@@ -26,27 +26,52 @@
  *
  */
 
-
 //!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
+//! \file     Render2TextureMesh.h
+//! \brief    Defines class for Render2TextureMesh.
 //!
-//! Created on April 30, 2019, 6:04 AM
-//!
+#ifndef _RENDER2TEXTUREMESH_H_
+#define _RENDER2TEXTUREMESH_H_
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#include "Mesh.h"
 
-#include "../utils/ns_def.h"
-#include "RenderType.h"
-#ifndef LOW_LATENCY_USAGE
-#include "data_type.h"
-#endif
-#include "../utils/OmafStructure.h"
-#include "../utils/GlogWrapper.h"
+VCD_NS_BEGIN
 
-#define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
-#define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
-#define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete [] (x); (x)=NULL; };
+class Render2TextureMesh
+    : public Mesh
+{
+public:
+    Render2TextureMesh()=default;
+    ~Render2TextureMesh()=default;
 
-#endif /* _COMMON_H_ */
+    //! \brief Create the Render2Texture Mesh
+    //!
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Create();
+
+    //! \brief Destroy the Render2Texture Mesh
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Destroy();
+
+    //! \brief bind the  Mesh
+    //!
+    //! \param  [in] RenderBackend*
+    //!              renderBackendGL API
+    //!         [in] uint32_t
+    //!              vertex Attrib
+    //!         [in] uint32_t
+    //!              texCoord Attrib
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Bind(uint32_t vertexAttrib, uint32_t texCoordAttrib);
+};
+
+VCD_NS_END
+#endif /* _RENDER2TEXTUREMESH_H_ */

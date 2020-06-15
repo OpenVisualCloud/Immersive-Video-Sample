@@ -108,6 +108,12 @@ int main(int32_t argc, char *argv[])
         LOG(ERROR)<<"---INVALID useDMABuffer input (0:not use DMA buffer)---"<<std::endl;
         return RENDER_ERROR;
     }
+    renderConfig.enableExtractor = atoi(info->FirstChildElement("enableExtractor")->GetText());// It is only valid for hardware decoding + EGL_CONTEXT if it is set as 1
+    if (renderConfig.enableExtractor != 0 && renderConfig.enableExtractor != 1)
+    {
+        LOG(ERROR)<<"---INVALID enableExtractor input (1: for LaterBinding 0: for extractor track)---"<<std::endl;
+        return RENDER_ERROR;
+    }
     renderConfig.viewportHFOV = atoi(info->FirstChildElement("viewportHFOV")->GetText());
     renderConfig.viewportVFOV = atoi(info->FirstChildElement("viewportVFOV")->GetText());
     if (renderConfig.viewportHFOV < MINFOV || renderConfig.viewportHFOV > MAXFOV || renderConfig.viewportVFOV < MINFOV || renderConfig.viewportVFOV > MAXFOV)

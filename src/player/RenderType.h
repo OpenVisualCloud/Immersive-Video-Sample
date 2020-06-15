@@ -38,6 +38,8 @@
 #include <string>
 #include <vector>
 #include "360SCVPAPI.h"
+#include "ns_def.h"
+#include "RegionData.h"
 
 typedef bool bool_t;
 typedef char char_t;
@@ -127,6 +129,7 @@ struct RenderConfig
     uint32_t viewportWidth;
     uint32_t viewportHeight;
     const char *cachePath;
+    bool enableExtractor;
     //for viewport predict
     bool enablePredictor;
     std::string predictPluginName;
@@ -146,7 +149,12 @@ struct MotionConfig
 enum ThreadStatus{
     STATUS_CREATED=0,
     STATUS_RUNNING,
+    STATUS_IDLE,
+    STATUS_PENDING,
     STATUS_STOPPED,
+    STATUS_PAUSED,
+    STATUS_PLAYING,
+    STATUS_CLOSED,
     STATUS_UNKNOWN,
 };
 #ifdef LOW_LATENCY_USAGE
@@ -222,8 +230,13 @@ struct SourceInfo
 {
     uint32_t sourceWidth;
     uint32_t sourceHeight;
+    uint32_t top;
+    uint32_t left;                 // the pos of the quality stream relative to whole source
+    uint32_t right;
+    uint32_t bottom;
     uint32_t tileRowNumber;
     uint32_t tileColumnNumber;
+    uint32_t quality;
 };
 
 struct RegionInfo
@@ -240,6 +253,8 @@ struct BufferInfo
     uint32_t height;
     uint32_t stride[4]; //rgb width*3
     PixelFormat::Enum pixelFormat;
+    bool     bFormatChange;
+    VCD::VRVideo::RegionData *regionInfo;
 };
 
 struct MultiBufferInfo
@@ -258,16 +273,26 @@ struct RenderInfo
 
 enum RenderStatus
 {
-    RENDER_ERROR = -1,
-
+    RENDER_STATUS_OK =0,
+    RENDER_ERROR,
     RENDER_CREATE_ERROR,
-    RENDER_STATUS_OK
+    RENDER_NULL_PACKET,
+    RENDER_UNSUPPORT_DECODER,
+    RENDER_DECODE_FAIL,
+    RENDER_NULL_QUEUE,
+    RENDER_DECODER_INVALID_FRAME,
+    RENDER_NO_FRAME,
+    RENDER_NO_MATCHED_DECODER,
+    RENDER_NOT_FOUND,
+    RENDER_EOS,
+    RENDER_NULL_HANDLE,
+    RENDER_SEEK_FAILURE,
+    RENDER_WAIT,
 };
 
 enum DecoderStatus
 {
     PACKET_ERROR = -1,
-
     FRAME_ERROR,
     DECODER_OK
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Intel Corporation
+ * Copyright (c) 2020, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,28 +25,34 @@
 
  *
  */
-
-
 //!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
-//!
-//! Created on April 30, 2019, 6:04 AM
+//! \file     FrameHandler.h
+//! \brief    Defines class for FrameHandler which is used to process decoded frames.
 //!
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#ifndef _FRAMEHANDLER_H_
+#define _FRAMEHANDLER_H_
 
-#include "../utils/ns_def.h"
-#include "RenderType.h"
-#ifndef LOW_LATENCY_USAGE
-#include "data_type.h"
+#include "../Common.h"
+#include "FrameHandler.h"
+#include <map>
+
+VCD_NS_BEGIN
+class FrameHandler
+{
+public:
+     FrameHandler()=default;
+     ~FrameHandler()=default;
+public:
+     //!
+     //! \brief interface to process an decoded frame, such as mapping an buffer to texture
+     //!
+     //! \param  [in] bufInfo: the buffer to be processed
+     //! \return RenderStatus
+     //!         RENDER_STATUS_OK if success, else fail reason
+     virtual RenderStatus process(BufferInfo* bufInfo, uint32_t id)=0;
+};
+
+VCD_NS_END
+
 #endif
-#include "../utils/OmafStructure.h"
-#include "../utils/GlogWrapper.h"
-
-#define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
-#define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
-#define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete [] (x); (x)=NULL; };
-
-#endif /* _COMMON_H_ */

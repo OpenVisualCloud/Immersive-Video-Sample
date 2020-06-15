@@ -13,6 +13,8 @@
     <contextType>0</contextType>
     <!-- useDMABuffer 0 is false and 1 is true -->
     <useDMABuffer>0</useDMABuffer>
+    <!-- enableExtractor 0 is false and 1 is true -->
+    <enableExtractor>0</enableExtractor>
     <!-- viewport settings -->
     <viewportHFOV>80</viewportHFOV>
     <viewportVFOV>80</viewportVFOV>

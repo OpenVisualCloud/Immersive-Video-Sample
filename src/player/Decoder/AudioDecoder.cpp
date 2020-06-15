@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Intel Corporation
+ * Copyright (c) 2020, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,27 +26,17 @@
  *
  */
 
+#include "AudioDecoder.h"
 
-//!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
-//!
-//! Created on April 30, 2019, 6:04 AM
-//!
+VCD_NS_BEGIN
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+AudioDecoder::AudioDecoder()
+{
 
-#include "../utils/ns_def.h"
-#include "RenderType.h"
-#ifndef LOW_LATENCY_USAGE
-#include "data_type.h"
-#endif
-#include "../utils/OmafStructure.h"
-#include "../utils/GlogWrapper.h"
+}
+AudioDecoder::~AudioDecoder()
+{
 
-#define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
-#define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
-#define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete [] (x); (x)=NULL; };
+}
 
-#endif /* _COMMON_H_ */
+VCD_NS_END

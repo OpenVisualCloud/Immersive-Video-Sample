@@ -27,30 +27,63 @@
  */
 
 //!
-//! \file     Player.h
+//! \file     MediaPlayer.h
 //! \brief    Define Player.
 //!
-#ifndef _PLAYER_H_
-#define _PLAYER_H_
+#ifndef _MEDIAPLAYER_H_
+#define _MEDIAPLAYER_H_
 
 #include "Common.h"
 #include "Render/RenderManager.h"
 #include <GLFW/glfw3.h>
 #include "Render/RenderContext.h"
+#include "../utils/Threadable.h"
 
 VCD_NS_BEGIN
 
-class Player
+class MediaPlayer : public Threadable
 {
 public:
-    Player(struct RenderConfig config);
-    virtual ~Player();
+    MediaPlayer();
+    MediaPlayer(struct RenderConfig config);
+
+    virtual ~MediaPlayer();
+
     //! \brief main loop in player control and playback
     //!
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
     RenderStatus Play();
+
+    //! \brief pause
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus Pause();
+
+    //! \brief Stop
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus Resume();
+
+    //! \brief pause
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus Stop();
+
+    //! \brief main loop in player control and playback
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus Seek();
+
     //! \brief open media and initialize
     //!
     //! \param  [in] struct RenderConfig
@@ -60,6 +93,14 @@ public:
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
     RenderStatus Open();
+
+    //! \brief close media and un-initialize
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus Close();
+
     //! \brief get player status
     //!
     //! \return uint32_t
@@ -67,15 +108,37 @@ public:
     //!
     uint32_t GetStatus();
 
+    //!
+    //! \brief  Thread functionality Pure virtual function  , it will be re implemented in derived classes
+    //!
+    virtual void Run();
+
 private:
-    uint32_t                  m_status;
+    //!
+    //! \brief  Thread functionality Pure virtual function  , it will be re implemented in derived classes
+    //!
+    RenderStatus PlayOneVideo(int64_t pts);
+
+    //!
+    //! \brief  Thread functionality Pure virtual function  , it will be re implemented in derived classes
+    //!
+    RenderStatus PlayOneAudio(int64_t pts);
+
+    RenderStatus UpdateUserInput();
+
+    bool HasAudio();
+    bool HasVideo();
+
+private:
+    ThreadStatus              m_status;
     RenderManager            *m_renderManager;
     MediaSource              *m_mediaSource;
     RenderSourceFactory      *m_rsFactory;
     RenderContext            *m_renderContext;
     RenderConfig              m_renderConfig;
     MediaInfo                 m_mediaInfo;
+
 };
 
 VCD_NS_END
-#endif /* _PLAYER_H_ */
+#endif /* _MEDIAPLAYER_H_ */
