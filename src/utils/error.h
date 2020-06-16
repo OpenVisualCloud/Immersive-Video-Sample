@@ -107,4 +107,5 @@
 #define OMAF_ERROR_TILES_MERGE_ARRANGEMENT       -101
 #define OMAF_ERROR_TILES_MERGE_RWPK              -102
 #define OMAF_ERROR_GENERATE_RWPK                 -103
+#define OMAF_INVALID_EXTRACTOR_ENABLEMENT        -104
 #endif /* ERROR_H */

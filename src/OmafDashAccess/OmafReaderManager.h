@@ -210,6 +210,8 @@ private:
     std::map<uint32_t, std::map<uint32_t, OmafSegment*>> m_readSegMap; //<! map of <segId, std::map<initSegId, Segment>>
     bool                            mExtractorEnabled;
     std::map<uint32_t, std::map<uint32_t, uint8_t*>>     m_videoHeaders; //<! map of <qualityRanking, <headerSize, headerData>> for streams
+
+    uint32_t                        mGlobalReadSegId;
 };
 
 typedef Singleton<OmafReaderManager> READERMANAGER;

@@ -184,6 +184,7 @@ int OmafMPDParser::GroupAdaptationSet(PeriodElement* pPeriod, TYPE_OMAFADAPTATIO
 int OmafMPDParser::BuildStreams( TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFSTREAMS& listStream )
 {
     int ret = ERROR_NONE;
+    bool hasExtractor = false;
     for(auto it = mapAdaptationSets.begin(); it != mapAdaptationSets.end(); it++){
         OMAFADAPTATIONSETS ASs = it->second;
         std::string type = it->first;
@@ -218,7 +219,17 @@ int OmafMPDParser::BuildStreams( TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAF
         // remove main AS from AdaptationSets for it has no real data
         ASs.erase(mainASit);
 
+        std::map<int, OmafExtractor*> extractors = pStream->GetExtractors();
+        if (extractors.size())
+            hasExtractor = true;
+
         listStream.push_back(pStream);
+    }
+
+    if (mExtractorEnabled && !hasExtractor)
+    {
+        LOG(INFO) << "There isn't extractor track from MPD parsing, extractor track enablement should be false !" << std::endl;
+        ret = OMAF_INVALID_EXTRACTOR_ENABLEMENT;
     }
 
     return ret;

@@ -45,8 +45,6 @@ using namespace std;
 VCD_USE_VROMAF;
 VCD_USE_VRVIDEO;
 
-uint16_t frameNum = 0;
-
 Handler OmafAccess_Init( DashStreamingClient* pCtx)
 {
     OmafMediaSource* pSource = new OmafDashSource();
@@ -116,28 +114,38 @@ int OmafAccess_GetPacket(
             *size -= 1;
             continue;
         }
-        uint64_t outSize = pPkt->Size();
-        char* buf = (char*)malloc(outSize * sizeof(char));
-        memcpy(buf, pPkt->Payload(), outSize);
-        RegionWisePacking *newRwpk = new RegionWisePacking;
-        RegionWisePacking *pRwpk = pPkt->GetRwpk();
-        *newRwpk = *pRwpk;
-        newRwpk->rectRegionPacking = new RectangularRegionWisePacking[newRwpk->numRegions];
-        memcpy(newRwpk->rectRegionPacking, pRwpk->rectRegionPacking, pRwpk->numRegions * sizeof(RectangularRegionWisePacking));
-        packet[i].rwpk = newRwpk;
-        packet[i].buf  = buf;
-        packet[i].size = outSize;
-        packet[i].segID = pPkt->GetSegID();
-        packet[i].videoID = pPkt->GetVideoID();
-        packet[i].video_codec = pPkt->GetCodecType();
-        packet[i].pts = pPkt->GetPTS();
-        packet[i].height = pPkt->GetVideoHeight();
-        packet[i].width = pPkt->GetVideoWidth();
-        packet[i].numQuality = pPkt->GetQualityNum();
-        packet[i].qtyResolution = pPkt->GetSourceResolutions();
-        packet[i].tileRowNum = pPkt->GetVideoTileRowNum();
-        packet[i].tileColNum = pPkt->GetVideoTileColNum();
-        packet[i].bEOS = pPkt->GetEOS();
+        if (!(pPkt->GetEOS()))
+        {
+            uint64_t outSize = pPkt->Size();
+            char* buf = (char*)malloc(outSize * sizeof(char));
+            memcpy(buf, pPkt->Payload(), outSize);
+            RegionWisePacking *newRwpk = new RegionWisePacking;
+            RegionWisePacking *pRwpk = pPkt->GetRwpk();
+            *newRwpk = *pRwpk;
+            newRwpk->rectRegionPacking = new RectangularRegionWisePacking[newRwpk->numRegions];
+            memcpy(newRwpk->rectRegionPacking, pRwpk->rectRegionPacking, pRwpk->numRegions * sizeof(RectangularRegionWisePacking));
+            SourceResolution* srcRes = new SourceResolution[pPkt->GetQualityNum()];
+            memcpy(srcRes, pPkt->GetSourceResolutions(), pPkt->GetQualityNum() * sizeof(SourceResolution));
+            packet[i].rwpk = newRwpk;
+            packet[i].buf  = buf;
+            packet[i].size = outSize;
+            packet[i].segID = pPkt->GetSegID();
+            packet[i].videoID = pPkt->GetVideoID();
+            packet[i].video_codec = pPkt->GetCodecType();
+            packet[i].pts = pPkt->GetPTS();
+            packet[i].height = pPkt->GetVideoHeight();
+            packet[i].width = pPkt->GetVideoWidth();
+            packet[i].numQuality = pPkt->GetQualityNum();
+            packet[i].qtyResolution = srcRes;
+            packet[i].tileRowNum = pPkt->GetVideoTileRowNum();
+            packet[i].tileColNum = pPkt->GetVideoTileColNum();
+            packet[i].bEOS = pPkt->GetEOS();
+        }
+        else
+        {
+            packet[i].bEOS = true;
+        }
+
         i++;
 
         delete pPkt;

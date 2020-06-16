@@ -65,7 +65,7 @@ OmafSegment::~OmafSegment()
     pthread_cond_destroy( &mCond );
 
     //SAFE_DELETE(mSeg);
-    mSeg->StopDownloadSegment((OmafDownloaderObserver*) this);
+    //mSeg->StopDownloadSegment((OmafDownloaderObserver*) this);
 
     DOWNLOADMANAGER::GetInstance()->DeleteCacheFile(mCacheFile);
 }
@@ -89,7 +89,11 @@ OmafSegment::OmafSegment(SegmentElement* pSeg, int segCnt, bool bInitSegment, bo
 
 int OmafSegment::StartDownload()
 {
-    if(NULL == mSeg) return ERROR_NULL_PTR;
+    if(NULL == mSeg)
+    {
+        LOG(INFO)<<"==============================Segment is null!"<<endl;
+        return ERROR_NULL_PTR;
+    }
 
     mStoreFile = DOWNLOADMANAGER::GetInstance()->UseCache();
 
@@ -108,10 +112,6 @@ int OmafSegment::WaitComplete()
 
     int64_t waitTime = 0;
 
-    /*pthread_mutex_lock(&m_mutex);
-    pthread_cond_wait(&m_cond, &m_mutex);
-
-    pthread_mutex_unlock(&m_mutex);*/
     // exit the waiting if segment downloaded or wait time is more than 10 mins
     while(mStatus != SegDownloaded && waitTime < 60000){
         ::usleep(10000);
@@ -166,8 +166,6 @@ int OmafSegment::Close()
 
     if(mStatus != SegDownloading) mSeg->StopDownloadSegment((OmafDownloaderObserver*) this);
 
-    //SAFE_DELETE( mSeg );
-
     return ERROR_NONE;
 }
 
@@ -205,8 +203,9 @@ void OmafSegment::DownloadStatusNotify(DownloaderStatus state)
     switch(state){
         case DOWNLOADED:
             mStatus = SegDownloaded;
+            //LOG(INFO)<<"===============================================SaveToFile mInitSegID:"<<mInitSegID<<" mSegID:"<<mSegID<<endl;
             if( mStoreFile ) SaveToFile();
-
+            //LOG(INFO)<<"===============================================SaveToFile Complete! mInitSegID:"<<mInitSegID<<" mSegID:"<<mSegID<<endl;
             if(this->mInitSegment){
                 READERMANAGER::GetInstance()->AddInitSegment(this, mInitSegID);
             }else{

@@ -51,8 +51,6 @@ VCD_OMAF_BEGIN
 #define STATUS_STOPPING      3
 #define STATUS_SEEKING       4
 
-//static uint32_t frameNumber = 0;
-
 static uint16_t GetTrackId(uint32_t id)
 {
     return (id & 0xffff);
@@ -71,16 +69,14 @@ OmafReaderManager::OmafReaderManager()
     mStatus    = STATUS_UNKNOWN;
     mReader    = NULL;
     mInitSegParsed = false;
-    //memset(mVPS, 0, 256);
     mVPSLen = 0;
-    //memset(mSPS, 0, 256);
     mSPSLen = 0;
-    //memset(mPPS, 0, 256);
     mPPSLen = 0;
     mWidth  = 0;
     mHeight = 0;
     mReadSync = false;
     mExtractorEnabled = true;
+    mGlobalReadSegId = 0;
 }
 
 OmafReaderManager::~OmafReaderManager()
@@ -140,21 +136,14 @@ int OmafReaderManager::Initialize( OmafMediaSource* pSource )
     mSource    = pSource;
     mStatus    = STATUS_STOPPED;
     mReader    = new OmafMP4VRReader();
-    //this->StartThread();
     return ERROR_NONE;
 }
 
 int OmafReaderManager::Close()
 {
-    if(mStatus == STATUS_RUNNING || mStatus == STATUS_SEEKING){
-        mStatus = STATUS_STOPPING;
-        this->Join();
-    }
-
-    SAFE_DELETE(mReader);
-    releaseAllSegments();
-    releasePacketQueue();
-
+    mStatus = STATUS_STOPPING;
+    usleep(1000);
+    mLock.lock();
     std::map<uint32_t, std::map<uint32_t, OmafSegment*>>::iterator it;
     for (it = m_readSegMap.begin(); it != m_readSegMap.end();)
     {
@@ -162,12 +151,18 @@ int OmafReaderManager::Close()
         for (auto& itRmSeg : initSegNormalSeg)
         {
             OmafSegment *rmSeg = itRmSeg.second;
+            rmSeg->Close();
             delete rmSeg;
             rmSeg = NULL;
         }
         m_readSegMap.erase(it++);
     }
     m_readSegMap.clear();
+    mLock.unlock();
+
+    SAFE_DELETE(mReader);
+    releaseAllSegments();
+    releasePacketQueue();
 
     return ERROR_NONE;
 }
@@ -367,7 +362,7 @@ int OmafReaderManager::ParseSegment(
         LOG(ERROR) << "cannot get segment with ID "<<nSegID<<endl;
         return ERROR_INVALID;
     }
-
+    pSeg->Close();
     if (!mExtractorEnabled)
     {
         qualityRanking = pSeg->GetQualityRanking();
@@ -545,22 +540,29 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
 {
     mPacketLock.lock();
     if( mPacketQueues[trackID].empty()){
+        LOG(INFO)<< "track for " << trackID << " Empty packets queue !" <<endl;
         DashMediaInfo info;
         mSource->GetMediaInfo(&info);
         if (info.streaming_type == 1)
         {
+            bool isEOSNow = false;
             mLock.lock();
-            while (!mEOS)
-            {
-                mLock.unlock();
-                usleep(1000);
-                mLock.lock();
-            }
+            isEOSNow = mEOS;
             mLock.unlock();
-            pPacket = new MediaPacket();
-            pPacket->SetEOS(true);
-            mPacketLock.unlock();
-            return ERROR_NONE;
+            if (isEOSNow)
+            {
+                LOG(INFO)<< "EOS Now !" << endl;
+                pPacket = new MediaPacket();
+                pPacket->SetEOS(true);
+                mPacketLock.unlock();
+                return ERROR_NONE;
+            }
+            else
+            {
+                pPacket = NULL;
+                mPacketLock.unlock();
+                return ERROR_NULL_PACKET;
+            }
         }
         else
         {
@@ -572,7 +574,7 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
 
     pPacket = mPacketQueues[trackID].front();
     mPacketQueues[trackID].pop_front();
-    LOG(INFO)<<"========mPacketQueues size========:"<<mPacketQueues[trackID].size()<<std::endl;
+    LOG(INFO)<<"========mPacketQueues size========:"<<mPacketQueues[trackID].size() << " for track "<< trackID <<std::endl;
     mPacketLock.unlock();
 
     if (needParams)
@@ -597,19 +599,17 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
         char *newData  = newPacket->Payload();
         if(!origData || !newData)
         {
+            LOG(ERROR)<<" data ptr is null !"<<endl;
             SAFE_DELETE(newPacket);
             return OMAF_ERROR_NULL_PTR;
         }
-        //memcpy(newData, mVPS, mVPSLen);
-        //memcpy(newData + mVPSLen, mSPS, mSPSLen);
-        //memcpy(newData + mVPSLen + mSPSLen, mPPS, mPPSLen);
-        //memcpy(newData + mVPSLen + mSPSLen + mPPSLen, origData, pPacket->Size());
         memcpy(newData, headerData, headerSize);
         memcpy(newData + headerSize, origData, pPacket->Size());
         RegionWisePacking *newRwpk = new RegionWisePacking;
         RegionWisePacking *pRwpk = pPacket->GetRwpk();
         if(!newRwpk || !pRwpk)
         {
+            LOG(ERROR)<<"rwpk ptr is null!"<<endl;
             SAFE_DELETE(newPacket);
             SAFE_DELETE(newRwpk);
             return OMAF_ERROR_NULL_PTR;
@@ -621,10 +621,19 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
         newPacket->SetType(pPacket->GetType());
         newPacket->SetPTS(pPacket->GetPTS());
         newPacket->SetSegID(pPacket->GetSegID());
+        newPacket->SetQualityNum(pPacket->GetQualityNum());
+        SourceResolution* newSrcRes = new SourceResolution[pPacket->GetQualityNum()];
+        memcpy(newSrcRes, pPacket->GetSourceResolutions(), pPacket->GetQualityNum() * sizeof(SourceResolution));
+        for (int32_t i=0;i<pPacket->GetQualityNum();i++)
+        {
+            newPacket->SetSourceResolution(i, newSrcRes[i]);
+            //cout<<"copy sourceRes:"<<newPacket->GetSourceResolutions()[i].qualityRanking<<" "<<newPacket->GetSourceResolutions()[i].top<<" "<<newPacket->GetSourceResolutions()[i].left<<" "<<newPacket->GetSourceResolutions()[i].width<<" "<<newPacket->GetSourceResolutions()[i].height<<endl;
+        }
         newPacket->SetQualityRanking(pPacket->GetQualityRanking());
         newPacket->SetSRDInfo(pPacket->GetSRDInfo());
         newPacket->SetCodecType(pPacket->GetCodecType());
         newPacket->SetHasVideoHeader(true);
+        //LOG(INFO)<<"SetHasVideoHeader: "<<trackID<<endl;
         newPacket->SetVideoHeaderSize(headerSize);
         if (qualityRanking == HIGHEST_QUALITY_RANKING)
         {
@@ -702,14 +711,12 @@ int OmafReaderManager::ReadNextSegment(
 
     std::map<uint32_t, uint32_t> segSizeMap;
 
-    //for (auto& itSample : trackInfo->sampleProperties)
     for (uint32_t sampIndex = 0; sampIndex < trackInfo->sampleProperties.size; sampIndex++)
     {
         segSizeMap[trackInfo->sampleProperties[sampIndex].segmentId] = 0;
     }
     int32_t beginSampleId = -1;
 
-    //for (auto& itSample : trackInfo->sampleProperties)
     for (uint32_t sampIndex = 0; sampIndex < trackInfo->sampleProperties.size; sampIndex++)
     {
         segSizeMap[trackInfo->sampleProperties[sampIndex].segmentId]++;
@@ -764,8 +771,6 @@ int OmafReaderManager::ReadNextSegment(
 
         std::map<uint32_t, std::map<uint32_t, uint8_t*>>::iterator itVideoHrd;
         itVideoHrd = m_videoHeaders.find(qualityRanking);
-        //std::map<uint32_t, uint8_t*> *header = &(m_videoHeaders[qualityRanking]);
-        //if (0 == header->size())
         if (itVideoHrd == m_videoHeaders.end())
         {
             uint8_t vps[256];
@@ -777,12 +782,6 @@ int OmafReaderManager::ReadNextSegment(
             memset(vps, 0, 256);
             memset(sps, 0, 256);
             memset(pps, 0, 256);
-            //memset(mVPS, 0, 256);
-            //memset(mSPS, 0, 256);
-            //memset(mPPS, 0, 256);
-            //mVPSLen = 0;
-            //mSPSLen = 0;
-            //mPPSLen = 0;
 
             std::vector<VCD::OMAF::DecoderSpecificInfo> parameterSets;
             ret = mReader->getDecoderConfiguration(combinedTrackId, sample, parameterSets);
@@ -842,6 +841,7 @@ int OmafReaderManager::ReadNextSegment(
                 mPPSLen = ppsLen;
             }
         }
+
         if (isExtractor)
         {
             ret = mReader->getExtractorTrackSampleData(combinedTrackId, sample, (char *)(packet->Payload()), packetSize );
@@ -860,6 +860,40 @@ int OmafReaderManager::ReadNextSegment(
         if (!isExtractor)
         {
             packet->SetSRDInfo(*srd);
+        }
+        else
+        {
+            packet->SetQualityNum(2);
+            vector<uint32_t> boundLeft(1);// num of quality is limited to 2.
+            vector<uint32_t> boundTop(1);
+            for (int j = packet->GetRwpk()->numRegions - 1; j >= 0; j--)
+            {
+                if (packet->GetRwpk()->rectRegionPacking[j].projRegLeft == 0 && packet->GetRwpk()->rectRegionPacking[j].projRegTop == 0
+                    && !(packet->GetRwpk()->rectRegionPacking[j].packedRegLeft == 0 && packet->GetRwpk()->rectRegionPacking[j].packedRegTop == 0))
+                {
+                    boundLeft.push_back(packet->GetRwpk()->rectRegionPacking[j].packedRegLeft);
+                    boundTop.push_back(packet->GetRwpk()->rectRegionPacking[j].packedRegTop);
+                    break;
+                }
+            }
+            for (int idx = 0; idx < packet->GetQualityNum(); idx++)
+            {
+                SourceResolution srcRes;
+                srcRes.qualityRanking = idx + 1;
+                srcRes.top = boundTop[idx];
+                srcRes.left = boundLeft[idx];
+                srcRes.height = packet->GetRwpk()->packedPicHeight;
+                if (idx == 0)
+                {
+                    srcRes.width = boundLeft[idx+1] - boundLeft[idx];
+                }
+                else
+                {
+                    srcRes.width = packet->GetRwpk()->packedPicWidth - boundLeft[idx];
+                }
+                packet->SetSourceResolution(idx, srcRes);
+                //cout<<"sourceRes:"<<srcRes.qualityRanking<<" "<<srcRes.top<<" "<<srcRes.left<<" "<<srcRes.width<<" "<<srcRes.height<<endl;
+            }
         }
 
         if (ret == OMAF_MEMORY_TOO_SMALL_BUFFER )
@@ -920,15 +954,53 @@ int OmafReaderManager::ReadNextSegment(
     return ERROR_NONE;
 }
 
+static bool IsSelectionChanged(std::map<int, OmafAdaptationSet*> selection1, std::map<int, OmafAdaptationSet*> selection2)
+{
+    bool isChanged = false;
+
+    if (selection1.size() && selection2.size())
+    {
+        if (selection1.size() != selection2.size())
+        {
+            isChanged = true;
+        }
+        else
+        {
+            std::map<int, OmafAdaptationSet*>::iterator it1;
+            for (it1 = selection1.begin(); it1 != selection1.end(); it1++)
+            {
+                OmafAdaptationSet *as1 = it1->second;
+                std::map<int, OmafAdaptationSet*>::iterator it2;
+                for (it2 = selection2.begin(); it2 != selection2.end(); it2++)
+                {
+                    OmafAdaptationSet *as2 = it2->second;
+                    if (as1 == as2)
+                    {
+                        break;
+                    }
+                }
+                if (it2 == selection2.end())
+                {
+                    isChanged = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    return isChanged;
+}
+
 void OmafReaderManager::Run()
 {
     bool go_on = true;
-
     if(NULL == mSource) return;
 
     bool bSegChange = false;
 
     mStatus = STATUS_RUNNING;
+
+    bool prevPoseChanged = false;
 
     while(go_on && mStatus != STATUS_STOPPED){
         mLock.lock();
@@ -1100,11 +1172,14 @@ void OmafReaderManager::Run()
                     }
                 }
             }else{
-                //std::map<int, OmafAdaptationSet*> mapAS = pStream->GetMediaAdaptationSet();
                 std::map<int, OmafAdaptationSet*> mapAS = pStream->GetSelectedTileTracks();
+                LOG(INFO)<<"Selected tile tracks number is: "<<mapAS.size()<<" in reader manager!"<<endl;
+		        bool hasPoseChanged = false;
+		        uint32_t processedNum = 0;
                 for(auto as_it = mapAS.begin(); as_it != mapAS.end(); as_it++){
                     OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
                     SRDInfo srdInfo;
+                    //LOG(INFO)<<"Selected track: "<<pAS->GetTrackNumber()<<endl;
                     SegStatus *st = &(mMapSegStatus[pAS->GetTrackNumber()]);
                     if(type == 1){
                         uint64_t segmentDur = pStream->GetSegmentDuration();
@@ -1137,19 +1212,38 @@ void OmafReaderManager::Run()
                     // exit the waiting if segment downloaded or wait time is more than 10 mins
                     int64_t waitTime = 0;
                     mLock.lock();
+                    if (prevPoseChanged)
+                    {
+                        st->sampleIndex.mCurrentReadSegment = mGlobalReadSegId;
+                    }
+                    //LOG(INFO)<<st->sampleIndex.mCurrentReadSegment<<" "<<st->sampleIndex.mCurrentAddSegment<<endl;
                     while (st->sampleIndex.mCurrentReadSegment > st->sampleIndex.mCurrentAddSegment && mStatus!=STATUS_STOPPING && waitTime < 600000)
                     {
+                        std::map<int, OmafAdaptationSet*> mapAS1 = pStream->GetSelectedTileTracks();
+                        bool isPoseChanged = IsSelectionChanged(mapAS, mapAS1);
+                        if (isPoseChanged)
+                        {
+                            LOG(INFO) << "When track  "<< pAS->GetTrackNumber()<< " , pose changed" <<endl;
+                            hasPoseChanged = true;
+                            mLock.unlock();
+                            break;
+                        }
                         LOG(INFO) << "New segment " << st->sampleIndex.mCurrentReadSegment << " hasn't come, then wait !" << endl;
                         mLock.unlock();
                         ::usleep(1000);
                         mLock.lock();
                         waitTime++;
                     }
+                    if (hasPoseChanged)
+                    {
+                        prevPoseChanged = true;
+                        break;
+                    }
                     mLock.unlock();
 
                     if( mStatus==STATUS_STOPPING ){
                         mStatus = STATUS_STOPPED;
-                          break;
+                        break;
                     }
 
                     LOG(INFO) << "Now will parse Segment  " << st->sampleIndex.mCurrentReadSegment << endl;
@@ -1159,7 +1253,15 @@ void OmafReaderManager::Run()
                     this->ReadNextSegment(trackID, initSegID, false, readTrackInfos, bSegChange, qualityRanking, &srdInfo);
                     mSegTrackInfos.erase(st->sampleIndex.mCurrentReadSegment - 1);
                     RemoveReadSegmentFromMap();
+                    processedNum++;
+                    //LOG(INFO) << "For current frame,  " << processedNum << "  tiles have been read !" << endl;
+                    if (processedNum == mapAS.size())
+                    {
+	                    mGlobalReadSegId = st->sampleIndex.mCurrentReadSegment;
+		            }
                 }
+                if (prevPoseChanged && !hasPoseChanged)
+                    prevPoseChanged = false;
             }
         }
 
@@ -1174,21 +1276,26 @@ void OmafReaderManager::Run()
 // Keep more than 1 element in m_readSegMap for segment count update if viewport changed
 void OmafReaderManager::RemoveReadSegmentFromMap()
 {
-    if(m_readSegMap.size() < 10) return;
+    if(m_readSegMap.size() < 2) return;
 
     for(auto &it:m_readSegMap)
     {
-        if(m_readSegMap.size() < 10)
+        if(m_readSegMap.size() < 2)
             break;
         std::map<uint32_t, OmafSegment*> initSegNormalSeg = it.second;
-        for (auto& itRmSeg : initSegNormalSeg)
+        if (it.first < mGlobalReadSegId)
         {
-            OmafSegment *rmSeg = itRmSeg.second;
-            delete rmSeg;
-            rmSeg = NULL;
+            for (auto& itRmSeg : initSegNormalSeg)
+            {
+                OmafSegment *rmSeg = itRmSeg.second;
+                //LOG(INFO)<<"Now will delete seg for track "<<itRmSeg.first<<endl;
+                delete rmSeg;
+                rmSeg = NULL;
+            }
+            initSegNormalSeg.clear();
+            //LOG(INFO)<<"Now will erase "<<it.first<<" segs"<<endl;
+            m_readSegMap.erase(it.first);
         }
-        initSegNormalSeg.clear();
-        m_readSegMap.erase(it.first);
     }
 }
 

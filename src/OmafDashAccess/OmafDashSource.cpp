@@ -154,14 +154,19 @@ int OmafDashSource::OpenMedia(
     }
 
     mMPDParser = new OmafMPDParser( );
-    mMPDParser->SetExtractorEnabled(enableExtractor);
-
     if( NULL == mMPDParser ) return ERROR_NULL_PTR;
+    mMPDParser->SetExtractorEnabled(enableExtractor);
 
     OMAFSTREAMS listStream;
     mMPDParser->SetCacheDir(cacheDir);
     int ret = mMPDParser->ParseMPD(url, listStream);
-    if(ret != ERROR_NONE) return ret;
+    if (ret == OMAF_INVALID_EXTRACTOR_ENABLEMENT)
+    {
+        enableExtractor = false;//!enableExtractor;
+        mMPDParser->SetExtractorEnabled(enableExtractor);
+    }
+    else if (ret != ERROR_NONE)
+        return ret;
 
     mMPDinfo = this->GetMPDInfo();
 
@@ -268,6 +273,12 @@ int OmafDashSource::CloseMedia()
 
     READERMANAGER::GetInstance()->Close();
 
+    for (auto it : mMapStream)
+    {
+        OmafMediaStream *stream = it.second;
+        stream->Close();
+    }
+
     return ERROR_NONE;
 }
 
@@ -329,68 +340,9 @@ int OmafDashSource::GetPacket(
         }
         else
         {
-            bool isEOS = false;
-            std::map<uint32_t, MediaPacket*> selectedPackets;
-            for (auto as_it = mapSelectedAS.begin(); as_it != mapSelectedAS.end(); as_it++)
-            {
-                OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
-                int32_t trackID = pAS->GetTrackNumber();
-                MediaPacket *onePacket = NULL;
-                int ret = READERMANAGER::GetInstance()->GetNextFrame(trackID, onePacket, needParams);
-
-                if (ret == ERROR_NONE)
-                {
-                    if (onePacket->GetEOS())
-                    {
-                        LOG(INFO) << "EOS has been gotten !" << std::endl;
-                        isEOS = true;
-                        selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
-                        break;
-                    }
-                    selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
-                }
-            }
-
-            if (!m_stitch)
-            {
-                m_stitch = new OmafTilesStitch();
-                if (!m_stitch)
-                    return OMAF_ERROR_NULL_PTR;
-
-                int32_t ret = m_stitch->Initialize(selectedPackets, needParams);
-                if (ret)
-                {
-                    LOG(ERROR) << "Failed to initialize stitch class !" << std::endl;
-                    return ret;
-                }
-            }
-            else
-            {
-                if (!isEOS)
-                {
-                    int32_t ret = m_stitch->UpdateSelectedTiles(selectedPackets, needParams);
-                    if (ret)
-                    {
-                        LOG(ERROR) << "Failed to update media packets for tiles merge !" << std::endl;
-                        return ret;
-                    }
-                }
-            }
-
             std::list<MediaPacket*> mergedPackets;
-            if (isEOS)
-            {
-                std::map<uint32_t, MediaPacket*>::iterator itPacket1;
-                for (itPacket1 = selectedPackets.begin(); itPacket1 != selectedPackets.end(); itPacket1++)
-                {
-                    MediaPacket *packet = itPacket1->second;
-                    mergedPackets.push_back(packet);
-                }
-            }
-            else
-            {
-                mergedPackets = m_stitch->GetTilesMergedPackets();
-            }
+            pStream->SetNeedVideoParams(needParams);
+            mergedPackets = pStream->GetOutTilesMergedPackets();
 
             std::list<MediaPacket*>::iterator itPacket;
             for (itPacket = mergedPackets.begin(); itPacket != mergedPackets.end(); itPacket++)
@@ -399,7 +351,6 @@ int OmafDashSource::GetPacket(
                 pkts->push_back(onePacket);
             }
             mergedPackets.clear();
-            selectedPackets.clear();
         }
     }
 
@@ -457,6 +408,8 @@ int OmafDashSource::GetMediaInfo( DashMediaInfo* media_info )
         media_info->stream_info[i].source_number = pStreamInfo->source_number;
         media_info->stream_info[i].source_resolution = pStreamInfo->source_resolution;
         media_info->stream_info[i].segmentDuration = pStreamInfo->segmentDuration;
+        media_info->stream_info[i].tileRowNum    = pStreamInfo->tileRowNum;
+        media_info->stream_info[i].tileColNum    = pStreamInfo->tileColNum;
         memcpy( const_cast<char*>(media_info->stream_info[i].codec),
                 pStreamInfo->codec,
                 1024);
