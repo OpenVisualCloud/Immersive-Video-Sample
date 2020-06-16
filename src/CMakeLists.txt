@@ -58,7 +58,7 @@ IF(${TARGET} STREQUAL "server")
       COMMAND echo "Target ffmpeg"
       VERBATIM)
   ADD_CUSTOM_COMMAND(TARGET ffmpeg
-      COMMAND export PKG_CONFIG_PATH=${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/main_encoder/:${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/:$PKG_CONFIG_PATH &&
+      COMMAND export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/:${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/main_encoder/:${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/:$PKG_CONFIG_PATH &&
               mkdir -p ${FFMPEG_DIR} && cd ${FFMPEG_DIR} &&
               ${CMAKE_CURRENT_SOURCE_DIR}/FFmpeg/configure ${FFMPEG_FLAG}
                   --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/"

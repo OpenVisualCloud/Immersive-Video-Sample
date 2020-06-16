@@ -688,7 +688,7 @@ new file mode 100644
 index 0000000..332bf7b
 --- /dev/null
 +++ b/FFmpeg/libavcodec/distributed_encoder.c
-@@ -0,0 +1,561 @@
+@@ -0,0 +1,576 @@
 +/*
 +* Scalable Video Technology for distributed encoder library plugin
 +*
@@ -762,6 +762,8 @@ index 0000000..332bf7b
 +    int tile_row;
 +    int tile_column;
 +    uint64_t frame_number;
++
++    bool in_parallel;
 +} DEContext;
 +
 +static int set_enc_params(AVCodecContext *avctx, DistributedEncoderParam *DEparams)
@@ -808,6 +810,12 @@ index 0000000..332bf7b
 +    params.tile_columnCnt = deCxt->tile_column;
 +    params.tile_rowCnt = deCxt->tile_row;
 +    params.MCTS_enable = (params.tile_columnCnt * params.tile_rowCnt) > 1 ? 1 : 0;
++
++    if (deCxt->in_parallel && params.MCTS_enable)
++        params.in_parallel = true;
++    else
++        params.in_parallel = false;
++
 +    memcpy(&(DEparams->encoderParams), &params, sizeof(EncoderParam));
 +
 +    DEparams->type = ResourceBalanced;
@@ -861,7 +869,11 @@ index 0000000..332bf7b
 +            return AVERROR(EINVAL);
 +    }
 +
-+    codecOption.encOption.encType = EncoderType_SVTHEVC;
++    if (params.in_parallel)
++        codecOption.encOption.encType = EncoderType_Multiple_SVTHEVC;
++    else
++        codecOption.encOption.encType = EncoderType_SVTHEVC;
++
 +    memcpy(&(DEparams->codecOption), &codecOption, sizeof(CodecAppOption));
 +
 +    return 0;
@@ -1207,6 +1219,9 @@ index 0000000..332bf7b
 +
 +    { "tile_row", "tile row count number, default is 1", OFFSET(tile_row),
 +      AV_OPT_TYPE_INT, { .i64 = 1 }, 0, 256, VE },
++
++    { "in_parallel", "Multiple encoders running in parallel [0: Off, 1: On]", OFFSET(in_parallel),
++      AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, VE },
 +
 +    {NULL},
 +};

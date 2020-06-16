@@ -117,6 +117,7 @@ typedef enum
 {
     EncoderType_None = 0,
     EncoderType_SVTHEVC,
+    EncoderType_Multiple_SVTHEVC,
 }EncoderType;
 
 //!
@@ -182,6 +183,7 @@ typedef struct ENCODERPARAM{
     uint8_t  MCTS_enable;               //!< motion vector constrains flag
     uint8_t  tile_columnCnt;            //!< tile column count when tile is enabled
     uint8_t  tile_rowCnt;               //!< tile row count when tile is enabled
+    bool     in_parallel;               //!< multiple tiles encoding in parallel
 }EncoderParam;
 
 typedef struct INPUTFRAME{
