@@ -27,5 +27,5 @@ dependencies {
     implementation files('libs/jna.jar')
     androidTestImplementation 'androidx.test.ext:junit:1.1.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.1'
-    androidTestCompile project(path: ':omafdashaccesslibrary')
+    androidTestImplementation project(path: ':omafdashaccesslibrary')
 }

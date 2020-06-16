@@ -45,16 +45,17 @@ public class OmafAccess {
         mHandle = null;
     }
 
-    public OmafAccess(String url, String cache){
+    public OmafAccess(String url, String cache, int source_type, boolean enable_extractor){
         this();
-        SetClientCtx(url, cache);
+        SetClientCtx(url, cache, source_type, enable_extractor);
     }
 
-    private void SetClientCtx(String url, String cache){
+    private void SetClientCtx(String url, String cache, int source_type, boolean enable_extractor){
         mContext.media_url = url;
 
         mContext.cache_path = cache;
-        mContext.source_type = 1;//MultiResSource
+        mContext.source_type = source_type;
+        mContext.enable_extractor = enable_extractor;
     }
 
     public int Initialize( ){
@@ -68,13 +69,13 @@ public class OmafAccess {
         return 0;
     }
 
-    public int OpenMedia(boolean enablePredictor){
+    public int OpenMedia(boolean enablePredictor, String pluginName, String libPath){
         if(mHandle == null){
             Log.e(TAG, "Omaf Access Handle is NULL; cannot continue !!!");
             return -1;
         }
 
-        return JnaOmafAccess.INSTANCE.OmafAccess_OpenMedia(this.mHandle, this.mContext, enablePredictor);
+        return JnaOmafAccess.INSTANCE.OmafAccess_OpenMedia(this.mHandle, this.mContext, enablePredictor, pluginName, libPath);
     }
 
     public int SeekMedia( long time){
@@ -103,7 +104,7 @@ public class OmafAccess {
         return JnaOmafAccess.INSTANCE.OmafAccess_GetMediaInfo(this.mHandle, info);
     }
 
-    public int GetPacket(int stream_id, JnaOmafAccess.DASHPACKET.ByReference packet, IntByReference size, LongByReference pts, byte needParams, byte clearBuf){
+    public int GetPacket(int stream_id, JnaOmafAccess.DASHPACKET[] packet, IntByReference size, LongByReference pts, byte needParams, byte clearBuf){
         if(mHandle == null){
             Log.e(TAG, "Omaf Access Handle is NULL; cannot continue !!!");
             return -1;
