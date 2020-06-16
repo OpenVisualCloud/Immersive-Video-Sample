@@ -40,6 +40,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import static com.example.omafdashaccesslibrary.JnaOmafAccess.SourceType.MultiResSource;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -50,8 +51,8 @@ import static org.junit.Assert.assertEquals;
 @RunWith(AndroidJUnit4.class)
 public class UnitTestOmafDashAccess {
     //set up initial parameters
-    private final String url_static = "http://192.168.43.166:8080/testOMAFstatic/Test.mpd";
-    private final String url_static_https = "https://192.168.43.166:443/testOMAFstatic/Test.mpd";
+    private final String url_static = "http://192.168.43.166:8080/4k_small_tiles_30M/Test.mpd";
+    private final String url_static_https = "https://192.168.43.166:443/4k_small_tiles_30M/Test.mpd";
     private final String cache_path = "sdcard/Android/data/tmp/";
 
 
@@ -59,7 +60,9 @@ public class UnitTestOmafDashAccess {
     @Test
     public void sampleOmafDashAccessAPI() {
         //1. new OmafAccess object
-        OmafAccess omafAccess = new OmafAccess(url_static_https, cache_path);
+        int source_type = MultiResSource;
+        boolean enable_extractor = false;
+        OmafAccess omafAccess = new OmafAccess(url_static_https, cache_path, source_type, enable_extractor);
         //2. initialize
         int ret = 0;
         ret = omafAccess.Initialize();
@@ -70,48 +73,58 @@ public class UnitTestOmafDashAccess {
         ret = omafAccess.SetupHeadSetInfo(clientInfo);
         assertEquals(ret, 0);
         //4. open media
-        ret = omafAccess.OpenMedia(false); // -1
+        ret = omafAccess.OpenMedia(false, "", ""); // -1
         assertEquals(ret, 0);
         //5. get media information
         JnaOmafAccess.DASHMEDIAINFO info = new JnaOmafAccess.DASHMEDIAINFO();
         ret = omafAccess.GetMediaInfo(info);
         assertEquals(ret, 0);
         try {
-            Thread.sleep(4000);
             //6. test hevc file output
             int stream_id = 0;
-            File file = new File(cache_path + "frame100.h265");
-            if (file.exists()) {
-                file.delete();
+            File file1 = new File(cache_path + "frame300high.h265");
+            if (file1.exists()) {
+                file1.delete();
             }
-            file.createNewFile();
-            FileOutputStream outStream = null;
-            outStream = new FileOutputStream(file);
+            file1.createNewFile();
+            FileOutputStream outStream1 = null;
+            outStream1 = new FileOutputStream(file1);
+
+            File file2 = new File(cache_path + "frame300low.h265");
+            if (file2.exists()) {
+                file2.delete();
+            }
+            file2.createNewFile();
+            FileOutputStream outStream2 = null;
+            outStream2 = new FileOutputStream(file2);
             //7. get packets
             byte needHeader = 1;
-            for (int i = 0; i < 100; i++) {
-                JnaOmafAccess.DASHPACKET.ByReference dashPackets = new JnaOmafAccess.DASHPACKET.ByReference();
+            int frame_count = 0;
+            while (frame_count < 300) {
+                JnaOmafAccess.DASHPACKET[] dashPackets = new JnaOmafAccess.DASHPACKET[16];
                 IntByReference size = new IntByReference();
                 LongByReference pts = new LongByReference();
                 byte clearbuf = 0;
                 ret = omafAccess.GetPacket(stream_id, dashPackets, size, pts, needHeader, clearbuf);
-                assertEquals(ret, 0);
-                ByteBuffer byteBuffer = dashPackets.buf.getByteBuffer(0, dashPackets.size);
-                byte[] bytes = new byte[byteBuffer.remaining()];
-                byteBuffer.get(bytes, 0, bytes.length);
-                if (dashPackets.buf != null && dashPackets.size != 0 && size.getValue() != 0) {
-                    outStream.write(bytes);
-                    if (needHeader == 1) {
-                        needHeader = 0;
-                    }
+                if (ret == 0 && dashPackets[0].buf != null && dashPackets[0].size != 0 && size.getValue() != 0) {
+                    ByteBuffer byteBuffer1 = dashPackets[0].buf.getByteBuffer(0, dashPackets[0].size);
+                    byte[] bytes1 = new byte[byteBuffer1.remaining()];
+                    byteBuffer1.get(bytes1, 0, bytes1.length);
+                    outStream1.write(bytes1);
+                    frame_count++;
+                }
+                if (ret == 0 && dashPackets[1].buf != null && dashPackets[1].size != 0 && size.getValue() != 0) {
+                    ByteBuffer byteBuffer2 = dashPackets[1].buf.getByteBuffer(0, dashPackets[1].size);
+                    byte[] bytes2 = new byte[byteBuffer2.remaining()];
+                    byteBuffer2.get(bytes2, 0, bytes2.length);
+                    outStream2.write(bytes2);
                 }
             }
-            outStream.close();
+            outStream1.close();
+            outStream2.close();
             omafAccess.CloseMedia();
             omafAccess.Close();
         }catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }

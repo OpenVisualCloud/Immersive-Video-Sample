@@ -49,6 +49,27 @@ public interface JnaOmafAccess extends Library {
     public static final NativeLibrary JNA_NATIVE_LIB = NativeLibrary.getInstance(JnaOmafAccess.JNA_LIBRARY_NAME);
     public static final JnaOmafAccess INSTANCE = (JnaOmafAccess)Native.load(JnaOmafAccess.JNA_LIBRARY_NAME, JnaOmafAccess.class); //load 3rd-party library
 
+
+    /** enum values */
+    public static interface Codec_Type {
+        /** <i>native declaration : line 7</i> */
+        public static final int VideoCodec_NONE = 0;
+        /** <i>native declaration : line 8</i> */
+        public static final int VideoCodec_AVC = 1;
+        /** <i>native declaration : line 9</i> */
+        public static final int VideoCodec_HEVC = 2;
+        /** <i>native declaration : line 10</i> */
+        public static final int VideoCodec_AV1 = 3;
+        /** <i>native declaration : line 11</i> */
+        public static final int AudioCodec_NONE = 100;
+        /** <i>native declaration : line 12</i> */
+        public static final int AudioCodec_AAC = 101;
+        /** <i>native declaration : line 13</i> */
+        public static final int AudioCodec_AV3 = 102;
+        /** <i>native declaration : line 14</i> */
+        public static final int AudioCodec_MP3 = 103;
+    };
+
     /** enum values */
     public static interface MediaType {
         /** <i>native declaration : line 7</i> */
@@ -126,14 +147,18 @@ public interface JnaOmafAccess extends Library {
         public short packedPicHeight;
         /** C type : RectangularRegionWisePacking* */
         public JnaOmafAccess.RECTANGUALAR_REGION_WIZE_PACKING.ByReference rectRegionPacking;
+        public byte numHiRegions;
+        public int lowResPicWidth;
+        public int lowResPicHeight;
+        public int timeStamp;
         public REGION_WIZE_PACKING() {
             super();
         }
         protected List getFieldOrder() {
-            return Arrays.asList("constituentPicMatching", "numRegions", "projPicWidth", "projPicHeight", "packedPicWidth", "packedPicHeight", "rectRegionPacking");
+            return Arrays.asList("constituentPicMatching", "numRegions", "projPicWidth", "projPicHeight", "packedPicWidth", "packedPicHeight", "rectRegionPacking", "numHiRegions", "lowResPicWidth", "lowResPicHeight", "timeStamp");
         }
         /** @param rectRegionPacking C type : RectangularRegionWisePacking* */
-        public REGION_WIZE_PACKING(byte constituentPicMatching, byte numRegions, int projPicWidth, int projPicHeight, short packedPicWidth, short packedPicHeight, JnaOmafAccess.RECTANGUALAR_REGION_WIZE_PACKING.ByReference rectRegionPacking) {
+        public REGION_WIZE_PACKING(byte constituentPicMatching, byte numRegions, int projPicWidth, int projPicHeight, short packedPicWidth, short packedPicHeight, JnaOmafAccess.RECTANGUALAR_REGION_WIZE_PACKING.ByReference rectRegionPacking, byte numHiRegions, int lowResPicWidth, int lowResPicHeight, int timeStamp) {
             super();
             this.constituentPicMatching = constituentPicMatching;
             this.numRegions = numRegions;
@@ -142,6 +167,10 @@ public interface JnaOmafAccess extends Library {
             this.packedPicWidth = packedPicWidth;
             this.packedPicHeight = packedPicHeight;
             this.rectRegionPacking = rectRegionPacking;
+            this.numHiRegions = numHiRegions;
+            this.lowResPicWidth = lowResPicWidth;
+            this.lowResPicHeight = lowResPicHeight;
+            this.timeStamp = timeStamp;
         }
         protected ByReference newByReference() { return new ByReference(); }
         protected ByValue newByValue() { return new ByValue(); }
@@ -239,17 +268,21 @@ public interface JnaOmafAccess extends Library {
 
     public static class SOURCERESOLUTION extends Structure {
         public int qualityRanking;
+        public int top;
+        public int left;
         public int width;
         public int height;
         public SOURCERESOLUTION() {
             super();
         }
         protected List getFieldOrder() {
-            return Arrays.asList("qualityRanking", "width", "height");
+            return Arrays.asList("qualityRanking", "top", "left", "width", "height");
         }
-        public SOURCERESOLUTION(int qualityRanking, int width, int height) {
+        public SOURCERESOLUTION(int qualityRanking, int top, int left, int width, int height) {
             super();
             this.qualityRanking = qualityRanking;
+            this.top = top;
+            this.left = left;
             this.width = width;
             this.height = height;
         }
@@ -288,6 +321,7 @@ public interface JnaOmafAccess extends Library {
          * C type : MediaType
          */
         public int stream_type;
+        public int codec_type;
         public int height;
         public int width;
         public int tileRowNum;
@@ -312,7 +346,7 @@ public interface JnaOmafAccess extends Library {
             super();
         }
         protected List getFieldOrder() {
-            return Arrays.asList("stream_type", "height", "width", "tileRowNum", "tileColNum", "framerate_num", "framerate_den", "segmentDuration", "bit_rate", "channels", "sample_rate", "channel_bytes", "mProjFormat", "mFpt", "mime_type", "codec", "source_number", "source_resolution");
+            return Arrays.asList("stream_type", "codec_type", "height", "width", "tileRowNum", "tileColNum", "framerate_num", "framerate_den", "segmentDuration", "bit_rate", "channels", "sample_rate", "channel_bytes", "mProjFormat", "mFpt", "mime_type", "codec", "source_number", "source_resolution");
         }
         protected ByReference newByReference() { return new ByReference(); }
         protected ByValue newByValue() { return new ByValue(); }
@@ -353,26 +387,48 @@ public interface JnaOmafAccess extends Library {
     };
 
     public static class DASHPACKET extends Structure {
+        public int videoID;
+        public int video_codec;
+        public int pts;
         public long size;
         /** C type : char* */
         public Pointer buf;
         /** C type : RegionWisePacking* */
         public JnaOmafAccess.REGION_WIZE_PACKING.ByReference rwpk;
+        public int segID;
+        public int height;
+        public int width;
+        public int numQuality;
+        public JnaOmafAccess.SOURCERESOLUTION.ByReference qtyResolution;
+        public int tileRowNum;
+        public int tileColNum;
+        public boolean bEOS;
         public DASHPACKET() {
             super();
         }
         protected List getFieldOrder() {
-            return Arrays.asList("size", "buf", "rwpk");
+            return Arrays.asList("videoID", "video_codec", "pts", "size", "buf", "rwpk", "segID", "height", "width", "numQuality", "qtyResolution", "tileRowNum", "tileColNum", "bEOS");
         }
         /**
          * @param buf C type : char*<br>
          * @param rwpk C type : RegionWisePacking*
          */
-        public DASHPACKET(long size, Pointer buf, JnaOmafAccess.REGION_WIZE_PACKING.ByReference rwpk) {
+        public DASHPACKET(int videoID, int video_codec, int pts, long size, Pointer buf, JnaOmafAccess.REGION_WIZE_PACKING.ByReference rwpk, int segID, int height, int width, int numQuality, JnaOmafAccess.SOURCERESOLUTION.ByReference qtyResolution, int tileRowNum, int tileColNum, boolean bEOS) {
             super();
+            this.videoID = videoID;
+            this.video_codec = video_codec;
+            this.pts = pts;
             this.size = size;
             this.buf = buf;
             this.rwpk = rwpk;
+            this.segID = segID;
+            this.height = height;
+            this.width = width;
+            this.numQuality = numQuality;
+            this.qtyResolution = qtyResolution;
+            this.tileRowNum = tileRowNum;
+            this.tileColNum = tileColNum;
+            this.bEOS = bEOS;
         }
         protected ByReference newByReference() { return new ByReference(); }
         protected ByValue newByValue() { return new ByValue(); }
@@ -392,23 +448,27 @@ public interface JnaOmafAccess extends Library {
         public int source_type;
         /** C type : const char* */
         public String cache_path;
+        /** C type : bool */
+        public boolean enable_extractor;
         public DASHSTREAMINGCLIENT() {
             super();
         }
         protected List getFieldOrder() {
-            return Arrays.asList("media_url", "source_type", "cache_path");
+            return Arrays.asList("media_url", "source_type", "cache_path", "enable_extractor");
         }
         /**
          * @param media_url C type : const char*<br>
          * @param source_type @see SourceType<br>
+         * @param enable_extractor C type : bool<br>
          * C type : SourceType<br>
          * @param cache_path C type : const char*
          */
-        public DASHSTREAMINGCLIENT(String media_url, int source_type, String cache_path) {
+        public DASHSTREAMINGCLIENT(String media_url, int source_type, String cache_path, boolean enable_extractor) {
             super();
             this.media_url = media_url;
             this.source_type = source_type;
             this.cache_path = cache_path;
+            this.enable_extractor = enable_extractor;
         }
         protected ByReference newByReference() { return new ByReference(); }
         protected ByValue newByValue() { return new ByValue(); }
@@ -418,6 +478,32 @@ public interface JnaOmafAccess extends Library {
         public static class ByValue extends DASHSTREAMINGCLIENT implements Structure.ByValue {  };
     };
 
+    public static class VIEWPORTANGLE extends Structure {
+        public float yaw;
+        public float pitch;
+        public float roll;
+        public VIEWPORTANGLE() {
+            super();
+            this.yaw = 0;
+            this.pitch = 0;
+            this.roll = 0;
+        }
+        protected List getFieldOrder() {
+            return Arrays.asList("yaw", "pitch", "roll");
+        }
+        public VIEWPORTANGLE(float yaw, float pitch, float roll) {
+            super();
+            this.yaw = yaw;
+            this.pitch = pitch;
+            this.roll = roll;
+        }
+        protected ByReference newByReference() { return new ByReference(); }
+        protected ByValue newByValue() { return new ByValue(); }
+        protected VIEWPORTANGLE newInstance() { return new VIEWPORTANGLE(); }
+
+        public static class ByReference extends VIEWPORTANGLE implements Structure.ByReference {  };
+        public static class ByValue extends VIEWPORTANGLE implements Structure.ByValue {  };
+    };
     /**
      * description: API to initialize API handle and relative context<br>
      * params: pCtx - [in] the structure for the necessary parameters to handle an dash stream<br>
@@ -431,11 +517,13 @@ public interface JnaOmafAccess extends Library {
      * params: hdl - [in] handler created with DashStreaming_Init<br>
      *         pCtx - [in] the structure for the necessary parameters to handle an dash stream<br>
      *         enablePredictor - [in] flag for use predictor or not<br>
+     *         predictPluginName - [in] viewport predict plugin name<br>
+     *         libPath - [in] path of viewport predict plugin library<br>
      * return: the error return from the API<br>
-     * Original signature : <code>int OmafAccess_OpenMedia(Handler, DashStreamingClient*, bool)</code><br>
+     * Original signature : <code>int OmafAccess_OpenMedia(Handler, DashStreamingClient*, bool, char*, char*)</code><br>
      * <i>native declaration : line 193</i>
      */
-    int OmafAccess_OpenMedia(Pointer hdl, DASHSTREAMINGCLIENT pCtx, boolean enablePredictor);
+    int OmafAccess_OpenMedia(Pointer hdl, DASHSTREAMINGCLIENT pCtx, boolean enablePredictor, String predictPluginName, String libPath);
     /**
      * description: API to seek a stream. only work with static mode. not implement yet.<br>
      * params: hdl - [in] handler created with DashStreaming_Init<br>
@@ -479,7 +567,7 @@ public interface JnaOmafAccess extends Library {
      * Original signature : <code>int OmafAccess_GetPacket(Handler, int, DashPacket*, int*, uint64_t*, bool, bool)</code><br>
      * <i>native declaration : line 232</i>
      */
-    int OmafAccess_GetPacket(Pointer hdl, int stream_id, JnaOmafAccess.DASHPACKET.ByReference packet, IntByReference size, LongByReference pts, byte needParams, byte clearBuf);
+    int OmafAccess_GetPacket(Pointer hdl, int stream_id, JnaOmafAccess.DASHPACKET[] packet, IntByReference size, LongByReference pts, byte needParams, byte clearBuf);
     /**
      * description: API to set InitViewport before downloading segment.<br>
      * params: hdl - [in]handler created with DashStreaming_Init<br>
