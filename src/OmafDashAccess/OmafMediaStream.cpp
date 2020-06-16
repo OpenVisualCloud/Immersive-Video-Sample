@@ -26,6 +26,8 @@
  */
 
 #include "OmafMediaStream.h"
+#include "OmafReaderManager.h"
+#include "OmafTileTracksSelector.h"
 
 VCD_OMAF_BEGIN
 
@@ -36,9 +38,14 @@ OmafMediaStream::OmafMediaStream()
     m_pStreamInfo          = NULL;
     m_bEOS                 = false;
     mStreamID              = 0;
+    m_hasTileTracksSelected = false;
+    m_stitchThread         = 0;
     m_enabledExtractor     = true;
+    m_stitch               = NULL;
+    m_needParams           = false;
     pthread_mutex_init(&mMutex, NULL);
     pthread_mutex_init(&mCurrentMutex, NULL);
+    pthread_mutex_init(&m_packetsMutex, NULL);
 }
 
 OmafMediaStream::~OmafMediaStream()
@@ -66,9 +73,53 @@ OmafMediaStream::~OmafMediaStream()
         }
         mExtractors.clear();
     }
+
+    if (m_stitchThread)
+    {
+        pthread_join(m_stitchThread, NULL);
+        m_stitchThread = 0;
+    }
+
+    if (m_mergedPackets.size())
+    {
+        std::list<std::list<MediaPacket*>>::iterator it;
+        for(it = m_mergedPackets.begin(); it != m_mergedPackets.end(); )
+        {
+            std::list<MediaPacket*> packets = *it;
+            if (packets.size())
+            {
+                std::list<MediaPacket*>::iterator itPacket;
+                for (itPacket = packets.begin(); itPacket != packets.end(); )
+                {
+                    MediaPacket *packet = *itPacket;
+                    SAFE_DELETE(packet);
+                    packets.erase(itPacket++);
+                }
+                packets.clear();
+            }
+            m_mergedPackets.erase(it++);
+        }
+        m_mergedPackets.clear();
+    }
+
+    SAFE_DELETE(m_stitch);
     pthread_mutex_destroy( &mMutex );
     pthread_mutex_destroy( &mCurrentMutex );
+    pthread_mutex_destroy( &m_packetsMutex );
     m_sources.clear();
+}
+
+void OmafMediaStream::Close()
+{
+    if (m_status != STATUS_STOPPED)
+    {
+        m_status = STATUS_STOPPED;
+        if (m_stitchThread)
+        {
+            pthread_join(m_stitchThread, NULL);
+            m_stitchThread = 0;
+        }
+    }
 }
 
 int OmafMediaStream::AddExtractor(OmafExtractor* pAS)
@@ -107,9 +158,26 @@ int OmafMediaStream::InitStream(std::string type)
         return ERROR_INVALID;
     }
 
+    if (!m_enabledExtractor && !m_stitch)
+    {
+        m_stitch = new OmafTilesStitch();
+        if (!m_stitch)
+            return OMAF_ERROR_NULL_PTR;
+    }
+
     UpdateStreamInfo();
 
     SetupExtratorDependency();
+
+    if (!m_enabledExtractor)
+    {
+        int32_t ret = StartTilesStitching();
+        if (ret)
+        {
+            LOG(ERROR) << "Failed to start tiles stitching !" << std::endl;
+            return ret;
+        }
+    }
 
     return ERROR_NONE;
 }
@@ -127,14 +195,12 @@ void OmafMediaStream::UpdateStreamInfo()
 
             m_pStreamInfo->framerate_den = vi.frame_Rate.den;
             m_pStreamInfo->framerate_num = vi.frame_Rate.num;
-            m_pStreamInfo->height        = mExtratorAdaptationSet->GetVideoInfo().height;
-            m_pStreamInfo->width         = mExtratorAdaptationSet->GetVideoInfo().width;
+            m_pStreamInfo->width         = mExtratorAdaptationSet->GetQualityRanking()->srqr_quality_infos[0].orig_width;
+            m_pStreamInfo->height        = mExtratorAdaptationSet->GetQualityRanking()->srqr_quality_infos[0].orig_height;
             m_pStreamInfo->mime_type     = new char[1024];
             m_pStreamInfo->codec         = new char[1024];
             memcpy(const_cast<char*>(m_pStreamInfo->mime_type), mMainAdaptationSet->GetMimeType().c_str(), 1024);
             memcpy(const_cast<char*>(m_pStreamInfo->codec), mMainAdaptationSet->GetCodec()[0].c_str(), 1024);
-            // m_pStreamInfo->mime_type     = mMainAdaptationSet->GetMimeType().c_str();
-            // m_pStreamInfo->codec         = mMainAdaptationSet->GetCodec()[0].c_str();
             m_pStreamInfo->mFpt          = (int32_t)mMainAdaptationSet->GetFramePackingType();
             m_pStreamInfo->mProjFormat   = (int32_t)mMainAdaptationSet->GetProjectionFormat();
             m_pStreamInfo->segmentDuration = mMainAdaptationSet->GetSegmentDuration();
@@ -181,8 +247,6 @@ void OmafMediaStream::UpdateStreamInfo()
             m_pStreamInfo->codec         = new char[1024];
             memcpy(const_cast<char*>(m_pStreamInfo->mime_type), mMainAdaptationSet->GetMimeType().c_str(), 1024);
             memcpy(const_cast<char*>(m_pStreamInfo->codec), mMainAdaptationSet->GetCodec()[0].c_str(), 1024);
-            // m_pStreamInfo->mime_type     = mMainAdaptationSet->GetMimeType().c_str();
-            // m_pStreamInfo->codec         = mMainAdaptationSet->GetCodec()[0].c_str();
             m_pStreamInfo->mFpt          = (int32_t)mMainAdaptationSet->GetFramePackingType();
             m_pStreamInfo->mProjFormat   = (int32_t)mMainAdaptationSet->GetProjectionFormat();
             m_pStreamInfo->segmentDuration = mMainAdaptationSet->GetSegmentDuration();
@@ -317,30 +381,7 @@ int OmafMediaStream::UpdateStartNumber(uint64_t nAvailableStartTime)
     pthread_mutex_unlock(&mMutex);
     return ret;
 }
-/*
-int OmafMediaStream::LoadLocalInitSegment()
-{
-    int ret = ERROR_NONE;
-    pthread_mutex_lock(&mMutex);
-    for(auto it = mMediaAdaptationSet.begin();
-             it != mMediaAdaptationSet.end();
-             it++ ){
-        OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
-        //pAS->DownloadInitializeSegment();
-        pAS->LoadLocalInitSegment();
-    }
 
-    for(auto extrator_it = mExtractors.begin();
-             extrator_it != mExtractors.end();
-             extrator_it++ ){
-        OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
-        //extractor->DownloadInitializeSegment();
-        extractor->LoadLocalInitSegment();
-    }
-    pthread_mutex_unlock(&mMutex);
-    return ret;
-}
-*/
 int OmafMediaStream::DownloadInitSegment()
 {
     pthread_mutex_lock(&mMutex);
@@ -364,32 +405,7 @@ int OmafMediaStream::DownloadInitSegment()
     pthread_mutex_unlock(&mMutex);
     return ERROR_NONE;
 }
-/*
-int OmafMediaStream::LoadLocalSegments()
-{
-    int ret = ERROR_NONE;
-    pthread_mutex_lock(&mMutex);
-    for(auto it = mMediaAdaptationSet.begin();
-             it != mMediaAdaptationSet.end();
-             it++ ){
-        OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
-        //pAS->DownloadSegment();
-        pAS->LoadLocalSegment();
-    }
 
-    // NOTE: this function should be in the same thread with UpdateEnabledExtractors
-    //       , otherwise mCurrentExtractors need a mutex lock
-    for(auto extrator_it = mExtractors.begin();
-             extrator_it != mExtractors.end();
-             extrator_it++ ){
-        OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
-        //extractor->DownloadSegment();
-        extractor->LoadLocalSegment();
-    }
-    pthread_mutex_unlock(&mMutex);
-    return ret;
-}
-*/
 int OmafMediaStream::DownloadSegments()
 {
     int ret = ERROR_NONE;
@@ -501,6 +517,8 @@ int OmafMediaStream::UpdateEnabledTileTracks(
         m_selectedTileTracks.insert(make_pair(itAS->first, itAS->second));
     }
 
+    m_hasTileTracksSelected = true;
+
     pthread_mutex_unlock(&mCurrentMutex);
     pthread_mutex_unlock(&mMutex);
 
@@ -519,6 +537,250 @@ int OmafMediaStream::GetTrackCount()
         tracksCnt = this->mMediaAdaptationSet.size();
     }
     return tracksCnt;
+}
+
+int32_t OmafMediaStream::StartTilesStitching()
+{
+    int32_t ret = pthread_create(&m_stitchThread, NULL, TilesStitchingThread, this);
+    if (ret)
+    {
+        LOG(ERROR) << "Failed to create tiles stitching thread !" << std::endl;
+        return OMAF_ERROR_CREATE_THREAD;
+    }
+
+    return ERROR_NONE;
+}
+
+void *OmafMediaStream::TilesStitchingThread(void *pThis)
+{
+    OmafMediaStream *pStream = (OmafMediaStream*)pThis;
+
+    pStream->TilesStitching();
+
+    return NULL;
+}
+
+static bool IsSelectionChanged(TracksMap selection1, TracksMap selection2)
+{
+    bool isChanged = false;
+
+    if (selection1.size() && selection2.size())
+    {
+        if (selection1.size() != selection2.size())
+        {
+            isChanged = true;
+        }
+        else
+        {
+            std::map<int, OmafAdaptationSet*>::iterator it1;
+            for (it1 = selection1.begin(); it1 != selection1.end(); it1++)
+            {
+                OmafAdaptationSet *as1 = it1->second;
+                std::map<int, OmafAdaptationSet*>::iterator it2;
+                for (it2 = selection2.begin(); it2 != selection2.end(); it2++)
+                {
+                    OmafAdaptationSet *as2 = it2->second;
+                    if (as1 == as2)
+                    {
+                        break;
+                    }
+                }
+                if (it2 == selection2.end())
+                {
+                    isChanged = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    return isChanged;
+}
+
+int32_t OmafMediaStream::TilesStitching()
+{
+    if (!m_stitch)
+    {
+        LOG(ERROR) << "Tiles stitching handle hasn't been created !" << std::endl;
+        return OMAF_ERROR_NULL_PTR;
+    }
+    int ret = ERROR_NONE;
+
+    pthread_mutex_lock(&mCurrentMutex);
+    while(!m_hasTileTracksSelected)
+    {
+        pthread_mutex_unlock(&mCurrentMutex);
+        usleep(100);
+        pthread_mutex_lock(&mCurrentMutex);
+    }
+    pthread_mutex_unlock(&mCurrentMutex);
+
+    std::map<int, OmafAdaptationSet*> mapSelectedAS;
+    bool isEOS = false;
+    uint32_t waitTimes = 1000;
+    bool prevPoseChanged = false;
+    std::map<int, OmafAdaptationSet*> prevSelectedAS;
+    while(!isEOS && m_status != STATUS_STOPPED)
+    {
+        //begin to generate tiles merged media packets for each frame
+        uint32_t currWaitTimes = 0;
+
+        pthread_mutex_lock(&mCurrentMutex);
+        mapSelectedAS = m_selectedTileTracks;
+        pthread_mutex_unlock(&mCurrentMutex);
+
+
+        prevPoseChanged = prevSelectedAS.empty() ? false : IsSelectionChanged(mapSelectedAS, prevSelectedAS);
+
+        bool hasPoseChanged = false;
+        std::map<uint32_t, MediaPacket*> selectedPackets;
+        for (auto as_it = mapSelectedAS.begin(); as_it != mapSelectedAS.end(); as_it++)
+        {
+            OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
+            int32_t trackID = pAS->GetTrackNumber();
+            MediaPacket *onePacket = NULL;
+            if (!(m_stitch->IsInitialized()))
+                m_needParams = true;
+
+            if (prevPoseChanged)
+                m_needParams = true;
+
+            ret = READERMANAGER::GetInstance()->GetNextFrame(trackID, onePacket, m_needParams);
+            currWaitTimes = 0;
+            std::map<int, OmafAdaptationSet*> mapSelectedAS1;
+            pthread_mutex_lock(&mCurrentMutex);
+            mapSelectedAS1 = m_selectedTileTracks;
+            pthread_mutex_unlock(&mCurrentMutex);
+            bool isPoseChanged = false;
+            isPoseChanged = IsSelectionChanged(mapSelectedAS, mapSelectedAS1);
+            LOG(INFO)<<"In tiles stitching thread, pose changed: " << isPoseChanged<<endl;
+            if ((ret == ERROR_NULL_PACKET) && isPoseChanged)
+            {
+                hasPoseChanged = true;
+                break;
+            }
+
+            while ((ret == ERROR_NULL_PACKET) && (currWaitTimes < waitTimes) && m_status != STATUS_STOPPED)
+            {
+                std::map<int, OmafAdaptationSet*> mapSelectedAS2;
+                pthread_mutex_lock(&mCurrentMutex);
+                mapSelectedAS2 = m_selectedTileTracks;
+                pthread_mutex_unlock(&mCurrentMutex);
+                bool isPoseChanged1 = false;
+                isPoseChanged1 = IsSelectionChanged(mapSelectedAS, mapSelectedAS2);
+                if(isPoseChanged1)
+                {
+                    hasPoseChanged = true;
+                    break;
+                }
+
+                usleep(1000);
+                currWaitTimes++;
+                ret = READERMANAGER::GetInstance()->GetNextFrame(trackID, onePacket, m_needParams);
+            }
+            if (hasPoseChanged)
+            {
+                prevPoseChanged = true;
+                break;
+            }
+
+            if (ret == ERROR_NONE)
+            {
+                if (onePacket->GetEOS())
+                {
+                    LOG(INFO) << "EOS has been gotten !" << std::endl;
+                    isEOS = true;
+                    selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
+                    break;
+                }
+                selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
+            }
+        }
+
+        if (hasPoseChanged)
+            continue;
+
+        if (!isEOS && (selectedPackets.size() != mapSelectedAS.size()) && (currWaitTimes >= waitTimes)  )
+        {
+            LOG(INFO) << "Incorrect selected tile tracks packets number for tiles stitching !" << std::endl;
+            //return OMAF_ERROR_INVALID_DATA;
+        }
+
+        if (!isEOS && !(m_stitch->IsInitialized()))
+        {
+            ret = m_stitch->Initialize(selectedPackets, m_needParams);
+            if (ret)
+            {
+                LOG(ERROR) << "Failed to initialize stitch class !" << std::endl;
+                for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end(); )
+                {
+                    MediaPacket *pkt = it1->second;
+                    SAFE_DELETE(pkt);
+                    selectedPackets.erase(it1++);
+                }
+                selectedPackets.clear();
+                return ret;
+            }
+        }
+        else
+        {
+            if (!isEOS && m_status != STATUS_STOPPED)
+            {
+                ret = m_stitch->UpdateSelectedTiles(selectedPackets, m_needParams);
+                if (ret)
+                {
+                    LOG(ERROR) << "Failed to update media packets for tiles merge !" << std::endl;
+                    for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end(); )
+                    {
+                        MediaPacket *pkt = it1->second;
+                        SAFE_DELETE(pkt);
+                        selectedPackets.erase(it1++);
+                    }
+                    selectedPackets.clear();
+                    return ret;
+                }
+            }
+        }
+
+        std::list<MediaPacket*> mergedPackets;
+
+        if (isEOS)
+        {
+            std::map<uint32_t, MediaPacket*>::iterator itPacket1;
+            for (itPacket1 = selectedPackets.begin(); itPacket1 != selectedPackets.end(); itPacket1++)
+            {
+                MediaPacket *packet = itPacket1->second;
+                mergedPackets.push_back(packet);
+            }
+        }
+        else
+        {
+            mergedPackets = m_stitch->GetTilesMergedPackets();
+        }
+
+        pthread_mutex_lock(&m_packetsMutex);
+        m_mergedPackets.push_back(mergedPackets);
+        pthread_mutex_unlock(&m_packetsMutex);
+
+        selectedPackets.clear();
+        prevPoseChanged = false;
+        prevSelectedAS = mapSelectedAS;
+    }
+
+    return ERROR_NONE;
+}
+
+std::list<MediaPacket*> OmafMediaStream::GetOutTilesMergedPackets()
+{
+    std::list<MediaPacket*> outPackets;
+    pthread_mutex_lock(&m_packetsMutex);
+    if (m_mergedPackets.size())
+    {
+        outPackets = m_mergedPackets.front();
+        m_mergedPackets.pop_front();
+    }
+    pthread_mutex_unlock(&m_packetsMutex);
+    return outPackets;
 }
 
 VCD_OMAF_END

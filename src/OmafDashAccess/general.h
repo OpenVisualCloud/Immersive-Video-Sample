@@ -54,6 +54,12 @@
 
 VCD_OMAF_BEGIN
 
+typedef struct SourceInfo {
+    uint32_t qualityRanking;
+    int32_t  width;
+    int32_t  height;
+}SourceInfo;
+
 typedef struct FRACTIONAL{
     uint32_t     num;
     uint32_t     den;

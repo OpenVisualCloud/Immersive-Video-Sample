@@ -486,6 +486,8 @@ void OmafAdaptationSet::ClearSegList()
     std::list<OmafSegment*>::iterator it;
     pthread_mutex_lock(&mMutex);
     for(auto it = mSegments.begin(); it != mSegments.end(); it++){
+        OmafSegment *oneSeg = *it;
+        oneSeg->Close();
         delete *it;
         *it = NULL;
     }

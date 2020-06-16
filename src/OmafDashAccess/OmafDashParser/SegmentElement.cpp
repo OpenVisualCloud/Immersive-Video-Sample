@@ -60,8 +60,6 @@ SegmentElement::~SegmentElement()
 
 ODStatus SegmentElement::InitDownload(vector<BaseUrlElement*>& baseURL, string& representationID, int32_t number, int32_t bandwidth, int32_t time)
 {
-    this->ResetDownload();
-
     string completeURL = GenerateCompleteURL(baseURL, representationID, number, bandwidth, time);
     //LOG(INFO)<<"Download "<<completeURL<<endl;
     if(!completeURL.length())
@@ -109,7 +107,8 @@ ODStatus SegmentElement::StopDownloadSegment(OmafDownloaderObserver* observer)
 
     m_downloader->Stop();
     if(observer) m_downloader->ObserverDetach(observer);
-
+    SAFE_DELETE(m_downloader);
+    m_url.clear();
     return OD_STATUS_SUCCESS;
 }
 

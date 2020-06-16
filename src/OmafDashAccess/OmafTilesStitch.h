@@ -119,6 +119,14 @@ public:
     //!
     std::list<MediaPacket*> GetTilesMergedPackets();
 
+    //!
+    //! \brief  Get whether stitch class instance has been initialized
+    //!
+    //! \return bool
+    //!         whether stitch class instance has been initialized
+    //!
+    bool IsInitialized() { return m_isInitialized; };
+
 private:
 
     //!
@@ -182,6 +190,8 @@ private:
     int32_t GenerateOutputMergedPackets();
 
 private:
+
+    bool                                                    m_isInitialized;  //<! whether the stitch class has been initialized
 
     PacketsMap                                              m_selectedTiles;  //<! map of <qualityRanking, <trackID, MediaPacket*>>
 

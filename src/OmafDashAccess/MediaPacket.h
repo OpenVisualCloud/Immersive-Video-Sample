@@ -38,7 +38,7 @@
 #define MEDIAPACKET_H_
 
 #include "general.h"
-#include "OmafMediaStream.h"
+#include "iso_structure.h"
 
 VCD_OMAF_BEGIN
 
@@ -316,13 +316,7 @@ public:
             return OMAF_ERROR_INVALID_DATA;
         }
 
-        if (m_qualityRanking != (uint32_t)(resolution.qualityRanking))
-        {
-            LOG(ERROR) << "Invalid quality ranking !" << std::endl;
-            return OMAF_ERROR_INVALID_DATA;
-        }
-
-        m_qtyResolution[srcId].qualityRanking = m_qualityRanking;
+        m_qtyResolution[srcId].qualityRanking = resolution.qualityRanking;
         m_qtyResolution[srcId].top            = resolution.top;
         m_qtyResolution[srcId].left           = resolution.left;
         m_qtyResolution[srcId].width          = resolution.width;

@@ -41,14 +41,9 @@
 #include "OmafAdaptationSet.h"
 #include "OmafExtractor.h"
 #include "MediaPacket.h"
+#include "OmafTilesStitch.h"
 
 VCD_OMAF_BEGIN
-
-typedef struct SourceInfo {
-    uint32_t qualityRanking;
-    int32_t  width;
-    int32_t  height;
-}SourceInfo;
 
 class OmafMediaStream{
 public:
@@ -243,6 +238,12 @@ public:
 
     void     SetSources(std::map<uint32_t, SourceInfo> sources) { m_sources = sources; };
 
+    void     SetNeedVideoParams(bool needParams) { m_needParams = needParams; };
+
+    std::list<MediaPacket*> GetOutTilesMergedPackets();
+
+    void Close();
+
 private:
     //!
     //! \brief  UpdateStreamInfo
@@ -253,6 +254,12 @@ private:
     //! \brief  SetupExtratorDependency
     //!
     void SetupExtratorDependency();
+
+    int32_t StartTilesStitching();
+
+    static void* TilesStitchingThread(void *pThis);
+
+    int32_t TilesStitching();
 
 private:
     std::map<int, OmafAdaptationSet*> mMediaAdaptationSet;            //<! Adaptation Set list for tiles
@@ -268,7 +275,22 @@ private:
     bool                              m_enabledExtractor;           //<! flag for enabling/disabling extractor track
 
     std::map<int, OmafAdaptationSet*> m_selectedTileTracks;         //<! map of selected tile tracks based on viewport when disabling extractor track
+
+    bool                              m_hasTileTracksSelected;
+
     std::map<uint32_t, SourceInfo>    m_sources;                    //<! map of video sources for the media stream
+
+    pthread_t                         m_stitchThread;               //<! tiles stitching thread ID
+
+    pthread_mutex_t                    m_packetsMutex;               //<! mutex for output tiles merged media packet list
+
+    std::list<std::list<MediaPacket*>> m_mergedPackets;              //<! list of output tiles merged media packets
+
+    bool                              m_needParams;
+
+    OmafTilesStitch                   *m_stitch;                    //<! tiles stitch handle
+
+    int                               m_status;
 };
 
 VCD_OMAF_END;

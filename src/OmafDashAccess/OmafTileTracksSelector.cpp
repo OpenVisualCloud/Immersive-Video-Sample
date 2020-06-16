@@ -39,6 +39,7 @@
 #include <math.h>
 #include <chrono>
 #include <cstdint>
+#include "general.h"
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
 #include "../trace/MtHQ_tp.h"
@@ -154,7 +155,7 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
         {
             m_currentTracks.clear();
         }
-
+        //LOG(INFO)<<"************Will update tile tracks selection *****"<<endl;
         m_currentTracks = selectedTracks;
     }
     selectedTracks.clear();
@@ -258,9 +259,8 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
         return selectedTracks;
 
     Param_ViewportOutput paramViewportOutput;
-    int32_t selectedTilesNum = I360SCVP_getFixedNumTiles(
+    int32_t selectedTilesNum = I360SCVP_getTilesInViewport(
             tilesInViewport, &paramViewportOutput, m360ViewPortHandle);
-
     if (selectedTilesNum <= 0 || selectedTilesNum > 1024)
     {
         LOG(ERROR) << "Failed to get tiles information in viewport !" << endl;
