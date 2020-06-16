@@ -688,7 +688,7 @@ new file mode 100644
 index 0000000..332bf7b
 --- /dev/null
 +++ b/FFmpeg/libavcodec/distributed_encoder.c
-@@ -0,0 +1,576 @@
+@@ -0,0 +1,578 @@
 +/*
 +* Scalable Video Technology for distributed encoder library plugin
 +*
@@ -858,11 +858,11 @@ index 0000000..332bf7b
 +        {
 +            codecOption.decOption.decType = DecoderType_ffmpeg;
 +            ffmpegOption * fo = (ffmpegOption*)malloc(sizeof(ffmpegOption));
-+            fo->codecID = CodecID_H264;
 +            if(!fo)
 +            {
 +                return AVERROR(EINVAL);
 +            }
++            fo->codecID = CodecID_H264;
 +            codecOption.decOption.decSetting = (void*)fo;
 +        }
 +        else
@@ -947,7 +947,6 @@ index 0000000..332bf7b
 +        lastFrame->picType = PictureType_NONE;
 +        DistributedEncoder_Process(deCxt->handle, lastFrame);
 +        free(lastFrame);
-+
 +        deCxt->send_end = true;
 +        av_log(avctx, AV_LOG_DEBUG, "Finish sending frames!!!\n");
 +        return 0;
@@ -957,8 +956,12 @@ index 0000000..332bf7b
 +    if(!inFrame)
 +        return AVERROR(EINVAL);
 +    memset(inFrame, 0 , sizeof(InputFrame));
++
 +    if(deCxt->input_type != encoded && deCxt->input_type != raw)
++    {
++        free(inFrame);
 +        return AVERROR(EINVAL);
++    }
 +
 +    bool isEncoded = (deCxt->input_type == encoded);
 +    bool useSharedMem = (deCxt->input_type == raw);
@@ -984,7 +987,6 @@ index 0000000..332bf7b
 +        break;
 +    }
 +    DistributedEncoder_Process(deCxt->handle, inFrame);
-+
 +    if(inFrame)
 +        free(inFrame);
 +    return 0;
@@ -1010,8 +1012,8 @@ index 0000000..332bf7b
 +    if(!data && !size && !eos && !deCxt->send_end)
 +    {
 +        return AVERROR(EAGAIN);
-+//        *got_packet = 0;
-+  //      return 0;
++        // *got_packet = 0;
++        // return 0;
 +    }
 +
 +    if(!data && !size && deCxt->send_end)
@@ -4074,7 +4076,7 @@ new file mode 100644
 index 0000000..0a66efa
 --- /dev/null
 +++ b/FFmpeg/libavformat/omaf_packing_enc.c
-@@ -0,0 +1,431 @@
+@@ -0,0 +1,441 @@
 +/*
 + * Intel tile Dash muxer
 + *
@@ -4134,6 +4136,7 @@ index 0000000..0a66efa
 +    float          viewport_fov_ver;
 +    int            window_size;
 +    int            extra_window_size;
++    int            has_extractor;
 +    const char     *pluginPath;
 +    const char     *pluginName;
 +    int            need_buffered_frames;
@@ -4187,19 +4190,27 @@ index 0000000..0a66efa
 +        }
 +    }
 +
-+    initInfo->pluginPath = c->pluginPath;
-+    if (s->nb_streams == 1)
++    if (c->has_extractor)
 +    {
-+        initInfo->pluginName = "SingleVideoPacking";
-+    }
-+    else if (s->nb_streams == 2)
-+    {
-+        initInfo->pluginName = c->pluginName;
++        initInfo->pluginPath = c->pluginPath;
++        if (s->nb_streams == 1)
++        {
++            initInfo->pluginName = "SingleVideoPacking";
++        }
++        else if (s->nb_streams == 2)
++        {
++            initInfo->pluginName = c->pluginName;
++        }
++        else
++        {
++            av_log(s, AV_LOG_ERROR, "Not correct video streams number for VR OMAF Packing \n");
++            return AVERROR(EINVAL);
++        }
 +    }
 +    else
 +    {
-+        av_log(s, AV_LOG_ERROR, "Not correct video streams number for VR OMAF Packing \n");
-+        return AVERROR(EINVAL);
++        initInfo->pluginPath = NULL;
++        initInfo->pluginName = NULL;
 +    }
 +
 +    initInfo->bsBuffers = (BSBuffer*)malloc(sizeof(BSBuffer) * initInfo->bsNumVideo);
@@ -4477,6 +4488,7 @@ index 0000000..0a66efa
 +    { "out_name", "name prefix for all dash output files", OFFSET(out_name), AV_OPT_TYPE_STRING, {.str = "dash-stream"}, 0, 0, E },
 +    { "need_buffered_frames", "needed buffered frames number before packing starts", OFFSET(need_buffered_frames), AV_OPT_TYPE_INT, { .i64 = 15 }, 0, INT_MAX, E },
 +    { "extractors_per_thread", "extractor tracks per segmentation thread", OFFSET(extractors_per_thread), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, INT_MAX, E },
++    { "has_extractor", "Enable/Disable OMAF extractor tracks", OFFSET(has_extractor), AV_OPT_TYPE_INT, { .i64 = 1 }, 0, INT_MAX, E },
 +    { "plugin_path", "OMAF Packing plugin path", OFFSET(pluginPath), AV_OPT_TYPE_STRING, {.str = "/usr/local/lib"}, 0, 0, E },
 +    { "plugin_name", "OMAF Packing plugin name", OFFSET(pluginName), AV_OPT_TYPE_STRING, {.str = "HighResPlusFullLowResPacking"}, 0, 0, E },
 +    { NULL },
@@ -4511,7 +4523,7 @@ new file mode 100644
 index 0000000..8e469af
 --- /dev/null
 +++ b/FFmpeg/libavformat/tiled_dash_dec.c
-@@ -0,0 +1,309 @@
+@@ -0,0 +1,310 @@
 +/*
 + * Intel tile Dash Demuxer
 + *
@@ -4668,6 +4680,7 @@ index 0000000..8e469af
 +    c->client = (DashStreamingClient *)malloc(sizeof(DashStreamingClient));
 +    c->client->source_type = MultiResSource;//DefaultSource;
 +    c->client->media_url = s->filename;
++    c->client->enable_extractor = true;
 +    if(!c->cache_path)
 +    {
 +        c->client->cache_path = "./cache";
@@ -4685,7 +4698,7 @@ index 0000000..8e469af
 +    ret = SetupHeadSetInfo(&(c->HSInfo));
 +    ret = OmafAccess_SetupHeadSetInfo(c->hdl, &(c->HSInfo));
 +
-+    ret = OmafAccess_OpenMedia(c->hdl, c->client, false, NULL, NULL);
++    ret = OmafAccess_OpenMedia(c->hdl, c->client, false, "", "");
 +
 +    c->lastPose.yaw = c->HSInfo.pose->yaw;
 +    c->lastPose.pitch = c->HSInfo.pose->pitch;
