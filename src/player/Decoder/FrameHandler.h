@@ -50,7 +50,7 @@ public:
      //! \param  [in] bufInfo: the buffer to be processed
      //! \return RenderStatus
      //!         RENDER_STATUS_OK if success, else fail reason
-     virtual RenderStatus process(BufferInfo* bufInfo, uint32_t id)=0;
+     virtual RenderStatus process(BufferInfo* bufInfo)=0;
 };
 
 VCD_NS_END

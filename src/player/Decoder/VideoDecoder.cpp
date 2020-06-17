@@ -495,7 +495,11 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts)
 
 
     buf_info->height = mDecCtx->codec_ctx->height;
-    buf_info->width = frame->av_frame->linesize[0];
+    buf_info->width = mDecCtx->codec_ctx->width;
+    for (uint32_t i=0;i<bufferNumber;i++)
+    {
+        buf_info->stride[i] = frame->av_frame->linesize[i];
+    }
 
     buf_info->regionInfo = new RegionData(frame->rwpk, frame->numQuality, frame->qtyResolution);
     // LOG(INFO)<<"regionInfo ptr:"<<buf_info->regionInfo->GetSourceInRegion()<<" rwpk:"<<buf_info->regionInfo->GetRegionWisePacking()->rectRegionPacking<<" source:"<<buf_info->regionInfo->GetSourceInfo()->width<<endl;
@@ -505,7 +509,7 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts)
     LOG(INFO)<<"Transfer frame time is:"<<(end2 - start2)<<endl;
     uint64_t start3 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     if(NULL != this->mHandler){
-        mHandler->process(buf_info, frame->video_id);
+        mHandler->process(buf_info);
     }
     uint64_t end3 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"process time is:"<<(end3 - start3)<<endl;

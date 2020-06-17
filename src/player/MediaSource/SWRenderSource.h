@@ -59,12 +59,12 @@ public:
 
     //! \brief Update the render source
     //!
-    //! \param  [in] uint8_t** buffer
-    //!         frame buffers.
+    //! \param  [in] BufferInfo*
+    //!         frame buffer info
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus UpdateR2T(void **buffer);
+    virtual RenderStatus UpdateR2T(BufferInfo* bufInfo);
     //! \brief Destroy the render source
     //!
     //! \return RenderStatus
@@ -79,7 +79,7 @@ public:
     //!
     virtual RenderStatus CreateRenderSource();
 
-    virtual RenderStatus process(BufferInfo* bufInfo, uint32_t id);
+    virtual RenderStatus process(BufferInfo* bufInfo);
 
 private:
 
