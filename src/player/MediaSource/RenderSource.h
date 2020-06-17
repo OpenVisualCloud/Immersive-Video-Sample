@@ -48,7 +48,7 @@ public:
     RenderSource();
     virtual ~RenderSource();
 
-    virtual RenderStatus process(BufferInfo* bufInfo, uint32_t id)=0;
+    virtual RenderStatus process(BufferInfo* bufInfo)=0;
 
     //! \brief Initialize RenderSource data according to mediaSource Info
     //!
@@ -69,14 +69,12 @@ public:
     virtual RenderStatus CreateRenderSource() = 0;
     //! \brief Update the render source
     //!
-    //! \param  [in] RenderBackend*
-    //!         RenderBackend interface
-    //!         [in] void* buffer[]
-    //!         frame buffers.
+    //! \param  [in] BufferInfo*
+    //!         frame buffer info
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus UpdateR2T(void **buffer) = 0;
+    virtual RenderStatus UpdateR2T(BufferInfo* bufInfo) = 0;
     //! \brief Destroy the render source
     //!
     //! \param  [in] RenderBackend*

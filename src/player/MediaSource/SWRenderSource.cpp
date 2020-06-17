@@ -183,7 +183,7 @@ RenderStatus SWRenderSource::CreateSourceTex()
 
         renderBackend->BindTexture(GL_TEXTURE_2D, sourceTextureHandle[i]);
         struct SourceWH sourceWH = GetSourceWH();
-        renderBackend->PixelStorei(GL_UNPACK_ROW_LENGTH, sourceWH.width[i]);
+
         renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -203,7 +203,7 @@ RenderStatus SWRenderSource::CreateR2TFBO()
     renderBackend->BindTexture(GL_TEXTURE_2D, textureOfR2T);
     SetTextureOfR2T(textureOfR2T);
     struct SourceWH sourceWH = GetSourceWH();
-    renderBackend->PixelStorei(GL_UNPACK_ROW_LENGTH, sourceWH.width[0]);
+
     renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -229,7 +229,7 @@ RenderStatus SWRenderSource::CreateR2TFBO()
     return RENDER_STATUS_OK;
 }
 
-RenderStatus SWRenderSource::UpdateR2T(void **buffer)
+RenderStatus SWRenderSource::UpdateR2T(BufferInfo* bufInfo)
 {
     std::chrono::high_resolution_clock clock;
     uint64_t start1 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
@@ -249,11 +249,11 @@ RenderStatus SWRenderSource::UpdateR2T(void **buffer)
         else if (i == 3)
             renderBackend->ActiveTexture(GL_TEXTURE3);
         renderBackend->BindTexture(GL_TEXTURE_2D, sourceTextureHandle[i]);
-        renderBackend->PixelStorei(GL_UNPACK_ROW_LENGTH, sourceWH.width[i]);
+        renderBackend->PixelStorei(GL_UNPACK_ROW_LENGTH, bufInfo->stride[i]);
         if (GetSourceTextureNumber() == 1)
-            renderBackend->TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sourceWH.width[i], sourceWH.height[i], GL_RGB, GL_UNSIGNED_BYTE, buffer[i]); //use rgb data
+            renderBackend->TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sourceWH.width[i], sourceWH.height[i], GL_RGB, GL_UNSIGNED_BYTE, bufInfo->buffer[i]); //use rgb data
         else
-            renderBackend->TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sourceWH.width[i], sourceWH.height[i], GL_RED, GL_UNSIGNED_BYTE, buffer[i]); //use yuv data
+            renderBackend->TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sourceWH.width[i], sourceWH.height[i], GL_RED, GL_UNSIGNED_BYTE, bufInfo->buffer[i]); //use yuv data
     }
     uint64_t end1 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"update process is:"<<(end1 - start1)<<endl;
@@ -305,7 +305,7 @@ RenderStatus SWRenderSource::DestroyRenderSource()
     return RENDER_STATUS_OK;
 }
 
-RenderStatus SWRenderSource::process(BufferInfo* bufInfo, uint32_t id)
+RenderStatus SWRenderSource::process(BufferInfo* bufInfo)
 {
     RenderStatus ret = RENDER_STATUS_OK;
     std::chrono::high_resolution_clock clock;
@@ -333,7 +333,7 @@ RenderStatus SWRenderSource::process(BufferInfo* bufInfo, uint32_t id)
     uint64_t end1 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"regioninfo process is:"<<(end1 - start1)<<endl;
     uint64_t start2 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-    ret = this->UpdateR2T((void**) bufInfo->buffer);
+    ret = this->UpdateR2T(bufInfo);
     uint64_t end2 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"UpdateR2T process is:"<<(end2 - start2)<<endl;
     if(RENDER_STATUS_OK!=ret){
