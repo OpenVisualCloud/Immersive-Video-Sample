@@ -354,8 +354,8 @@ int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile)
         additionalTilesNum = maxTileNum - tileNum;
     }
     // printf("the max tile count = %d additionalTilesNum = %d\n", maxTileNum, additionalTilesNum);
-    if (additionalTilesNum < 0)
-        printf("there is an error in the judgement\n");
+    // if (additionalTilesNum < 0)
+    //     printf("there is an error in the judgement\n");
     int32_t pos = 0;
     for (int32_t i = 0; i < additionalTilesNum; i++)
     {

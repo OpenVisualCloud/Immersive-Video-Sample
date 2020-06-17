@@ -184,13 +184,13 @@ int OmafMPDParser::GroupAdaptationSet(PeriodElement* pPeriod, TYPE_OMAFADAPTATIO
 int OmafMPDParser::BuildStreams( TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFSTREAMS& listStream )
 {
     int ret = ERROR_NONE;
-    bool hasExtractor = false;
+    uint32_t allExtractorCnt = 0;
+    std::map<std::string, OmafMediaStream*> streamsMap;
     for(auto it = mapAdaptationSets.begin(); it != mapAdaptationSets.end(); it++){
         OMAFADAPTATIONSETS ASs = it->second;
         std::string type = it->first;
 
         OmafMediaStream* pStream = new OmafMediaStream();
-        pStream->SetEnabledExtractor(mExtractorEnabled);
         auto mainASit = ASs.begin();
 
         for(auto as_it = ASs.begin(); as_it != ASs.end(); as_it++){
@@ -214,24 +214,36 @@ int OmafMPDParser::BuildStreams( TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAF
             }
         }
 
-        pStream->InitStream(type);
+        std::map<int, OmafExtractor*> extractors = pStream->GetExtractors();
+        if (extractors.size())
+        {
+            allExtractorCnt++;
+        }
 
         // remove main AS from AdaptationSets for it has no real data
         ASs.erase(mainASit);
 
-        std::map<int, OmafExtractor*> extractors = pStream->GetExtractors();
-        if (extractors.size())
-            hasExtractor = true;
-
-        listStream.push_back(pStream);
+        streamsMap.insert(std::make_pair(type, pStream));
     }
-
-    if (mExtractorEnabled && !hasExtractor)
+    LOG(INFO)<<"allExtractorCnt"<<allExtractorCnt<<endl;
+    if (allExtractorCnt < mapAdaptationSets.size())
     {
-        LOG(INFO) << "There isn't extractor track from MPD parsing, extractor track enablement should be false !" << std::endl;
-        ret = OMAF_INVALID_EXTRACTOR_ENABLEMENT;
+        if (mExtractorEnabled)
+        {
+            LOG(INFO) << "There isn't extractor track from MPD parsing, extractor track enablement should be false !" << std::endl;
+            mExtractorEnabled = false;
+            ret = OMAF_INVALID_EXTRACTOR_ENABLEMENT;
+        }
     }
-
+    std::map<std::string, OmafMediaStream*>::iterator itStream;
+    for (itStream = streamsMap.begin(); itStream != streamsMap.end(); itStream++)
+    {
+        std::string type = itStream->first;
+        OmafMediaStream *stream = itStream->second;
+        stream->SetEnabledExtractor(mExtractorEnabled);
+        stream->InitStream(type);
+        listStream.push_back(stream);
+    }
     return ret;
 }
 
