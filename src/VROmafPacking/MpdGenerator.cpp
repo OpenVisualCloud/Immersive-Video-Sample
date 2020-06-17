@@ -198,7 +198,7 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
     snprintf(string, 1024, "%s_track%d.init.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     sgtTpeEle->SetAttribute(INITIALIZATION, string);
     sgtTpeEle->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
-    sgtTpeEle->SetAttribute(STARTNUMBER, 0);
+    sgtTpeEle->SetAttribute(STARTNUMBER, 1);
     sgtTpeEle->SetAttribute(TIMESCALE, m_timeScale);
     representationEle->InsertEndChild(sgtTpeEle);
 
@@ -304,7 +304,7 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
     snprintf(string, 1024, "%s_track%d.init.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     sgtTpeEle->SetAttribute(INITIALIZATION, string);
     sgtTpeEle->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
-    sgtTpeEle->SetAttribute(STARTNUMBER, 0);
+    sgtTpeEle->SetAttribute(STARTNUMBER, 1);
     sgtTpeEle->SetAttribute(TIMESCALE, m_timeScale);
     representationEle->InsertEndChild(sgtTpeEle);
 
@@ -507,7 +507,7 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
         segTleEle1->SetAttribute(TIMESCALE, m_timeScale);
         segTleEle1->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
         segTleEle1->SetAttribute(MEDIA, "track0_$Number$.m4s");
-        segTleEle1->SetAttribute(STARTNUMBER, 0);
+        segTleEle1->SetAttribute(STARTNUMBER, 1);
         repEle->InsertEndChild(segTleEle1);
     }
 
