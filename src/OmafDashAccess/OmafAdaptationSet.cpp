@@ -60,7 +60,7 @@ OmafAdaptationSet::OmafAdaptationSet()
     mPF                = PF_UNKNOWN;
     mSegmentDuration   = 0;
     mTrackNumber       = 0;
-    mStartNumber       = 0;
+    mStartNumber       = 1;
     mID                = 0;
     mType              = MediaType_NONE;
     mFpt               = FP_UNKNOWN;
@@ -453,7 +453,7 @@ int OmafAdaptationSet::UpdateStartNumberByTime(uint64_t nAvailableStartTime)
 
         return -1;
     }
-    mActiveSegNum = (current - nAvailableStartTime) / (mSegmentDuration * 1000) + mStartNumber;
+    mActiveSegNum = (current - nAvailableStartTime) / (mSegmentDuration * 1000) + mStartNumber - 1;
 
     LOG(INFO) << "current " << current << " and available time " << nAvailableStartTime << " Start segment index " << mActiveSegNum << endl;
     return mActiveSegNum;
