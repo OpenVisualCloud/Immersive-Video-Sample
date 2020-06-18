@@ -642,6 +642,12 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
             newPacket->SetPPSLen(mPPSLen);
         }
 
+        if (newSrcRes)
+        {
+            delete [] newSrcRes;
+            newSrcRes = NULL;
+        }
+
         delete pPacket;
         pPacket = newPacket;
     }

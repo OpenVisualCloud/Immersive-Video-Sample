@@ -112,6 +112,17 @@ ODStatus SegmentElement::StopDownloadSegment(OmafDownloaderObserver* observer)
     return OD_STATUS_SUCCESS;
 }
 
+ODStatus SegmentElement::DetachDownloadObserver(OmafDownloaderObserver* observer)
+{
+    if (!m_downloader)
+        return OD_STATUS_INVALID;
+
+    if (observer)
+        m_downloader->ObserverDetach(observer);
+
+    return OD_STATUS_SUCCESS;
+}
+
 ODStatus SegmentElement::Read(uint8_t* data, size_t size)
 {
     CheckNullPtr_PrintLog_ReturnStatus(m_downloader, "The downloader is not created yet!", ERROR, OD_STATUS_INVALID);
