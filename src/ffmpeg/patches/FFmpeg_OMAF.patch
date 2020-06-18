@@ -4523,7 +4523,7 @@ new file mode 100644
 index 0000000..8e469af
 --- /dev/null
 +++ b/FFmpeg/libavformat/tiled_dash_dec.c
-@@ -0,0 +1,310 @@
+@@ -0,0 +1,314 @@
 +/*
 + * Intel tile Dash Demuxer
 + *
@@ -4680,7 +4680,7 @@ index 0000000..8e469af
 +    c->client = (DashStreamingClient *)malloc(sizeof(DashStreamingClient));
 +    c->client->source_type = MultiResSource;//DefaultSource;
 +    c->client->media_url = s->filename;
-+    c->client->enable_extractor = true;
++    c->client->enable_extractor = c->enable_extractor;
 +    if(!c->cache_path)
 +    {
 +        c->client->cache_path = "./cache";
@@ -4812,6 +4812,10 @@ index 0000000..8e469af
 +        OFFSET(cache_path), AV_OPT_TYPE_STRING,
 +        {.str = NULL},
 +        INT_MIN, INT_MAX, FLAGS},
++    {"enable_extractor", "whether to enable extractor track in OMAF Dash Access engine",
++        OFFSET(enable_extractor), AV_OPT_TYPE_INT,
++        {.i64 = 1},
++        INT_MIN, INT_MAX, FLAGS},
 +    {NULL}
 +};
 +
@@ -4839,7 +4843,7 @@ new file mode 100644
 index 0000000..20e4f53
 --- /dev/null
 +++ b/FFmpeg/libavformat/tiled_dash_dec.h
-@@ -0,0 +1,64 @@
+@@ -0,0 +1,65 @@
 +/*
 + * Intel tile Dash muxer
 + *
@@ -4898,6 +4902,7 @@ index 0000000..20e4f53
 +    HeadPose            lastPose;
 +    bool                mClearBuf;
 +    bool                needHeaders;
++    int                 enable_extractor;
 +}TiledDASHDecContext;
 +
 +int tiled_dash_ViewPort_update(AVFormatContext *s, bool isVertical, double move);
