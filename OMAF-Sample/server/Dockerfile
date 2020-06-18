@@ -100,7 +100,7 @@ RUN wget -O - ${BOOST_REPO} | tar xz && \
 RUN git clone https://github.com/OpenVisualCloud/SVT-HEVC.git && \
     cd SVT-HEVC && \
     source /opt/rh/devtoolset-7/enable && \
-    git checkout ec0d95c7e0d5be20586e1b87150bdfb9ae97cf4d && \
+    git checkout v1.4.3 && \
     cd Build/linux/ && \
     ./build.sh && \
     cd Release && \
