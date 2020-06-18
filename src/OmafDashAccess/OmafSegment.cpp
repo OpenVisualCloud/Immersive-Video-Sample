@@ -66,6 +66,7 @@ OmafSegment::~OmafSegment()
 
     //SAFE_DELETE(mSeg);
     //mSeg->StopDownloadSegment((OmafDownloaderObserver*) this);
+    mSeg->DetachDownloadObserver((OmafDownloaderObserver*) this);
 
     DOWNLOADMANAGER::GetInstance()->DeleteCacheFile(mCacheFile);
 }

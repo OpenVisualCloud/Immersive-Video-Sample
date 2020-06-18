@@ -227,6 +227,8 @@ public:
     //!
     ODStatus StopDownloadSegment(OmafDownloaderObserver* observer = nullptr);
 
+    ODStatus DetachDownloadObserver(OmafDownloaderObserver* observer);
+
 private:
 
     //!
