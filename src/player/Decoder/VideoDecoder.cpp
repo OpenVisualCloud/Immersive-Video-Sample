@@ -93,8 +93,8 @@ RenderStatus VideoDecoder::Initialize()
         return RENDER_ERROR;
     }
     mDecCtx->codec_ctx->thread_count = DECODE_THREAD_COUNT;
-    mDecCtx->codec_ctx->flags |= AV_CODEC_FLAG_LOW_DELAY;
-    mDecCtx->codec_ctx->delay = 2;
+    // mDecCtx->codec_ctx->flags |= AV_CODEC_FLAG_LOW_DELAY;
+    // mDecCtx->codec_ctx->delay = 2;
 
     if (avcodec_open2(mDecCtx->codec_ctx, mDecCtx->decoder, NULL) < 0)
     {
@@ -205,6 +205,8 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
 
 RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
 {
+    std::chrono::high_resolution_clock clock;
+    uint64_t start = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     uint32_t ret = 0;
     ret = avcodec_send_packet(mDecCtx->codec_ctx, pkt);
     av_packet_unref(pkt);
@@ -246,7 +248,8 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
     mDecCtx->push_frame(frame);
     //SAFE_DELETE(data->rwpk);
     SAFE_DELETE(data);
-
+    uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+    LOG(INFO)<<" decode one frame cost time "<<(end-start)<<" ms reso is " << mDecCtx->codec_ctx->width <<" x " <<mDecCtx->codec_ctx->height<<endl;
     return RENDER_STATUS_OK;
 }
 
@@ -428,6 +431,10 @@ DecodedFrame* VideoDecoder::GetFrame(uint64_t pts)
         frame = mDecCtx->pop_frame();
         LOG(ERROR)<<"Now will drop one frame since pts is over time!"<<endl;
         av_free(frame->av_frame);
+        if (frame->rwpk)
+            SAFE_DELETE_ARRAY(frame->rwpk->rectRegionPacking);
+        SAFE_DELETE(frame->rwpk);
+        SAFE_DELETE_ARRAY(frame->qtyResolution);
         SAFE_DELETE(frame);
     }
 
@@ -494,8 +501,8 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts)
     buf_info->bFormatChange = frame->bFmtChange;
 
 
-    buf_info->height = mDecCtx->codec_ctx->height;
-    buf_info->width = mDecCtx->codec_ctx->width;
+    buf_info->width = frame->av_frame->width;
+    buf_info->height = frame->av_frame->height;
     for (uint32_t i=0;i<bufferNumber;i++)
     {
         buf_info->stride[i] = frame->av_frame->linesize[i];

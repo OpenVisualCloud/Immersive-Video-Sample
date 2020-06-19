@@ -347,7 +347,8 @@ int32_t RenderTarget::findQuality(RegionData *regionInfo, RectangularRegionWiseP
 
             mQualityRankingInfo.mapQualitySelection[quality].push_back(tile_info);
         }
-        SAFE_DELETE(regionInfo);
+        it->second->SafeDeleteRegionInfo();
+        regionInfo = NULL;
     }
     return ret;
 }
