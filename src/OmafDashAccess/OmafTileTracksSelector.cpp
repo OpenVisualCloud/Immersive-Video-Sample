@@ -304,6 +304,10 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
             selectedTracks.insert(make_pair(trackID, adaptationSet));
         }
     }
+
+    delete [] tilesInViewport;
+    tilesInViewport = NULL;
+
     return selectedTracks;
 }
 

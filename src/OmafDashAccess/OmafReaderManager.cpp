@@ -516,6 +516,20 @@ int OmafReaderManager::Seek( )
 
     mStatus=STATUS_RUNNING;
 
+    for (int i = 0; i < info.stream_count; i++)
+    {
+        if (info.stream_info[i].codec)
+        {
+            delete [] (info.stream_info[i].codec);
+            info.stream_info[i].codec = NULL;
+        }
+        if (info.stream_info[i].mime_type)
+        {
+            delete [] (info.stream_info[i].mime_type);
+            info.stream_info[i].mime_type = NULL;
+        }
+    }
+
     return ERROR_NONE;
 }
 
@@ -555,12 +569,38 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
                 pPacket = new MediaPacket();
                 pPacket->SetEOS(true);
                 mPacketLock.unlock();
+                for (int i = 0; i < info.stream_count; i++)
+                {
+                    if (info.stream_info[i].codec)
+                    {
+                        delete [] (info.stream_info[i].codec);
+                        info.stream_info[i].codec = NULL;
+                    }
+                    if (info.stream_info[i].mime_type)
+                    {
+                        delete [] (info.stream_info[i].mime_type);
+                        info.stream_info[i].mime_type = NULL;
+                    }
+                }
                 return ERROR_NONE;
             }
             else
             {
                 pPacket = NULL;
                 mPacketLock.unlock();
+                for (int i = 0; i < info.stream_count; i++)
+                {
+                    if (info.stream_info[i].codec)
+                    {
+                        delete [] (info.stream_info[i].codec);
+                        info.stream_info[i].codec = NULL;
+                    }
+                    if (info.stream_info[i].mime_type)
+                    {
+                        delete [] (info.stream_info[i].mime_type);
+                        info.stream_info[i].mime_type = NULL;
+                    }
+                }
                 return ERROR_NULL_PACKET;
             }
         }
@@ -568,6 +608,19 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
         {
             pPacket = NULL;
             mPacketLock.unlock();
+            for (int i = 0; i < info.stream_count; i++)
+            {
+                if (info.stream_info[i].codec)
+                {
+                    delete [] (info.stream_info[i].codec);
+                    info.stream_info[i].codec = NULL;
+                }
+                if (info.stream_info[i].mime_type)
+                {
+                    delete [] (info.stream_info[i].mime_type);
+                    info.stream_info[i].mime_type = NULL;
+                }
+            }
             return ERROR_NULL_PACKET;
         }
     }
@@ -640,12 +693,6 @@ int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool ne
             newPacket->SetVPSLen(mVPSLen);
             newPacket->SetSPSLen(mSPSLen);
             newPacket->SetPPSLen(mPPSLen);
-        }
-
-        if (newSrcRes)
-        {
-            delete [] newSrcRes;
-            newSrcRes = NULL;
         }
 
         delete pPacket;
@@ -1273,8 +1320,16 @@ void OmafReaderManager::Run()
 
         for(int i=0; i<info.stream_count; i++)
         {
-            SAFE_DELETE(info.stream_info[i].codec);
-            SAFE_DELETE(info.stream_info[i].mime_type);
+            if (info.stream_info[i].codec)
+            {
+                delete [] (info.stream_info[i].codec);
+                info.stream_info[i].codec = NULL;
+            }
+            if (info.stream_info[i].mime_type)
+            {
+                delete [] (info.stream_info[i].mime_type);
+                info.stream_info[i].mime_type = NULL;
+            }
         }
     }
 }
