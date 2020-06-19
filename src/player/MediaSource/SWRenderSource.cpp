@@ -317,12 +317,6 @@ RenderStatus SWRenderSource::process(BufferInfo* bufInfo)
             LOG(ERROR)<<"Video "<< GetVideoID() <<": Initialize Render source failed"<<std::endl;
             return ret;
         }
-
-        ret = this->CreateRenderSource();
-        if(RENDER_STATUS_OK!=ret){
-            LOG(ERROR)<<"Video "<< GetVideoID() <<": Create Render Source failed"<<std::endl;
-            return ret;
-        }
     }
     uint64_t end3 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"init process is:"<<(end3 - start3)<<endl;

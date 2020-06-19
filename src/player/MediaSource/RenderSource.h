@@ -160,6 +160,7 @@ public:
 
     RegionData* GetCurrentRegionInfo(){return mCurRegionInfo;};
     void SetCurrentRegionInfo(RegionData* regionInfo);
+    void SafeDeleteRegionInfo() { SAFE_DELETE(mCurRegionInfo); };
 
 protected:
     uint32_t        *m_sourceTextureHandle; //! list of textureID for input video buffer
