@@ -225,6 +225,31 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
     m_pViewportParam.m_viewPort_hFOV = pViewPortInfo->viewPortFOVH;
     m_pViewportParam.m_viewPort_vFOV = pViewPortInfo->viewPortFOVV;
     m_pViewportParam.m_usageType = pViewPortInfo->usageType;
+    if (m_pViewportParam.m_input_geoType == E_SVIDEO_EQUIRECT)
+    {
+        m_pViewportParam.m_paramVideoFP.cols = 1;
+        m_pViewportParam.m_paramVideoFP.rows = 1;
+        m_pViewportParam.m_paramVideoFP.faces[0][0].faceHeight = pViewPortInfo->faceHeight;
+        m_pViewportParam.m_paramVideoFP.faces[0][0].faceWidth = pViewPortInfo->faceWidth;
+        m_pViewportParam.m_paramVideoFP.faces[0][0].idFace = 1;
+        m_pViewportParam.m_paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
+    }
+    else
+    {
+        m_pViewportParam.m_paramVideoFP.cols = pViewPortInfo->paramVideoFP.cols;
+        m_pViewportParam.m_paramVideoFP.rows = pViewPortInfo->paramVideoFP.rows;
+    }
+
+    for (int i = 0; i < pViewPortInfo->paramVideoFP.rows; i++)
+    {
+        for (int j = 0; j < pViewPortInfo->paramVideoFP.cols; j++)
+        {
+            m_pViewportParam.m_paramVideoFP.faces[i][j].faceHeight = pViewPortInfo->paramVideoFP.faces[i][j].faceHeight;
+            m_pViewportParam.m_paramVideoFP.faces[i][j].faceWidth = pViewPortInfo->paramVideoFP.faces[i][j].faceWidth;
+            m_pViewportParam.m_paramVideoFP.faces[i][j].idFace = pViewPortInfo->paramVideoFP.faces[i][j].idFace;
+            m_pViewportParam.m_paramVideoFP.faces[i][j].rotFace = pViewPortInfo->paramVideoFP.faces[i][j].rotFace;
+        }
+    }
     m_pViewport = genViewport_Init(&m_pViewportParam);
     return 0;
 }
@@ -327,10 +352,21 @@ int32_t TstitchStream::init(param_360SCVP* pParamStitchStream)
     {
         return ret;
     }
+	if (pParamStitchStream->paramViewPort.geoTypeInput == E_SVIDEO_EQUIRECT)
+	{
+		pParamStitchStream->paramViewPort.paramVideoFP.cols = 1;
+		pParamStitchStream->paramViewPort.paramVideoFP.rows = 1;
+		pParamStitchStream->paramViewPort.paramVideoFP.faces[0][0].faceHeight = pParamStitchStream->paramViewPort.faceHeight;
+		pParamStitchStream->paramViewPort.paramVideoFP.faces[0][0].faceWidth = pParamStitchStream->paramViewPort.faceWidth;
+		pParamStitchStream->paramViewPort.paramVideoFP.faces[0][0].idFace = 1;
+		pParamStitchStream->paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
+	}
+
     if (m_usedType == E_VIEWPORT_ONLY)
     {
         // Init the viewport library
-        ret = initViewport(&pParamStitchStream->paramViewPort, pParamStitchStream->paramViewPort.tileNumCol, pParamStitchStream->paramViewPort.tileNumRow);
+        ret = initViewport(&pParamStitchStream->paramViewPort, pParamStitchStream->paramViewPort.tileNumCol * pParamStitchStream->paramViewPort.paramVideoFP.cols,
+                           pParamStitchStream->paramViewPort.tileNumRow * pParamStitchStream->paramViewPort.paramVideoFP.rows);
         return ret;
     }
     if (m_usedType == E_STREAM_STITCH_ONLY)
@@ -358,7 +394,7 @@ int32_t TstitchStream::init(param_360SCVP* pParamStitchStream)
         int32_t tilerowCount = m_tileHeightCountOri[0];
 
         // Init the viewport library
-        ret = initViewport(&pParamStitchStream->paramViewPort, tilecolCount, tilerowCount);
+        ret = initViewport(&pParamStitchStream->paramViewPort, tilecolCount* pParamStitchStream->paramViewPort.paramVideoFP.cols, tilerowCount* pParamStitchStream->paramViewPort.paramVideoFP.rows);
 
         int32_t sliceHeight = pParamStitchStream->paramViewPort.faceHeight / tilerowCount;
         int32_t sliceWidth = pParamStitchStream->paramViewPort.faceWidth / tilecolCount;
@@ -616,13 +652,24 @@ int32_t TstitchStream::getViewPortTiles()
     if (!m_pViewport)
         return -1;
     int32_t ret = 0;
-    ret = genViewport_postprocess(&m_pViewportParam, m_pViewport);
+
+    for (int i = 0; i < 6; i++)
+    {
+        m_pUpLeft[i].faceId = -1;
+        m_pDownRight[i].faceId = -1;
+    }
+
+    if(m_pViewportParam.m_input_geoType == E_SVIDEO_EQUIRECT)
+        ret = genViewport_postprocess(&m_pViewportParam, m_pViewport);
+    else
+        ret = genViewport_process(&m_pViewportParam, m_pViewport);
     if (ret)
     {
         printf("gen viewport process error!\n");
         return -1;
     }
-    ret = genViewport_getFixedNumTiles(m_pViewport, m_pOutTile);
+    if(m_usedType == E_MERGE_AND_VIEWPORT)
+        ret = genViewport_getFixedNumTiles(m_pViewport, m_pOutTile);
     if (m_pViewportParam.m_input_geoType == SVIDEO_EQUIRECT)
     {
         int32_t widthViewport = 0;

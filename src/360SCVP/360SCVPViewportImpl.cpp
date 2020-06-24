@@ -47,6 +47,13 @@ using namespace std;
 
 void* genViewport_Init(generateViewPortParam* pParamGenViewport)
 {
+    uint32_t maxTileNumCol = 0;
+    uint32_t maxTileNumRow = 0;
+    uint32_t maxTileNum = 0;
+    int32_t viewPortWidth = 0;
+    int32_t viewPortHeight = 0;
+    int32_t viewPortHeightmax = 0;
+
     if (!pParamGenViewport)
         return NULL;
     TgenViewport*  cTAppConvCfg = new TgenViewport;
@@ -54,6 +61,18 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
         return NULL;
 
     cTAppConvCfg->m_usageType = pParamGenViewport->m_usageType;
+    cTAppConvCfg->m_paramVideoFP.cols = pParamGenViewport->m_paramVideoFP.cols;
+    cTAppConvCfg->m_paramVideoFP.rows = pParamGenViewport->m_paramVideoFP.rows;
+    for (int i = 0; i < pParamGenViewport->m_paramVideoFP.rows; i++)
+    {
+        for (int j = 0; j < pParamGenViewport->m_paramVideoFP.cols; j++)
+        {
+            cTAppConvCfg->m_paramVideoFP.faces[i][j].faceHeight = pParamGenViewport->m_paramVideoFP.faces[i][j].faceHeight;
+            cTAppConvCfg->m_paramVideoFP.faces[i][j].faceWidth = pParamGenViewport->m_paramVideoFP.faces[i][j].faceWidth;
+            cTAppConvCfg->m_paramVideoFP.faces[i][j].idFace = pParamGenViewport->m_paramVideoFP.faces[i][j].idFace;
+            cTAppConvCfg->m_paramVideoFP.faces[i][j].rotFace = pParamGenViewport->m_paramVideoFP.faces[i][j].rotFace;
+        }
+    }
     memset(&cTAppConvCfg->m_sourceSVideoInfo, 0, sizeof(struct SVideoInfo));
     memset(&cTAppConvCfg->m_codingSVideoInfo, 0, sizeof(struct SVideoInfo));
     cTAppConvCfg->m_iCodingFaceWidth = pParamGenViewport->m_iViewportWidth;
@@ -66,7 +85,7 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
     cTAppConvCfg->m_sourceSVideoInfo.geoType = pParamGenViewport->m_input_geoType;
     cTAppConvCfg->m_iInputWidth = pParamGenViewport->m_iInputWidth;
     cTAppConvCfg->m_iInputHeight = pParamGenViewport->m_iInputHeight;
-    if (cTAppConvCfg->create(pParamGenViewport->m_tileNumRow, pParamGenViewport->m_tileNumCol) < 0)
+    if (cTAppConvCfg->create(pParamGenViewport->m_tileNumRow / cTAppConvCfg->m_paramVideoFP.rows, pParamGenViewport->m_tileNumCol / cTAppConvCfg->m_paramVideoFP.cols) < 0)
     {
         delete cTAppConvCfg;
         cTAppConvCfg = NULL;
@@ -79,37 +98,44 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
         return NULL;
     if (cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP)
     {
-        int32_t tilewidth = cTAppConvCfg->m_iInputWidth / pParamGenViewport->m_tileNumCol;
-        int32_t tileheight = cTAppConvCfg->m_iInputHeight / pParamGenViewport->m_tileNumRow;
-        uint32_t tiles_num_row = 0;
-        uint32_t tiles_num_col = 0;
-        uint32_t tiles_num = 0;
-        int32_t idx = 0;
-        float fovh = MAX_FOV_ANGLE;
-        for (int32_t j = 0; j < FOV_Angle_NUM; j++)
+        SPos *pUpLeft = cTAppConvCfg->m_pUpLeft;
+        SPos *pDownRight = cTAppConvCfg->m_pDownRight;
+        genViewport_setViewPort((void*)cTAppConvCfg, 45, -90);
+        genViewport_process(pParamGenViewport, (void*)cTAppConvCfg);
+
+        cTAppConvCfg->m_codingSVideoInfo.viewPort.fPitch = pParamGenViewport->m_viewPort_fPitch;
+        cTAppConvCfg->m_codingSVideoInfo.viewPort.fYaw = pParamGenViewport->m_viewPort_fYaw;
+
+        for (int32_t i = 0; i < 6; i++) // the max count is 6
         {
-            if (cTAppConvCfg->m_codingSVideoInfo.viewPort.hFOV <= fovh && cTAppConvCfg->m_codingSVideoInfo.viewPort.hFOV > fovh-10)
+            if (pDownRight->faceIdx == -1)
             {
-                idx = j;
-                break;
+                pUpLeft++;
+                pDownRight++;
+                continue;
             }
-            fovh -= 10;
+            viewPortWidth = int32_t(pDownRight->x - pUpLeft->x);
+            viewPortHeight = int32_t(pDownRight->y - pUpLeft->y);
+
+            viewPortWidth = floor((float)(viewPortWidth) / (float)(cTAppConvCfg->m_srd[0].tilewidth) + 0.499) * cTAppConvCfg->m_srd[0].tilewidth;
+            viewPortHeightmax = floor((float)(viewPortHeight) / (float)(cTAppConvCfg->m_srd[0].tileheight) + 0.499) * cTAppConvCfg->m_srd[0].tileheight;
+            printf("viewPortWidthMax = %d viewPortHeightMax = %d, tile_width %d, tile_height %d\n", viewPortWidth, viewPortHeightmax, cTAppConvCfg->m_srd[0].tilewidth, cTAppConvCfg->m_srd[0].tileheight);
+
+            maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 1);
+            if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
+                maxTileNumCol = cTAppConvCfg->m_tileNumCol;
+
+            maxTileNumRow = (viewPortHeightmax / cTAppConvCfg->m_srd[0].tileheight + 1);
+            if (maxTileNumRow > cTAppConvCfg->m_tileNumRow)
+                maxTileNumRow = cTAppConvCfg->m_tileNumRow;
+
+            maxTileNum += maxTileNumCol * maxTileNumRow;
+            pUpLeft++;
+            pDownRight++;
         }
-        if (tilewidth == 0 || tileheight == 0)
-            return NULL;
-        for (int32_t i = 0; i < 4; i++)
-        {
-            tiles_num_row = (Max_Viewport_Size[idx][i].x / tilewidth + ((Max_Viewport_Size[idx][i].x !=0) ? 2 : 0));
-            tiles_num_col = (Max_Viewport_Size[idx][i].y / tileheight + ((Max_Viewport_Size[idx][i].y!=0) ? 2 : 0));
-            if (tiles_num_row > pParamGenViewport->m_tileNumRow)
-                tiles_num_row = pParamGenViewport->m_tileNumRow;
-            if (tiles_num_col > pParamGenViewport->m_tileNumCol)
-                tiles_num_col = pParamGenViewport->m_tileNumCol;
-            tiles_num += tiles_num_row * tiles_num_col;
-        }
-        cTAppConvCfg->m_maxTileNum = tiles_num;
-        pParamGenViewport->m_viewportDestWidth = tiles_num_row * cTAppConvCfg->m_srd[0].tilewidth;
-        pParamGenViewport->m_viewportDestHeight = tiles_num_row * cTAppConvCfg->m_srd[0].tileheight;
+        //cTAppConvCfg->m_maxTileNum = tiles_num;
+        //pParamGenViewport->m_viewportDestWidth = tiles_num_row * cTAppConvCfg->m_srd[0].tilewidth;
+        //pParamGenViewport->m_viewportDestHeight = tiles_num_row * cTAppConvCfg->m_srd[0].tileheight;
     }
     else if (cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_EQUIRECT)
     {
@@ -118,12 +144,6 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
 
         cTAppConvCfg->m_codingSVideoInfo.viewPort.fPitch = pParamGenViewport->m_viewPort_fPitch;
         cTAppConvCfg->m_codingSVideoInfo.viewPort.fYaw = pParamGenViewport->m_viewPort_fYaw;
-        uint32_t maxTileNumCol = 0;
-        uint32_t maxTileNumRow = 0;
-        uint32_t maxTileNum = 0;
-        int32_t viewPortWidth = 0;
-        int32_t viewPortHeight = 0;
-        int32_t viewPortHeightmax = 0;
         SPos *pUpLeft = cTAppConvCfg->m_pUpLeft;
         SPos *pDownRight = cTAppConvCfg->m_pDownRight;
         for (int32_t i = 0; i < 2; i++) // the max count is 2
@@ -145,8 +165,7 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
         }
 
         if (pParamGenViewport->m_usageType == E_PARSER_ONENAL
-            || pParamGenViewport->m_usageType == E_VIEWPORT_ONLY
-            || pParamGenViewport->m_usageType == E_MERGE_AND_VIEWPORT)
+            || pParamGenViewport->m_usageType == E_VIEWPORT_ONLY)
         {
             viewPortWidth = floor((float)(viewPortWidth) / (float)(cTAppConvCfg->m_srd[0].tilewidth) + 0.499) * cTAppConvCfg->m_srd[0].tilewidth;
             viewPortHeightmax = floor((float)(viewPortHeightmax) / (float)(cTAppConvCfg->m_srd[0].tileheight) + 0.499) * cTAppConvCfg->m_srd[0].tileheight;
@@ -171,10 +190,10 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
         }
 
         maxTileNum = maxTileNumCol * maxTileNumRow;
-        cTAppConvCfg->m_maxTileNum = maxTileNum;
         pParamGenViewport->m_viewportDestWidth = maxTileNumCol * cTAppConvCfg->m_srd[0].tilewidth;
         pParamGenViewport->m_viewportDestHeight = maxTileNumRow * cTAppConvCfg->m_srd[0].tileheight;
     }
+    cTAppConvCfg->m_maxTileNum = maxTileNum;
     return (void*)cTAppConvCfg;
 }
 
@@ -373,7 +392,8 @@ int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile)
     //set the occupy tile into the output parameter
     int32_t idx = 0;
     TileDef* pOutTileTmp = pOutTile;
-    if (cTAppConvCfg->m_usageType == E_PARSER_ONENAL)
+    int32_t faceNum = (cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 2;
+	if (cTAppConvCfg->m_usageType == E_PARSER_ONENAL)
     {
         tileNum = maxTileNum;
     }
@@ -383,39 +403,44 @@ int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile)
     }
     if (cTAppConvCfg->m_srd[cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow-1].isOccupy == 1)
     {
-        idx = cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow -1;
-        for (uint32_t col = cTAppConvCfg->m_tileNumCol; col > 0 ; col--)
+        for (int32_t idFace = 0; idFace < faceNum; idFace++)
         {
-            for (uint32_t row = cTAppConvCfg->m_tileNumRow; row > 0 ; row--)
+            idx = idFace* cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow + cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow -1;
+            for (uint32_t col = cTAppConvCfg->m_tileNumCol; col > 0 ; col--)
             {
-                if (cTAppConvCfg->m_srd[idx].isOccupy == 1)
+                for (uint32_t row = cTAppConvCfg->m_tileNumRow; row > 0 ; row--)
                 {
-                    pOutTileTmp->faceId = cTAppConvCfg->m_srd[idx].faceId;
-                    pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
-                    pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
-                    pOutTileTmp->idx = idx;
-                    pOutTileTmp++;
+                    if (cTAppConvCfg->m_srd[idx].isOccupy == 1)
+                    {
+                        pOutTileTmp->faceId = cTAppConvCfg->m_srd[idx].faceId;
+                        pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
+                        pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
+                        pOutTileTmp->idx = idx;
+                        pOutTileTmp++;
+                    }
+                    idx--;
                 }
-                idx--;
             }
         }
-
     }
     else
     {
-        for (uint32_t col = 0; col < cTAppConvCfg->m_tileNumCol; col++)
+        for (int32_t idFace = 0; idFace < faceNum; idFace++)
         {
-            for (uint32_t row = 0; row < cTAppConvCfg->m_tileNumRow; row++)
+            for (uint32_t col = 0; col < cTAppConvCfg->m_tileNumCol; col++)
             {
-                if (cTAppConvCfg->m_srd[idx].isOccupy == 1)
+                for (uint32_t row = 0; row < cTAppConvCfg->m_tileNumRow; row++)
                 {
-                    pOutTileTmp->faceId = cTAppConvCfg->m_srd[idx].faceId;
-                    pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
-                    pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
-                    pOutTileTmp->idx = idx;
-                    pOutTileTmp++;
+                    if (cTAppConvCfg->m_srd[idx].isOccupy == 1)
+                    {
+                        pOutTileTmp->faceId = cTAppConvCfg->m_srd[idx].faceId;
+                        pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
+                        pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
+                        pOutTileTmp->idx = idx;
+                        pOutTileTmp++;
+                    }
+                   idx++;
                 }
-                idx++;
             }
         }
     }
@@ -736,8 +761,8 @@ int32_t TgenViewport::parseCfg(  )
 {
     m_iFrameRate = 30;
     m_faceSizeAlignment = 1;
-    m_iSourceWidth = m_iInputWidth;
-    m_iSourceHeight = m_iInputHeight;
+    m_iSourceWidth = m_iInputWidth * m_paramVideoFP.cols;
+    m_iSourceHeight = m_iInputHeight * m_paramVideoFP.rows;
     m_sourceSVideoInfo.iNumFaces = 1;
     m_sourceSVideoInfo.iFaceWidth = m_iInputWidth;
     m_sourceSVideoInfo.iFaceHeight = m_iInputHeight;
@@ -756,7 +781,7 @@ int32_t TgenViewport::parseCfg(  )
     m_codingSVideoInfo.iNumFaces = 1;
     m_codingSVideoInfo.iFaceWidth = m_iCodingFaceWidth ;
     m_codingSVideoInfo.iFaceHeight = m_iCodingFaceHeight;
-    m_codingSVideoInfo.fullWidth = m_iInputWidth;
+    m_codingSVideoInfo.fullWidth = m_iSourceWidth;
     m_codingSVideoInfo.fullHeight = m_iSourceHeight;
 
     m_aiPad[1] = m_aiPad[0] = 0;
@@ -797,6 +822,7 @@ int32_t TgenViewport::parseCfg(  )
             posY += stepY;
             vertPos -= stepVertPos;
         }
+        posY = 0;
     }
     return 0;
 }
@@ -854,7 +880,9 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     short centerY = m_srd[idx].y;
     short halfVPhorz = (dstWidth - m_srd[idx].tilewidth) >> 1;
     short halfVPvert = (dstHeight - m_srd[idx].tileheight) >> 1;
-
+    //need to refine later
+    if (NORMAL_PITCH_MAX > fPitch  && fPitch > NORMAL_PITCH_MIN)
+        centerY -= m_srd[0].tileheight;
     for (uint32_t i=0;i<FACE_NUMBER;i++)
     {
         m_pUpLeft[i].x = inputWidth;
@@ -1003,6 +1031,12 @@ bool TgenViewport::isInside(int32_t x, int32_t y, int32_t width, int32_t height,
     if (bFind == 0)
         return ret;
 
+    if (x + width > pUpLeft->x &&
+        pUpLeft->x + (pDownRight->x - pUpLeft->x) > x &&
+        y + height > pUpLeft->y &&
+        pUpLeft->y + (pDownRight->y - pUpLeft->y) > y)
+        ret = 1;
+/*
     if ((x >= pUpLeft->x)
         && (x < pDownRight->x)
         && (y >= pUpLeft->y)
@@ -1023,7 +1057,7 @@ bool TgenViewport::isInside(int32_t x, int32_t y, int32_t width, int32_t height,
         && (y + height >= pUpLeft->y)
         && (y + height < pDownRight->y))
         ret = 1;
-
+*/
     //for erp format source, need to judge the boudary
     if (m_sourceSVideoInfo.geoType == SVIDEO_EQUIRECT)
     {
@@ -1073,6 +1107,7 @@ int32_t TgenViewport::calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol,
                 if (pTileInfoTmp->isOccupy == 1)
                 {
                     ret++;
+                    printf("facid, x, y : %d, %d, %d\n", faceid, pTileInfoTmp->x, pTileInfoTmp->y);
                 }
                 pTileInfoTmp++;
             }

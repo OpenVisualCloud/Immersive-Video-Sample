@@ -82,7 +82,7 @@ typedef struct GENERATE_VIEWPORT_PARAM
     int32_t m_viewportDestWidth;
     int32_t m_viewportDestHeight;
     UsageType m_usageType;
-
+    Param_VideoFPStruct m_paramVideoFP;
 } generateViewPortParam;
 
 //!

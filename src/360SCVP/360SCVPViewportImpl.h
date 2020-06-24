@@ -41,6 +41,8 @@ typedef struct SIZE_DEF
 
 #define MAX_FOV_ANGLE 100;
 #define NORMAL_FACE_SIZE 960;
+#define NORMAL_PITCH_MIN -75
+#define NORMAL_PITCH_MAX -15
 
 enum FOVAngle
 {
@@ -97,6 +99,8 @@ public:
     int32_t   m_faceSizeAlignment;
     int32_t       m_maxTileNum;
     UsageType     m_usageType;
+    Param_VideoFPStruct m_paramVideoFP;
+
     inline int32_t round(POSType t) { return (int32_t)(t+ (t>=0? 0.5 :-0.5)); };
 public:
     TgenViewport();
