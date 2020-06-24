@@ -22,7 +22,7 @@
 - Server :
 ```bash
     cd OMAF-Sample/server && ./deploy.sh <proxy>  # Proxy config is optional.
-    docker image ls                               # Created an image. [REPOSITORY:immersive_server, TAG:v0.1]
+    docker image ls                               # Created an image. [REPOSITORY:immersive_server, TAG:v1]
 ```
 
 - Client :
@@ -38,12 +38,12 @@
 - Server :
 
 ```bash
-    docker run -p 5000:443 -p 5001:8080 -it immersive_server:v0.1 bash  # Map the port.
+    docker run --privileged -p 5000:443 -p 5001:8080 -it immersive_server:v1 bash  # Map the port.
     cd /usr/local/nginx/conf/
-    ./configure.sh CN Shanghai A B C D E@F.com                          # './configure.sh -h' for details.
-    /usr/local/nginx/sbin/nginx                                         # Start nginx.
-    cd /home/immersive/Sample-Videos && ./run.sh <RES> <TYPE>           # <RES>:[4K,8K] <TYPE>:[LIVE,VOD]
-                                                                        # Press 'q' button to quit.
+    ./configure.sh CN Shanghai A B C D E@F.com                                     # './configure.sh -h' for details.
+    /usr/local/nginx/sbin/nginx                                                    # Start nginx.
+    cd /home/immersive/Sample-Videos && ./run.sh <RES> <TYPE>                      # <RES>:[4K,8K] <TYPE>:[LIVE,VOD]
+                                                                                   # Press 'q' button to quit.
 ```
 
 - Client :
