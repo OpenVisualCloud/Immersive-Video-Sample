@@ -126,6 +126,10 @@ TEST_F(I360SCVPTest, I360SCVPCreate_type1)
     param.paramViewPort.viewPortPitch = 0;
     param.paramViewPort.viewPortFOVH = 80;
     param.paramViewPort.viewPortFOVV = 80;
+    param.paramViewPort.paramVideoFP.cols = 1;
+    param.paramViewPort.paramVideoFP.rows = 1;
+    param.paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
+    param.paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
     void* pI360SCVP = I360SCVP_Init(&param);
     bool notnull = (pI360SCVP != NULL);
     //EXPECT_TRUE(pI360SCVP != NULL);
@@ -173,6 +177,10 @@ TEST_F(I360SCVPTest, ParseNAL_type1)
     param.paramViewPort.viewPortFOVV = 80;
     param.paramViewPort.tileNumCol = 6;
     param.paramViewPort.tileNumRow = 3;
+    param.paramViewPort.paramVideoFP.cols = 1;
+    param.paramViewPort.paramVideoFP.rows = 1;
+    param.paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
+    param.paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
 
     param.usedType = E_MERGE_AND_VIEWPORT;
     void* pI360SCVP = I360SCVP_Init(&param);
@@ -326,6 +334,10 @@ TEST_F(I360SCVPTest, GetParameter_PicInfo_type1)
     param.paramViewPort.tileNumCol = 6;
     param.paramViewPort.tileNumRow = 3;
     param.usedType = E_MERGE_AND_VIEWPORT;
+    param.paramViewPort.paramVideoFP.cols = 1;
+    param.paramViewPort.paramVideoFP.rows = 1;
+    param.paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
+    param.paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
     if (!pI360SCVP)
@@ -417,6 +429,10 @@ TEST_F(I360SCVPTest, SetParameter_SetViewport)
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
     paramViewPorInfo.usageType = E_STREAM_STITCH_ONLY;
+    paramViewPorInfo.paramVideoFP.cols = 1;
+    paramViewPorInfo.paramVideoFP.rows = 1;
+    paramViewPorInfo.paramVideoFP.faces[0][0].idFace = 0;
+    paramViewPorInfo.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);
     I360SCVP_unInit(pI360SCVP);
     EXPECT_TRUE(ret ==0);
@@ -549,6 +565,10 @@ TEST_F(I360SCVPTest, SetViewportSEI)
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
     paramViewPorInfo.usageType = E_STREAM_STITCH_ONLY;
+    paramViewPorInfo.paramVideoFP.cols = 1;
+    paramViewPorInfo.paramVideoFP.rows = 1;
+    paramViewPorInfo.paramVideoFP.faces[0][0].idFace = 0;
+    paramViewPorInfo.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    EXPECT_TRUE(ret == 0);
     if (ret)
     {
@@ -656,6 +676,10 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
     paramViewPorInfo.usageType = E_STREAM_STITCH_ONLY;
+    paramViewPorInfo.paramVideoFP.cols = 1;
+    paramViewPorInfo.paramVideoFP.rows = 1;
+    paramViewPorInfo.paramVideoFP.faces[0][0].idFace = 0;
+    paramViewPorInfo.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);    
     EXPECT_TRUE(ret == 0);
     if (ret)
@@ -744,6 +768,10 @@ TEST_F(I360SCVPTest, SetRotationSEI)
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
     paramViewPorInfo.usageType = E_STREAM_STITCH_ONLY;
+    paramViewPorInfo.paramVideoFP.cols = 1;
+    paramViewPorInfo.paramVideoFP.rows = 1;
+    paramViewPorInfo.paramVideoFP.faces[0][0].idFace = 0;
+    paramViewPorInfo.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);
     EXPECT_TRUE(ret == 0);
     if (ret)
@@ -832,6 +860,10 @@ TEST_F(I360SCVPTest, SetFramePackingSEI)
     paramViewPorInfo.tileNumCol = 6;
     paramViewPorInfo.tileNumRow = 3;
     paramViewPorInfo.usageType = E_STREAM_STITCH_ONLY;
+    paramViewPorInfo.paramVideoFP.cols = 1;
+    paramViewPorInfo.paramVideoFP.rows = 1;
+    paramViewPorInfo.paramVideoFP.faces[0][0].idFace = 0;
+    paramViewPorInfo.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
     ret = I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &paramViewPorInfo);
     EXPECT_TRUE(ret == 0);
     if (ret)
@@ -892,6 +924,10 @@ TEST_F(I360SCVPTest, webrtcUsage)
     param.paramViewPort.viewPortFOVH = 80;
     param.paramViewPort.viewPortFOVV = 80;
     param.usedType = E_MERGE_AND_VIEWPORT;
+    param.paramViewPort.paramVideoFP.cols = 1;
+    param.paramViewPort.paramVideoFP.rows = 1;
+    param.paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
+    param.paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
     if (!pI360SCVP)
@@ -938,6 +974,10 @@ TEST_F(I360SCVPTest, parseRWPK)
     param.paramViewPort.viewPortFOVH = 80;
     param.paramViewPort.viewPortFOVV = 80;
     param.usedType = E_MERGE_AND_VIEWPORT;
+    param.paramViewPort.paramVideoFP.cols = 1;
+    param.paramViewPort.paramVideoFP.rows = 1;
+    param.paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
+    param.paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
     void* pI360SCVP = I360SCVP_Init(&param);
     EXPECT_TRUE(pI360SCVP != NULL);
     if (!pI360SCVP)
@@ -1009,4 +1049,54 @@ TEST_F(I360SCVPTest, parseRWPK)
     EXPECT_TRUE(ret == 0);
 }
 
+TEST_F(I360SCVPTest, cubemapUsage)
+{
+    int ret = 0;
+    param.paramViewPort.faceWidth = 512 * 4;
+    param.paramViewPort.faceHeight = 512 * 4;
+    param.paramViewPort.geoTypeInput = EGeometryType(E_SVIDEO_CUBEMAP);
+    param.paramViewPort.viewportHeight = 960;
+    param.paramViewPort.viewportWidth = 960;
+    param.paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;
+    param.paramViewPort.tileNumCol = 4;
+    param.paramViewPort.tileNumRow = 4;
+    param.paramViewPort.viewPortYaw = -90;
+    param.paramViewPort.viewPortPitch = 0;
+    param.paramViewPort.viewPortFOVH = 80;
+    param.paramViewPort.viewPortFOVV = 80;
+    param.usedType = E_MERGE_AND_VIEWPORT;
+    param.paramViewPort.paramVideoFP.cols = 3;
+    param.paramViewPort.paramVideoFP.rows = 2;
+    param.paramViewPort.paramVideoFP.faces[0][0].idFace = 4;
+    param.paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
+    param.paramViewPort.paramVideoFP.faces[0][0].faceHeight = 512 * 4;
+    param.paramViewPort.paramVideoFP.faces[0][0].faceHeight = 512 * 4;
+    param.paramViewPort.paramVideoFP.faces[0][1].idFace = 0;
+    param.paramViewPort.paramVideoFP.faces[0][1].rotFace = NO_TRANSFORM;
+    param.paramViewPort.paramVideoFP.faces[0][2].idFace = 5;
+    param.paramViewPort.paramVideoFP.faces[0][2].rotFace = NO_TRANSFORM;
+
+    param.paramViewPort.paramVideoFP.faces[1][0].idFace = 3;
+    param.paramViewPort.paramVideoFP.faces[1][0].rotFace = ROTATION_180_ANTICLOCKWISE;
+    param.paramViewPort.paramVideoFP.faces[1][1].idFace = 1;
+    param.paramViewPort.paramVideoFP.faces[1][1].rotFace = ROTATION_270_ANTICLOCKWISE;
+    param.paramViewPort.paramVideoFP.faces[1][2].idFace = 2;
+    param.paramViewPort.paramVideoFP.faces[1][2].rotFace = NO_TRANSFORM;
+    void* pI360SCVP = I360SCVP_Init(&param);
+    EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+    float raw = -90;
+    float pitch = 84;
+
+    I360SCVP_setViewPort(pI360SCVP, raw, pitch);
+
+    ret = I360SCVP_process(&param, pI360SCVP);
+    I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(ret == 0);
+    EXPECT_TRUE(param.outputBitstreamLen > 0);
+}
 }

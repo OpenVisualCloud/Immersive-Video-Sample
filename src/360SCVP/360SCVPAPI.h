@@ -274,6 +274,34 @@ typedef struct PARAM_PICTURE
     int32_t maxCUWidth;
 }Param_PicInfo;
 
+//Enumeration type for indicating rotation information in input Cubemap projected picture
+typedef enum
+{
+    NO_TRANSFORM = 0,
+    MIRRORING_HORIZONTALLY,
+    ROTATION_180_ANTICLOCKWISE,
+    ROTATION_180_ANTICLOCKWISE_AFTER_MIRRORING_HOR,
+    ROTATION_90_ANTICLOCKWISE_BEFORE_MIRRORING_HOR,
+    ROTATION_90_ANTICLOCKWISE,
+    ROTATION_270_ANTICLOCKWISE_BEFORE_MIRRORING_HOR,
+    ROTATION_270_ANTICLOCKWISE,
+}E_TransformType;
+
+typedef struct PARAM_FACEPPROPERTY
+{
+    int faceWidth;
+    int faceHeight;
+    int idFace;
+    E_TransformType rotFace;
+}Param_FaceProperty;
+
+typedef struct PARAM_VIDEOFPSTRUCT
+{
+    int rows;
+    int cols;
+    Param_FaceProperty faces[6][6];
+}Param_VideoFPStruct;
+
 //!
 //! \brief  This structure is for the viewport output parameters
 //!
@@ -323,6 +351,7 @@ typedef struct PARAM_VIEWPORT
     uint32_t               tileNumRow;
     uint32_t               tileNumCol;
     UsageType              usageType;
+    Param_VideoFPStruct    paramVideoFP;
 }Param_ViewPortInfo;
 
 //!
