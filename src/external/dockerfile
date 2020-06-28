@@ -33,7 +33,9 @@ RUN yum install -y centos-release-scl-rh && \
     git config --global https.proxy ${https_proxy} ; \
     fi
 
-RUN yum -y install ruby rubygems ruby-devel rpm-build && \
+RUN yum -y install rh-ruby23 rh-ruby23-ruby-devel rh-ruby23-rubygem* && \
+    source /opt/rh/rh-ruby23/enable && \
+    yum -y install rpm-build && \
     if [ -n "${http_proxy}" ]; then \
     gem install -p ${http_proxy} fpm ; \
     else \
