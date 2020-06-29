@@ -688,7 +688,7 @@ TgenViewport::TgenViewport()
     m_maxTileNum = 0;
     m_usageType = E_STREAM_STITCH_ONLY;
     m_numFaces = 0;
-    m_srd = new ITileInfo;
+    m_srd = NULL;
 }
 
 TgenViewport::~TgenViewport()
@@ -705,7 +705,7 @@ TgenViewport::~TgenViewport()
     }
     if(m_srd)
     {
-        delete m_srd;
+        delete [] m_srd;
         m_srd = NULL;
     }
 }
@@ -730,7 +730,10 @@ TgenViewport& TgenViewport::operator=(const TgenViewport& src)
     this->m_iInputWidth = src.m_iInputWidth;
     this->m_iInputHeight = src.m_iInputHeight;
     this->m_usageType = src.m_usageType;
-    memcpy(this->m_srd, src.m_srd, sizeof(ITileInfo));
+    if (this->m_srd && src.m_srd)
+    {
+        memcpy(this->m_srd, src.m_srd, FACE_NUMBER*m_tileNumRow*m_tileNumCol*sizeof(ITileInfo));
+    }
     return *this;
 }
 
@@ -738,18 +741,32 @@ int32_t TgenViewport::create(uint32_t tileNumRow, uint32_t tileNumCol)
 {
     m_tileNumRow = tileNumRow;
     m_tileNumCol = tileNumCol;
-    m_srd = new ITileInfo[FACE_NUMBER*m_tileNumRow*m_tileNumCol];
-    if (m_srd)
-        return 0;
-    else
-        return -1;
+    if (!m_srd)
+    {
+        m_srd = new ITileInfo[FACE_NUMBER*m_tileNumRow*m_tileNumCol];
+        if (!m_srd)
+            return -1;
+    }
+    return 0;
 }
 
 void TgenViewport::destroy()
 {
+    if(m_pUpLeft)
+    {
+        delete [] m_pUpLeft;
+        m_pUpLeft = NULL;
+    }
+    if(m_pDownRight)
+    {
+        delete [] m_pDownRight;
+        m_pDownRight = NULL;
+    }
     if(m_srd)
-        delete[] m_srd;
-    m_srd = NULL;
+    {
+        delete [] m_srd;
+        m_srd = NULL;
+    }
 }
 
 
