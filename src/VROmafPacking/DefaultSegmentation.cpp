@@ -90,6 +90,21 @@ DefaultSegmentation::~DefaultSegmentation()
         m_extractorSegCtx.clear();
     }
 
+    if (m_extractorThreadIds.size())
+    {
+        std::map<pthread_t, ExtractorTrack*>::iterator itThreadId;
+        for (itThreadId = m_extractorThreadIds.begin(); itThreadId != m_extractorThreadIds.end(); )
+        {
+            pthread_t oneThread = itThreadId->first;
+            if (oneThread)
+            {
+                pthread_join(oneThread, NULL);
+            }
+            m_extractorThreadIds.erase(itThreadId++);
+        }
+        m_extractorThreadIds.clear();
+    }
+
     DELETE_ARRAY(m_videosBitrate);
 
     int32_t ret = pthread_mutex_destroy(&m_mutex);

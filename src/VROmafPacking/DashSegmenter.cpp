@@ -143,18 +143,25 @@ void DashSegmenter::Feed(
 
 int32_t DashSegmenter::SegmentData(TrackSegmentCtx *trackSegCtx)
 {
-    if (!trackSegCtx->isEOS && trackSegCtx->isExtractorTrack)
+    if (!trackSegCtx->codedMeta.isEOS)
     {
+        if (trackSegCtx->isExtractorTrack)
+        {
 
-        if (!(trackSegCtx->extractors))
-            return OMAF_ERROR_NULL_PTR;
+            if (!(trackSegCtx->extractors))
+                return OMAF_ERROR_NULL_PTR;
 
-        PackExtractors(trackSegCtx->extractors, trackSegCtx->refTrackIdxs, &(trackSegCtx->extractorTrackNalu));
-        return SegmentOneTrack(&(trackSegCtx->extractorTrackNalu), trackSegCtx->codedMeta, trackSegCtx->dashCfg.tileSegBaseName);
+            PackExtractors(trackSegCtx->extractors, trackSegCtx->refTrackIdxs, &(trackSegCtx->extractorTrackNalu));
+            return SegmentOneTrack(&(trackSegCtx->extractorTrackNalu), trackSegCtx->codedMeta, trackSegCtx->dashCfg.tileSegBaseName);
+        }
+        else
+        {
+            return SegmentOneTrack(trackSegCtx->tileInfo->tileNalu, trackSegCtx->codedMeta, trackSegCtx->dashCfg.tileSegBaseName);
+        }
     }
     else
     {
-        return SegmentOneTrack(trackSegCtx->tileInfo->tileNalu, trackSegCtx->codedMeta, trackSegCtx->dashCfg.tileSegBaseName);
+        return SegmentOneTrack(NULL, trackSegCtx->codedMeta, trackSegCtx->dashCfg.tileSegBaseName);
     }
 }
 
@@ -164,7 +171,6 @@ int32_t DashSegmenter::SegmentOneTrack(Nalu *dataNalu, CodedMeta codedMeta, char
     trackId = codedMeta.trackId;
 
     TrackInfo& trackInfo = m_trackInfo[trackId];
-
     if (codedMeta.isEOS)
     {
         if (!trackInfo.endOfStream)
@@ -206,14 +212,12 @@ int32_t DashSegmenter::SegmentOneTrack(Nalu *dataNalu, CodedMeta codedMeta, char
     }
 
     std::list<VCD::MP4::SegmentList> segments = m_segWriter.ExtractSubSegments();
-
     if (segments.size())
     {
         for (auto& segment : segments)
         {
             m_segNum++;
             snprintf(m_segName, 1024, "%s.%ld.mp4", outBaseName, m_segNum);
-
             WriteSegment(segment);
         }
     }
@@ -225,24 +229,7 @@ int32_t DashSegmenter::WriteSegment(VCD::MP4::SegmentList& aSegment)
 {
     std::ostringstream frameStream;
     std::unique_ptr<std::ostringstream> sidxStream;
-    /*
-    if (m_config.useSeparatedSidx)
-    {
-        sidxStream.reset(new std::ostringstream);
-        if (!m_sidxWriter)
-        {
-            m_sidxWriter = m_segmentWriter->newSidxWriter(1000);
-        }
-        if (m_sidxWriter)
-        {
-            m_sidxWriter->setOutput(sidxStream.GetIndex());
-        }
-    }
-    else
-    {
-        //mSidxWriter = mSegmentWriter.newSidxWriter();
-    }
-    */
+
     m_segWriter.WriteSubSegments(frameStream, aSegment);
 
     std::string frameString(frameStream.str());
