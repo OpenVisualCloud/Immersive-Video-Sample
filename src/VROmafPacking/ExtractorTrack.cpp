@@ -326,12 +326,13 @@ int32_t ExtractorTrack::GenerateExtractors()
             }
             memset(inlineCtor->inlineData, 0, 256);
 
-            if (m_360scvpHandles.size() < m_streams->size())
+            std::map<MediaStream*, void*>::iterator itHdl;
+            itHdl = m_360scvpHandles.find((MediaStream*)video);
+            if (itHdl == m_360scvpHandles.end())
             {
                 void *handle = I360SCVP_New(video->Get360SCVPHandle());
                 m_360scvpHandles.insert(std::make_pair((MediaStream*)video, handle));
             }
-
             void *m_360scvpHandle = m_360scvpHandles[(MediaStream*)video];
             memcpy(m_360scvpParam, video->Get360SCVPParam(), sizeof(param_360SCVP));
 

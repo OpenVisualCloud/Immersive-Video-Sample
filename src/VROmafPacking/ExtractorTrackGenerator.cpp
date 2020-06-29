@@ -47,8 +47,17 @@ ExtractorTrackGenerator::~ExtractorTrackGenerator()
     DELETE_ARRAY(m_videoIdxInMedia);
     DELETE_ARRAY(m_tilesInViewport);
     DELETE_MEMORY(m_viewInfo);
+    if (m_newSPSNalu)
+    {
+        DELETE_ARRAY(m_newSPSNalu->data);
+    }
     DELETE_MEMORY(m_newSPSNalu);
+    if (m_newPPSNalu)
+    {
+        DELETE_ARRAY(m_newPPSNalu->data);
+    }
     DELETE_MEMORY(m_newPPSNalu);
+    DELETE_MEMORY(m_rwpkGen);
 }
 
 uint16_t ExtractorTrackGenerator::CalculateViewportNum()
