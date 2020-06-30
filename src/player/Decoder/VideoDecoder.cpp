@@ -130,7 +130,7 @@ void VideoDecoder::CloseDecoder()
 RenderStatus VideoDecoder::Reset()
 {
     RenderStatus ret = FlushDecoder();
-    // if(RENDER_STATUS_OK!=ret) return ret;
+    if(RENDER_STATUS_OK!=ret) return ret;
 
     CloseDecoder();
 
@@ -154,7 +154,14 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
     PacketInfo* newPkt = new PacketInfo;
     RegionWisePacking* rwpk = new RegionWisePacking;
     AVPacket *pkt = (AVPacket *)av_malloc(sizeof(AVPacket));
-
+    if (newPkt == NULL || rwpk == NULL || pkt == NULL)
+    {
+        LOG(ERROR)<<" alloc memory failed in send packet! " << endl;
+        SAFE_DELETE(newPkt);
+        SAFE_DELETE(rwpk);
+        av_free(&pkt);
+        return RENDER_ERROR;
+    }
     newPkt->bCodecChange = MediaInfoChange(packet);
 
     mDecCtx->width = packet->width;
@@ -167,6 +174,9 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
         int size = packet->size;
         if (av_new_packet(pkt, size) < 0)
         {
+            SAFE_DELETE(newPkt);
+            av_free(&pkt);
+            SAFE_DELETE(rwpk);
             return RENDER_ERROR;
         }
         memcpy(pkt->data, packet->buf, size);
@@ -207,7 +217,7 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
 {
     std::chrono::high_resolution_clock clock;
     uint64_t start = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-    uint32_t ret = 0;
+    int32_t ret = 0;
     ret = avcodec_send_packet(mDecCtx->codec_ctx, pkt);
     av_packet_unref(pkt);
     if (ret < 0)
@@ -217,8 +227,13 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
     }
 
     AVFrame* av_frame = av_frame_alloc();
+    if (NULL == av_frame)
+    {
+        LOG(ERROR)<<" alloc av frame failed in decode one frame! " << endl;
+        return RENDER_DECODE_FAIL;
+    }
     ret = avcodec_receive_frame(mDecCtx->codec_ctx, av_frame);
-    if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF)
+    if (ret < 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
     {
         av_frame_free(&av_frame);
         return RENDER_DECODE_FAIL;
@@ -255,7 +270,7 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
 
 RenderStatus VideoDecoder::FlushDecoder()
 {
-    uint32_t ret = 0;
+    int32_t ret = 0;
     ret = avcodec_send_packet(mDecCtx->codec_ctx, NULL);
     if (ret < 0)
     {
@@ -265,6 +280,11 @@ RenderStatus VideoDecoder::FlushDecoder()
     while(ret >= 0)
     {
         AVFrame* av_frame = av_frame_alloc();
+        if (NULL == av_frame)
+        {
+            LOG(ERROR)<<"alloc av frame failed in flushing frame!" << endl;
+            return RENDER_DECODE_FAIL;
+        }
         ret = avcodec_receive_frame(mDecCtx->codec_ctx, av_frame);
         if (ret < 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
         {
@@ -373,12 +393,13 @@ void VideoDecoder::Run()
         }
         PacketInfo* pkt_info = mDecCtx->pop_packet();
 
-        LOG(INFO)<<"Now packet pts is "<<pkt_info->pts<<endl;
-
         if(NULL == pkt_info){
             LOG(INFO)<<"possible error since null packet has been pushed to queue"<<std::endl;
             continue;
         }
+
+        LOG(INFO)<<"Now packet pts is "<<pkt_info->pts<<endl;
+
 	    // check eos status and do flush operation.
         if(pkt_info->bEOS)
         {
@@ -509,9 +530,7 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts)
     }
 
     buf_info->regionInfo = new RegionData(frame->rwpk, frame->numQuality, frame->qtyResolution);
-    // LOG(INFO)<<"regionInfo ptr:"<<buf_info->regionInfo->GetSourceInRegion()<<" rwpk:"<<buf_info->regionInfo->GetRegionWisePacking()->rectRegionPacking<<" source:"<<buf_info->regionInfo->GetSourceInfo()->width<<endl;
-    if(RENDER_STATUS_OK!=ret)
-        LOG(INFO)<<"Video "<< mVideoId <<": SetRegionInfo failed"<<std::endl;
+
     uint64_t end2 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"Transfer frame time is:"<<(end2 - start2)<<endl;
     uint64_t start3 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();

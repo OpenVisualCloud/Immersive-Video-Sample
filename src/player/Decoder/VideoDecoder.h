@@ -73,6 +73,7 @@ class DecoderContext
 public:
      DecoderContext()
      {
+         codec_id       = AV_CODEC_ID_NONE;
          codec_ctx      = NULL;
          decoder        = NULL;
          height         = 0;

@@ -177,7 +177,14 @@ public:
     //! \return
     //!         ERROR_NONE if success, else fail reason
     //!
-    virtual int SeekTo( int64_t time ){ return 0; };
+    virtual int SeekTo( int64_t time ) // need to implement in later version
+    {
+        if (time < 0)
+        {
+            return ERROR_INVALID;
+        }
+        return ERROR_NONE;
+    };
 
     //!
     //! \brief  Get total track count of the media

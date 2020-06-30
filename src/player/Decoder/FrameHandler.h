@@ -42,7 +42,7 @@ class FrameHandler
 {
 public:
      FrameHandler()=default;
-     ~FrameHandler()=default;
+     virtual ~FrameHandler()=default;
 public:
      //!
      //! \brief interface to process an decoded frame, such as mapping an buffer to texture

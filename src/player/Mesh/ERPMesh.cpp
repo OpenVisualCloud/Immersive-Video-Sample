@@ -160,12 +160,8 @@ RenderStatus ERPMesh::Create()
 RenderStatus ERPMesh::Bind(uint32_t vertexAttrib, uint32_t texCoordAttrib)
 {
     RenderBackend *renderBackend = RENDERBACKEND::GetInstance();
-    uint32_t VAOHandle;
-    uint32_t EBOHandle;
     renderBackend->GenVertexArrays(1, &m_VAOHandle);
     renderBackend->GenBuffers(1, &m_EBOHandle);
-    //renderBackend->SetOnScreenVAOHandle(VAOHandle);
-    //renderBackend->SetOnScreenEBOHandle(EBOHandle);
     renderBackend->BindVertexArray(m_VAOHandle);
     renderBackend->BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBOHandle);
     renderBackend->BufferData(GL_ELEMENT_ARRAY_BUFFER, GetIndexNum() * sizeof(uint32_t), &GetIndices()[0], GL_STATIC_DRAW);

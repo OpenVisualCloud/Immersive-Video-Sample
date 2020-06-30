@@ -42,7 +42,7 @@ class RenderSourceFactory : public FrameHandlerFactory
 {
 public:
     RenderSourceFactory(void *window);
-    ~RenderSourceFactory();
+    virtual ~RenderSourceFactory();
 
 public:
      //!

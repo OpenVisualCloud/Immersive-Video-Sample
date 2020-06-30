@@ -59,6 +59,7 @@ Player::Player(struct RenderConfig config)
     m_renderContext = NULL;
     m_mediaSource   = NULL;
     m_renderManager = NULL;
+    m_rsFactory     = NULL;
 }
 
 Player::~Player()

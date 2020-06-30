@@ -52,7 +52,6 @@ DashMediaSource::DashMediaSource()
     pthread_mutex_init(&m_frameMutex, NULL);
     m_status = STATUS_UNKNOWN;
     m_handler = NULL;
-    m_bEOS = false;
     m_DecoderManager = NULL;
 }
 
@@ -121,8 +120,6 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
     DashMediaInfo mediaInfo;
     OmafAccess_GetMediaInfo(m_handler, &mediaInfo);
 
-    m_bEOS = false;
-
     m_rsFactory = rsFactory;
 
     SetMediaInfo(&mediaInfo);
@@ -134,6 +131,7 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
     if(RENDER_STATUS_OK!=ret){
         LOG(INFO)<<"m_DecoderManager::Initialize failed"<<std::endl;
     }
+
     m_sourceType = (MediaSourceType::Enum)mediaInfo.streaming_type;
     StartThread();
     m_status = STATUS_CREATED;
@@ -204,7 +202,7 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo)
         m_rsFactory->SetHighTileRow(vi.sourceHighTileRow);
         m_rsFactory->SetHighTileCol(vi.sourceHighTileCol);
     }
-    int32_t frameNum = round(float(mMediaInfo.mDuration) / 1000 * (vi.framerate_num/vi.framerate_den));
+
     LOG(INFO)<<"------------------------------------------"<<std::endl;
     LOG(INFO)<<"Player [config]: fps               "<<vi.framerate_num/vi.framerate_den<<std::endl;
     //LOG(INFO)<<"Player [config]: render resolution "<<m_mediaSourceInfo.sourceWH->width[0]<<"x"<<m_mediaSourceInfo.sourceWH->height[0]<<std::endl;
@@ -216,6 +214,7 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo)
         LOG(ERROR)<<"dash mode is invalid!"<<std::endl;
     }
 #ifdef _USE_TRACE_
+    int32_t frameNum = round(float(mMediaInfo.mDuration) / 1000 * (vi.framerate_num/vi.framerate_den));
     const char * dash_mode = (dashMediaInfo->streaming_type == 1) ? "static" : "dynamic";
     tracepoint(mthq_tp_provider, stream_information, (char *)dash_mode, dashMediaInfo->stream_info[0].segmentDuration, dashMediaInfo->duration, \
                 vi.framerate_num/vi.framerate_den, frameNum, vi.width, vi.height);
@@ -244,7 +243,6 @@ RenderStatus DashMediaSource::ChangeViewport(float yaw, float pitch)
 
 void DashMediaSource::ProcessVideoPacket()
 {
-    static int cnt =0;
     VideoInfo vi;
     mMediaInfo.GetActiveVideoInfo(vi);
     //1. get one packet from DashStreaming lib.
@@ -301,8 +299,10 @@ void DashMediaSource::Run()
     m_status = STATUS_PLAYING;
     while (m_status != STATUS_STOPPED)
     {
-        ScopeLock lock(m_Lock);
-        ProcessVideoPacket();
+        {
+            ScopeLock lock(m_Lock);
+            ProcessVideoPacket();
+        }
         usleep(1000);
     }
 }
@@ -317,9 +317,6 @@ RenderStatus DashMediaSource::UpdateFrames(uint64_t pts)
          LOG(INFO)<<"DashMediaSource::UpdateFrames failed with code:" << ret <<std::endl;
     }
 
-    if(RENDER_EOS==ret){
-        m_bEOS = true;
-    }
     return ret;
 }
 
