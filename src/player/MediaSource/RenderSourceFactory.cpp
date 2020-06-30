@@ -42,6 +42,10 @@ RenderSourceFactory::RenderSourceFactory(void *window)
 {
     mMapRenderSource.clear();
     share_window = window;
+    mWidth       = 0;
+    mHeight      = 0;
+    m_highTileCol= 0;
+    m_highTileRow= 0;
 }
 
 RenderSourceFactory::~RenderSourceFactory()

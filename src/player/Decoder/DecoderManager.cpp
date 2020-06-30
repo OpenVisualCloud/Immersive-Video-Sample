@@ -59,6 +59,10 @@ DecoderManager::~DecoderManager()
 
 RenderStatus DecoderManager::Initialize(FrameHandlerFactory* factory)
 {
+    if (NULL == factory)
+    {
+        return RENDER_ERROR;
+    }
     this->m_handlerFactory = factory;
     return RENDER_STATUS_OK;
 }
@@ -208,7 +212,7 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts )
     // delete IDLE decoder.
     for(auto it=m_mapVideoDecoder.begin(); it!=m_mapVideoDecoder.end(); it++){
         if (it->second == NULL){
-            it = m_mapVideoDecoder.erase(it);
+            m_mapVideoDecoder.erase(it);
         }
     }
     LOG(INFO)<<"Update one frame at:"<<pts<<endl;

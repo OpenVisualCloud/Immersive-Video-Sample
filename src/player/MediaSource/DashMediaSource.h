@@ -153,7 +153,6 @@ private:
     int32_t                             m_status;
     pthread_mutex_t                     m_frameMutex;
     DecoderManager                     *m_DecoderManager;
-    bool                                m_bEOS;
     ThreadLock                          m_Lock;
 };
 

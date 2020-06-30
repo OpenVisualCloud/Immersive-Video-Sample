@@ -127,12 +127,11 @@ RenderStatus RenderManager::Initialize(MediaSource* source, RenderSourceFactory 
     //initial renderTarget
     m_rsFactory = rsFactory;
     m_renderTarget = new RenderTarget();
-    m_renderTarget->Initialize(m_rsFactory);
+    ret = m_renderTarget->Initialize(m_rsFactory);
     if( RENDER_STATUS_OK!=ret ){
         LOG(ERROR) << "failed to initial render target!" << std::endl;
         return ret;
     }
-
     if (m_renderTarget->CreateRenderTarget() != RENDER_STATUS_OK)
     {
         return RENDER_ERROR;

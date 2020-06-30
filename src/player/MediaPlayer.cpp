@@ -56,6 +56,7 @@ MediaPlayer::MediaPlayer(struct RenderConfig config)
     m_renderContext = NULL;
     m_mediaSource   = NULL;
     m_renderManager = NULL;
+    m_rsFactory     = NULL;
 }
 
 MediaPlayer::~MediaPlayer()
@@ -157,7 +158,7 @@ RenderStatus MediaPlayer::Close()
 
 RenderStatus UpdateUserInput()
 {
-
+    return RENDER_STATUS_OK;
 }
 
 RenderStatus MediaPlayer::PlayOneVideo(int64_t pts)

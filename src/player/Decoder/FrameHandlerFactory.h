@@ -47,7 +47,7 @@ class FrameHandlerFactory
 {
 public:
      FrameHandlerFactory()=default;
-     ~FrameHandlerFactory()=default;
+     virtual ~FrameHandlerFactory()=default;
 public:
      //!
      //! \brief interface to create an frame processing handler for a video_id

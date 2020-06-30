@@ -75,6 +75,10 @@ RenderTarget::~RenderTarget()
 
 RenderStatus RenderTarget::Initialize(RenderSourceFactory* rsFactory)
 {
+    if (NULL == rsFactory)
+    {
+        return RENDER_ERROR;
+    }
     this->m_rsFactory = rsFactory;
 
     return RENDER_STATUS_OK;
@@ -252,7 +256,6 @@ RenderStatus RenderTarget::CalcQualityRanking()
         return  RENDER_NULL_HANDLE;
     }
 
-    RenderStatus ret = RENDER_STATUS_OK;
     std::map<uint32_t, RenderSource*> mapRenderSources = m_rsFactory->GetRenderSources();
     std::list<int32_t> listQuality;
     uint32_t errorCnt = 0;

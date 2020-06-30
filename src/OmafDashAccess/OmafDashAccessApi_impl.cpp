@@ -74,10 +74,7 @@ int OmafAccess_SeekMedia( Handler hdl, uint64_t time )
 {
     OmafMediaSource* pSource = (OmafMediaSource*)hdl;
 
-    pSource->SeekTo(time);
-
-    return 0;
-    //return pSource->SeekTo(time);
+    return pSource->SeekTo(time);
 }
 
 int OmafAccess_GetMediaInfo( Handler hdl, DashMediaInfo* info )

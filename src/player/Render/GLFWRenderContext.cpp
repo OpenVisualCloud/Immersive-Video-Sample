@@ -79,7 +79,6 @@ void GLFWRenderContext::AutoChangePos(float *hPos, float *vPos)
 {
     m_verticalAngle = *vPos;
     m_horizontalAngle = *hPos;
-    static int cnt = 0;
     if (!strcmp(m_motionConfig.mode, "smooth"))
     {
         *hPos += 2 * RENDER_PI / m_motionConfig.freq;
