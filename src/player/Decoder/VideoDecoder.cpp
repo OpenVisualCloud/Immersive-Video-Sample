@@ -159,7 +159,8 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
         LOG(ERROR)<<" alloc memory failed in send packet! " << endl;
         SAFE_DELETE(newPkt);
         SAFE_DELETE(rwpk);
-        av_free(&pkt);
+        if (pkt)
+            av_packet_unref(pkt);
         return RENDER_ERROR;
     }
     newPkt->bCodecChange = MediaInfoChange(packet);
@@ -175,7 +176,7 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
         if (av_new_packet(pkt, size) < 0)
         {
             SAFE_DELETE(newPkt);
-            av_free(&pkt);
+            av_packet_unref(pkt);
             SAFE_DELETE(rwpk);
             return RENDER_ERROR;
         }
@@ -480,8 +481,6 @@ ThreadStatus VideoDecoder::GetDecoderStatus()
 
 RenderStatus VideoDecoder::UpdateFrame(uint64_t pts)
 {
-    RenderStatus ret = RENDER_STATUS_OK;
-
     std::chrono::high_resolution_clock clock;
     uint64_t start1 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     DecodedFrame* frame = GetFrame(pts);

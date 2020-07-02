@@ -210,9 +210,12 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts )
         ret = RENDER_STATUS_OK;
     }
     // delete IDLE decoder.
-    for(auto it=m_mapVideoDecoder.begin(); it!=m_mapVideoDecoder.end(); it++){
+    for(auto it=m_mapVideoDecoder.begin(); it!=m_mapVideoDecoder.end(); ){
         if (it->second == NULL){
-            m_mapVideoDecoder.erase(it);
+            m_mapVideoDecoder.erase(it++);
+        }
+        else{
+            it++;
         }
     }
     LOG(INFO)<<"Update one frame at:"<<pts<<endl;
@@ -232,7 +235,7 @@ RenderStatus DecoderManager::ResetDecoders()
         if(ret != RENDER_STATUS_OK)
             LOG(INFO)<<"Audio "<< it->first <<" : reset failed "<<std::endl;
     }
-    return RENDER_STATUS_OK;
+    return ret;
 }
 
 VCD_NS_END
