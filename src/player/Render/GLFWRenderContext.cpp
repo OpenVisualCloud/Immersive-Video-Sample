@@ -188,7 +188,7 @@ RenderStatus GLFWRenderContext::GetStatusAndPose(float *yaw, float *pitch, uint3
     //    glm::vec3 right = glm::cross( direction, glm::vec3(0.0,1.0,0.0));
     glm::vec3 up = glm::cross(right, direction);
     float aspect = m_hFOV / m_vFOV;
-    m_projectionMatrix = glm::perspective(glm::radians(-m_vFOV), aspect, 0.01f, 1000.0f);
+    m_projectionMatrix = glm::perspective(glm::radians(m_vFOV), aspect, 0.01f, 1000.0f);
     m_viewModelMatrix = glm::lookAt(
         //        position,           // Camera is here
         glm::vec3(0, 0, 0),
@@ -207,9 +207,8 @@ RenderStatus GLFWRenderContext::GetStatusAndPose(float *yaw, float *pitch, uint3
     float latitude = asin(-direction[1] / r);
     float u = 0.5f - longitude / 2 / RENDER_PI;
     float v = 0.5f - latitude / RENDER_PI;
-    *yaw = (u - 0.5f) * 360;
-    *pitch = (0.5f - v) * 180;
-
+    *yaw = (0.5f - u) * 360;
+    *pitch = (v - 0.5f) * 180;
     return RENDER_STATUS_OK;
 }
 
