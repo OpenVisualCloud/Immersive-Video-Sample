@@ -48,6 +48,8 @@ typedef char utf8_t;
 typedef float float32_t;
 typedef double float64_t;
 
+#define FACE_SIZE 6
+
 #ifndef NULL
 #define NULL 0
 #endif
@@ -113,6 +115,17 @@ enum TileType
 {
     HIGHRESOTYPE = 0,
     LOWRESOTYPE,
+};
+// followed by order in Opengl (right, left, top, bottom, back, front)
+// in OMAF standard, the order is (left, front, right, bottom, back, top)
+enum
+{
+    CUBE_MAP_RIGHT = 0,
+    CUBE_MAP_LEFT,
+    CUBE_MAP_TOP,
+    CUBE_MAP_BOTTOM,
+    CUBE_MAP_BACK,
+    CUBE_MAP_FRONT
 };
 struct RenderConfig
 {

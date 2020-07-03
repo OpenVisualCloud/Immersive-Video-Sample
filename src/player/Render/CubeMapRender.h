@@ -62,7 +62,7 @@ public:
     //! \return N/A
     //!
     //!
-    ~CubeMapRender();
+    virtual ~CubeMapRender();
 
     //! \brief The render function
     //!
@@ -80,6 +80,8 @@ public:
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
     virtual RenderStatus Render(uint32_t onScreenTexHandle, uint32_t width, uint32_t height, glm::mat4 ProjectionMatrix, glm::mat4 ViewModelMatrix);
+
+    virtual void SetUniformFrameTex();
 
 private:
 };
