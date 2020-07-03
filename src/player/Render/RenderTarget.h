@@ -54,6 +54,8 @@ typedef struct TileInformation{
     uint16_t packedRegHeight;
     uint16_t packedPicWidth;
     uint16_t packedPicHeight;
+    uint8_t  transformType;
+    uint32_t face_id;
 }TileInformation;
 
 typedef struct QualityRankingInfo{
@@ -65,8 +67,19 @@ typedef struct QualityRankingInfo{
 class RenderTarget
 {
 public:
-    RenderTarget();
-    virtual ~RenderTarget();
+    RenderTarget()
+    {
+        m_rsFactory = NULL;
+        m_transformType.clear();
+        m_fboOnScreenHandle = 0;
+        m_textureOfR2S = 0;
+        m_avgChangedTime = 0;
+        m_isAllHighQualityInView = true;
+        mQualityRankingInfo.mainQualityRanking = 0;
+        mQualityRankingInfo.numQuality = 0;
+        mQualityRankingInfo.mapQualitySelection.clear();
+    }
+    virtual ~RenderTarget() = default;
 
     //! \brief Initialize RenderTarget data according to mediaSource Info
     //!
@@ -77,7 +90,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus Initialize(RenderSourceFactory* rsFactory);
+    virtual RenderStatus Initialize(RenderSourceFactory* rsFactory) = 0;
 
     //! \brief Create a render target
     //!
@@ -88,7 +101,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus CreateRenderTarget();
+    virtual RenderStatus CreateRenderTarget() = 0;
 
     //! \brief Update the render target
     //!
@@ -99,8 +112,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus Update( float yaw, float pitch, float hFOV, float vFOV );
-
+    virtual RenderStatus Update( float yaw, float pitch, float hFOV, float vFOV ) = 0;
     //! \brief Get the texture Of R2S
     //!
     //! \return uint32_t
@@ -108,61 +120,11 @@ public:
     //!
     uint32_t GetTextureOfR2S(){ return m_textureOfR2S; };
 
-private:
-    //! \brief transfer RegionInfo to a pair vectors describing the relationship between index and packedRegion information.
-    //!
-    //! \param  [in] std::vector<std::vector<std::pair<uint32_t, std::vector<uint32_t>>>> the high and low region relationship between index and offset/W/H in the packedSource
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus TransferRegionInfo(std::map<int32_t, std::vector<TileInformation>>& org_region);
+    std::map<uint32_t, uint8_t> GetTransformType() { return m_transformType; };
 
-    //! \brief get the RenderSource from a frame
-    //!
-    //! \param  [in] [out] std::vector<std::vector<std::pair<uint32_t, std::vector<uint32_t>>>>&
-    //!         regionInfo including packed w/h/l/r and proj w/h/l/r and tile information.
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus GetRenderMultiSource( std::map<int32_t, std::vector<TileInformation>> &regionInfoTransfer);
-
-    //! \brief get the needed tile Ids within the region
-    //!
-    //! \param  [in] SphereRegion*
-    //!         SphereRegion* of the region
-    //!         [in] SourceInfo*
-    //!         Source Information including width heigth tile number
-    //!
-    //! \return std::vector<uint32_t>
-    //!         return needed tile Ids within the region
-    //!
-    std::vector<uint32_t> GetRegionTileId(struct SphereRegion *sphereRegion, struct SourceInfo *sourceInfo);
-
-    //! \brief transfer the tile Id to SphereRegion.
-    //!
-    //! \param  [in] uint32_t tileId
-    //!         input tileId
-    //!         [in] SourceInfo*
-    //!         Source Information including width heigth tile number
-    //!         [out] SphereRegion*
-    //!         transfered sphereRegion according to the tile Id
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus TransferTileIdToRegion(uint32_t tileId, struct SourceInfo *sourceInfo, SphereRegion *sphereRegion);
-
-    RenderStatus GetTilesInViewport(float yaw, float pitch, float hFOV, float vFOV, uint32_t row, uint32_t col, std::vector<uint32_t>& TilesInViewport);
-
-    int32_t findQuality(RegionData *regionInfo, RectangularRegionWisePacking rectRWP, int32_t& source_idx);
-
-    RenderStatus CalcQualityRanking();
-
-    bool findTileID(std::vector<TileInformation> vecTile, uint32_t tile_id);
-
-private:
+protected:
     RenderSourceFactory*   m_rsFactory;                 //!RenderSource Factory;
+    std::map<uint32_t, uint8_t> m_transformType;       //!transformtype
     uint32_t               m_fboOnScreenHandle;         //!output
     uint32_t               m_textureOfR2S;              //!render to screen
     float                  m_avgChangedTime;            //!average time to change from blur to clear

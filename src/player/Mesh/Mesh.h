@@ -34,6 +34,7 @@
 #define _MESH_H_
 
 #include "../Common.h"
+#include <map>
 
 VCD_NS_BEGIN
 
@@ -48,6 +49,12 @@ public:
          m_indexNum = 0;
          m_VAOHandle = 0;
          m_EBOHandle = 0;
+         m_VBOHandle = 0;
+         m_typeChanged = false;
+         for (uint32_t i = 0; i < FACE_SIZE; i++)
+         {
+             m_transformType[i] = 0;
+         }
     };
 
     virtual ~Mesh()=default;
@@ -65,6 +72,33 @@ public:
     uint32_t *GetIndices(){ return m_indices; };
     uint32_t GetVAOHandle(){return m_VAOHandle; };
     uint32_t GetEBOHandle(){return m_EBOHandle; };
+    uint32_t GetVBOHandle(){return m_VBOHandle; };
+    void SetTransformType(std::map<uint32_t, uint8_t> type)
+    {
+        if (type.empty())
+        {
+            // LOG(ERROR) << "Current transform type is invalid!" << std::endl;
+            return;
+        }
+        std::map<uint32_t, uint8_t>::iterator it;
+        for (it = type.begin(); it != type.end(); it++)
+        {
+            uint32_t face_id = it->first;
+            uint8_t type = it->second;
+            if (m_transformType.find(face_id) != m_transformType.end() && m_transformType[face_id] != type) // diff
+            {
+                m_typeChanged = true;
+                break;
+            }
+        }
+        if (it == type.end())
+        {
+            m_typeChanged = false;
+        }
+        m_transformType = type;
+        return;
+    };
+    std::map<uint32_t, uint8_t> GetTransformType() { return m_transformType; };
 
 protected:
     float    *m_vertices;
@@ -74,6 +108,9 @@ protected:
     uint32_t  m_indexNum;
     uint32_t  m_VAOHandle;
     uint32_t  m_EBOHandle;
+    uint32_t  m_VBOHandle;
+    bool      m_typeChanged;
+    std::map<uint32_t, uint8_t> m_transformType;
 };
 
 VCD_NS_END

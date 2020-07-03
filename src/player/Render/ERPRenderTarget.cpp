@@ -27,11 +27,11 @@
  */
 
 //!
-//! \file     RenderTarget.cpp
-//! \brief    Implement class for RenderTarget.
+//! \file     ERPRenderTarget.cpp
+//! \brief    Implement class for ERP RenderTarget.
 //!
 
-#include "RenderTarget.h"
+#include "ERPRenderTarget.h"
 #include "RenderContext.h"
 
 #include <GL/glu.h>
@@ -53,19 +53,11 @@
 
 VCD_NS_BEGIN
 
-RenderTarget::RenderTarget()
+ERPRenderTarget::ERPRenderTarget()
 {
-    m_fboOnScreenHandle                    = 0;
-    m_textureOfR2S                         = 0;
-    m_avgChangedTime                       = 0;
-    m_rsFactory                            = NULL;
-    m_isAllHighQualityInView               = true;
-    mQualityRankingInfo.mainQualityRanking = -1;
-    mQualityRankingInfo.numQuality         = 0;
-    mQualityRankingInfo.mapQualitySelection.clear();
 }
 
-RenderTarget::~RenderTarget()
+ERPRenderTarget::~ERPRenderTarget()
 {
     RenderBackend *renderBackend = RENDERBACKEND::GetInstance();
     renderBackend->DeleteFramebuffers(1, &m_fboOnScreenHandle);
@@ -73,7 +65,7 @@ RenderTarget::~RenderTarget()
     std::cout<<"AVG CHANGED TIME COST : "<<m_avgChangedTime<<"ms"<<std::endl;
 }
 
-RenderStatus RenderTarget::Initialize(RenderSourceFactory* rsFactory)
+RenderStatus ERPRenderTarget::Initialize(RenderSourceFactory* rsFactory)
 {
     if (NULL == rsFactory)
     {
@@ -84,7 +76,7 @@ RenderStatus RenderTarget::Initialize(RenderSourceFactory* rsFactory)
     return RENDER_STATUS_OK;
 }
 
-RenderStatus RenderTarget::CreateRenderTarget()
+RenderStatus ERPRenderTarget::CreateRenderTarget()
 {
     if(NULL==this->m_rsFactory){
         return RENDER_NULL_HANDLE;
@@ -123,7 +115,7 @@ RenderStatus RenderTarget::CreateRenderTarget()
     return RENDER_STATUS_OK;
 }
 
-RenderStatus RenderTarget::Update( float yaw, float pitch, float hFOV, float vFOV )
+RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float vFOV )
 {
     if(NULL==this->m_rsFactory){
         return  RENDER_NULL_HANDLE;
@@ -241,7 +233,7 @@ RenderStatus RenderTarget::Update( float yaw, float pitch, float hFOV, float vFO
     return RENDER_STATUS_OK;
 }
 
-bool RenderTarget::findTileID(std::vector<TileInformation> vecTile, uint32_t tile_id)
+bool ERPRenderTarget::findTileID(std::vector<TileInformation> vecTile, uint32_t tile_id)
 {
     for(auto it=vecTile.begin(); it!=vecTile.end(); it++){
         if(it->tile_id == tile_id) return true;
@@ -250,7 +242,7 @@ bool RenderTarget::findTileID(std::vector<TileInformation> vecTile, uint32_t til
     return false;
 }
 
-RenderStatus RenderTarget::CalcQualityRanking()
+RenderStatus ERPRenderTarget::CalcQualityRanking()
 {
     if(NULL==this->m_rsFactory){
         return  RENDER_NULL_HANDLE;
@@ -293,7 +285,7 @@ RenderStatus RenderTarget::CalcQualityRanking()
     return RENDER_STATUS_OK;
 }
 
-int32_t RenderTarget::findQuality(RegionData *regionInfo, RectangularRegionWisePacking rectRWP, int32_t& source_idx)
+int32_t ERPRenderTarget::findQuality(RegionData *regionInfo, RectangularRegionWisePacking rectRWP, int32_t& source_idx)
 {
     //get the quality ranking and source index based on tile's RectangularRegionWisePacking through the tile position in the packed source.
     for(int32_t i=0; i<regionInfo->GetSourceInRegion(); i++){
@@ -308,7 +300,7 @@ int32_t RenderTarget::findQuality(RegionData *regionInfo, RectangularRegionWiseP
     return 0;
 }
 
- RenderStatus RenderTarget::TransferRegionInfo(std::map<int32_t, std::vector<TileInformation>>& org_region)
+ RenderStatus ERPRenderTarget::TransferRegionInfo(std::map<int32_t, std::vector<TileInformation>>& org_region)
 {
     if(NULL==this->m_rsFactory){
         return  RENDER_NULL_HANDLE;
@@ -356,13 +348,13 @@ int32_t RenderTarget::findQuality(RegionData *regionInfo, RectangularRegionWiseP
     return ret;
 }
 
-RenderStatus RenderTarget::GetRenderMultiSource(std::map<int32_t, std::vector<TileInformation>> &regionInfoTransfer)
+RenderStatus ERPRenderTarget::GetRenderMultiSource(std::map<int32_t, std::vector<TileInformation>> &regionInfoTransfer)
 {
     //1.transfer the regionInfo
     return TransferRegionInfo(regionInfoTransfer);
 }
 
-std::vector<uint32_t> RenderTarget::GetRegionTileId(struct SphereRegion *sphereRegion, struct SourceInfo *sourceInfo)
+std::vector<uint32_t> ERPRenderTarget::GetRegionTileId(struct SphereRegion *sphereRegion, struct SourceInfo *sourceInfo)
 {
     std::vector<uint32_t> RegionTileId;
     if (NULL == sphereRegion || NULL == sourceInfo)
@@ -405,7 +397,7 @@ std::vector<uint32_t> RenderTarget::GetRegionTileId(struct SphereRegion *sphereR
     return RegionTileId;
 }
 
-RenderStatus RenderTarget::TransferTileIdToRegion(uint32_t tileId, struct SourceInfo *sourceInfo, SphereRegion *sphereRegion)
+RenderStatus ERPRenderTarget::TransferTileIdToRegion(uint32_t tileId, struct SourceInfo *sourceInfo, SphereRegion *sphereRegion)
 {
     if (NULL == sphereRegion || NULL == sourceInfo)
     {
@@ -428,7 +420,7 @@ RenderStatus RenderTarget::TransferTileIdToRegion(uint32_t tileId, struct Source
     return RENDER_STATUS_OK;
 }
 
-RenderStatus RenderTarget::GetTilesInViewport(float yaw, float pitch, float hFOV, float vFOV, uint32_t row, uint32_t col, std::vector<uint32_t>& TilesInViewport)
+RenderStatus ERPRenderTarget::GetTilesInViewport(float yaw, float pitch, float hFOV, float vFOV, uint32_t row, uint32_t col, std::vector<uint32_t>& TilesInViewport)
 {
     if (hFOV <= 0 || vFOV <= 0)
     {

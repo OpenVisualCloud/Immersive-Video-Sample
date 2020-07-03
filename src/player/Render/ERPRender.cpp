@@ -32,7 +32,6 @@
 //!
 
 #include "ERPRender.h"
-//#include "Render2TextureMesh.h"
 #include <GL/gl.h>
 
 #define ERP_MESH_COLUMNS 64
@@ -42,12 +41,13 @@ VCD_NS_BEGIN
 
 ERPRender::ERPRender()
 {
+    m_videoShaderOfOnScreen = new VideoShader(shader_screen_vs, shader_screen_fs);
     //2.render to screen : vertex and texCoords assign
-    m_videoShaderOfOnScreen.Bind();
+    m_videoShaderOfOnScreen->Bind();
     m_meshOfOnScreen = new ERPMesh(ERP_MESH_COLUMNS, ERP_MESH_ROWS);
     m_meshOfOnScreen->Create();
-    uint32_t vertexAttribOfOnScreen = m_videoShaderOfOnScreen.SetAttrib("vertex");
-    uint32_t texCoordsAttribOfOnScreen = m_videoShaderOfOnScreen.SetAttrib("texCoord0");
+    uint32_t vertexAttribOfOnScreen = m_videoShaderOfOnScreen->SetAttrib("vertex");
+    uint32_t texCoordsAttribOfOnScreen = m_videoShaderOfOnScreen->SetAttrib("texCoord0");
     m_meshOfOnScreen->Bind(vertexAttribOfOnScreen, texCoordsAttribOfOnScreen);
 }
 
@@ -66,9 +66,9 @@ RenderStatus ERPRender::Render(uint32_t onScreenTexHandle, uint32_t width, uint3
     renderBackend->BindFramebuffer(GL_FRAMEBUFFER, 0);
     renderBackend->Clear(GL_COLOR_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
     renderBackend->Disable(GL_DEPTH_TEST);
-    m_videoShaderOfOnScreen.Bind();
-    m_videoShaderOfOnScreen.SetUniformMatrix4f("uProjMatrix", ProjectionMatrix);
-    m_videoShaderOfOnScreen.SetUniformMatrix4f("uViewMatrix", ViewModelMatrix);
+    m_videoShaderOfOnScreen->Bind();
+    m_videoShaderOfOnScreen->SetUniformMatrix4f("uProjMatrix", ProjectionMatrix);
+    m_videoShaderOfOnScreen->SetUniformMatrix4f("uViewMatrix", ViewModelMatrix);
     renderBackend->Viewport(0, 0, width, height);
     uint32_t onScreenVAO = this->m_meshOfOnScreen->GetVAOHandle();//renderBackend->GetOnScreenVAOHandle();
     renderBackend->BindVertexArray(onScreenVAO);
@@ -76,8 +76,13 @@ RenderStatus ERPRender::Render(uint32_t onScreenTexHandle, uint32_t width, uint3
     renderBackend->BindTexture(GL_TEXTURE_2D, onScreenTexHandle);
     uint32_t meshIndexNum = m_meshOfOnScreen->GetIndexNum();
     renderBackend->DrawElements(GL_TRIANGLE_STRIP, meshIndexNum, GL_UNSIGNED_INT, 0);
-
     return RENDER_STATUS_OK;
+}
+
+void ERPRender::SetUniformFrameTex()
+{
+    m_videoShaderOfOnScreen->Bind();
+    m_videoShaderOfOnScreen->SetUniform1i("frameTex_screen", 0);
 }
 
 VCD_NS_END

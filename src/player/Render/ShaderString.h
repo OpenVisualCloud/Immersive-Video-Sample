@@ -104,4 +104,28 @@ std::string const shader_screen_fs =
 "    fragColor = texture(frameTex_screen, texCoord);\n"
 "}\n";
 
+std::string const shader_skybox_vs =
+"#version 300 es\n"
+"in vec3 aPos;\n"
+"in vec3 transPos;\n"
+"out vec3 TexCoords;\n"
+"uniform mat4 projection;\n"
+"uniform mat4 view;\n"
+"void main()\n"
+"{\n"
+"    TexCoords = transPos;\n"
+"    gl_Position = projection * view * vec4(aPos, 1.0);\n"
+"}\n";
+
+std::string const shader_skybox_fs =
+"#version 300 es\n"
+"precision mediump float;\n"
+"uniform samplerCube skybox;\n"
+"in vec3 TexCoords;\n"
+"out vec4 FragColor;\n"
+"void main()\n"
+"{\n"
+"    FragColor = texture(skybox, TexCoords);\n"
+"}\n";
+
 #endif /* _SHADERSTRING_H_ */

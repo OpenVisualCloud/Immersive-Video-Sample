@@ -33,6 +33,8 @@
 
 #include "RenderManager.h"
 #include "ERPRender.h"
+#include "ERPRenderTarget.h"
+#include "CubeMapRenderTarget.h"
 #include "CubeMapRender.h"
 #include "GLFWRenderContext.h"
 #include "EGLRenderContext.h"
@@ -85,6 +87,7 @@ RenderStatus RenderManager::Render(int64_t pts)
     }
     uint64_t end2 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"Update cost time:"<<(end2-start2)<<endl;
+    m_surfaceRender->SetTransformTypeToMesh(m_renderTarget->GetTransformType());
     uint64_t start3 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     if (RENDER_STATUS_OK != m_surfaceRender->Render(m_renderTarget->GetTextureOfR2S(), width, height, m_renderContext->GetProjectionMatrix(), m_renderContext->GetViewModelMatrix()))
     {
@@ -123,10 +126,12 @@ RenderStatus RenderManager::Initialize(MediaSource* source, RenderSourceFactory 
     }
     //set uniform frameTex
     m_surfaceRender->SetUniformFrameTex();
-
     //initial renderTarget
+    if (CreateRenderTarget(m_renderConfig.projFormat) != RENDER_STATUS_OK)
+    {
+        return RENDER_ERROR;
+    }
     m_rsFactory = rsFactory;
-    m_renderTarget = new RenderTarget();
     ret = m_renderTarget->Initialize(m_rsFactory);
     if( RENDER_STATUS_OK!=ret ){
         LOG(ERROR) << "failed to initial render target!" << std::endl;
@@ -134,6 +139,46 @@ RenderStatus RenderManager::Initialize(MediaSource* source, RenderSourceFactory 
     }
     if (m_renderTarget->CreateRenderTarget() != RENDER_STATUS_OK)
     {
+        return RENDER_ERROR;
+    }
+
+    return RENDER_STATUS_OK;
+}
+
+RenderStatus RenderManager::CreateRenderTarget(int32_t projFormat)
+{
+    switch (projFormat)
+    {
+#ifndef LOW_LATENCY_USAGE
+    case VCD::OMAF::PF_ERP:
+#else
+    case PT_ERP:
+#endif
+    {
+        m_renderTarget = new ERPRenderTarget();
+        if (NULL == m_renderTarget)
+        {
+            LOG(ERROR)<< "ERP render target creation failed" << std::endl;
+            return RENDER_ERROR;
+        }
+        break;
+    }
+#ifndef LOW_LATENCY_USAGE
+    case VCD::OMAF::PF_CUBEMAP:
+#else
+    case PT_CUBEMAP:
+#endif
+    {
+        m_renderTarget = new CubeMapRenderTarget();
+        if (NULL == m_renderTarget)
+        {
+            LOG(ERROR)<< "CubeMap render target creation failed" << std::endl;
+            return RENDER_ERROR;
+        }
+        break;
+    }
+
+    default:
         return RENDER_ERROR;
     }
 

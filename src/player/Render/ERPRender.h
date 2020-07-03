@@ -63,6 +63,8 @@ public:
     //!
     virtual RenderStatus Render(uint32_t onScreenTexHandle, uint32_t width, uint32_t height, glm::mat4 ProjectionMatrix, glm::mat4 ViewModelMatrix);
 
+    virtual void SetUniformFrameTex();
+
 private:
 };
 

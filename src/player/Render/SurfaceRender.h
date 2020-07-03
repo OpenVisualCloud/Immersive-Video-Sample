@@ -48,10 +48,11 @@ VCD_NS_BEGIN
 class SurfaceRender
 {
 public:
-    SurfaceRender() : m_videoShaderOfOnScreen(shader_screen_vs, shader_screen_fs)
+    SurfaceRender()
     {
         m_meshOfOnScreen = NULL;
         m_renderType = 0;
+        m_videoShaderOfOnScreen = NULL;
     };
     virtual ~SurfaceRender()=default;
 
@@ -70,15 +71,15 @@ public:
     //!
     virtual RenderStatus Render(uint32_t onScreenTexHandle, uint32_t width, uint32_t height, glm::mat4 ProjectionMatrix, glm::mat4 ViewModelMatrix) = 0;
 
-    void SetUniformFrameTex(){
-        m_videoShaderOfOnScreen.Bind();
-        m_videoShaderOfOnScreen.SetUniform1i("frameTex_screen", 0);
-    };
+    virtual void SetUniformFrameTex() = 0;
+
+    void SetTransformTypeToMesh(std::map<uint32_t, uint8_t> type) { m_meshOfOnScreen->SetTransformType(type); };
+    std::map<uint32_t, uint8_t> GetTransformTypeToMesh() { return m_meshOfOnScreen->GetTransformType(); };
 
 protected:
-    Mesh       *m_meshOfOnScreen;
-    int32_t     m_renderType;
-    VideoShader m_videoShaderOfOnScreen;
+    Mesh        *m_meshOfOnScreen;
+    int32_t      m_renderType;
+    VideoShader *m_videoShaderOfOnScreen;
 };
 
 VCD_NS_END

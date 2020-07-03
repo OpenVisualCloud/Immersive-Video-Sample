@@ -37,20 +37,48 @@ VCD_NS_BEGIN
 
 CubeMapRender::CubeMapRender()
 {
+    m_videoShaderOfOnScreen = new VideoShader(shader_skybox_vs, shader_skybox_fs);
+    //2.render to screen : vertex and texCoords assign
+    m_videoShaderOfOnScreen->Bind();
+    m_meshOfOnScreen = new CubeMapMesh();
+    m_meshOfOnScreen->Create();
+    uint32_t vertexAttribOfOnScreen = m_videoShaderOfOnScreen->SetAttrib("aPos");
+    uint32_t transVertexAttribOfOnScreen = m_videoShaderOfOnScreen->SetAttrib("transPos");
+    m_meshOfOnScreen->Bind(vertexAttribOfOnScreen, transVertexAttribOfOnScreen);
 }
 
 CubeMapRender::~CubeMapRender()
 {
-    if (m_meshOfOnScreen != NULL)
-    {
-        delete m_meshOfOnScreen;
-        m_meshOfOnScreen = NULL;
-    }
+    SAFE_DELETE(m_videoShaderOfOnScreen);
+    SAFE_DELETE(m_meshOfOnScreen);
 }
 
 RenderStatus CubeMapRender::Render(uint32_t onScreenTexHandle, uint32_t width, uint32_t height, glm::mat4 ProjectionMatrix, glm::mat4 ViewModelMatrix)
 {
+    uint32_t vertexAttribOfOnScreen = m_videoShaderOfOnScreen->SetAttrib("aPos");
+    uint32_t transVertexAttribOfOnScreen = m_videoShaderOfOnScreen->SetAttrib("transPos");
+    m_meshOfOnScreen->Bind(vertexAttribOfOnScreen, transVertexAttribOfOnScreen);
+    RenderBackend* renderBackend = RENDERBACKEND::GetInstance();
+    renderBackend->BindFramebuffer(GL_FRAMEBUFFER, 0);
+    renderBackend->Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    m_videoShaderOfOnScreen->Bind();
+    m_videoShaderOfOnScreen->SetUniformMatrix4f("projection", ProjectionMatrix);
+    m_videoShaderOfOnScreen->SetUniformMatrix4f("view", ViewModelMatrix);
+    renderBackend->ActiveTexture(GL_TEXTURE0);
+    renderBackend->BindTexture(GL_TEXTURE_CUBE_MAP, onScreenTexHandle);
+    renderBackend->Viewport(0, 0, width, height);
+    uint32_t onScreenVAO = this->m_meshOfOnScreen->GetVAOHandle();//renderBackend->GetOnScreenVAOHandle();
+    renderBackend->BindVertexArray(onScreenVAO);
+    uint32_t meshVertexNum = m_meshOfOnScreen->GetVertexNum();
+    renderBackend->DrawArrays(GL_TRIANGLES, 0, meshVertexNum);
+    renderBackend->BindVertexArray(0);
     return RENDER_STATUS_OK;
+}
+
+void CubeMapRender::SetUniformFrameTex()
+{
+    m_videoShaderOfOnScreen->Bind();
+    m_videoShaderOfOnScreen->SetUniform1i("skybox", 0);
 }
 
 VCD_NS_END

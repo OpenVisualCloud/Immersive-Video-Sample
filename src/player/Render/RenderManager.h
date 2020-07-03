@@ -142,6 +142,16 @@ private:
     //!         RENDER_STATUS_SUCCESS if success, else fail reason
     //!
     RenderStatus CreateRender(int32_t projFormat);
+    //!
+    //! \brief  Create the render target
+    //!
+    //! \param  [in] type
+    //!         ERP or CubeMap
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_SUCCESS if success, else fail reason
+    //!
+    RenderStatus CreateRenderTarget(int32_t projFormat);
 
 private:
     ViewPortManager        *m_viewPortManager;
