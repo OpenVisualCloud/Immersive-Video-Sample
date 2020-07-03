@@ -123,8 +123,8 @@ RenderStatus ERPMesh::Create()
             m_vertices[vertexPtr++] = y;
             m_vertices[vertexPtr++] = z;
 
-            m_texCoords[texPtr++] = i < m_columns ? 1 - u : 1 - right;
-            m_texCoords[texPtr++] = j < m_rows ? v : bottom;
+            m_texCoords[texPtr++] = i < m_columns ? u : right;
+            m_texCoords[texPtr++] = j < m_rows ? 1 - v : 1 - bottom;
         }
     }
 
