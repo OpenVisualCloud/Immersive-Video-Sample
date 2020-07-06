@@ -42,8 +42,11 @@
 #endif
 
 using namespace std;
-#define HIGH_PITCH_BOUND_IN_NORTH 45
-#define HIGH_PITCH_BOUND_IN_SOUTH -45
+#define LOW_PITCH_BOUND_IN_NORTH 25
+#define LOW_PITCH_BOUND_IN_SOUTH -25
+
+#define HIGH_PITCH_BOUND_IN_NORTH 50
+#define HIGH_PITCH_BOUND_IN_SOUTH -50
 
 void* genViewport_Init(generateViewPortParam* pParamGenViewport)
 {
@@ -454,79 +457,80 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
         return -1;
 
     int32_t tileNum = 0;
-    int32_t maxTileNum = 0;
-    int32_t additionalTilesNum = 0;
+    // work around : low pitch area need to cover 2 tiles on both left/right sides separately.
+    int32_t additionalTilesNum = 4;
 
     int32_t fPitch = (int32_t)(cTAppConvCfg->m_codingSVideoInfo.viewPort.fPitch);
     tileNum = cTAppConvCfg->calcTilesInViewport(cTAppConvCfg->m_srd, cTAppConvCfg->m_tileNumCol, cTAppConvCfg->m_tileNumRow);
 
-    maxTileNum = cTAppConvCfg->m_maxTileNum;
-    additionalTilesNum = maxTileNum - tileNum;
-    if (additionalTilesNum > 0)
+    int32_t pos = 0;
+    if (fPitch >= LOW_PITCH_BOUND_IN_NORTH || fPitch <= LOW_PITCH_BOUND_IN_SOUTH)
     {
-        int32_t pos = 0;
-        if (fPitch >= HIGH_PITCH_BOUND_IN_NORTH || fPitch <= HIGH_PITCH_BOUND_IN_SOUTH)
-        {
-            if (fPitch >= HIGH_PITCH_BOUND_IN_NORTH)
-                pos = 0;
-            else
-                pos = cTAppConvCfg->m_tileNumRow - 1;
+        if (fPitch >= LOW_PITCH_BOUND_IN_NORTH)
+            pos = 0;
+        else
+            pos = cTAppConvCfg->m_tileNumRow - 1;
 
-            int32_t leftAddition = additionalTilesNum / 2;
-            int32_t rightAddition = additionalTilesNum - leftAddition;
-            for (uint32_t j = pos * cTAppConvCfg->m_tileNumCol; j < (pos+1) * cTAppConvCfg->m_tileNumCol; j++)
+        int32_t leftAddition = additionalTilesNum / 2;
+        int32_t rightAddition = additionalTilesNum - leftAddition;
+        for (uint32_t j = pos * cTAppConvCfg->m_tileNumCol; j < (pos+1) * cTAppConvCfg->m_tileNumCol; j++)
+        {
+            if (cTAppConvCfg->m_srd[j].isOccupy == 0 && cTAppConvCfg->m_srd[(j+1)%cTAppConvCfg->m_tileNumCol + pos * cTAppConvCfg->m_tileNumCol].isOccupy == 1)
             {
-                if (cTAppConvCfg->m_srd[j].isOccupy == 0 && cTAppConvCfg->m_srd[(j+1)%cTAppConvCfg->m_tileNumCol + pos * cTAppConvCfg->m_tileNumCol].isOccupy == 1)
+                uint32_t acc_idx = (j + cTAppConvCfg->m_tileNumCol) % cTAppConvCfg->m_tileNumCol + pos * cTAppConvCfg->m_tileNumCol;
+                while (leftAddition-- > 0)
                 {
-                    uint32_t acc_idx = (j + cTAppConvCfg->m_tileNumCol) % cTAppConvCfg->m_tileNumCol + pos * cTAppConvCfg->m_tileNumCol;
-                    while (leftAddition-- > 0)
+                    cTAppConvCfg->m_srd[acc_idx].isOccupy = 1;
+                    if (pos == 0)
                     {
-                        cTAppConvCfg->m_srd[acc_idx].isOccupy = 1;
-                        if (pos == 0)
-                        {
-                            acc_idx += cTAppConvCfg->m_tileNumCol;
-                        }else
-                        {
-                            acc_idx -= cTAppConvCfg->m_tileNumCol;
-                        }
+                        acc_idx += cTAppConvCfg->m_tileNumCol;
+                    }else
+                    {
+                        acc_idx -= cTAppConvCfg->m_tileNumCol;
                     }
                 }
-                if (cTAppConvCfg->m_srd[j].isOccupy == 1 && cTAppConvCfg->m_srd[(j+1)%cTAppConvCfg->m_tileNumCol + pos * cTAppConvCfg->m_tileNumCol].isOccupy == 0)
+            }
+            if (cTAppConvCfg->m_srd[j].isOccupy == 1 && cTAppConvCfg->m_srd[(j+1)%cTAppConvCfg->m_tileNumCol + pos * cTAppConvCfg->m_tileNumCol].isOccupy == 0)
+            {
+                uint32_t acc_idx = (j + 1 + cTAppConvCfg->m_tileNumCol) % cTAppConvCfg->m_tileNumCol +  pos * cTAppConvCfg->m_tileNumCol;
+                while (rightAddition-- > 0)
                 {
-                    uint32_t acc_idx = (j + 1 + cTAppConvCfg->m_tileNumCol) % cTAppConvCfg->m_tileNumCol +  pos * cTAppConvCfg->m_tileNumCol;
-                    while (rightAddition-- > 0)
+                    cTAppConvCfg->m_srd[acc_idx].isOccupy = 1;
+                    if (pos == 0)
                     {
-                        cTAppConvCfg->m_srd[acc_idx].isOccupy = 1;
-                        if (pos == 0)
-                        {
-                            acc_idx += cTAppConvCfg->m_tileNumCol;
-                        }else
-                        {
-                            acc_idx -= cTAppConvCfg->m_tileNumCol;
-                        }
+                        acc_idx += cTAppConvCfg->m_tileNumCol;
+                    }else
+                    {
+                        acc_idx -= cTAppConvCfg->m_tileNumCol;
                     }
                 }
             }
         }
-        else// normal
+        // work around : high pitch area need more tiles( 2 rows )
+        if (fPitch >= HIGH_PITCH_BOUND_IN_NORTH)
         {
-            for (int32_t i = 0; i < additionalTilesNum; i++)
+            for (uint32_t i = 0; i < min(cTAppConvCfg->m_tileNumCol * 2, cTAppConvCfg->m_tileNumCol * cTAppConvCfg->m_tileNumRow); i++)
             {
-                for (uint32_t j = pos; j < cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow; j++)
-                {
-                    if (cTAppConvCfg->m_srd[j].isOccupy == 0)
-                    {
-                        cTAppConvCfg->m_srd[j].isOccupy = 1;
-                        pos = j;
-                        break;
-                    }
-                }
+                if (cTAppConvCfg->m_srd[i].isOccupy == 0)
+                    additionalTilesNum++;
+                cTAppConvCfg->m_srd[i].isOccupy = 1;
+            }
+        }
+        if (fPitch <= HIGH_PITCH_BOUND_IN_SOUTH)
+        {
+            uint32_t startRow = cTAppConvCfg->m_tileNumRow - 2 > 0 ? cTAppConvCfg->m_tileNumRow - 2 : 0;
+            for (uint32_t i = startRow * cTAppConvCfg->m_tileNumCol; i < cTAppConvCfg->m_tileNumCol * cTAppConvCfg->m_tileNumRow; i++)
+            {
+                if (cTAppConvCfg->m_srd[i].isOccupy == 0)
+                    additionalTilesNum++;
+                cTAppConvCfg->m_srd[i].isOccupy = 1;
             }
         }
     }
     //set the occupy tile into the output parameter
     int32_t idx = 0;
     TileDef* pOutTileTmp = pOutTile;
+    // correct accurate needed tile number.
     if (additionalTilesNum > 0)
         tileNum = tileNum + additionalTilesNum;
 
