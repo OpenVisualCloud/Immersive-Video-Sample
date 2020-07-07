@@ -878,6 +878,22 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
         std::vector<uint32_t> selected_idxs;
         uint32_t select_idx = fov_corr.first + fov_corr.second * m_tileNumCol;
         uint32_t boundary_offset = fov_corr.first == m_tileNumCol -1 ? m_tileNumCol : 0;
+        if (fov_corr.second == m_tileNumRow - 1 && faceNum == 1) // erp ( add idx at bottom to select opt_idx )
+        {
+            m_srd[select_idx + m_tileNumCol].x = m_srd[select_idx].x;
+            m_srd[select_idx + m_tileNumCol].y = inputHeight;
+            m_srd[select_idx + m_tileNumCol].tilewidth = m_srd[select_idx].tilewidth;
+            m_srd[select_idx + m_tileNumCol].tileheight = m_srd[select_idx].tileheight;
+            m_srd[select_idx + m_tileNumCol].horzPos = m_srd[select_idx].horzPos;
+            m_srd[select_idx + m_tileNumCol].vertPos = m_srd[select_idx].vertPos - ERP_VERT_ANGLE / (float)m_tileNumRow;
+
+            m_srd[select_idx + 1 + m_tileNumCol - boundary_offset].x = m_srd[select_idx + 1 - boundary_offset].x;
+            m_srd[select_idx + 1 + m_tileNumCol - boundary_offset].y = inputHeight;
+            m_srd[select_idx + 1 + m_tileNumCol - boundary_offset].tilewidth = m_srd[select_idx + 1 - boundary_offset].tilewidth;
+            m_srd[select_idx + 1 + m_tileNumCol - boundary_offset].tileheight = m_srd[select_idx + 1 - boundary_offset].tileheight;
+            m_srd[select_idx + 1 + m_tileNumCol - boundary_offset].horzPos = m_srd[select_idx + 1 - boundary_offset].horzPos;
+            m_srd[select_idx + 1 + m_tileNumCol - boundary_offset].vertPos = m_srd[select_idx + 1 - boundary_offset].vertPos - ERP_VERT_ANGLE / (float)m_tileNumRow;
+        }
         selected_idxs.push_back(select_idx);
         selected_idxs.push_back(select_idx + 1 - boundary_offset);
         selected_idxs.push_back(select_idx + m_tileNumCol);
@@ -901,9 +917,7 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     short centerY = m_srd[idx].y;
     short halfVPhorz = (dstWidth - m_srd[idx].tilewidth) >> 1;
     short halfVPvert = (dstHeight - m_srd[idx].tileheight) >> 1;
-    //need to refine later
-    if (NORMAL_PITCH_MAX > fPitch  && fPitch > NORMAL_PITCH_MIN)
-        centerY -= m_srd[0].tileheight;
+
     for (uint32_t i=0;i<FACE_NUMBER;i++)
     {
         m_pUpLeft[i].x = inputWidth;
@@ -930,10 +944,9 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     else if(pTmpUpLeft->y < 0)
         pTmpUpLeft->y = 0;
     // Need to ajust after region select optimization in two pole areas
-    if (pTmpDownRight->y >= inputHeight + m_srd[idx].tileheight / 2)
+    if (pTmpDownRight->y >= inputHeight + m_srd[idx].tileheight)
     {
         pTmpUpLeft->x = 0;
-        pTmpUpLeft->y = pTmpUpLeft->y + halfVPvert;
         pTmpDownRight->x = inputWidth;
         pTmpDownRight->y = inputHeight;
     }
