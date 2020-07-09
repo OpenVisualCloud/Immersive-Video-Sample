@@ -191,6 +191,7 @@ build_test(){
         # Compile distributed_encoder test
         cd ../distributed_encoder && \
             g++ -I../../../google_test -std=c++11 \
+              -I/usr/local/include/svt-hevc \
               -I../../../distributed_encoder/util/ -g -c \
               ../../../distributed_encoder/test/testMainEncoder.cpp \
               -D_GLIBCXX_USE_CXX11_ABI=0 && \
