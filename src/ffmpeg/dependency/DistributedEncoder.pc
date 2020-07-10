@@ -7,4 +7,4 @@ Name:DistributedEncoder
 Description: Distributed Encoder with remote or local workers
 Version:0.0.1-DEV
 Cflags: -I${prefix}/include
-Libs: -L${libdir} -lDistributedEncoder -lstdc++ -l360SCVP -lthrift -lthriftnb -levent -lglog -lpthread -L/usr/local/lib64
+Libs: -L${libdir} -lDistributedEncoder -lstdc++ -l360SCVP -lthrift -lthriftnb -levent -lglog -lpthread -lavcodec -lavformat -lavutil -L/usr/local/lib64
