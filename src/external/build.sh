@@ -15,7 +15,7 @@ build_server(){
     if [ "${PREBUILD_FLAG}" == "y" ] ; then
         ./prebuild.sh server
     fi
-
+    ./install_safestringlib.sh
     mkdir -p ../build/server
     cd ../build/server
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
@@ -40,7 +40,7 @@ build_client(){
     if [ "${PREBUILD_FLAG}" == "y" ] ; then
         ./prebuild.sh client
     fi
-
+    ./install_safestringlib.sh
     mkdir -p ../build/client
     cd ../build/client
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH

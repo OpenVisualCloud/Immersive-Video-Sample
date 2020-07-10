@@ -87,6 +87,6 @@ ENDIF()
 
 SET(LINK_LIB ${LINK_LIB}
     avfilter avformat avcodec avdevice avutil swscale swresample
-    360SCVP glfw GL GLU X11 pthread lzma z glog EGL GLESv2 dl)
+    360SCVP glfw GL GLU X11 pthread lzma z glog EGL GLESv2 dl safestring_shared)
 
 TARGET_LINK_LIBRARIES(render ${LINK_LIB})

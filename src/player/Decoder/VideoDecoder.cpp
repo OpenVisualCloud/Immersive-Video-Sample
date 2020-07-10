@@ -180,7 +180,7 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
             SAFE_DELETE(rwpk);
             return RENDER_ERROR;
         }
-        memcpy(pkt->data, packet->buf, size);
+        memcpy_s(pkt->data, size, packet->buf, size);
         pkt->size = size;
         *rwpk = *(packet->rwpk);
 
