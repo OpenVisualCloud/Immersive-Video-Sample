@@ -36,6 +36,7 @@
 
 #include "RegionData.h"
 #include <string.h>
+#include "Common.h"
 
 VCD_NS_BEGIN
 
@@ -46,7 +47,7 @@ RegionData::RegionData(RegionWisePacking* rwpk, uint32_t sourceNumber, SourceRes
     m_regionWisePacking = new RegionWisePacking;
     *m_regionWisePacking = *rwpk;
     m_regionWisePacking->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
-    memcpy(m_regionWisePacking->rectRegionPacking, rwpk->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking));
+    memcpy_s(m_regionWisePacking->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking), rwpk->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking));
 
     m_sourceInfo = new SourceResolution[sourceNumber];
     for (uint32_t i=0;i<sourceNumber;i++)

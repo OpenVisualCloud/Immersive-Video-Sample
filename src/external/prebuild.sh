@@ -89,6 +89,7 @@ install_dependencies() {
     cd ${EX_PATH}
     if [ $1 == "server" ] ; then
         ./build_glog.sh
+	./install_safestringlib.sh
         ./install_openHEVC.sh
         ./install_SVT.sh
         ./install_thrift.sh
@@ -96,6 +97,7 @@ install_dependencies() {
         ./install_lttng.sh
     elif [ $1 == "client" ] ; then
         ./build_glog.sh
+	./install_safestringlib.sh
         ./prebuild_player.sh
         ./install_FFmpeg.sh client
         ./install_lttng.sh

@@ -60,6 +60,7 @@ if [ ${ITEM} = "server" ] ; then
     cp /usr/local/lib/libHighResPlusFullLowResPacking.so              ${LIBDIR}
     cp /usr/local/lib/libSingleVideoPacking.so                        ${LIBDIR}
     cp /usr/local/lib/libglog.so.0                                    ${LIBDIR}
+    cp /usr/local/lib/libsafestring_shared.so                         ${LIBDIR}
     cp /usr/local/lib/libthrift-0.12.0.so                             ${LIBDIR}
     cp /usr/local/lib/libthriftnb-0.12.0.so                           ${LIBDIR}
     cp /usr/local/lib64/libSvtHevcEnc.so.1                            ${LIBDIR}
@@ -94,6 +95,7 @@ if [ ${ITEM} = "client" ] ; then
     cp /usr/local/lib/libva-x11.so.2                                  ${LIBDIR}
     cp /usr/local/lib/libva.so.2                                      ${LIBDIR}
     cp /usr/local/lib/libglog.so.0                                    ${LIBDIR}
+    cp /usr/local/lib/libsafestring_shared.so                         ${LIBDIR}
     cp /usr/lib64/libSDL2-2.0.so.0                                    ${LIBDIR}
     cp client/360SCVP/lib360SCVP.so                                   ${LIBDIR}
     cp client/OmafDashAccess/libOmafDashAccess.so                     ${LIBDIR}
