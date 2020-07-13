@@ -127,6 +127,50 @@ public:
         return isEOS;
     };
 
+    uint64_t GetOldestPacketPTSForTrack(int trackId)
+    {
+        MediaPacket *onePacket = NULL;
+        uint64_t oldestPTS = 0;
+        mPacketLock.lock();
+        if (mPacketQueues[trackId].size() > 0)
+        {
+            onePacket = mPacketQueues[trackId].front();
+            if (onePacket)
+            {
+                oldestPTS = onePacket->GetPTS();
+            }
+        }
+        mPacketLock.unlock();
+        return oldestPTS;
+    }
+
+    void RemoveOutdatedPacketForTrack(int trackId, uint64_t currPTS)
+    {
+        mPacketLock.lock();
+        if (mPacketQueues[trackId].size() > 0)
+        {
+            std::list<MediaPacket*>::iterator it;
+            for(it = mPacketQueues[trackId].begin(); it != mPacketQueues[trackId].end(); )
+            {
+                MediaPacket *onePkt = *it;
+                if (onePkt)
+                {
+                    uint64_t pts = onePkt->GetPTS();
+                    if (pts < currPTS)
+                    {
+                        SAFE_DELETE(onePkt);
+                        mPacketQueues[trackId].erase(it++);
+                    }
+                    else
+                    {
+                        it++;
+                    }
+                }
+            }
+        }
+        mPacketLock.unlock();
+    }
+
 public:
     //!  \brief call when seeking
     //!
@@ -199,11 +243,8 @@ private:
     int                             mStatus;          //<! thread status: 0: runing; 1: stopping, 2. stopped;
     bool                            mReadSync;        //<! need to read  the frame at the bound of I frame (GOP boundary)
     bool                            mInitSegParsed;   //<! flag for noting all initial segments have been parsed
-    //uint8_t                         mVPS[256];        //<! VPS data
     uint8_t                         mVPSLen;          //<! VPS size for the main stream
-    //uint8_t                         mSPS[256];        //<! SPS data
     uint8_t                         mSPSLen;          //<! SPS size for the main stream
-    //uint8_t                         mPPS[256];        //<! PPS data
     uint8_t                         mPPSLen;          //<! PPS size for the main stream
     uint32_t                        mWidth;           //<! sample width
     uint32_t                        mHeight;          //<! sample height
@@ -212,6 +253,7 @@ private:
     std::map<uint32_t, std::map<uint32_t, uint8_t*>>     m_videoHeaders; //<! map of <qualityRanking, <headerSize, headerData>> for streams
 
     uint32_t                        mGlobalReadSegId;
+    uint64_t                        mGlobalReadSampleId;
 };
 
 typedef Singleton<OmafReaderManager> READERMANAGER;
