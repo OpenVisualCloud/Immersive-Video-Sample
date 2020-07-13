@@ -43,6 +43,7 @@ OmafMediaStream::OmafMediaStream()
     m_enabledExtractor     = true;
     m_stitch               = NULL;
     m_needParams           = false;
+    m_currFrameIdx         = 0;
     pthread_mutex_init(&mMutex, NULL);
     pthread_mutex_init(&mCurrentMutex, NULL);
     pthread_mutex_init(&m_packetsMutex, NULL);
@@ -615,6 +616,7 @@ int32_t OmafMediaStream::TilesStitching()
     }
     pthread_mutex_unlock(&mCurrentMutex);
 
+    uint64_t currFramePTS = 0;
     std::map<int, OmafAdaptationSet*> mapSelectedAS;
     bool isEOS = false;
     uint32_t waitTimes = 1000;
@@ -629,10 +631,10 @@ int32_t OmafMediaStream::TilesStitching()
         mapSelectedAS = m_selectedTileTracks;
         pthread_mutex_unlock(&mCurrentMutex);
 
-
         prevPoseChanged = prevSelectedAS.empty() ? false : IsSelectionChanged(mapSelectedAS, prevSelectedAS);
 
         bool hasPoseChanged = false;
+        bool hasPktOutdated = false;
         std::map<uint32_t, MediaPacket*> selectedPackets;
         for (auto as_it = mapSelectedAS.begin(); as_it != mapSelectedAS.end(); as_it++)
         {
@@ -644,6 +646,22 @@ int32_t OmafMediaStream::TilesStitching()
 
             if (prevPoseChanged)
                 m_needParams = true;
+
+            if (as_it != mapSelectedAS.begin())
+            {
+                uint64_t pts = READERMANAGER::GetInstance()->GetOldestPacketPTSForTrack(trackID);
+                if (pts > currFramePTS)
+                {
+	            LOG(INFO) << "Packet is outdated ! " << std::endl;
+                    hasPktOutdated = true;
+                    break;
+                }
+                else if (pts < currFramePTS)
+                {
+		    LOG(INFO) << "Old PTS  " << pts << "  occures ! " << std::endl;
+                    READERMANAGER::GetInstance()->RemoveOutdatedPacketForTrack(trackID, currFramePTS);
+                }
+            }
 
             ret = READERMANAGER::GetInstance()->GetNextFrame(trackID, onePacket, m_needParams);
             currWaitTimes = 0;
@@ -693,12 +711,27 @@ int32_t OmafMediaStream::TilesStitching()
                     selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
                     break;
                 }
+                if (as_it == mapSelectedAS.begin())
+                {
+                    currFramePTS = onePacket->GetPTS();
+                    LOG(INFO) << "The PTS for this batch is  " << currFramePTS << std::endl;
+                }
                 selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
             }
         }
 
-        if (hasPoseChanged)
+        if (hasPoseChanged || hasPktOutdated)
+        {
+            for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end(); )
+            {
+                MediaPacket *pkt = it1->second;
+                SAFE_DELETE(pkt);
+                selectedPackets.erase(it1++);
+            }
+            selectedPackets.clear();
+
             continue;
+        }
 
         if (!isEOS && (selectedPackets.size() != mapSelectedAS.size()) && (currWaitTimes >= waitTimes)  )
         {

@@ -77,6 +77,7 @@ OmafReaderManager::OmafReaderManager()
     mReadSync = false;
     mExtractorEnabled = true;
     mGlobalReadSegId = 0;
+    mGlobalReadSampleId = 0;
 }
 
 OmafReaderManager::~OmafReaderManager()
@@ -904,10 +905,33 @@ int OmafReaderManager::ReadNextSegment(
             ret =  mReader->getTrackSampleData(combinedTrackId, sample, (char *)(packet->Payload()), packetSize );
         }
 
+        if (ret == OMAF_MEMORY_TOO_SMALL_BUFFER )
+        {
+            LOG(ERROR) << "The frame size has exceeded the maximum packet size" << endl;
+            return ret;
+        }
+        else if (ret)
+        {
+            LOG(ERROR) << "Failed to get packet " << (sampleIdx->mGlobalSampleIndex + beginSampleId) << " for track " << trackID << " and error is " << ret << endl;
+            return ret;
+        }
+
         RegionWisePacking *pRwpk = new RegionWisePacking;
 
         ret = mReader->getPropertyRegionWisePacking(combinedTrackId, sample, pRwpk);
+        if (ret == OMAF_MEMORY_TOO_SMALL_BUFFER )
+        {
+            LOG(ERROR) << "The frame size has exceeded the maximum packet size" << endl;
+            return ret;
+        }
+        else if (ret)
+        {
+            LOG(ERROR) << "Failed to get packet " << (sampleIdx->mGlobalSampleIndex + beginSampleId) << " for track " << trackID << " and error is " << ret << endl;
+            return ret;
+        }
+
         packet->SetRwpk(pRwpk);
+        packet->SetPTS((uint64_t)(mGlobalReadSampleId) + (uint64_t)(beginSampleId));
 
         packet->SetQualityRanking(qualityRanking);
         if (!isExtractor)
@@ -945,20 +969,9 @@ int OmafReaderManager::ReadNextSegment(
                     srcRes.width = packet->GetRwpk()->packedPicWidth - boundLeft[idx];
                 }
                 packet->SetSourceResolution(idx, srcRes);
-                //cout<<"sourceRes:"<<srcRes.qualityRanking<<" "<<srcRes.top<<" "<<srcRes.left<<" "<<srcRes.width<<" "<<srcRes.height<<endl;
             }
         }
 
-        if (ret == OMAF_MEMORY_TOO_SMALL_BUFFER )
-        {
-            LOG(ERROR) << "The frame size has exceeded the maximum packet size" << endl;
-            return ret;
-        }
-        else if (ret)
-        {
-            LOG(ERROR) << "Failed to get packet " << (sampleIdx->mGlobalSampleIndex + beginSampleId) << " for track " << trackID << " and error is " << ret << endl;
-            return ret;
-        }
         packet->SetRealSize(packetSize);
         packet->SetSegID(trackInfo->sampleProperties[beginSampleId - 1].segmentId);
         mPacketLock.lock();
@@ -1268,6 +1281,7 @@ void OmafReaderManager::Run()
                     if (prevPoseChanged)
                     {
                         st->sampleIndex.mCurrentReadSegment = mGlobalReadSegId;
+			st->sampleIndex.mGlobalSampleIndex  = mGlobalReadSampleId;
                     }
                     //LOG(INFO)<<st->sampleIndex.mCurrentReadSegment<<" "<<st->sampleIndex.mCurrentAddSegment<<endl;
                     while (st->sampleIndex.mCurrentReadSegment > st->sampleIndex.mCurrentAddSegment && mStatus!=STATUS_STOPPING && waitTime < 600000)
@@ -1311,6 +1325,7 @@ void OmafReaderManager::Run()
                     if (processedNum == mapAS.size())
                     {
 	                    mGlobalReadSegId = st->sampleIndex.mCurrentReadSegment;
+			    mGlobalReadSampleId = st->sampleIndex.mGlobalSampleIndex;
 		            }
                 }
                 if (prevPoseChanged && !hasPoseChanged)

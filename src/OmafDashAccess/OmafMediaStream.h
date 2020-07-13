@@ -262,7 +262,7 @@ private:
     int32_t TilesStitching();
 
 private:
-    std::map<int, OmafAdaptationSet*> mMediaAdaptationSet;            //<! Adaptation Set list for tiles
+    std::map<int, OmafAdaptationSet*> mMediaAdaptationSet;          //<! Adaptation Set list for tiles
     std::map<int, OmafExtractor*>     mExtractors;                  //<! Adaptation Set list for extractor
     std::list<OmafExtractor*>         mCurrentExtractors;           //<! the current extractors to be dealt with
     OmafAdaptationSet*                mMainAdaptationSet;           //<! the main AdaptationSet, it can be exist or not
@@ -282,15 +282,17 @@ private:
 
     pthread_t                         m_stitchThread;               //<! tiles stitching thread ID
 
-    pthread_mutex_t                    m_packetsMutex;               //<! mutex for output tiles merged media packet list
+    pthread_mutex_t                    m_packetsMutex;              //<! mutex for output tiles merged media packet list
 
-    std::list<std::list<MediaPacket*>> m_mergedPackets;              //<! list of output tiles merged media packets
+    std::list<std::list<MediaPacket*>> m_mergedPackets;             //<! list of output tiles merged media packets
 
     bool                              m_needParams;
 
     OmafTilesStitch                   *m_stitch;                    //<! tiles stitch handle
 
     int                               m_status;
+
+    uint64_t                          m_currFrameIdx;               //<! the frame index which is currently processed
 };
 
 VCD_OMAF_END;
