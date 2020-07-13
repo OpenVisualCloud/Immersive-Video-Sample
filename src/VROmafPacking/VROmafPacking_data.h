@@ -43,6 +43,7 @@ extern "C" {
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include "360SCVPAPI.h"
 
 //!
 //! \enum:  MediaType
@@ -152,6 +153,34 @@ typedef struct SegmentationInfo
 }SegmentationInfo;
 
 //!
+//! \struct: CubeMapFaceInfo
+//! \brief:  define the information of one face from input
+//!          Cube-3x2 which may not be the standard Cube-3x2
+//!          defined in OMAF. The information includes mapped
+//!          face id in standard Cube-3x2 and the transfrom
+//!          type of the face
+//!
+typedef struct CubeMapFaceInfo
+{
+    uint8_t mappedStandardFaceId; //the corresponding face id in standard Cube-3x2
+    E_TransformType transformType; //face transform type
+}CubeMapFaceInfo;
+
+//!
+//! \struct: InputCubeMapInfo
+//! \brief:  define all six faces information in input Cube-3x2
+//!
+typedef struct InputCubeMapInfo
+{
+    CubeMapFaceInfo face0MapInfo;
+    CubeMapFaceInfo face1MapInfo;
+    CubeMapFaceInfo face2MapInfo;
+    CubeMapFaceInfo face3MapInfo;
+    CubeMapFaceInfo face4MapInfo;
+    CubeMapFaceInfo face5MapInfo;
+}InputCubeMapInfo;
+
+//!
 //! \struct: InitialInfo
 //! \brief:  define the overall initial information set by
 //!          library interface externally used for media
@@ -159,15 +188,18 @@ typedef struct SegmentationInfo
 //!
 typedef struct InitialInfo
 {
-    uint8_t                 bsNumVideo; //mandatory
-    uint8_t                 bsNumAudio; //mandatory
-    //TilesMergingType        tilesMergingType; //mandatory
-    const char              *pluginPath; //needed if extractor track will be generated
-    const char              *pluginName; //needed if extractor track will be generated
-    BSBuffer                *bsBuffers; //mandatory
+    uint8_t                 bsNumVideo;        //mandatory
+    uint8_t                 bsNumAudio;        //mandatory
 
-    ViewportInformation     *viewportInfo; //mandatory
+    const char              *pluginPath;       //needed if extractor track will be generated
+    const char              *pluginName;       //needed if extractor track will be generated
+    BSBuffer                *bsBuffers;        //mandatory
+
+    ViewportInformation     *viewportInfo;     //mandatory
     SegmentationInfo        *segmentationInfo; //mandatory
+
+    EGeometryType           projType;          //mandatory
+    InputCubeMapInfo        *cubeMapInfo;      //needed if projType is E_SVIDEO_CUBEMAP
 }InitialInfo;
 
 //!

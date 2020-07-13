@@ -82,20 +82,27 @@ int32_t ExtractorTrackManager::Initialize(std::map<uint8_t, MediaStream*> *media
     if (m_initInfo->pluginName)
     {
         LOG(INFO) << "Appoint plugin  " << (m_initInfo->pluginName) << " for extractor track generation !" << std::endl;
-        m_extractorTrackGen = new ExtractorTrackGenerator(m_initInfo, m_streams);
-        if (!m_extractorTrackGen)
+        if (m_initInfo->projType == E_SVIDEO_EQUIRECT)
         {
-            LOG(ERROR) << "Failed to create extractor track generator !" << std::endl;
-            return OMAF_ERROR_NULL_PTR;
+            m_extractorTrackGen = new ExtractorTrackGenerator(m_initInfo, m_streams);
+            if (!m_extractorTrackGen)
+            {
+                LOG(ERROR) << "Failed to create extractor track generator !" << std::endl;
+                return OMAF_ERROR_NULL_PTR;
+            }
+
+            int32_t ret = m_extractorTrackGen->Initialize();
+            if (ret)
+                return ret;
+
+            ret = AddExtractorTracks();
+            if (ret)
+                return ret;
         }
-
-        int32_t ret = m_extractorTrackGen->Initialize();
-        if (ret)
-            return ret;
-
-        ret = AddExtractorTracks();
-        if (ret)
-            return ret;
+        else if (m_initInfo->projType == E_SVIDEO_CUBEMAP)
+        {
+            LOG(INFO) << "But at present, extractor track is not supported for CubeMap, so extractor track will not be generated as well !" << std::endl;
+        }
     }
     else
     {

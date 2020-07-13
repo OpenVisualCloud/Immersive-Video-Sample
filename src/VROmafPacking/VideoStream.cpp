@@ -45,8 +45,11 @@ VideoStream::VideoStream()
     m_height = 0;
     m_tileInRow = 0;
     m_tileInCol = 0;
+    m_tileRowsInFace = 0;
+    m_tileColsInFace = 0;
     m_tilesInfo = NULL;
-    m_projType = 0;
+    m_projType = VCD::OMAF::ProjectionFormat::PF_ERP;
+    memset(m_cubeMapInfo, 0, CUBEMAP_FACES_NUM * sizeof(CubeMapFaceInfo));
     m_frameRate.num = 0;
     m_frameRate.den = 0;
     m_bitRate = 0;
@@ -144,13 +147,14 @@ int32_t VideoStream::ParseHeader()
     m_height = m_naluParser->GetSrcHeight();
     m_tileInRow = m_naluParser->GetTileInRow();
     m_tileInCol = m_naluParser->GetTileInCol();
-    m_projType = m_naluParser->GetProjectionType();
+    m_projType = (VCD::OMAF::ProjectionFormat)(m_naluParser->GetProjectionType());
 
     uint16_t tilesNum = m_tileInRow * m_tileInCol;
     m_tilesInfo = new TileInfo[tilesNum];
     if (!m_tilesInfo)
         return OMAF_ERROR_NULL_PTR;
 
+    memset(m_tilesInfo, 0, tilesNum * sizeof(TileInfo));
     for (uint16_t tileIdx = 0; tileIdx < tilesNum; tileIdx++)
     {
         m_naluParser->GetTileInfo(tileIdx, &(m_tilesInfo[tileIdx]));
@@ -162,7 +166,7 @@ int32_t VideoStream::ParseHeader()
     return ERROR_NONE;
 }
 
-int32_t VideoStream::FillRegionWisePacking()
+int32_t VideoStream::FillRegionWisePackingForERP()
 {
     if (!m_srcRwpk)
         return OMAF_ERROR_NULL_PTR;
@@ -185,6 +189,7 @@ int32_t VideoStream::FillRegionWisePacking()
     {
         RectangularRegionWisePacking *rectRwpk = &(m_srcRwpk->rectRegionPacking[regionIdx]);
         TileInfo *tileInfo                     = &(m_tilesInfo[regionIdx]);
+        tileInfo->projFormat                   = VCD::OMAF::ProjectionFormat::PF_ERP;
 
         memset(rectRwpk, 0, sizeof(RectangularRegionWisePacking));
         rectRwpk->transformType = 0;
@@ -213,7 +218,72 @@ int32_t VideoStream::FillRegionWisePacking()
     return ERROR_NONE;
 }
 
-int32_t VideoStream::FillContentCoverage()
+int32_t VideoStream::FillRegionWisePackingForCubeMap()
+{
+    if (!m_srcRwpk)
+        return OMAF_ERROR_NULL_PTR;
+
+    if (!m_tilesInfo)
+        return OMAF_ERROR_NULL_PTR;
+
+    m_srcRwpk->constituentPicMatching = 0;
+    m_srcRwpk->numRegions             = m_tileInRow * m_tileInCol;
+    m_srcRwpk->projPicWidth           = m_width;
+    m_srcRwpk->projPicHeight          = m_height;
+    m_srcRwpk->packedPicWidth         = m_width;
+    m_srcRwpk->packedPicHeight        = m_height;
+
+    m_srcRwpk->rectRegionPacking      = new RectangularRegionWisePacking[m_srcRwpk->numRegions];
+    if (!(m_srcRwpk->rectRegionPacking))
+        return OMAF_ERROR_NULL_PTR;
+
+    for (uint8_t regionIdx = 0; regionIdx < m_srcRwpk->numRegions; regionIdx++)
+    {
+        RectangularRegionWisePacking *rectRwpk = &(m_srcRwpk->rectRegionPacking[regionIdx]);
+        TileInfo *tileInfo                     = &(m_tilesInfo[regionIdx]);
+        tileInfo->projFormat                   = VCD::OMAF::ProjectionFormat::PF_CUBEMAP;
+
+        memset(rectRwpk, 0, sizeof(RectangularRegionWisePacking));
+
+        uint8_t regColId = regionIdx % m_tileInRow;
+        uint8_t regRowId = regionIdx / m_tileInRow;
+        uint8_t faceId = 0;
+        faceId = (uint8_t)(regRowId / m_tileRowsInFace) * 3 + (uint8_t)(regColId / m_tileColsInFace);
+        uint8_t mappedDefaultFaceId = m_cubeMapInfo[faceId].mappedStandardFaceId;
+        uint8_t tileColIdInFace = regColId - (uint8_t)(faceId % 3) * m_tileColsInFace;
+        uint8_t tileRowIdInFace = regRowId - (uint8_t)(faceId / 3) * m_tileRowsInFace;
+        uint8_t regIdInDefaultLayout = (uint8_t)(mappedDefaultFaceId / 3) * m_tileInRow * m_tileRowsInFace + (uint8_t)(mappedDefaultFaceId % 3) * m_tileColsInFace;
+        regIdInDefaultLayout += tileRowIdInFace * m_tileInRow + tileColIdInFace;
+
+        rectRwpk->transformType = m_cubeMapInfo[faceId].transformType;
+        rectRwpk->guardBandFlag = 0;
+        rectRwpk->projRegWidth  = tileInfo->tileWidth;
+        rectRwpk->projRegHeight = tileInfo->tileHeight;
+        rectRwpk->projRegLeft   = (regIdInDefaultLayout % m_tileInRow) * (tileInfo->tileWidth); //projected region left is calculated according to default Cube-3x2 layout
+        rectRwpk->projRegTop    = (regIdInDefaultLayout / m_tileInRow) * (tileInfo->tileHeight);
+        tileInfo->defaultHorPos = rectRwpk->projRegLeft;
+        tileInfo->defaultVerPos = rectRwpk->projRegTop;
+
+        rectRwpk->packedRegWidth  = tileInfo->tileWidth;
+        rectRwpk->packedRegHeight = tileInfo->tileHeight;
+        rectRwpk->packedRegLeft   = tileInfo->horizontalPos; //packed region left is left position in actual input source picture
+        rectRwpk->packedRegTop    = tileInfo->verticalPos;
+
+        rectRwpk->leftGbWidth          = 0;
+        rectRwpk->rightGbWidth         = 0;
+        rectRwpk->topGbHeight          = 0;
+        rectRwpk->bottomGbHeight       = 0;
+        rectRwpk->gbNotUsedForPredFlag = true;
+        rectRwpk->gbType0              = 0;
+        rectRwpk->gbType1              = 0;
+        rectRwpk->gbType2              = 0;
+        rectRwpk->gbType3              = 0;
+    }
+
+    return ERROR_NONE;
+}
+
+int32_t VideoStream::FillContentCoverageForERP()
 {
     if (!m_srcCovi)
         return OMAF_ERROR_NULL_PTR;
@@ -221,7 +291,7 @@ int32_t VideoStream::FillContentCoverage()
     if (!m_srcRwpk)
         return OMAF_ERROR_NULL_PTR;
 
-    if (m_projType == 0) //ERP projection type
+    if (m_projType == VCD::OMAF::ProjectionFormat::PF_ERP) //ERP projection type
     {
         m_srcCovi->coverageShapeType = 1;// TwoAzimuthAndTwoElevationCircles
     }
@@ -269,9 +339,9 @@ int32_t VideoStream::Initialize(
     if (!m_srcRwpk)
         return OMAF_ERROR_NULL_PTR;
 
-    m_srcCovi = new ContentCoverage;
-    if (!m_srcCovi)
-        return OMAF_ERROR_NULL_PTR;
+    //m_srcCovi = new ContentCoverage;
+    //if (!m_srcCovi)
+    //    return OMAF_ERROR_NULL_PTR;
 
     m_streamIdx = streamIdx;
 
@@ -310,6 +380,48 @@ int32_t VideoStream::Initialize(
     if (ret)
         return ret;
 
+    if (initInfo->projType != (EGeometryType)(m_projType))
+    {
+        LOG(ERROR) << "Not matched projection type in bitstream and initial information !" << std::endl;
+        return OMAF_ERROR_INVALID_PROJECTIONTYPE;
+    }
+
+    if (m_projType == VCD::OMAF::ProjectionFormat::PF_ERP)
+    {
+        m_srcCovi = new ContentCoverage;
+        if (!m_srcCovi)
+            return OMAF_ERROR_NULL_PTR;
+    }
+
+    if (m_projType == VCD::OMAF::ProjectionFormat::PF_CUBEMAP)
+    {
+        if (!(initInfo->cubeMapInfo))
+        {
+            LOG(ERROR) << "There is no input CubeMap information in initial information !" << std::endl;
+            return OMAF_ERROR_BAD_PARAM;
+        }
+        m_cubeMapInfo[0] = (initInfo->cubeMapInfo)->face0MapInfo;
+        m_cubeMapInfo[1] = (initInfo->cubeMapInfo)->face1MapInfo;
+        m_cubeMapInfo[2] = (initInfo->cubeMapInfo)->face2MapInfo;
+        m_cubeMapInfo[3] = (initInfo->cubeMapInfo)->face3MapInfo;
+        m_cubeMapInfo[4] = (initInfo->cubeMapInfo)->face4MapInfo;
+        m_cubeMapInfo[5] = (initInfo->cubeMapInfo)->face5MapInfo;
+
+        if (m_tileInCol % 2)
+        {
+            LOG(ERROR) << "Each face in CubeMap should have the same tile rows !" << std::endl;
+            return OMAF_ERROR_BAD_PARAM;
+        }
+        m_tileRowsInFace = m_tileInCol / 2;
+
+        if (m_tileInRow % 3)
+        {
+            LOG(ERROR) << "Each face in CubeMap should have the same tile cols !" << std::endl;
+            return OMAF_ERROR_BAD_PARAM;
+        }
+        m_tileColsInFace = m_tileInRow / 3;
+    }
+
     m_videoSegInfoGen = new VideoSegmentInfoGenerator(
                                 bs, initInfo, m_streamIdx,
                                 m_width, m_height,
@@ -321,18 +433,23 @@ int32_t VideoStream::Initialize(
     if (ret)
         return ret;
 
-    ret = FillRegionWisePacking();
+    if (m_projType == VCD::OMAF::ProjectionFormat::PF_ERP)
+    {
+        ret = FillRegionWisePackingForERP();
+    }
+    else if (m_projType == VCD::OMAF::ProjectionFormat::PF_CUBEMAP)
+    {
+        ret = FillRegionWisePackingForCubeMap();
+    }
     if (ret)
         return ret;
 
-    ret = FillContentCoverage();
-    if (ret)
-        return ret;
-
-    //uint32_t tilesNum = m_tileInRow * m_tileInCol;
-    //m_trackSegCtxs = new TrackSegmentCtx[tilesNum];
-    //if (!m_trackSegCtxs);
-        //return OMAF_ERROR_NULL_PTR;
+    if (m_projType == VCD::OMAF::ProjectionFormat::PF_ERP)
+    {
+        ret = FillContentCoverageForERP();
+        if (ret)
+            return ret;
+    }
 
     return ERROR_NONE;
 }

@@ -201,6 +201,10 @@ public:
         m_initInfo->viewportInfo->viewportYaw        = 90;
         m_initInfo->viewportInfo->horizontalFOVAngle = 80;
         m_initInfo->viewportInfo->verticalFOVAngle   = 90;
+        m_initInfo->viewportInfo->outGeoType         = E_SVIDEO_VIEWPORT;
+        m_initInfo->viewportInfo->inGeoType          = E_SVIDEO_EQUIRECT;
+
+        m_initInfo->projType = E_SVIDEO_EQUIRECT;
 
         m_omafPackage = new OmafPackage();
         if (!m_omafPackage)

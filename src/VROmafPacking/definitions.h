@@ -57,6 +57,14 @@ struct TileInfo
     uint16_t tileHeight;
 
     Nalu     *tileNalu;
+
+    int32_t  projFormat;
+    //this value denotes the tile horizontal position in
+    //default Cube-3x2 defined in OMAF spec
+    uint16_t defaultHorPos;
+    //this value denotes the tile vertical position in
+    //default Cube-3x2 defined in OMAF spec
+    uint16_t defaultVerPos;
 };
 
 //!

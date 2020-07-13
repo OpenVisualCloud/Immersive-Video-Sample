@@ -290,6 +290,8 @@ public:
         m_initInfo->segmentationInfo->baseUrl = NULL;
         m_initInfo->segmentationInfo->utcTimingUrl = NULL;
 
+        m_initInfo->projType = E_SVIDEO_EQUIRECT;
+
         m_vsLow = new VideoStream();
         if (!m_vsLow)
         {

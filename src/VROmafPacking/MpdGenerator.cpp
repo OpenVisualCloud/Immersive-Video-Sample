@@ -167,7 +167,15 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
     XMLElement *supplementalEle = m_xmlDoc->NewElement(SUPPLEMENTALPROPERTY);
     supplementalEle->SetAttribute(SCHEMEIDURI, SCHEMEIDURI_SRD);
     memset(string, 0, 1024);
-    snprintf(string, 1024, "1,%d,%d,%d,%d", trackSegCtx.tileInfo->horizontalPos, trackSegCtx.tileInfo->verticalPos, trackSegCtx.tileInfo->tileWidth, trackSegCtx.tileInfo->tileHeight);
+    if (m_projType == VCD::OMAF::ProjectionFormat::PF_ERP)
+    {
+        snprintf(string, 1024, "1,%d,%d,%d,%d", trackSegCtx.tileInfo->horizontalPos, trackSegCtx.tileInfo->verticalPos, trackSegCtx.tileInfo->tileWidth, trackSegCtx.tileInfo->tileHeight);
+    }
+    else if (m_projType == VCD::OMAF::ProjectionFormat::PF_CUBEMAP)
+    {
+        snprintf(string, 1024, "1,%d,%d,%d,%d", trackSegCtx.tileInfo->defaultHorPos, trackSegCtx.tileInfo->defaultVerPos, trackSegCtx.tileInfo->tileWidth, trackSegCtx.tileInfo->tileHeight);
+    }
+
     supplementalEle->SetAttribute(COMMON_VALUE, string);
     asEle->InsertEndChild(supplementalEle);
 
