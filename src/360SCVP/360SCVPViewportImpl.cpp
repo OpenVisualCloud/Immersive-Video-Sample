@@ -168,30 +168,30 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
             pDownRight++;
         }
 
-        if (pParamGenViewport->m_usageType == E_PARSER_ONENAL
-            || pParamGenViewport->m_usageType == E_VIEWPORT_ONLY)
-        {
-            viewPortWidth = floor((float)(viewPortWidth) / (float)(cTAppConvCfg->m_srd[0].tilewidth) + 0.499) * cTAppConvCfg->m_srd[0].tilewidth;
-            viewPortHeightmax = floor((float)(viewPortHeightmax) / (float)(cTAppConvCfg->m_srd[0].tileheight) + 0.499) * cTAppConvCfg->m_srd[0].tileheight;
-            printf("viewPortWidthMax = %d viewPortHeightMax = %d, tile_width %d, tile_height %d\n", viewPortWidth, viewPortHeightmax, cTAppConvCfg->m_srd[0].tilewidth, cTAppConvCfg->m_srd[0].tileheight);
+        // if (pParamGenViewport->m_usageType == E_PARSER_ONENAL
+        //     || pParamGenViewport->m_usageType == E_VIEWPORT_ONLY)
+        // {
+        //     viewPortWidth = floor((float)(viewPortWidth) / (float)(cTAppConvCfg->m_srd[0].tilewidth) + 0.499) * cTAppConvCfg->m_srd[0].tilewidth;
+        //     viewPortHeightmax = floor((float)(viewPortHeightmax) / (float)(cTAppConvCfg->m_srd[0].tileheight) + 0.499) * cTAppConvCfg->m_srd[0].tileheight;
+        //     printf("viewPortWidthMax = %d viewPortHeightMax = %d, tile_width %d, tile_height %d\n", viewPortWidth, viewPortHeightmax, cTAppConvCfg->m_srd[0].tilewidth, cTAppConvCfg->m_srd[0].tileheight);
 
-            maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 1);
-            if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
-                maxTileNumCol = cTAppConvCfg->m_tileNumCol;
+        //     maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 1);
+        //     if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
+        //         maxTileNumCol = cTAppConvCfg->m_tileNumCol;
 
-            maxTileNumRow = (viewPortHeightmax / cTAppConvCfg->m_srd[0].tileheight + 1);
-            if (maxTileNumRow > cTAppConvCfg->m_tileNumRow)
-                maxTileNumRow = cTAppConvCfg->m_tileNumRow;
-        }
-        else
-        {
+        //     maxTileNumRow = (viewPortHeightmax / cTAppConvCfg->m_srd[0].tileheight + 1);
+        //     if (maxTileNumRow > cTAppConvCfg->m_tileNumRow)
+        //         maxTileNumRow = cTAppConvCfg->m_tileNumRow;
+        // }
+        // else
+        // {
             maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 2);
             if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
                 maxTileNumCol = cTAppConvCfg->m_tileNumCol;
             maxTileNumRow = (viewPortHeightmax / cTAppConvCfg->m_srd[0].tileheight + 2);
             if (maxTileNumRow > cTAppConvCfg->m_tileNumRow)
                 maxTileNumRow = cTAppConvCfg->m_tileNumRow;
-        }
+        // }
 
         maxTileNum = maxTileNumCol * maxTileNumRow;
         pParamGenViewport->m_viewportDestWidth = maxTileNumCol * cTAppConvCfg->m_srd[0].tilewidth;
@@ -1150,7 +1150,7 @@ int32_t TgenViewport::calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol,
                 if (pTileInfoTmp->isOccupy == 1)
                 {
                     ret++;
-                    printf("facid, x, y : %d, %d, %d\n", cubeMapFaceMap[faceid], pTileInfoTmp->x, pTileInfoTmp->y);
+                    // printf("facid, x, y : %d, %d, %d\n", cubeMapFaceMap[faceid], pTileInfoTmp->x, pTileInfoTmp->y);
                 }
                 pTileInfoTmp++;
             }
