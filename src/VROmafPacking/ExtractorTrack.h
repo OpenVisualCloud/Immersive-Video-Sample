@@ -39,6 +39,7 @@
 #include "definitions.h"
 #include "MediaStream.h"
 #include "RegionWisePackingGenerator.h"
+#include "../utils/OmafStructure.h"
 
 #include <list>
 #include <map>
@@ -177,10 +178,10 @@ public:
     //!
     //! \brief  Get projection type of the video frame
     //!
-    //! \return uint16_t
-    //!         0 is ERP, and 1 is CubeMap
+    //! \return VCD::OMAF::ProjectionFormat
+    //!         PF_ERP is ERP, and PF_CUBEMAP is CubeMap
     //!
-    uint16_t GetProjType() { return m_projType; };
+    VCD::OMAF::ProjectionFormat GetProjType() { return m_projType; };
 
     //!
     //! \brief  Get the region wise packing information for this extractor track
@@ -335,7 +336,7 @@ private:
 private:
     std::map<uint8_t, MediaStream*> *m_streams;          //!< media streams map set up in OmafPackage
     uint8_t                         m_viewportIdx;       //!< the index of viewport corresponding to extractor track
-    uint16_t                        m_projType;          //!< projection type of the video frame
+    VCD::OMAF::ProjectionFormat     m_projType;          //!< projection type of the video frame
     RegionWisePacking               *m_dstRwpk;          //!< pointer to the region wise packing information of extractor track
     ContentCoverage                 *m_dstCovi;          //!< pointer to the content coverage information of extractor track
     std::map<uint8_t, Extractor*>   m_extractors;        //!< map of all extractors belong to the extractor track

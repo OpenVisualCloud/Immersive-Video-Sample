@@ -34,7 +34,6 @@
 #include "360SCVPAPI.h"
 #include "ExtractorTrack.h"
 #include "VideoStream.h"
-#include "../utils/OmafStructure.h"
 
 VCD_NS_BEGIN
 
@@ -42,7 +41,7 @@ ExtractorTrack::ExtractorTrack()
 {
     m_streams = NULL;
     m_viewportIdx = 0;
-    m_projType = 0;
+    m_projType = VCD::OMAF::ProjectionFormat::PF_ERP;
 
     m_dstRwpk = NULL;
     m_dstCovi = NULL;
@@ -117,7 +116,7 @@ ExtractorTrack::ExtractorTrack(uint8_t viewportIdx, std::map<uint8_t, MediaStrea
 {
     m_streams = streams;
     m_viewportIdx = viewportIdx;
-    m_projType = projType;
+    m_projType = (VCD::OMAF::ProjectionFormat)projType;
 
     m_dstRwpk = NULL;
     m_dstCovi = NULL;

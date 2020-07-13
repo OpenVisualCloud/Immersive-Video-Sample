@@ -40,10 +40,13 @@
 #include "MediaStream.h"
 #include "NaluParser.h"
 #include "VideoSegmentInfoGenerator.h"
+#include "../utils/OmafStructure.h"
 
 #include <list>
 
 VCD_NS_BEGIN
+
+#define CUBEMAP_FACES_NUM 6
 
 //!
 //! \class VideoStream
@@ -135,7 +138,7 @@ public:
     //! \return uint16_t
     //!         0 is ERP, and 1 is CubeMap
     //!
-    uint16_t GetProjType() { return m_projType; };
+    VCD::OMAF::ProjectionFormat GetProjType() { return m_projType; };
 
     //!
     //! \brief  Get the video segment information of the video
@@ -337,21 +340,31 @@ private:
 
     //!
     //! \brief  Fill source region wise packing information
-    //!         according to tiles information
+    //!         according to tiles information for ERP
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t FillRegionWisePacking();
+    int32_t FillRegionWisePackingForERP();
+
+    //!
+    //! \brief  Fill source region wise packing information
+    //!         according to tiles information for CubeMap
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t FillRegionWisePackingForCubeMap();
 
     //!
     //! \brief  Fill source content coverage information
     //!         according to region wise packing information
+    //!         for ERP
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t FillContentCoverage();
+    int32_t FillContentCoverageForERP();
 
 private:
     uint8_t                   m_streamIdx;        //!< the index of the video in all media streams
@@ -360,8 +373,11 @@ private:
     uint16_t                  m_height;           //!< height of the video frame
     uint8_t                   m_tileInRow;        //!< tiles number in row in video frame
     uint8_t                   m_tileInCol;        //!< tiles number in column in video frame
+    uint8_t                   m_tileRowsInFace;   //!< tile rows number in each CubeMap face
+    uint8_t                   m_tileColsInFace;   //!< tile cols number in each CubeMap face
     TileInfo                  *m_tilesInfo;       //!< pointer to tile information of all tiles
-    uint16_t                  m_projType;         //!< projection type of the video frame
+    VCD::OMAF::ProjectionFormat m_projType;       //!< projection type of the video frame
+    CubeMapFaceInfo           m_cubeMapInfo[CUBEMAP_FACES_NUM]; //!< pointer to the input CubeMap information
     RegionWisePacking         *m_srcRwpk;         //!< pointer to the region wise packing information of the video
     ContentCoverage           *m_srcCovi;         //!< pointer to the content coverage information of the video
     VideoSegmentInfoGenerator *m_videoSegInfoGen; //!< pointer to the video segment information generator
