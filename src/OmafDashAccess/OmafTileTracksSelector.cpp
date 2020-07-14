@@ -297,6 +297,14 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     }
     else if (mProjFmt == ProjectionFormat::PF_CUBEMAP)
     {
+        uint32_t sqrtedSize = (uint32_t)sqrt(selectedTilesNum);
+        while(sqrtedSize && selectedTilesNum%sqrtedSize) { sqrtedSize--; }
+        bool needAddtionalTile = false;
+        if (sqrtedSize == 1) // selectedTilesNum is prime number
+        {
+            LOG(INFO) <<"need additional tile is true!"<<endl;
+            needAddtionalTile = true;
+        }
         for (int32_t index = 0; index < selectedTilesNum; index++)
         {
             int32_t left = tilesInViewport[index].x;
@@ -329,6 +337,20 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
                         selectedTracks.insert(make_pair(trackID, adaptationSet));
                         break;
                     }
+                }
+            }
+        }
+        if (needAddtionalTile)
+        {
+            for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+            {
+                OmafAdaptationSet *adaptationSet = itAS->second;
+                uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
+                int trackID = adaptationSet->GetID();
+                if (selectedTracks.find(trackID) == selectedTracks.end() && qualityRanking == HIGHEST_QUALITY_RANKING)
+                {
+                    selectedTracks.insert(make_pair(trackID, adaptationSet));
+                    break;
                 }
             }
         }
