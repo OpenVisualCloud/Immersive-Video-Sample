@@ -65,7 +65,7 @@ public:
     //!
     //! \brief  construct from AdaptationSetElement
     //!
-    OmafAdaptationSet( AdaptationSetElement* pAdaptationSet );
+    OmafAdaptationSet( AdaptationSetElement* pAdaptationSet, ProjectionFormat pf );
 
     //!
     //! \brief  de-construct
@@ -170,6 +170,8 @@ public:
         return this;
     };
 
+    TileDef*                   GetTileInfo()                               { return mTileInfo;            };
+
 private:
 
     //!
@@ -189,6 +191,7 @@ protected:
     OmafSegment*                          mInitSegment;      //<! Initialize Segmentation
 
     OmafSrd                              *mSRD;              //<! SRD information
+    TileDef                              *mTileInfo;          //<! TileDef information
     PreselValue                          *mPreselID;         //<! dependency ID
     TwoDQualityRanking                   *mTwoDQuality;      //<! TwoDQUality ranking
     SphereQuality                        *mSrqr;             //<! srqe information

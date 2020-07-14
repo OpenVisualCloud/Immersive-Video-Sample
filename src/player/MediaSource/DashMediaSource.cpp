@@ -106,8 +106,6 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
     }
     //2. initial viewport.
     HeadSetInfo clientInfo;
-    clientInfo.input_geoType = E_SVIDEO_EQUIRECT;
-    clientInfo.output_geoType = E_SVIDEO_VIEWPORT;
     clientInfo.pose = (HeadPose*)malloc(sizeof(HeadPose));
     if (NULL == clientInfo.pose)
     {

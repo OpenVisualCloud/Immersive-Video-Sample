@@ -45,8 +45,8 @@ OmafExtractor::~OmafExtractor()
 {
 }
 
-OmafExtractor::OmafExtractor( AdaptationSetElement* pAdaptationSet )
-:OmafAdaptationSet(pAdaptationSet)
+OmafExtractor::OmafExtractor( AdaptationSetElement* pAdaptationSet, ProjectionFormat pf )
+:OmafAdaptationSet(pAdaptationSet, pf)
 {
 }
 

@@ -47,8 +47,6 @@ public:
         libPath = "../../plugins/ViewportPredict_Plugin/predict_LR/";
 
         clientInfo = new HeadSetInfo;
-        clientInfo->input_geoType = 0;
-        clientInfo->output_geoType = E_SVIDEO_VIEWPORT;
         clientInfo->pose = new HeadPose;
         clientInfo->pose->yaw = -90;
         clientInfo->pose->pitch = 0;

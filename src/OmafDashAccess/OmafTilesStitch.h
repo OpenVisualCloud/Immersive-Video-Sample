@@ -90,11 +90,17 @@ public:
     //!         the first set of media packets for selected tiles
     //! \param  [in] needParams
     //!         denote whether VPS/SPS/PPS need to be added into merged packet
+    //! \param  [in] projFmt
+    //!         denote the projectin format of input source where tiles come
+    //!         from
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t Initialize(std::map<uint32_t, MediaPacket*>& firstFramePackets, bool needParams);
+    int32_t Initialize(
+        std::map<uint32_t, MediaPacket*>& firstFramePackets,
+        bool needParams,
+        VCD::OMAF::ProjectionFormat projFmt);
 
     //!
     //! \brief  Update the set of media packets of selected tiles for next frame
@@ -152,7 +158,8 @@ private:
 
     //!
     //! \brief  Calculate region wise packing information for
-    //!         tiles set with specified quality ranking
+    //!         tiles set with specified quality ranking when
+    //!         tiles come from ERP projection
     //!
     //! \param  [in] qualityRanking
     //!         the quality ranking information for the tiles
@@ -168,7 +175,31 @@ private:
     //!         the pointer to the calculated region wise packing
     //!         information
     //!
-    RegionWisePacking* CalculateMergedRwpk(
+    RegionWisePacking* CalculateMergedRwpkForERP(
+        uint32_t qualityRanking,
+        bool     hasPacketLost,
+        bool     hasLayoutChanged);
+
+    //!
+    //! \brief  Calculate region wise packing information for
+    //!         tiles set with specified quality ranking when
+    //!         tiles come from CubeMap projection
+    //!
+    //! \param  [in] qualityRanking
+    //!         the quality ranking information for the tiles
+    //!         set needed to be calculate region wise packing
+    //! \param  [in] hasPacketLost
+    //!         denote whether media packet is lost in packets
+    //!         set
+    //! \param  [in] hasLayoutChanged
+    //!         denote whether current tiles merge layout has
+    //!         changed compared to previous layout
+    //!
+    //! \return RegionWisePacking*
+    //!         the pointer to the calculated region wise packing
+    //!         information
+    //!
+    RegionWisePacking* CalculateMergedRwpkForCubeMap(
         uint32_t qualityRanking,
         bool     hasPacketLost,
         bool     hasLayoutChanged);
@@ -192,6 +223,8 @@ private:
 private:
 
     bool                                                    m_isInitialized;  //<! whether the stitch class has been initialized
+
+    VCD::OMAF::ProjectionFormat                             m_projFmt;        //<! the projection format of input source where tiles come from
 
     PacketsMap                                              m_selectedTiles;  //<! map of <qualityRanking, <trackID, MediaPacket*>>
 

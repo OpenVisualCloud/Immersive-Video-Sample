@@ -95,6 +95,8 @@ public:
     //!
     //virtual int GetSegmentPriority(OmafSegment *segment) = 0;
 
+    void SetProjectionFmt(ProjectionFormat projFmt) { mProjFmt = projFmt; };
+
 private:
 
     //!
@@ -113,6 +115,7 @@ protected:
     std::string                       mPredictPluginName;
     std::string                       mLibPath;
     std::map<std::string, ViewportPredictPlugin*> mPredictPluginMap;
+    ProjectionFormat                  mProjFmt;
 };
 
 VCD_OMAF_END;

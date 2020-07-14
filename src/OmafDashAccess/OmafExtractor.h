@@ -55,7 +55,7 @@ public:
     //!
     //! \brief  construct from AdaptationSetElement
     //!
-    OmafExtractor( AdaptationSetElement* pAdaptationSet );
+    OmafExtractor( AdaptationSetElement* pAdaptationSet, ProjectionFormat pf );
 
     //!
     //! \brief  de-construct

@@ -183,9 +183,9 @@ int OmafMediaStream::InitStream(std::string type)
     return ERROR_NONE;
 }
 
-void OmafMediaStream::UpdateStreamInfo()
+int OmafMediaStream::UpdateStreamInfo()
 {
-    if(!mMediaAdaptationSet.size()) return;
+    if(!mMediaAdaptationSet.size()) return OMAF_ERROR_INVALID_DATA;
     if (m_enabledExtractor)
     {
         if(NULL != mMainAdaptationSet && NULL != mExtratorAdaptationSet){
@@ -345,6 +345,81 @@ void OmafMediaStream::UpdateStreamInfo()
     }
     m_pStreamInfo->tileRowNum = rowNum;
     m_pStreamInfo->tileColNum = colNum;
+
+    if (m_pStreamInfo->mProjFormat == VCD::OMAF::ProjectionFormat::PF_CUBEMAP)
+    {
+        std::map<int, OmafAdaptationSet*>::iterator itAS;
+        for (itAS = mMediaAdaptationSet.begin();
+            itAS != mMediaAdaptationSet.end(); itAS++)
+        {
+            OmafAdaptationSet *adaptationSet = itAS->second;
+            uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
+            if (qualityRanking == HIGHEST_QUALITY_RANKING)
+            {
+                OmafSrd *srd = adaptationSet->GetSRD();
+                TileDef *oneTile = adaptationSet->GetTileInfo();
+                if (!oneTile)
+                {
+                    LOG(ERROR) << "Un-matched projection format !" << std::endl;
+                    return OMAF_ERROR_INVALID_PROJECTIONTYPE;
+                }
+                int32_t globalX = oneTile->x;
+                int32_t globalY = oneTile->y;
+                int32_t faceWidth = m_pStreamInfo->width / 3;
+                int32_t faceHeight = m_pStreamInfo->height / 2;
+                int32_t faceColId = globalX / faceWidth;
+                int32_t faceRowId = globalY / faceHeight;
+                int32_t localX = globalX % faceWidth;
+                int32_t localY = globalY % faceHeight;
+                int32_t tileWidth = srd->get_W();
+                int32_t tileHeight = srd->get_H();
+                if (faceRowId == 0)
+                {
+                    if (faceColId == 0)
+                    {
+                        oneTile->faceId = 2;
+                        oneTile->x = localX;
+                        oneTile->y = localY;
+                    }
+                    else if (faceColId == 1)
+                    {
+                        oneTile->faceId = 0;
+                        oneTile->x = localX;
+                        oneTile->y = localY;
+                    }
+                    else if (faceColId == 2)
+                    {
+                        oneTile->faceId = 3;
+                        oneTile->x = localX;
+                        oneTile->y = localY;
+                    }
+                }
+                else if (faceRowId == 1)
+                {
+                    if (faceColId == 0)
+                    {
+                        oneTile->faceId = 5;
+                        oneTile->y = localX;
+                        oneTile->x = faceHeight - tileHeight - localY;
+                    }
+                    else if (faceColId == 1)
+                    {
+                        oneTile->faceId = 1;
+                        oneTile->x = localX;
+                        oneTile->y = localY;
+                    }
+                    else if (faceColId == 2)
+                    {
+                        oneTile->faceId = 4;
+                        oneTile->y = faceWidth - tileWidth - localX;
+                        oneTile->x = localY;
+                    }
+                }
+            }
+        }
+    }
+
+    return ERROR_NONE;
 }
 
 void OmafMediaStream::SetupExtratorDependency()
@@ -652,13 +727,13 @@ int32_t OmafMediaStream::TilesStitching()
                 uint64_t pts = READERMANAGER::GetInstance()->GetOldestPacketPTSForTrack(trackID);
                 if (pts > currFramePTS)
                 {
-	            LOG(INFO) << "Packet is outdated ! " << std::endl;
+                    LOG(INFO) << "Packet is outdated ! " << std::endl;
                     hasPktOutdated = true;
                     break;
                 }
                 else if (pts < currFramePTS)
                 {
-		    LOG(INFO) << "Old PTS  " << pts << "  occures ! " << std::endl;
+                    LOG(INFO) << "Old PTS  " << pts << "  occures ! " << std::endl;
                     READERMANAGER::GetInstance()->RemoveOutdatedPacketForTrack(trackID, currFramePTS);
                 }
             }
@@ -716,6 +791,7 @@ int32_t OmafMediaStream::TilesStitching()
                     currFramePTS = onePacket->GetPTS();
                     LOG(INFO) << "The PTS for this batch is  " << currFramePTS << std::endl;
                 }
+
                 selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
             }
         }
@@ -741,7 +817,9 @@ int32_t OmafMediaStream::TilesStitching()
 
         if (!isEOS && !(m_stitch->IsInitialized()))
         {
-            ret = m_stitch->Initialize(selectedPackets, m_needParams);
+            ret = m_stitch->Initialize(
+                selectedPackets, m_needParams,
+                (VCD::OMAF::ProjectionFormat)(m_pStreamInfo->mProjFormat));
             if (ret)
             {
                 LOG(ERROR) << "Failed to initialize stitch class !" << std::endl;

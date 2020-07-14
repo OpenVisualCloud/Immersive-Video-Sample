@@ -53,8 +53,6 @@ typedef struct HEADPOSE {
 }HeadPose;
 
 typedef struct HEADSETINFO {
-    int32_t    input_geoType;
-    int32_t    output_geoType;
     HeadPose   *pose;
     float      viewPort_hFOV;
     float      viewPort_vFOV;

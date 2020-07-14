@@ -47,6 +47,7 @@ OmafTilesStitch::OmafTilesStitch()
     m_mainMergedTileCols = 0;
     m_needHeaders        = false;
     m_isInitialized      = false;
+    m_projFmt            = VCD::OMAF::ProjectionFormat::PF_ERP;
 }
 
 OmafTilesStitch::~OmafTilesStitch()
@@ -174,7 +175,8 @@ OmafTilesStitch::~OmafTilesStitch()
 
 int32_t OmafTilesStitch::Initialize(
     std::map<uint32_t, MediaPacket*>& firstFramePackets,
-    bool needParams)
+    bool needParams,
+    VCD::OMAF::ProjectionFormat projFmt)
 {
     if (0 == firstFramePackets.size())
     {
@@ -189,6 +191,7 @@ int32_t OmafTilesStitch::Initialize(
     }
 
     m_needHeaders = needParams;
+    m_projFmt     = projFmt;
 
     std::map<uint32_t, MediaPacket*>::iterator it;
     for ( it = firstFramePackets.begin(); it != firstFramePackets.end(); it++)
@@ -596,7 +599,7 @@ std::map<uint32_t, TilesMergeArrangement*> OmafTilesStitch::CalculateTilesMergeA
     return tilesMergeArr;
 }
 
-RegionWisePacking* OmafTilesStitch::CalculateMergedRwpk(
+RegionWisePacking* OmafTilesStitch::CalculateMergedRwpkForERP(
     uint32_t qualityRanking,
     bool     hasPacketLost,
     bool     hasLayoutChanged)
@@ -750,6 +753,179 @@ RegionWisePacking* OmafTilesStitch::CalculateMergedRwpk(
             rectReg->packedRegHeight = srd.height;
             rectReg->packedRegTop    = srd.top;
             rectReg->packedRegLeft   = srd.left;
+        }
+
+        rectReg->leftGbWidth = 0;
+        rectReg->rightGbWidth = 0;
+        rectReg->topGbHeight  = 0;
+        rectReg->bottomGbHeight = 0;
+        rectReg->gbNotUsedForPredFlag = true;
+        rectReg->gbType0              = 0;
+        rectReg->gbType1              = 0;
+        rectReg->gbType2              = 0;
+        rectReg->gbType3              = 0;
+
+        regIdx++;
+    }
+
+    return rwpk;
+}
+
+RegionWisePacking* OmafTilesStitch::CalculateMergedRwpkForCubeMap(
+    uint32_t qualityRanking,
+    bool     hasPacketLost,
+    bool     hasLayoutChanged)
+{
+    if (0 == m_selectedTiles.size())
+        return NULL;
+
+    if (hasPacketLost && hasLayoutChanged)
+    {
+        LOG(ERROR) << "Packet lost and layout change can't happen at the same time !" << std::endl;
+        return NULL;
+    }
+
+    std::map<uint32_t, std::map<uint32_t, MediaPacket*>>::iterator it;
+    it = m_selectedTiles.find(qualityRanking);
+    if (it == m_selectedTiles.end())
+    {
+        LOG(ERROR) << "Can't find media packets of specified quality ranking !"<< std::endl;
+        return NULL;
+    }
+
+    std::map<uint32_t, MediaPacket*> packets = it->second;
+    if (0 == packets.size())
+    {
+        LOG(ERROR) << "Invalid media packets size for specified quality ranking !" << std::endl;
+        return NULL;
+    }
+
+    TilesMergeArrangement *mergeLayout = NULL;
+    std::map<uint32_t, TilesMergeArrangement*>::iterator itArr;
+    std::map<uint32_t, MediaPacket*>::iterator itPacket;
+
+    if (0 == m_initTilesMergeArr.size() && 0 == m_updatedTilesMergeArr.size())
+    {
+        LOG(ERROR) << "There is no tiles merge layout before calculating rwpk !" << std::endl;
+        return NULL;
+    }
+    LOG(INFO)<<"hasPacketLost:"<<hasPacketLost<<" hasLayoutChanged:"<<hasLayoutChanged<<endl;
+    if (!hasPacketLost && !hasLayoutChanged)
+    {
+        if (0 == m_updatedTilesMergeArr.size())
+        {
+            itArr = m_initTilesMergeArr.find(qualityRanking);
+            if (itArr == m_initTilesMergeArr.end())
+            {
+                LOG(ERROR) << "Can't find tiles merge layout for specified quality ranking !" << std::endl;
+                return NULL;
+            }
+            mergeLayout = itArr->second;
+            if (!mergeLayout)
+            {
+                LOG(ERROR) << "NULL tiles merge layout for specified quality ranking !" << std::endl;
+                return NULL;
+            }
+        }
+        else
+        {
+            itArr = m_updatedTilesMergeArr.find(qualityRanking);
+            if (itArr == m_updatedTilesMergeArr.end())
+            {
+                LOG(ERROR) << "Can't find tiles merge layout for specified quality ranking !" << std::endl;
+                return NULL;
+            }
+            mergeLayout = itArr->second;
+            if (!mergeLayout)
+            {
+                LOG(ERROR) << "NULL tiles merge layout for specified quality ranking !" << std::endl;
+                return NULL;
+            }
+        }
+    }
+    else if (!hasPacketLost && hasLayoutChanged)
+    {
+        itArr = m_updatedTilesMergeArr.find(qualityRanking);
+        if (itArr == m_updatedTilesMergeArr.end())
+        {
+            LOG(ERROR) << "Can't find tiles merge layout for specified quality ranking !" << std::endl;
+            return NULL;
+        }
+
+        mergeLayout = itArr->second;
+        if (!mergeLayout)
+        {
+            LOG(ERROR) << "NULL tiles merge layout for specified quality ranking !" << std::endl;
+            return NULL;
+        }
+    }
+
+    if (!mergeLayout)
+    {
+        LOG(ERROR) << "NULL tiles merge layout for specified quality ranking !" << std::endl;
+        return NULL;
+    }
+
+    uint32_t width  = mergeLayout->mergedWidth;
+    uint32_t height = mergeLayout->mergedHeight;
+    uint8_t tileRowsNum = mergeLayout->tilesLayout.tileRowsNum;
+    uint8_t tileColsNum = mergeLayout->tilesLayout.tileColsNum;
+    // construct region-wise packing information
+    RegionWisePacking *rwpk = new RegionWisePacking;
+    if (!rwpk)
+        return NULL;
+
+    rwpk->constituentPicMatching = 0;
+    rwpk->numRegions = (uint8_t)(tileRowsNum) * (uint8_t)(tileColsNum);
+    rwpk->projPicWidth = m_fullWidth;
+    rwpk->projPicHeight = m_fullHeight;
+    rwpk->packedPicWidth = width;
+    rwpk->packedPicHeight = height;
+
+    rwpk->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
+    if (!(rwpk->rectRegionPacking))
+    {
+        SAFE_DELETE(rwpk);
+        return NULL;
+    }
+
+    uint8_t regIdx = 0;
+    for (itPacket = packets.begin(); itPacket != packets.end(); itPacket++)
+    {
+        MediaPacket *onePacket = itPacket->second;
+        RectangularRegionWisePacking *rectReg = &(rwpk->rectRegionPacking[regIdx]);
+        memset(rectReg, 0, sizeof(RectangularRegionWisePacking));
+
+        RegionWisePacking *tileRwpk = onePacket->GetRwpk();
+        rectReg->transformType = tileRwpk->rectRegionPacking[0].transformType;
+        rectReg->guardBandFlag = false;
+
+        SRDInfo srd = onePacket->GetSRDInfo();
+        if (qualityRanking == HIGHEST_QUALITY_RANKING)
+        {
+            rectReg->projRegWidth  = tileRwpk->rectRegionPacking[0].projRegWidth;
+            rectReg->projRegHeight = tileRwpk->rectRegionPacking[0].projRegHeight;
+            rectReg->projRegTop    = tileRwpk->rectRegionPacking[0].projRegTop;
+            rectReg->projRegLeft   = tileRwpk->rectRegionPacking[0].projRegLeft;
+
+            rectReg->packedRegWidth = tileRwpk->rectRegionPacking[0].packedRegWidth;
+            rectReg->packedRegHeight = tileRwpk->rectRegionPacking[0].packedRegHeight;
+            uint8_t rowIdx = regIdx / tileColsNum;
+            uint8_t colIdx = regIdx % tileColsNum;
+            rectReg->packedRegTop = rowIdx * srd.height;
+            rectReg->packedRegLeft = colIdx * srd.width;
+        }
+        else
+        {
+            rectReg->projRegWidth  = (uint32_t)round((float)(tileRwpk->rectRegionPacking[0].projRegWidth * m_fullWidth) / (float)(width));
+            rectReg->projRegHeight = (uint32_t)round((float)(tileRwpk->rectRegionPacking[0].projRegHeight * m_fullHeight) / (float)(height));
+            rectReg->projRegTop    = (uint32_t)round((float)(tileRwpk->rectRegionPacking[0].projRegTop * m_fullHeight) / (float)(height));
+            rectReg->projRegLeft   = (uint32_t)round((float)(tileRwpk->rectRegionPacking[0].projRegLeft * m_fullWidth) / (float)(width));
+
+            rectReg->packedRegWidth  = tileRwpk->rectRegionPacking[0].packedRegWidth;
+            rectReg->packedRegHeight = tileRwpk->rectRegionPacking[0].packedRegHeight;
+            rectReg->packedRegTop    = tileRwpk->rectRegionPacking[0].packedRegTop;
+            rectReg->packedRegLeft   = tileRwpk->rectRegionPacking[0].packedRegLeft;
         }
 
         rectReg->leftGbWidth = 0;
@@ -997,7 +1173,16 @@ int32_t OmafTilesStitch::GenerateOutputMergedPackets()
             }
         }
 
-        RegionWisePacking *rwpk = CalculateMergedRwpk(qualityRanking, packetLost, arrangeChanged);
+        RegionWisePacking *rwpk = NULL;
+        if (m_projFmt == VCD::OMAF::ProjectionFormat::PF_ERP)
+        {
+            rwpk = CalculateMergedRwpkForERP(qualityRanking, packetLost, arrangeChanged);
+        }
+        else if (m_projFmt == VCD::OMAF::ProjectionFormat::PF_CUBEMAP)
+        {
+            rwpk = CalculateMergedRwpkForCubeMap(qualityRanking, packetLost, arrangeChanged);
+        }
+
         if (!rwpk)
             return OMAF_ERROR_GENERATE_RWPK;
 
