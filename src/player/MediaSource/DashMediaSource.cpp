@@ -37,6 +37,7 @@
 #include "../RenderType.h"
 #include "DashMediaSource.h"
 #include "OmafDashAccessApi.h"
+#include "../../utils/tinyxml2.h"
 #ifdef _USE_TRACE_
 #include "../../trace/MtHQ_tp.h"
 #endif
@@ -44,6 +45,8 @@
 #define MIN_LIST_REMAIN 2
 #define DECODE_THREAD_COUNT 16
 #define MAX_PACKETS 16
+
+using namespace tinyxml2;
 
 VCD_NS_BEGIN
 
@@ -53,12 +56,26 @@ DashMediaSource::DashMediaSource()
     m_status = STATUS_UNKNOWN;
     m_handler = NULL;
     m_DecoderManager = NULL;
+    GetStreamDumpedOptionParams();
+    if (m_needStreamDumped)
+    {
+        m_dumpedFile = fopen("highRes.h265", "wb");
+        if (NULL == m_dumpedFile)
+            LOG(ERROR)<<"Failed to open stream dumped file!"<<endl;
+    }
+    else
+        m_dumpedFile = NULL;
 }
 
 DashMediaSource::~DashMediaSource()
 {
     m_status = STATUS_STOPPED;
     SAFE_DELETE(m_DecoderManager);
+    if (m_needStreamDumped && m_dumpedFile)
+    {
+        fclose(m_dumpedFile);
+        m_dumpedFile = NULL;
+    }
     OmafAccess_CloseMedia(m_handler);
     OmafAccess_Close(m_handler);
 }
@@ -141,6 +158,22 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
     clientInfo.pose = NULL;
     return RENDER_STATUS_OK;
 }
+
+RenderStatus DashMediaSource::GetStreamDumpedOptionParams()
+{
+    XMLDocument config;
+    config.LoadFile("config.xml");
+    XMLElement *info = config.RootElement();
+    XMLElement *dumpedElem = info->FirstChildElement("StreamDumpedOption");
+    if (NULL == dumpedElem)
+    {
+        m_needStreamDumped = false;
+        return RENDER_ERROR;
+    }
+    m_needStreamDumped = atoi(dumpedElem->GetText());
+    return RENDER_STATUS_OK;
+}
+
 
 void DashMediaSource::SetActiveStream( int32_t video_id, int32_t audio_id )
 {
@@ -265,6 +298,11 @@ void DashMediaSource::ProcessVideoPacket()
     //trace
     tracepoint(mthq_tp_provider, T7_get_packet, dashPkt[0].segID);
 #endif
+
+    if (m_needStreamDumped && m_dumpedFile)
+    {
+        fwrite(dashPkt[0].buf, 1, dashPkt[0].size, m_dumpedFile);
+    }
 
     if(NULL != m_DecoderManager){
         RenderStatus ret = m_DecoderManager->SendVideoPackets(&(dashPkt[0]), dashPktNum);
