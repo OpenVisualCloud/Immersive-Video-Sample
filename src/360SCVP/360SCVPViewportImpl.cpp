@@ -458,8 +458,7 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
         return -1;
 
     int32_t tileNum = 0;
-    // work around : low pitch area need to cover 2 tiles on both left/right sides separately.
-    int32_t additionalTilesNum = 4;
+    int32_t additionalTilesNum = 0;
 
     int32_t fPitch = (int32_t)(cTAppConvCfg->m_codingSVideoInfo.viewPort.fPitch);
     tileNum = cTAppConvCfg->calcTilesInViewport(cTAppConvCfg->m_srd, cTAppConvCfg->m_tileNumCol, cTAppConvCfg->m_tileNumRow);
@@ -468,6 +467,8 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
         int32_t pos = 0;
         if (fPitch >= LOW_PITCH_BOUND_IN_NORTH || fPitch <= LOW_PITCH_BOUND_IN_SOUTH)
         {
+            // work around : low pitch area need to cover 2 tiles on both left/right sides separately.
+            additionalTilesNum = 4;
             if (fPitch >= LOW_PITCH_BOUND_IN_NORTH)
                 pos = 0;
             else
