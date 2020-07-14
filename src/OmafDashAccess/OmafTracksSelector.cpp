@@ -47,6 +47,7 @@ OmafTracksSelector::OmafTracksSelector(int size)
     mUsePrediction = false;
     mPredictPluginName = "";
     mLibPath = "";
+    mProjFmt = ProjectionFormat::PF_ERP;
 }
 
 OmafTracksSelector::~OmafTracksSelector()
@@ -99,19 +100,59 @@ int OmafTracksSelector::SetInitialViewport(
 
     mParamViewport = new param_360SCVP;
     mParamViewport->usedType = E_VIEWPORT_ONLY;
-    mParamViewport->paramViewPort.viewportWidth = headSetInfo->viewPort_Width;
-    mParamViewport->paramViewPort.viewportHeight = headSetInfo->viewPort_Height;
-    mParamViewport->paramViewPort.viewPortPitch = headSetInfo->pose->pitch;
-    mParamViewport->paramViewPort.viewPortYaw = headSetInfo->pose->yaw;
-    mParamViewport->paramViewPort.viewPortFOVH = headSetInfo->viewPort_hFOV;
-    mParamViewport->paramViewPort.viewPortFOVV = headSetInfo->viewPort_vFOV;
-    mParamViewport->paramViewPort.geoTypeInput = (EGeometryType)headSetInfo->input_geoType;
-    mParamViewport->paramViewPort.geoTypeOutput = (EGeometryType)headSetInfo->output_geoType;
-    mParamViewport->paramViewPort.tileNumRow = pStream->GetRowSize();
-    mParamViewport->paramViewPort.tileNumCol = pStream->GetColSize();
-    mParamViewport->paramViewPort.usageType = E_VIEWPORT_ONLY;
-    mParamViewport->paramViewPort.faceWidth = pStream->GetStreamHighResWidth();
-    mParamViewport->paramViewPort.faceHeight = pStream->GetStreamHighResHeight();
+    if (mProjFmt == ProjectionFormat::PF_ERP)
+    {
+        mParamViewport->paramViewPort.viewportWidth = headSetInfo->viewPort_Width;
+        mParamViewport->paramViewPort.viewportHeight = headSetInfo->viewPort_Height;
+        mParamViewport->paramViewPort.viewPortPitch = headSetInfo->pose->pitch;
+        mParamViewport->paramViewPort.viewPortYaw = headSetInfo->pose->yaw;
+        mParamViewport->paramViewPort.viewPortFOVH = headSetInfo->viewPort_hFOV;
+        mParamViewport->paramViewPort.viewPortFOVV = headSetInfo->viewPort_vFOV;
+        mParamViewport->paramViewPort.geoTypeInput = (EGeometryType)(mProjFmt);//(EGeometryType)headSetInfo->input_geoType;
+        mParamViewport->paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;//(EGeometryType)headSetInfo->output_geoType;
+        mParamViewport->paramViewPort.tileNumRow = pStream->GetRowSize();
+        mParamViewport->paramViewPort.tileNumCol = pStream->GetColSize();
+        mParamViewport->paramViewPort.usageType = E_VIEWPORT_ONLY;
+        mParamViewport->paramViewPort.faceWidth = pStream->GetStreamHighResWidth();
+        mParamViewport->paramViewPort.faceHeight = pStream->GetStreamHighResHeight();
+        mParamViewport->paramViewPort.paramVideoFP.cols = 1;
+        mParamViewport->paramViewPort.paramVideoFP.rows = 1;
+        mParamViewport->paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
+        mParamViewport->paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
+    }
+    else if (mProjFmt == ProjectionFormat::PF_CUBEMAP)
+    {
+        mParamViewport->paramViewPort.viewportWidth = headSetInfo->viewPort_Width;
+        mParamViewport->paramViewPort.viewportHeight = headSetInfo->viewPort_Height;
+        mParamViewport->paramViewPort.viewPortPitch = headSetInfo->pose->pitch;
+        mParamViewport->paramViewPort.viewPortYaw = headSetInfo->pose->yaw;
+        mParamViewport->paramViewPort.viewPortFOVH = headSetInfo->viewPort_hFOV;
+        mParamViewport->paramViewPort.viewPortFOVV = headSetInfo->viewPort_vFOV;
+        mParamViewport->paramViewPort.geoTypeInput = (EGeometryType)(mProjFmt);//(EGeometryType)headSetInfo->input_geoType;
+        mParamViewport->paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;//(EGeometryType)headSetInfo->output_geoType;
+        mParamViewport->paramViewPort.tileNumRow = pStream->GetRowSize() / 2;
+        mParamViewport->paramViewPort.tileNumCol = pStream->GetColSize() / 3;
+        mParamViewport->paramViewPort.usageType = E_VIEWPORT_ONLY;
+        mParamViewport->paramViewPort.faceWidth = pStream->GetStreamHighResWidth() / 3;
+        mParamViewport->paramViewPort.faceHeight = pStream->GetStreamHighResHeight() / 2;
+
+        mParamViewport->paramViewPort.paramVideoFP.cols = 3;
+        mParamViewport->paramViewPort.paramVideoFP.rows = 2;
+        mParamViewport->paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
+        mParamViewport->paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
+        mParamViewport->paramViewPort.paramVideoFP.faces[0][0].faceWidth = mParamViewport->paramViewPort.faceWidth;
+        mParamViewport->paramViewPort.paramVideoFP.faces[0][0].faceHeight = mParamViewport->paramViewPort.faceHeight;
+        mParamViewport->paramViewPort.paramVideoFP.faces[0][1].idFace = 1;
+        mParamViewport->paramViewPort.paramVideoFP.faces[0][1].rotFace = NO_TRANSFORM;
+        mParamViewport->paramViewPort.paramVideoFP.faces[0][2].idFace = 2;
+        mParamViewport->paramViewPort.paramVideoFP.faces[0][2].rotFace = NO_TRANSFORM;
+        mParamViewport->paramViewPort.paramVideoFP.faces[1][0].idFace = 3;
+        mParamViewport->paramViewPort.paramVideoFP.faces[1][0].rotFace = NO_TRANSFORM;
+        mParamViewport->paramViewPort.paramVideoFP.faces[1][1].idFace = 4;
+        mParamViewport->paramViewPort.paramVideoFP.faces[1][1].rotFace = NO_TRANSFORM;
+        mParamViewport->paramViewPort.paramVideoFP.faces[1][2].idFace = 5;
+        mParamViewport->paramViewPort.paramVideoFP.faces[1][2].rotFace = NO_TRANSFORM;
+    }
     m360ViewPortHandle = I360SCVP_Init(mParamViewport);
     if(!m360ViewPortHandle)
         return ERROR_NULL_PTR;

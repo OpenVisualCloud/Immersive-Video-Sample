@@ -271,28 +271,68 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     std::map<int, OmafAdaptationSet*>::iterator itAS;
 
     // insert all tile tracks in viewport into selected tile tracks map
-    for (int32_t index = 0; index < selectedTilesNum; index++)
+    if (mProjFmt == ProjectionFormat::PF_ERP)
     {
-        int32_t left = tilesInViewport[index].x;
-        int32_t top  = tilesInViewport[index].y;
-
-        for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+        for (int32_t index = 0; index < selectedTilesNum; index++)
         {
-            OmafAdaptationSet *adaptationSet = itAS->second;
-            OmafSrd *srd = adaptationSet->GetSRD();
-            int32_t tileLeft = srd->get_X();
-            int32_t tileTop  = srd->get_Y();
-            uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
+            int32_t left = tilesInViewport[index].x;
+            int32_t top  = tilesInViewport[index].y;
 
-            if ((qualityRanking == HIGHEST_QUALITY_RANKING) && (tileLeft == left) && (tileTop == top))
+            for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
             {
-                int trackID = adaptationSet->GetID();
-                selectedTracks.insert(make_pair(trackID, adaptationSet));
-                break;
+                OmafAdaptationSet *adaptationSet = itAS->second;
+                OmafSrd *srd = adaptationSet->GetSRD();
+                int32_t tileLeft = srd->get_X();
+                int32_t tileTop  = srd->get_Y();
+                uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
+
+                if ((qualityRanking == HIGHEST_QUALITY_RANKING) && (tileLeft == left) && (tileTop == top))
+                {
+                    int trackID = adaptationSet->GetID();
+                    selectedTracks.insert(make_pair(trackID, adaptationSet));
+                    break;
+                }
             }
         }
     }
+    else if (mProjFmt == ProjectionFormat::PF_CUBEMAP)
+    {
+        for (int32_t index = 0; index < selectedTilesNum; index++)
+        {
+            int32_t left = tilesInViewport[index].x;
+            int32_t top  = tilesInViewport[index].y;
+            int32_t faceId = tilesInViewport[index].faceId;
+            printf("In OmafDashAccess, selected tile x %d, y %d, faceId %d \n", left, top, faceId);
+            for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+            {
+                OmafAdaptationSet *adaptationSet = itAS->second;
+                //OmafSrd *srd = adaptationSet->GetSRD();
+                //int32_t tileLeft = srd->get_X();
+                //int32_t tileTop  = srd->get_Y();
+                uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
 
+                if (qualityRanking == HIGHEST_QUALITY_RANKING)
+                {
+                    TileDef *tileInfo = adaptationSet->GetTileInfo();
+                    if (!tileInfo)
+                    {
+                        LOG(ERROR) << "NULL tile information for Cubemap !" << std::endl;
+                        return selectedTracks;
+                    }
+                    int32_t tileLeft = tileInfo->x;
+                    int32_t tileTop  = tileInfo->y;
+                    int32_t tileFaceId = tileInfo->faceId;
+                    if ((tileLeft == left) && (tileTop == top) && (tileFaceId == faceId))
+                    {
+                        int trackID = adaptationSet->GetID();
+                        printf("Selected tile track id is %d \n", trackID);
+                        selectedTracks.insert(make_pair(trackID, adaptationSet));
+                        break;
+                    }
+                }
+            }
+        }
+    }
     // insert all tile tracks from low qulity video into selected tile tracks map
     for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
     {

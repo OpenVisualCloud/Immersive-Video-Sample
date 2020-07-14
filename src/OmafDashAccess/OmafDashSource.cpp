@@ -170,6 +170,23 @@ int OmafDashSource::OpenMedia(
 
     mMPDinfo = this->GetMPDInfo();
 
+    ProjectionFormat projFmt = mMPDParser->GetProjectionFmt();
+    std::string projStr;
+    if (projFmt == ProjectionFormat::PF_ERP)
+    {
+        projStr = "ERP";
+    }
+    else if (projFmt == ProjectionFormat::PF_CUBEMAP)
+    {
+        projStr = "CubeMap";
+    }
+    else
+    {
+        LOG(ERROR) << "Invalid projection format !" << std::endl;
+        return OMAF_ERROR_INVALID_PROJECTIONTYPE;
+    }
+    LOG(INFO) << "The DASH Source is from  " << projStr.c_str() << " projection !" << std::endl;
+
     if (!isLocalMedia)
     {
         // base URL should be "http://IP:port/FilePrefix/"
@@ -223,6 +240,7 @@ int OmafDashSource::OpenMedia(
         }
     }
 
+    m_selector->SetProjectionFmt(projFmt);
     if(enablePredictor) m_selector->EnablePosePrediction(predictPluginName, libPath);
     // Setup initial Viewport and select Adaption Set
     auto it = mMapStream.begin();

@@ -45,8 +45,6 @@ public:
     virtual void SetUp()
     {
         m_clientInfo = new HeadSetInfo;
-        m_clientInfo->input_geoType = 0;
-        m_clientInfo->output_geoType = E_SVIDEO_VIEWPORT;
         m_clientInfo->pose = new HeadPose;
         m_clientInfo->pose->yaw = -90;
         m_clientInfo->pose->pitch = 0;

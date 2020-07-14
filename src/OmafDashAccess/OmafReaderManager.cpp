@@ -904,7 +904,6 @@ int OmafReaderManager::ReadNextSegment(
         {
             ret =  mReader->getTrackSampleData(combinedTrackId, sample, (char *)(packet->Payload()), packetSize );
         }
-
         if (ret == OMAF_MEMORY_TOO_SMALL_BUFFER )
         {
             LOG(ERROR) << "The frame size has exceeded the maximum packet size" << endl;
@@ -1281,9 +1280,21 @@ void OmafReaderManager::Run()
                     if (prevPoseChanged)
                     {
                         st->sampleIndex.mCurrentReadSegment = mGlobalReadSegId;
-			st->sampleIndex.mGlobalSampleIndex  = mGlobalReadSampleId;
+                        st->sampleIndex.mGlobalSampleIndex  = mGlobalReadSampleId;
                     }
                     //LOG(INFO)<<st->sampleIndex.mCurrentReadSegment<<" "<<st->sampleIndex.mCurrentAddSegment<<endl;
+                    if ((st->sampleIndex.mCurrentReadSegment < st->sampleIndex.mCurrentAddSegment))
+                    {
+                        std::map<int, OmafAdaptationSet*> mapAS1 = pStream->GetSelectedTileTracks();
+                        bool isPoseChanged = IsSelectionChanged(mapAS, mapAS1);
+                        if (isPoseChanged)
+                        {
+                            LOG(INFO) << "When track  "<< pAS->GetTrackNumber()<< " , pose changed" <<endl;
+                            hasPoseChanged = true;
+                            mGlobalReadSegId = st->sampleIndex.mCurrentAddSegment;
+                        }
+
+                    }
                     while (st->sampleIndex.mCurrentReadSegment > st->sampleIndex.mCurrentAddSegment && mStatus!=STATUS_STOPPING && waitTime < 600000)
                     {
                         std::map<int, OmafAdaptationSet*> mapAS1 = pStream->GetSelectedTileTracks();
@@ -1325,9 +1336,10 @@ void OmafReaderManager::Run()
                     if (processedNum == mapAS.size())
                     {
 	                    mGlobalReadSegId = st->sampleIndex.mCurrentReadSegment;
-			    mGlobalReadSampleId = st->sampleIndex.mGlobalSampleIndex;
+                        mGlobalReadSampleId = st->sampleIndex.mGlobalSampleIndex;
 		            }
                 }
+
                 if (prevPoseChanged && !hasPoseChanged)
                     prevPoseChanged = false;
             }

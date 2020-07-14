@@ -65,6 +65,7 @@ OmafAdaptationSet::OmafAdaptationSet()
     mType              = MediaType_NONE;
     mFpt               = FP_UNKNOWN;
     mRwpkType          = RWPK_UNKNOWN;
+    mTileInfo          = NULL;
     memset(&mVideoInfo, 0, sizeof(VideoInfo));
     memset(&mAudioInfo, 0, sizeof(AudioInfo));
     pthread_mutex_init(&mMutex, NULL);
@@ -81,10 +82,12 @@ OmafAdaptationSet::~OmafAdaptationSet()
     {
         mBaseURL.clear();
     }
+    SAFE_DELETE(mTileInfo);
 }
 
-OmafAdaptationSet::OmafAdaptationSet( AdaptationSetElement* pAdaptationSet ):OmafAdaptationSet()
+OmafAdaptationSet::OmafAdaptationSet( AdaptationSetElement* pAdaptationSet, ProjectionFormat pf ):OmafAdaptationSet()
 {
+    mPF = pf;
     Initialize(pAdaptationSet);
 }
 
@@ -106,10 +109,19 @@ int OmafAdaptationSet::Initialize(AdaptationSetElement* pAdaptationSet)
     mSRD = mAdaptationSet->GetSRD();
     mPreselID = mAdaptationSet->GetPreselection();
     mRwpkType = mAdaptationSet->GetRwpkType();
-    mPF = mAdaptationSet->GetProjectionFormat();
+    //mPF = mAdaptationSet->GetProjectionFormat();
     mCC = mAdaptationSet->GetContentCoverage();
     mID = stoi(mAdaptationSet->GetId());
 
+    if (mPF == ProjectionFormat::PF_CUBEMAP)
+    {
+        mTileInfo = new TileDef;
+        if (!mTileInfo)
+            return OMAF_ERROR_NULL_PTR;
+
+        mTileInfo->x = mSRD->get_X();
+        mTileInfo->y = mSRD->get_Y();
+    }
 
     for(auto it = mRepresentation->GetDependencyIDs().begin(); it != mRepresentation->GetDependencyIDs().end(); it++ ){
         std::string id = *it;

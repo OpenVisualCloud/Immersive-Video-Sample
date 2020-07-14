@@ -248,7 +248,7 @@ private:
     //!
     //! \brief  UpdateStreamInfo
     //!
-    void UpdateStreamInfo( );
+    int UpdateStreamInfo( );
 
     //!
     //! \brief  SetupExtratorDependency
@@ -298,4 +298,3 @@ private:
 VCD_OMAF_END;
 
 #endif /* MEDIASTREAM_H */
-

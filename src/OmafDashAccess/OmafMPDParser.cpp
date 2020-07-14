@@ -170,7 +170,7 @@ int OmafMPDParser::GroupAdaptationSet(PeriodElement* pPeriod, TYPE_OMAFADAPTATIO
     /// FIXIT, if there are multiple viewpoints.
     for(auto it = AdaptationSets.begin(); it != AdaptationSets.end(); it++ ){
         AdaptationSetElement *pAS = (AdaptationSetElement*) (*it);
-        OmafAdaptationSet* pOmafAS = CreateAdaptationSet(pAS);
+        OmafAdaptationSet* pOmafAS = CreateAdaptationSet(pAS, mPF);
 
         /// catalog the Adaptation according to the media type: video, audio, etc
         std::string type   = GetSubstr(pOmafAS->GetMimeType(), '/', true);
@@ -247,12 +247,12 @@ int OmafMPDParser::BuildStreams( TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAF
     return ret;
 }
 
-OmafAdaptationSet* OmafMPDParser::CreateAdaptationSet(AdaptationSetElement* pAS)
+OmafAdaptationSet* OmafMPDParser::CreateAdaptationSet(AdaptationSetElement* pAS, ProjectionFormat pf)
 {
     if( ExtractorJudgement(pAS) ){
-        return new OmafExtractor(pAS);
+        return new OmafExtractor(pAS, pf);
     }
-    return new OmafAdaptationSet(pAS);
+    return new OmafAdaptationSet(pAS, pf);
 }
 
 bool OmafMPDParser::ExtractorJudgement(AdaptationSetElement* pAS)

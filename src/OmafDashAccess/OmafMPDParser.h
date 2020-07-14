@@ -97,6 +97,8 @@ public:
 
     bool GetExtractorEnabled() { return mExtractorEnabled; };
 
+    ProjectionFormat GetProjectionFmt() { return mPF; };
+
 private:
 
     //!
@@ -124,7 +126,7 @@ private:
     //! \param [in] pAS AdaptationSetElement
     //! \return
     //!
-    OmafAdaptationSet* CreateAdaptationSet(AdaptationSetElement* pAS);
+    OmafAdaptationSet* CreateAdaptationSet(AdaptationSetElement* pAS, ProjectionFormat pf);
 
     //!
     //! \brief Judge the type of the AdaptationSet.
