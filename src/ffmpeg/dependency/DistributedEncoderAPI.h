@@ -185,6 +185,7 @@ typedef struct ENCODERPARAM{
     uint8_t  tile_rowCnt;               //!< tile row count when tile is enabled
     int8_t   target_socket;             //!< Target socket to run on
     bool     in_parallel;               //!< multiple tiles encoding in parallel
+    bool     local_mode;                //!< flag of local mode for encoder
 }EncoderParam;
 
 typedef struct INPUTFRAME{
