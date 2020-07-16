@@ -33,6 +33,7 @@
 
 #include "GLFWRenderContext.h"
 #include "../utils/tinyxml2.h"
+#include <math.h>
 
 VCD_NS_BEGIN
 using namespace tinyxml2;
@@ -90,6 +91,16 @@ void GLFWRenderContext::AutoChangePos(float *hPos, float *vPos)
         if (timeInterval % m_motionConfig.timeInterval == 0)
         {
             *hPos +=  2 * RENDER_PI / m_motionConfig.freq;
+        }
+    }
+    else if (!strcmp(m_motionConfig.mode, "quicksin"))
+    {
+        static int timeInterval = 0;
+        timeInterval++;
+        if (timeInterval > 10 && timeInterval % m_motionConfig.timeInterval == 0)
+        {
+            *hPos += 2 * RENDER_PI / m_motionConfig.freq;
+            *vPos = RENDER_PI / 2 * sin(*hPos*1.5);
         }
     }
     else //xml input check
