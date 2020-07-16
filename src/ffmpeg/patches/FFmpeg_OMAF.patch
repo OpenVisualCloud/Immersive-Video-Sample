@@ -688,7 +688,7 @@ new file mode 100644
 index 0000000..332bf7b
 --- /dev/null
 +++ b/FFmpeg/libavcodec/distributed_encoder.c
-@@ -0,0 +1,579 @@
+@@ -0,0 +1,580 @@
 +/*
 +* Scalable Video Technology for distributed encoder library plugin
 +*
@@ -811,6 +811,7 @@ index 0000000..332bf7b
 +    params.tile_rowCnt = deCxt->tile_row;
 +    params.MCTS_enable = (params.tile_columnCnt * params.tile_rowCnt) > 1 ? 1 : 0;
 +    params.target_socket = -1;
++    params.local_mode = false;
 +
 +    if (deCxt->in_parallel && params.MCTS_enable)
 +        params.in_parallel = true;
