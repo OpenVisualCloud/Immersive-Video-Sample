@@ -64,6 +64,7 @@ VideoStream::VideoStream()
     m_360scvpHandle = NULL;
     m_naluParser = NULL;
     m_isEOS = false;
+    pthread_mutex_init(&m_mutex, NULL);
 }
 
 VideoStream::~VideoStream()
@@ -138,6 +139,13 @@ VideoStream::~VideoStream()
     }
 
     DELETE_MEMORY(m_naluParser);
+
+    int32_t ret = pthread_mutex_destroy(&m_mutex);
+    if (ret)
+    {
+        LOG(ERROR) << "Failed to destroy mutex of video stream !" << std::endl;
+        return;
+    }
 }
 
 int32_t VideoStream::ParseHeader()
@@ -482,18 +490,22 @@ int32_t VideoStream::AddFrameInfo(FrameBSInfo *frameInfo)
     newFrameInfo->pts = frameInfo->pts;
     newFrameInfo->isKeyFrame = frameInfo->isKeyFrame;
 
+    pthread_mutex_lock(&m_mutex);
     m_frameInfoList.push_back(newFrameInfo);
+    pthread_mutex_unlock(&m_mutex);
 
     return ERROR_NONE;
 }
 
 void VideoStream::SetCurrFrameInfo()
 {
+    pthread_mutex_lock(&m_mutex);
     if (m_frameInfoList.size() > 0)
     {
         m_currFrameInfo = m_frameInfoList.front();
         m_frameInfoList.pop_front();
     }
+    pthread_mutex_unlock(&m_mutex);
 }
 
 int32_t VideoStream::UpdateTilesNalu()
