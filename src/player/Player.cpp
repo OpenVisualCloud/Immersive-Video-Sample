@@ -158,16 +158,19 @@ RenderStatus Player::Play()
 
             lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
             RenderStatus renderStatus = m_renderManager->Render(renderCount);
-
+            if (renderStatus != RENDER_NO_FRAME){
+                renderCount++;
+                if (renderStatus != RENDER_ERROR)
+                {
+                    m_renderContext->SwapBuffers(NULL, 0);
+                    LOG(INFO)<<"===========renderTime==============:"<<lastTime<<std::endl;
+                }
+            }
             LOG(INFO)<<"render count is"<<renderCount<<endl;
-            m_renderContext->SwapBuffers(NULL, 0);
-            LOG(INFO)<<"===========renderTime==============:"<<lastTime<<std::endl;
 #ifdef _USE_TRACE_
             //trace
             tracepoint(mthq_tp_provider, T9_render, renderCount + 1);
 #endif
-            if (renderStatus != RENDER_NO_FRAME)
-                renderCount++;
         }
         LOG(INFO)<<"status:"<<GetStatus()<<std::endl;
         if (m_renderManager->IsEOS())
