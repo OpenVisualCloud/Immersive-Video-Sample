@@ -24,7 +24,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 /*
  * File:   VRDashStreamingAPI.h
  * Author: Zhang, Andrew
@@ -32,152 +31,204 @@
  * Created on January 15, 2019, 1:11 PM
  */
 
-#include "OmafDashAccessApi.h"
-
 #include <cstdlib>
-#include "general.h"
-#include "OmafMediaSource.h"
-#include "OmafDashSource.h"
+
 #include "../utils/GlogWrapper.h"
+#include "OmafDashAccessApi.h"
+#include "OmafDashSource.h"
+#include "OmafMediaSource.h"
+#include "OmafTypes.h"
+#include "general.h"
 
 using namespace std;
 
 VCD_USE_VROMAF;
 VCD_USE_VRVIDEO;
 
-Handler OmafAccess_Init( DashStreamingClient* pCtx)
-{
-    OmafMediaSource* pSource = new OmafDashSource();
+Handler OmafAccess_Init(DashStreamingClient *pCtx) {
+  if (pCtx == nullptr) {
+    return nullptr;
+  }
+  OmafMediaSource *pSource = new OmafDashSource();
 
-    return (Handler)((long)pSource);
+  VCD::OMAF::OmafDashParams omaf_dash_params;
+  const OmafParams &omaf_params = pCtx->omaf_params;
+  if (omaf_params.proxy.http_proxy) {
+    omaf_dash_params.http_proxy_.http_proxy_ = std::string(omaf_params.proxy.http_proxy);
+  }
+  if (omaf_params.proxy.https_proxy) {
+    omaf_dash_params.http_proxy_.https_proxy_ = std::string(omaf_params.proxy.https_proxy);
+  }
+  if (omaf_params.proxy.no_proxy) {
+    omaf_dash_params.http_proxy_.no_proxy_ = std::string(omaf_params.proxy.no_proxy);
+  }
+  if (omaf_params.proxy.proxy_user) {
+    omaf_dash_params.http_proxy_.proxy_user_ = std::string(omaf_params.proxy.proxy_user);
+  }
+  if (omaf_params.proxy.proxy_passwd) {
+    omaf_dash_params.http_proxy_.proxy_passwd_ = std::string(omaf_params.proxy.proxy_passwd);
+  }
+
+  if (omaf_params.http_params.conn_timeout > 0) {
+    omaf_dash_params.http_params_.conn_timeout_ = omaf_params.http_params.conn_timeout;
+  }
+  if (omaf_params.http_params.total_timeout > 0) {
+    omaf_dash_params.http_params_.total_timeout_ = omaf_params.http_params.total_timeout;
+  }
+
+  if (omaf_params.http_params.retry_times > 0) {
+    omaf_dash_params.http_params_.retry_times_ = omaf_params.http_params.retry_times;
+  }
+
+  omaf_dash_params.http_params_.bssl_verify_peer_ = omaf_params.http_params.ssl_verify_peer == 0 ? false : true;
+
+  omaf_dash_params.http_params_.bssl_verify_host_ = omaf_params.http_params.ssl_verify_host == 0 ? false : true;
+
+  omaf_dash_params.prediector_params_.enable_ = omaf_params.predictor_params.enable == 0 ? false : true;
+
+  if (omaf_params.predictor_params.name) {
+    omaf_dash_params.prediector_params_.name_ = std::string(omaf_params.predictor_params.name);
+  }
+  if (omaf_params.predictor_params.libpath) {
+    omaf_dash_params.prediector_params_.libpath_ = std::string(omaf_params.predictor_params.libpath);
+  }
+
+  omaf_dash_params.stats_params_.enable_ = omaf_params.statistic_params.enable == 0 ? false : true;
+  if (omaf_dash_params.stats_params_.enable_) {
+    omaf_dash_params.stats_params_.window_size_ms_ = omaf_params.statistic_params.window_size_ms;
+  }
+
+  omaf_dash_params.syncer_params_.enable_ = omaf_params.synchronizer_params.enable == 0 ? false : true;
+  if (omaf_dash_params.syncer_params_.enable_) {
+    omaf_dash_params.syncer_params_.segment_range_size_ = omaf_params.synchronizer_params.segment_range_size;
+  }
+
+  if (omaf_params.max_parallel_transfers > 0) {
+    omaf_dash_params.max_parallel_transfers_ = omaf_params.max_parallel_transfers;
+  }
+
+  if (omaf_params.segment_open_timeout_ms > 0) {
+    omaf_dash_params.segment_open_timeout_ms_ = omaf_params.segment_open_timeout_ms;
+  }
+
+  LOG(INFO) << omaf_dash_params.to_string() << std::endl;
+  pSource->SetOmafDashParams(omaf_dash_params);
+
+  return (Handler)((long)pSource);
 }
 
-int OmafAccess_OpenMedia( Handler hdl, DashStreamingClient* pCtx, bool enablePredictor, char *predictPluginName, char *libPath)
-{
-    OmafMediaSource* pSource = (OmafMediaSource*)hdl;
-    pSource->SetLoop(false);
-    int ret = pSource->OpenMedia(pCtx->media_url, pCtx->cache_path,
-        pCtx->enable_extractor, enablePredictor,
-        predictPluginName, libPath);
+int OmafAccess_OpenMedia(Handler hdl, DashStreamingClient *pCtx, bool enablePredictor, char *predictPluginName,
+                         char *libPath) {
+  if (hdl == nullptr || pCtx == nullptr) {
+    return ERROR_INVALID;
+  }
+  OmafMediaSource *pSource = (OmafMediaSource *)hdl;
+  pSource->SetLoop(false);
 
-    return ret;
+  return pSource->OpenMedia(pCtx->media_url, pCtx->cache_path, pCtx->enable_extractor, enablePredictor,
+                            predictPluginName, libPath);
 }
 
-int OmafAccess_CloseMedia( Handler hdl )
-{
-    OmafMediaSource* pSource = (OmafMediaSource*)hdl;
+int OmafAccess_CloseMedia(Handler hdl) {
+  OmafMediaSource *pSource = (OmafMediaSource *)hdl;
 
-    return pSource->CloseMedia();
+  return pSource->CloseMedia();
 }
 
-int OmafAccess_SeekMedia( Handler hdl, uint64_t time )
-{
-    OmafMediaSource* pSource = (OmafMediaSource*)hdl;
+int OmafAccess_SeekMedia(Handler hdl, uint64_t time) {
+  OmafMediaSource *pSource = (OmafMediaSource *)hdl;
 
-    return pSource->SeekTo(time);
+  return pSource->SeekTo(time);
 }
 
-int OmafAccess_GetMediaInfo( Handler hdl, DashMediaInfo* info )
-{
-    OmafMediaSource* pSource = (OmafMediaSource*)hdl;
-    pSource->GetMediaInfo(info);
-    return ERROR_NONE;
+int OmafAccess_GetMediaInfo(Handler hdl, DashMediaInfo *info) {
+  OmafMediaSource *pSource = (OmafMediaSource *)hdl;
+  pSource->GetMediaInfo(info);
+  return ERROR_NONE;
 }
 
-int OmafAccess_GetPacket(
-    Handler hdl,
-    int stream_id,
-    DashPacket* packet,
-    int* size,
-    uint64_t* pts,
-    bool needParams,
-    bool clearBuf )
-{
-    OmafMediaSource* pSource = (OmafMediaSource*)hdl;
-    std::list<MediaPacket*> pkts;
-    pSource->GetPacket(stream_id, &pkts, needParams, clearBuf);
+int OmafAccess_GetPacket(Handler hdl, int stream_id, DashPacket *packet, int *size, uint64_t *pts, bool needParams,
+                         bool clearBuf) {
+  OmafMediaSource *pSource = (OmafMediaSource *)hdl;
+  std::list<MediaPacket *> pkts;
+  pSource->GetPacket(stream_id, &pkts, needParams, clearBuf);
 
-    if( 0 == pkts.size()) {
-        return ERROR_NULL_PACKET;
+  if (0 == pkts.size()) {
+    return ERROR_NULL_PACKET;
+  }
+
+  *size = pkts.size();
+
+  int i = 0;
+  for (auto it = pkts.begin(); it != pkts.end(); it++) {
+    MediaPacket *pPkt = (MediaPacket *)(*it);
+    if (!pPkt) {
+      *size -= 1;
+      continue;
+    }
+    if (!(pPkt->GetEOS())) {
+      // int outSize = pPkt->Size();
+      // char *buf = (char *)malloc(outSize * sizeof(char));
+      // memcpy_s(buf, pPkt->Payload(), outSize);
+      RegionWisePacking *newRwpk = new RegionWisePacking;
+      const RegionWisePacking &pRwpk = pPkt->GetRwpk();
+      *newRwpk = pRwpk;
+      newRwpk->rectRegionPacking = new RectangularRegionWisePacking[newRwpk->numRegions];
+      memcpy_s(newRwpk->rectRegionPacking, pRwpk.numRegions * sizeof(RectangularRegionWisePacking),
+               pRwpk.rectRegionPacking, pRwpk.numRegions * sizeof(RectangularRegionWisePacking));
+      SourceResolution *srcRes = new SourceResolution[pPkt->GetQualityNum()];
+      memcpy_s(srcRes, pPkt->GetQualityNum() * sizeof(SourceResolution), pPkt->GetSourceResolutions(),
+               pPkt->GetQualityNum() * sizeof(SourceResolution));
+      packet[i].rwpk = newRwpk;
+      packet[i].buf = pPkt->MovePayload();
+      packet[i].size = pPkt->Size();
+      packet[i].segID = pPkt->GetSegID();
+      packet[i].videoID = pPkt->GetVideoID();
+      packet[i].video_codec = pPkt->GetCodecType();
+      packet[i].pts = pPkt->GetPTS();
+      packet[i].height = pPkt->GetVideoHeight();
+      packet[i].width = pPkt->GetVideoWidth();
+      packet[i].numQuality = pPkt->GetQualityNum();
+      packet[i].qtyResolution = srcRes;
+      packet[i].tileRowNum = pPkt->GetVideoTileRowNum();
+      packet[i].tileColNum = pPkt->GetVideoTileColNum();
+      packet[i].bEOS = pPkt->GetEOS();
+    } else {
+      packet[i].bEOS = true;
     }
 
-    *size = pkts.size();
+    i++;
 
-    int i = 0;
-    for(auto it=pkts.begin(); it!=pkts.end(); it++){
-        MediaPacket* pPkt = (MediaPacket*)(*it);
-        if(!pPkt)
-        {
-            *size -= 1;
-            continue;
-        }
-        if (!(pPkt->GetEOS()))
-        {
-            uint64_t outSize = pPkt->Size();
-            char* buf = (char*)malloc(outSize * sizeof(char));
-            memcpy(buf, pPkt->Payload(), outSize);
-            RegionWisePacking *newRwpk = new RegionWisePacking;
-            RegionWisePacking *pRwpk = pPkt->GetRwpk();
-            *newRwpk = *pRwpk;
-            newRwpk->rectRegionPacking = new RectangularRegionWisePacking[newRwpk->numRegions];
-            memcpy(newRwpk->rectRegionPacking, pRwpk->rectRegionPacking, pRwpk->numRegions * sizeof(RectangularRegionWisePacking));
-            SourceResolution* srcRes = new SourceResolution[pPkt->GetQualityNum()];
-            memcpy(srcRes, pPkt->GetSourceResolutions(), pPkt->GetQualityNum() * sizeof(SourceResolution));
-            packet[i].rwpk = newRwpk;
-            packet[i].buf  = buf;
-            packet[i].size = outSize;
-            packet[i].segID = pPkt->GetSegID();
-            packet[i].videoID = pPkt->GetVideoID();
-            packet[i].video_codec = pPkt->GetCodecType();
-            packet[i].pts = pPkt->GetPTS();
-            packet[i].height = pPkt->GetVideoHeight();
-            packet[i].width = pPkt->GetVideoWidth();
-            packet[i].numQuality = pPkt->GetQualityNum();
-            packet[i].qtyResolution = srcRes;
-            packet[i].tileRowNum = pPkt->GetVideoTileRowNum();
-            packet[i].tileColNum = pPkt->GetVideoTileColNum();
-            packet[i].bEOS = pPkt->GetEOS();
-        }
-        else
-        {
-            packet[i].bEOS = true;
-        }
+    delete pPkt;
+    pPkt = NULL;
+  }
 
-        i++;
-
-        delete pPkt;
-        pPkt = NULL;
-    }
-
-    return ERROR_NONE;
+  return ERROR_NONE;
 }
 
-int OmafAccess_SetupHeadSetInfo( Handler hdl, HeadSetInfo* clientInfo)
-{
-    OmafMediaSource* pSource = (OmafMediaSource*)hdl;
+int OmafAccess_SetupHeadSetInfo(Handler hdl, HeadSetInfo *clientInfo) {
+  OmafMediaSource *pSource = (OmafMediaSource *)hdl;
 
-    return pSource->SetupHeadSetInfo(clientInfo);
+  return pSource->SetupHeadSetInfo(clientInfo);
 }
 
-int OmafAccess_ChangeViewport( Handler hdl, HeadPose* pose)
-{
-    OmafMediaSource* pSource = (OmafMediaSource*)hdl;
+int OmafAccess_ChangeViewport(Handler hdl, HeadPose *pose) {
+  OmafMediaSource *pSource = (OmafMediaSource *)hdl;
 
-    return pSource->ChangeViewport(pose);
+  return pSource->ChangeViewport(pose);
 }
 
-int OmafAccess_Statistic( Handler hdl, DashStatisticInfo* info )
-{
-    OmafMediaSource* pSource = (OmafMediaSource*)hdl;
+int OmafAccess_Statistic(Handler hdl, DashStatisticInfo *info) {
+  OmafMediaSource *pSource = (OmafMediaSource *)hdl;
 
-    return pSource->GetStatistic(info);
+  return pSource->GetStatistic(info);
 }
 
-int OmafAccess_Close( Handler hdl )
-{
-    OmafMediaSource* pSource = (OmafMediaSource*)hdl;
-    delete pSource;
-    return ERROR_NONE;
+int OmafAccess_Close(Handler hdl) {
+  OmafMediaSource *pSource = (OmafMediaSource *)hdl;
+  delete pSource;
+
+  // FIXME, when and where to do resource release
+  // OmafCurlDownloader::releaseCurlModule();
+  return ERROR_NONE;
 }
-
-

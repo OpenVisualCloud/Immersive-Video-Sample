@@ -37,208 +37,212 @@
 #ifndef _MEDIASOURCE_H
 #define _MEDIASOURCE_H
 
-#include "general.h"
 #include "OmafMediaStream.h"
+#include "OmafTypes.h"
+#include "general.h"
 
 VCD_OMAF_BEGIN
 
+typedef enum {
+  STATUS_CREATED = 0,
+  STATUS_READY,
+  STATUS_RUNNING,
+  STATUS_EXITING,
+  STATUS_STOPPED,
+  STATUS_UNKNOWN,
+} DASH_STATUS;
+
 class OmafMediaSource {
-public:
-    //!
-    //! \brief  construct
-    //!
-    OmafMediaSource()
-    {
-        mViewPortChanged    = false;
-        memset(&mHeadSetInfo, 0, sizeof(mHeadSetInfo));
-        memset(&mPose, 0, sizeof(mPose));
-        mLoop = false;
-        mEOS = false;
-    };
+ public:
+  //!
+  //! \brief  construct
+  //!
+  OmafMediaSource() {
+    mViewPortChanged = false;
+    memset(&mHeadSetInfo, 0, sizeof(mHeadSetInfo));
+    memset(&mPose, 0, sizeof(mPose));
+    mLoop = false;
+    mEOS = false;
+  };
 
-    //!
-    //! \brief  de-construct
-    //!
-    virtual ~OmafMediaSource(){};
+  //!
+  //! \brief  de-construct
+  //!
+  virtual ~OmafMediaSource(){};
 
-public:
-    //!
-    //! \brief  Open Media from special url. it's pure interface
-    //!
-    //! \param  [in] url
-    //!         the location of the mpd to be opened
-    //! \param  [in] cacheDir
-    //!         path to cache files it can be "" for no cache needed
-    //!
-    //! \return
-    //!         ERROR_NONE if success, else fail reason
-    //!
-    virtual int OpenMedia(
-        std::string url, std::string cacheDir,
-        bool enableExtractor, bool enablePredictor=false,
-        std::string predictPluginName="", std::string dllPath="") = 0;
+ public:
+  //!
+  //! \brief  Open Media from special url. it's pure interface
+  //!
+  //! \param  [in] url
+  //!         the location of the mpd to be opened
+  //! \param  [in] cacheDir
+  //!         path to cache files it can be "" for no cache needed
+  //!
+  //! \return
+  //!         ERROR_NONE if success, else fail reason
+  //!
+  virtual int OpenMedia(std::string url, std::string cacheDir, bool enableExtractor, bool enablePredictor = false,
+                        std::string predictPluginName = "", std::string dllPath = "") = 0;
 
-    //!
-    //! \brief  Close the media. it's pure interface
-    //!
-    //! \return
-    //!         loop status
-    //!
-    virtual int CloseMedia() = 0;
+  //!
+  //! \brief  Close the media. it's pure interface
+  //!
+  //! \return
+  //!         loop status
+  //!
+  virtual int CloseMedia() = 0;
 
-    //!
-    //! \brief  Open Media from special url. it's pure interface
-    //!
-    //! \param  [in] streamID
-    //!         the ID of the stream to be operated
-    //! \param  [out] pkt
-    //!         Packet to hold the media stream
-    //! \param  [out] clearBuf
-    //!
-    //! \return
-    //!         ERROR_NONE if success, else fail reason
-    //!
-    virtual int GetPacket( int streamID, std::list<MediaPacket*>* pkts, bool needParams, bool clearBuf ) = 0;
+  //!
+  //! \brief  Open Media from special url. it's pure interface
+  //!
+  //! \param  [in] streamID
+  //!         the ID of the stream to be operated
+  //! \param  [out] pkt
+  //!         Packet to hold the media stream
+  //! \param  [out] clearBuf
+  //!
+  //! \return
+  //!         ERROR_NONE if success, else fail reason
+  //!
+  virtual int GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool needParams, bool clearBuf) = 0;
 
-    //!
-    //! \brief  Open Media from special url. it's pure interface
-    //!
-    //! \param  [in] media_info
-    //!
-    //!
-    //! \return
-    //!         ERROR_NONE if success, else fail reason
-    //!
-    virtual int GetMediaInfo( DashMediaInfo* media_info ) = 0;
+  //!
+  //! \brief  Open Media from special url. it's pure interface
+  //!
+  //! \param  [in] media_info
+  //!
+  //!
+  //! \return
+  //!         ERROR_NONE if success, else fail reason
+  //!
+  virtual int GetMediaInfo(DashMediaInfo* media_info) = 0;
 
-    //!
-    //! \brief  Open Media from special url.
-    //!
-    //! \param  [in] streamID
-    //!
-    //!
-    //! \return
-    //!         MediaStream* the pointer to the stream
-    //!
-    virtual OmafMediaStream* GetStream(int streamID){
-        if( (uint32_t)(streamID) >= mMapStream.size() || streamID < 0 )
-            return NULL;
-        std::map<int, OmafMediaStream*>::iterator it = mMapStream.find( streamID );
-        if (it != mMapStream.end())
-        {
-            return it->second;
-        }
-        return NULL;
-    };
-
-    //!
-    //! \brief  Get the stream number of the media
-    //!
-    //! \return
-    //!         the total count of the stream in the media
-    //!
-    virtual int GetStreamCount(){ return mMapStream.size(); };
-
-    //!
-    //! \brief  set initial viewport for the stream. it's pure interface
-    //!
-    //! \param  [in] clientInfo
-    //!
-    //!
-    //! \return
-    //!         ERROR_NONE if success, else fail reason
-    //!
-    virtual int SetupHeadSetInfo(HeadSetInfo* clientInfo) = 0;
-
-    //!
-    //! \brief  Change the viewport for the media. it's pure interface
-    //!
-    //! \param  [in] pose
-    //!
-    //!
-    //! \return
-    //!         ERROR_NONE if success, else fail reason
-    //!
-    virtual int ChangeViewport(HeadPose* pose) = 0;
-
-
-    //!
-    //! \brief  Get statistic information relative to the media. it's pure interface
-    //! \param  [out] info
-    //!         the information of statistic, such as bandwidth
-    //! \return
-    //!         the total count of the stream in the media
-    //!
-    virtual int GetStatistic(DashStatisticInfo* dsInfo) = 0;
-
-    //!
-    //! \brief  seek to special position of the media in VOD mode
-    //!
-    //! \return
-    //!         ERROR_NONE if success, else fail reason
-    //!
-    virtual int SeekTo( int64_t time ) // need to implement in later version
-    {
-        if (time < 0)
-        {
-            return ERROR_INVALID;
-        }
-        return ERROR_NONE;
-    };
-
-    //!
-    //! \brief  Get total track count of the media
-    //!
-    //! \return
-    //!         EOF status
-    //!
-    virtual int GetTrackCount() = 0;
-
-    //!
-    //! \brief  access the media with a loop or non-loop mode in VOD mode
-    //!
-    //! \return
-    //!         ERROR_NONE if success, else fail reason
-    //!
-    virtual int SetLoop(bool bLoop){
-        mLoop = bLoop;
-        return 0;
+  //!
+  //! \brief  Open Media from special url.
+  //!
+  //! \param  [in] streamID
+  //!
+  //!
+  //! \return
+  //!         MediaStream* the pointer to the stream
+  //!
+  virtual OmafMediaStream* GetStream(int streamID) {
+    if ((uint32_t)(streamID) >= mMapStream.size() || streamID < 0) return nullptr;
+    std::map<int, OmafMediaStream*>::iterator it = mMapStream.find(streamID);
+    if (it != mMapStream.end()) {
+      return it->second;
     }
+    return nullptr;
+  };
 
-    //!
-    //! \brief  Check whether it is loop mode or not
-    //!
-    //! \return
-    //!         loop status
-    //!
-    virtual bool IsLoop(){
-        return mLoop;
+  //!
+  //! \brief  Get the stream number of the media
+  //!
+  //! \return
+  //!         the total count of the stream in the media
+  //!
+  virtual int GetStreamCount() { return mMapStream.size(); };
+
+  //!
+  //! \brief  set initial viewport for the stream. it's pure interface
+  //!
+  //! \param  [in] clientInfo
+  //!
+  //!
+  //! \return
+  //!         ERROR_NONE if success, else fail reason
+  //!
+  virtual int SetupHeadSetInfo(HeadSetInfo* clientInfo) = 0;
+
+  //!
+  //! \brief  Change the viewport for the media. it's pure interface
+  //!
+  //! \param  [in] pose
+  //!
+  //!
+  //! \return
+  //!         ERROR_NONE if success, else fail reason
+  //!
+  virtual int ChangeViewport(HeadPose* pose) = 0;
+
+  //!
+  //! \brief  Get statistic information relative to the media. it's pure interface
+  //! \param  [out] info
+  //!         the information of statistic, such as bandwidth
+  //! \return
+  //!         the total count of the stream in the media
+  //!
+  virtual int GetStatistic(DashStatisticInfo* dsInfo) = 0;
+
+  //!
+  //! \brief  seek to special position of the media in VOD mode
+  //!
+  //! \return
+  //!         ERROR_NONE if success, else fail reason
+  //!
+  virtual int SeekTo(int64_t time)  // need to implement in later version
+  {
+    if (time < 0) {
+      return ERROR_INVALID;
     }
+    return ERROR_NONE;
+  };
 
-    //!
-    //! \brief  Check whether it is End of stream
-    //!
-    //! \return
-    //!         EOF status
-    //!
-    bool isEOS(){return mEOS;};
+  //!
+  //! \brief  Get total track count of the media
+  //!
+  //! \return
+  //!         EOF status
+  //!
+  virtual int GetTrackCount() = 0;
 
-    virtual int SelectSpecialSegments(int extractorTrackIdx) = 0;
+  //!
+  //! \brief  access the media with a loop or non-loop mode in VOD mode
+  //!
+  //! \return
+  //!         ERROR_NONE if success, else fail reason
+  //!
+  virtual int SetLoop(bool bLoop) {
+    mLoop = bLoop;
+    return 0;
+  }
 
-protected:
-    std::string                     mUrl;               //!< the url of the media
-    std::string                     mCacheDir;          //!< the path for cached files
-    std::map<int, OmafMediaStream*> mMapStream;         //!< map for streams in the media
-    bool                            mLoop;              //!< loop status
-    bool                            mEOS;               //!< EOS status
-    std::vector<Viewport*>          mViewPorts;         //!<
-    HeadSetInfo                     mHeadSetInfo;       //!<
-    HeadPose                        mPose;              //!<
-    bool                            mViewPortChanged;   //!<
+  //!
+  //! \brief  Check whether it is loop mode or not
+  //!
+  //! \return
+  //!         loop status
+  //!
+  virtual bool IsLoop() { return mLoop; }
 
+  //!
+  //! \brief  Check whether it is End of stream
+  //!
+  //! \return
+  //!         EOF status
+  //!
+  bool isEOS() { return mEOS; };
+
+  virtual int SelectSpecialSegments(int extractorTrackIdx) = 0;
+
+ public:
+  void SetOmafDashParams(OmafDashParams params) { omaf_dash_params_ = params; };
+  OmafDashParams GetOmafParams() { return omaf_dash_params_; };
+
+ protected:
+  OmafDashParams omaf_dash_params_;
+  std::string mUrl;                            //!< the url of the media
+  std::string mCacheDir;                       //!< the path for cached files
+  std::map<int, OmafMediaStream*> mMapStream;  //!< map for streams in the media
+  bool mLoop;                                  //!< loop status
+  bool mEOS;                                   //!< EOS status
+  std::vector<Viewport*> mViewPorts;           //!<
+  HeadSetInfo mHeadSetInfo;                    //!<
+  HeadPose mPose;                              //!<
+  bool mViewPortChanged;                       //!<
 };
 
 VCD_OMAF_END;
 
 #endif /* MEDIASOURCE_H */
-

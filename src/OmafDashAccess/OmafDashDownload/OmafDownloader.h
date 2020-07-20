@@ -34,116 +34,120 @@
 #define OMAFDOWNLOADER_H
 
 #include "../OmafDashParser/Common.h"
-#include "OmafDownloaderObserver.h"
+#include "../OmafTypes.h"
+#include "Stream.h"
 
-VCD_OMAF_BEGIN
+#include <string>
+#include <sstream>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
 
-//!
-//! \class:  OmafDownloader
-//! \brief:  downloader base
-//!
-class OmafDownloader
-{
-public:
+namespace VCD {
+namespace OMAF {
+class OmafDashSegmentClient : public VCD::NonCopyable {
+ public:
+  enum class State {
+    SUCCESS = 0,
+    STOPPED = 1,
+    TIMEOUT = 2,
+    FAILURE = 3,
+  };
 
-    //!
-    //! \brief Constructor
-    //!
-    OmafDownloader(){};
+  struct _perfNode {
+    size_t count_total_ = 0;
+    size_t transfer_bytes_total_ = 0;
+    size_t count_ = 0;
+    size_t transfer_bytes_ = 0;
+    double download_time_ms_ = 0;
+    size_t total_transfer_time_ms_ = 0;
+    double avr_transfer_time_ms_ = 0;
+    std::string to_string() {
+      std::stringstream ss;
+      ss << "{ total: { count=" << count_total_ << ", transfer=" << transfer_bytes_total_ << " bytes}, ";
+      ss << " sliding window: { count=" << count_;
+      ss << ", curl download time=" << download_time_ms_;
+      ss << ", transfer=" << transfer_bytes_ << " bytes";
+      ss << ", transfer time=" << total_transfer_time_ms_ << " ms";
+      ss << ", average transfer time=" << avr_transfer_time_ms_ << " ms";
+      ss << "}}";
+      return ss.str();
+    }
+  };
+  using PerfNode = struct _perfNode;
 
-    //!
-    //! \brief Destructor
-    //!
-    virtual ~OmafDownloader(){};
+  struct _perfStatistics {
+    std::chrono::system_clock::time_point check_time_;
+    PerfNode success_;
+    PerfNode timeout_;
+    PerfNode failure_;
+    float download_speed_bps_ = 0.0f;
 
-    //!
-    //! \brief    Stop download
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    virtual ODStatus Stop() = 0;
+    std::string serializeTimePoint(const std::chrono::system_clock::time_point &time) {
+      auto t_sec = std::chrono::time_point_cast<std::chrono::seconds>(time);
+      auto t_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(time);
+      auto tt = std::chrono::system_clock::to_time_t(t_sec);
+      auto ms = (t_ms - t_sec).count();
+      auto tm = *std::gmtime(&tt);
+      std::stringstream ss;
+      ss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S") << ":" << ms;
+      return ss.str();
+    }
 
-    //!
-    //! \brief    start download
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    virtual ODStatus Start() = 0;
+    std::string to_string() {
+      std::stringstream ss;
+      ss << std::endl;
+      ss << "time: " << serializeTimePoint(check_time_) << std::endl;
+      ss << "per segment transfer speed: " << download_speed_bps_ / 1000.0 << " kbps" << std::endl;
+      ss << "success segment transfer: " << success_.to_string() << std::endl;
+      ss << "timeout segment transfer: " << timeout_.to_string() << std::endl;
+      ss << "failure segment transfer: " << failure_.to_string() << std::endl;
+      return ss.str();
+    }
+  };
 
-    //!
-    //! \brief    Read given size stream to data pointer
-    //!
-    //! \param    [in] size
-    //!           size of stream that should read
-    //! \param    [out] data
-    //!           pointer stores read stream data
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    virtual ODStatus Read(uint8_t* data, size_t size) = 0;
+  using SourceParams = DashSegmentSourceParams;
+  using PerfStatistics = struct _perfStatistics;
+  using OnData = std::function<void(std::unique_ptr<VCD::OMAF::StreamBlock>)>;
+  using OnState = std::function<void(State)>;
 
-    //!
-    //! \brief    Peek given size stream to data pointer
-    //!
-    //! \param    [in] size
-    //!           size of stream that should read
-    //! \param    [out] data
-    //!           pointer stores read stream data
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    virtual ODStatus Peek(uint8_t* data, size_t size) = 0;
+ protected:
+  OmafDashSegmentClient() = default;
 
-    //!
-    //! \brief    Peek given size stream to data pointer start from offset
-    //!
-    //! \param    [in] size
-    //!           size of stream that should read
-    //! \param    [in] offset
-    //!           stream offset that read should start
-    //! \param    [out] data
-    //!           pointer stores read stream data
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    virtual ODStatus Peek(uint8_t* data, size_t size, size_t offset) = 0;
+ public:
+  virtual ~OmafDashSegmentClient(){};
 
-    //!
-    //! \brief    Attach download observer
-    //!
-    //! \param    [in] observer
-    //!           observer need to be attached
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    virtual ODStatus ObserverAttach(OmafDownloaderObserver *observer) = 0;
+ public:
+  virtual OMAF_STATUS start() noexcept = 0;
+  virtual OMAF_STATUS stop() noexcept = 0;
 
-    //!
-    //! \brief    Dettach download observer
-    //!
-    //! \param    [in] observer
-    //!           observer need to be dettached
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    virtual ODStatus ObserverDetach(OmafDownloaderObserver* observer) = 0;
-
-    //!
-    //! \brief    Get download rate
-    //!
-    //! \return   double
-    //!           download rate
-    //!
-    virtual double GetDownloadRate() = 0;
+ public:
+  virtual OMAF_STATUS open(const SourceParams &dash_source, OnData scb, OnState fcb) noexcept = 0;
+  virtual OMAF_STATUS remove(const SourceParams &dash_source) noexcept = 0;
+  virtual OMAF_STATUS check(const SourceParams &dash_source) noexcept = 0;
+  virtual void setStatisticsWindows(int32_t time_window) noexcept = 0;
+  virtual std::unique_ptr<PerfStatistics> statistics(void) noexcept = 0;
 };
 
-VCD_OMAF_END;
+class OmafDashSegmentHttpClient : public OmafDashSegmentClient {
+ public:
+  using Ptr = std::shared_ptr<OmafDashSegmentHttpClient>;
 
-#endif //OMAFDOWNLOADER_H
+ protected:
+  OmafDashSegmentHttpClient() : OmafDashSegmentClient(){};
+
+ public:
+  virtual ~OmafDashSegmentHttpClient(){};
+
+ public:
+  virtual void setProxy(OmafDashHttpProxy proxy) noexcept = 0;
+  virtual void setParams(OmafDashHttpParams params) noexcept = 0;
+
+ public:
+  static OmafDashSegmentHttpClient::Ptr create(long max_parallel_transfers) noexcept;
+};
+
+}  // namespace OMAF
+}  // namespace VCD
+
+#endif  // OMAFDOWNLOADER_H

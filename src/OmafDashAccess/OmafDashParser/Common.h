@@ -34,62 +34,49 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#include "../../utils/ns_def.h"
-#include "data_type.h"
-#include "../../utils/GlogWrapper.h"
+#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <string>
-#include <iostream>
-#include <fstream>
 #include <stdlib.h>
-#include <pthread.h>
 #include <unistd.h>
-#include <cstring>
-#include <cstdint>
 #include <climits>
-#include <sstream>
+#include <cstdint>
+#include <cstring>
+#include <fstream>
+#include <iostream>
 #include <regex>
+#include <sstream>
+#include <string>
+#include "../../utils/GlogWrapper.h"
+#include "../../utils/ns_def.h"
+#include "data_type.h"
 
 #include <semaphore.h>
-#include <thread>
 #include <condition_variable>
+#include <thread>
 
+#include <memory.h>
 #include <list>
 #include <map>
 #include <unordered_set>
 #include <vector>
-#include <memory.h>
 
-#include<sys/types.h>
-#include<sys/ipc.h>
-#include<sys/shm.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h>
 
-#include "../general.h"
 #include "../../utils/Threadable.h"
+#include "../general.h"
 
 //! \brief Return status
 typedef int32_t ODStatus;
-#define OD_STATUS_SUCCESS          0X00000000
-#define OD_STATUS_INVALID          0X00000001
+#define OD_STATUS_SUCCESS 0X00000000
+#define OD_STATUS_INVALID 0X00000001
 #define OD_STATUS_OPERATION_FAILED 0X00000002
-#define OD_STATUS_THREAD           0X00000003
-#define OD_STATUS_AGAIN            0X00000004
+#define OD_STATUS_THREAD 0X00000003
+#define OD_STATUS_AGAIN 0X00000004
 
 using namespace std;
-
-//!
-//! \enum   DownloaderStatus
-//! \brief  Downloader Status type
-//!
-enum DownloaderStatus
-{
-    NOT_START   = 0,
-    DOWNLOADING = 1,
-    STOPPING    = 2,
-    STOPPED     = 3,
-    DOWNLOADED  = 4
-};
 
 //!
 //! \brief    check status, return status if it doesn't equal to success
@@ -100,13 +87,12 @@ enum DownloaderStatus
 //! \return   ODStatus
 //!           nothing if success, else status
 //!
-#define CheckAndReturn(status)                      \
-{                                                   \
-    if(status != OD_STATUS_SUCCESS)                \
-    {                                               \
-        return status;                              \
-    }                                               \
-}                                                   \
+#define CheckAndReturn(status)         \
+  {                                    \
+    if (status != OD_STATUS_SUCCESS) { \
+      return status;                   \
+    }                                  \
+  }
 
 //!
 //! \brief    check status, print log and return status
@@ -121,14 +107,13 @@ enum DownloaderStatus
 //! \return   ODStatus
 //!           nothing if success, else status
 //!
-#define CheckPrintLogAndReturn(status, log, level)  \
-{                                                   \
-    if(status != OD_STATUS_SUCCESS)                \
-    {                                               \
-        LOG(level)<<log<<endl;                      \
-        return status;                              \
-    }                                               \
-}                                                   \
+#define CheckPrintLogAndReturn(status, log, level) \
+  {                                                \
+    if (status != OD_STATUS_SUCCESS) {             \
+      LOG(level) << log << endl;                   \
+      return status;                               \
+    }                                              \
+  }
 
 //!
 //! \brief    check null ptr, print log and return null ptr
@@ -143,14 +128,13 @@ enum DownloaderStatus
 //! \return   nullptr
 //!           nothing if success, else null pointer
 //!
-#define CheckNullPtr_PrintLog_ReturnNullPtr(ptr, log, level)  \
-{                                                   \
-    if(!ptr)                \
-    {                                               \
-        LOG(level)<<log<<endl;                      \
-        return nullptr;                              \
-    }                                               \
-}                                                   \
+#define CheckNullPtr_PrintLog_ReturnNullPtr(ptr, log, level) \
+  {                                                          \
+    if (!ptr) {                                              \
+      LOG(level) << log << endl;                             \
+      return nullptr;                                        \
+    }                                                        \
+  }
 
 //!
 //! \brief    check null ptr, print log and return status
@@ -167,14 +151,13 @@ enum DownloaderStatus
 //! \return   ODStatus
 //!           nothing if success, else status
 //!
-#define CheckNullPtr_PrintLog_ReturnStatus(ptr, log, level, status)  \
-{                                                   \
-    if(!ptr)                \
-    {                                               \
-        LOG(level)<<log<<endl;                      \
-        return status;                              \
-    }                                               \
-}                                                   \
+#define CheckNullPtr_PrintLog_ReturnStatus(ptr, log, level, status) \
+  {                                                                 \
+    if (!ptr) {                                                     \
+      LOG(level) << log << endl;                                    \
+      return status;                                                \
+    }                                                               \
+  }
 
 //!
 //! \brief    set and get function for class member
@@ -189,15 +172,9 @@ enum DownloaderStatus
 //! \return   void or Type
 //!           nothing if set, else member type
 //!
-#define MEMBER_SET_AND_GET_FUNC(Type, Member, MemberName)    \
-public:                                             \
-    void Set##MemberName(Type v)                \
-    {                                               \
-        Member = v;                                    \
-    }                                               \
-    Type Get##MemberName()                             \
-    {                                               \
-        return Member;                                 \
-    }                                               \
+#define MEMBER_SET_AND_GET_FUNC(Type, Member, MemberName) \
+ public:                                                  \
+  void Set##MemberName(Type v) { Member = v; }            \
+  Type Get##MemberName() { return Member; }
 
 #endif /* COMMON_H */

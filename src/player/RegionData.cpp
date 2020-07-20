@@ -40,44 +40,39 @@
 
 VCD_NS_BEGIN
 
-RegionData::RegionData(RegionWisePacking* rwpk, uint32_t sourceNumber, SourceResolution* qtyRes)
-{
-    m_sourceInRegion = sourceNumber;
+RegionData::RegionData(RegionWisePacking* rwpk, uint32_t sourceNumber, SourceResolution* qtyRes) {
+  m_sourceInRegion = sourceNumber;
 
-    m_regionWisePacking = new RegionWisePacking;
-    *m_regionWisePacking = *rwpk;
-    m_regionWisePacking->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
-    memcpy_s(m_regionWisePacking->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking), rwpk->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking));
+  m_regionWisePacking = new RegionWisePacking;
+  *m_regionWisePacking = *rwpk;
+  m_regionWisePacking->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
+  memcpy_s(m_regionWisePacking->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking),
+           rwpk->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking));
 
-    m_sourceInfo = new SourceResolution[sourceNumber];
-    for (uint32_t i=0;i<sourceNumber;i++)
-    {
-        m_sourceInfo[i].qualityRanking = (uint32_t)qtyRes[i].qualityRanking;
-        m_sourceInfo[i].left = qtyRes[i].left;
-        m_sourceInfo[i].top = qtyRes[i].top;
-        m_sourceInfo[i].width = qtyRes[i].width;
-        m_sourceInfo[i].height = qtyRes[i].height;
-    }
+  m_sourceInfo = new SourceResolution[sourceNumber];
+  for (uint32_t i = 0; i < sourceNumber; i++) {
+    m_sourceInfo[i].qualityRanking = qtyRes[i].qualityRanking;
+    m_sourceInfo[i].left = qtyRes[i].left;
+    m_sourceInfo[i].top = qtyRes[i].top;
+    m_sourceInfo[i].width = qtyRes[i].width;
+    m_sourceInfo[i].height = qtyRes[i].height;
+  }
 }
 
-RegionData::~RegionData(){
-    m_sourceInRegion = 0;
-    if (m_regionWisePacking != NULL)
-    {
-        if (m_regionWisePacking->rectRegionPacking != NULL)
-        {
-            delete [] m_regionWisePacking->rectRegionPacking;
-            m_regionWisePacking->rectRegionPacking = NULL;
-        }
-        delete m_regionWisePacking;
-        m_regionWisePacking = NULL;
+RegionData::~RegionData() {
+  m_sourceInRegion = 0;
+  if (m_regionWisePacking != NULL) {
+    if (m_regionWisePacking->rectRegionPacking != NULL) {
+      delete[] m_regionWisePacking->rectRegionPacking;
+      m_regionWisePacking->rectRegionPacking = NULL;
     }
-    if (m_sourceInfo != NULL)
-    {
-        delete [] m_sourceInfo;
-        m_sourceInfo = NULL;
-    }
+    delete m_regionWisePacking;
+    m_regionWisePacking = NULL;
+  }
+  if (m_sourceInfo != NULL) {
+    delete[] m_sourceInfo;
+    m_sourceInfo = NULL;
+  }
 }
-
 
 VCD_NS_END

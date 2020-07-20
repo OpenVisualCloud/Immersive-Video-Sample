@@ -45,56 +45,54 @@ VCD_OMAF_BEGIN
 //! \brief:   Extractor derived from OmafAdaptationSet since Extractor is also
 //!           one adpationSet in MPD
 //!
-class OmafExtractor : public OmafAdaptationSet{
-public:
-    //!
-    //! \brief  construct
-    //!
-    OmafExtractor();
+class OmafExtractor : public OmafAdaptationSet {
+ public:
+  //!
+  //! \brief  construct
+  //!
+  OmafExtractor();
 
-    //!
-    //! \brief  construct from AdaptationSetElement
-    //!
-    OmafExtractor( AdaptationSetElement* pAdaptationSet, ProjectionFormat pf );
+  //!
+  //! \brief  construct from AdaptationSetElement
+  //!
+  OmafExtractor(AdaptationSetElement* pAdaptationSet, ProjectionFormat pf);
 
-    //!
-    //! \brief  de-construct
-    //!
-    virtual ~OmafExtractor();
+  //!
+  //! \brief  de-construct
+  //!
+  virtual ~OmafExtractor();
 
-public:
-    //!
-    //! \brief  Reading a Sample from sample list.
-    //! \return the SampleData read from Sample list
-    //!
-    virtual SampleData* ReadSample( );
+ public:
+  //!
+  //! \brief  Reading a Sample from sample list.
+  //! \return the SampleData read from Sample list
+  //!
+  virtual SampleData* ReadSample();
 
-    virtual OmafExtractor* GetClassType(){
-        return this;
-    };
+  virtual OmafExtractor* GetClassType() { return this; };
 
-    //!
-    //! \brief  add Omaf Adaptation Set which is used by the extractor, it will
-    //!         be called by OmafMediaStream when it is initialization
-    //!
-    void AddDependAS(OmafAdaptationSet* as);
+  //!
+  //! \brief  add Omaf Adaptation Set which is used by the extractor, it will
+  //!         be called by OmafMediaStream when it is initialization
+  //!
+  void AddDependAS(OmafAdaptationSet* as);
 
-    //!
-    //! \brief  Get all depended adaptation sets
-    //!
-    std::map<int, OmafAdaptationSet*> GetDependAdaptationSets() { return mAdaptationSets; };
+  //!
+  //! \brief  Get all depended adaptation sets
+  //!
+  std::map<int, OmafAdaptationSet*> GetDependAdaptationSets() { return mAdaptationSets; };
 
-    //!
-    //! \brief  get the list of depended track IDs
-    //!
-    std::list<int> GetDependTrackID();
-private:
-    std::map<int, OmafAdaptationSet*> mAdaptationSets;     //<! the Adapation lists the extractor depends
+  //!
+  //! \brief  get the list of depended track IDs
+  //!
+  std::list<int> GetDependTrackID();
 
+  bool IsExtractor() override { return true; }
 
+ private:
+  std::map<int, OmafAdaptationSet*> mAdaptationSets;  //<! the Adapation lists the extractor depends
 };
 
 VCD_OMAF_END;
 
 #endif /* OMAFEXTRACTOR_H */
-

@@ -44,7 +44,7 @@
 extern "C" {
 #include <pthread.h>
 }
-#include<string>
+#include <string>
 #include "errno.h"
 #include <cstring>
 #include <cstdlib>
@@ -53,179 +53,148 @@ using namespace std;
 
 VCD_NS_BEGIN
 
-class ThreadLock{
-public:
-    ThreadLock(){
-        m_mutex = PTHREAD_MUTEX_INITIALIZER;
-    };
-    ~ThreadLock(){
-        pthread_mutex_destroy(&m_mutex);
-    };
+class ThreadLock {
+ public:
+  ThreadLock() { m_mutex = PTHREAD_MUTEX_INITIALIZER; };
+  ~ThreadLock() { pthread_mutex_destroy(&m_mutex); };
 
-    void lock(){
-        pthread_mutex_lock(&m_mutex);
-    }
+  void lock() { pthread_mutex_lock(&m_mutex); }
 
-    void unlock(){
-        pthread_mutex_unlock(&m_mutex);
-    }
-private:
-    pthread_mutex_t m_mutex;
+  void unlock() { pthread_mutex_unlock(&m_mutex); }
+
+ private:
+  pthread_mutex_t m_mutex;
 };
 
-class ScopeLock
-{
-    public:
+class ScopeLock {
+ public:
+  ScopeLock(ThreadLock& lock) : mLock(lock) { mLock.lock(); }
 
-        ScopeLock(ThreadLock& lock)
-        : mLock(lock)
-        {
-            mLock.lock();
-        }
+  ~ScopeLock() { mLock.unlock(); }
 
-        ~ScopeLock()
-        {
-            mLock.unlock();
-        }
-
-    private:
-
-        ThreadLock& mLock;
+ private:
+  ThreadLock& mLock;
 };
 
 //!
 //!   Signals a problem with the thread handling.
 //!
 
-class CThreadException: public std::exception
-{
-public:
-   //!
-   //! \brief Construct a SocketException with a explanatory message.
-   //! \param message explanatory message
-   //! \param bSysMsg true if system message (from strerror(errno))
-   //!   should be postfixed to the user provided message
-   //!
-    CThreadException(const string &message, bool bSysMsg = false) throw()
-    {
-        if(bSysMsg){
-            m_sMsg.append( ": " );
-            m_sMsg.append( strerror( errno ) );
-        }
-    };
+class CThreadException : public std::exception {
+ public:
+  //!
+  //! \brief Construct a SocketException with a explanatory message.
+  //! \param message explanatory message
+  //! \param bSysMsg true if system message (from strerror(errno))
+  //!   should be postfixed to the user provided message
+  //!
+  CThreadException(const string& message, bool bSysMsg = false) throw() {
+    if (bSysMsg) {
+      m_sMsg.append(": ");
+      m_sMsg.append(strerror(errno));
+    }
+  };
 
-    //!
-    //! Destructor.
-    //! Virtual to allow for subclassing.
-    //!
-    virtual ~CThreadException() throw (){};
+  //!
+  //! Destructor.
+  //! Virtual to allow for subclassing.
+  //!
+  virtual ~CThreadException() throw(){};
 
-    //!
-    //! \brief Returns a pointer to the (constant) error description.
-    //! \return A pointer to a \c const \c char*. The underlying memory
-    //!          is in posession of the \c Exception object. Callers \a must
-    //!          not attempt to free the memory.
-    //!
-    virtual const char* what() const throw (){  return m_sMsg.c_str(); }
+  //!
+  //! \brief Returns a pointer to the (constant) error description.
+  //! \return A pointer to a \c const \c char*. The underlying memory
+  //!          is in posession of the \c Exception object. Callers \a must
+  //!          not attempt to free the memory.
+  //!
+  virtual const char* what() const throw() { return m_sMsg.c_str(); }
 
-protected:
-
-    std::string    m_sMsg;     //<! Error message.
+ protected:
+  std::string m_sMsg;  //<! Error message.
 };
-
 
 //!
 //!  Abstract class for Thread management
 //!
-class Threadable
-{
+class Threadable {
  public:
+  //!
+  //! \brief  Default Constructor for thread
+  //!
+  Threadable(){};
 
-    //!
-    //! \brief  Default Constructor for thread
-    //!
-    Threadable(){};
+  //!
+  //! \brief  virtual destructor
+  //!
+  virtual ~Threadable(){};
 
-    //!
-    //! \brief  virtual destructor
-    //!
-    virtual ~Threadable(){};
+  //!
+  //! \brief  Thread functionality Pure virtual function  , it will be re implemented in derived classes
+  //!
+  virtual void Run() = 0;
 
-    //!
-    //! \brief  Thread functionality Pure virtual function  , it will be re implemented in derived classes
-    //!
-    virtual void Run() = 0;
+  //!
+  //! \brief  Function to start thread.
+  //! \param  [in] detached
+  //!         if user need the thread detached at the creation or not
+  //!
+  void StartThread(bool detached = false)  // throw(CThreadException)
+  {
+    CreateThread(detached);
+  };
 
-    //!
-    //! \brief  Function to start thread.
-    //! \param  [in] detached
-    //!         if user need the thread detached at the creation or not
-    //!
-    void StartThread(bool detached = false)// throw(CThreadException)
-    {
-        CreateThread(detached);
-    };
+  //!
+  //! \brief  Function to join thread.
+  //!
+  void Join()  // throw(CThreadException)
+  {
+    if (!m_Tid) return;
 
-    //!
-    //! \brief  Function to join thread.
-    //!
-    void Join()//throw(CThreadException)
-    {
-        if(!m_Tid)
-            return;
+    int rc = pthread_join(m_Tid, NULL);
 
-        int rc = pthread_join(m_Tid, NULL);
-
-        // won't throw exception if joined successfully or thread already exited
-        if ( rc != 0 && rc != EINVAL)
-        {
-            throw CThreadException("Error in thread join.... (pthread_join())", true);
-        }
-    };
+    // won't throw exception if joined successfully or thread already exited
+    if (rc != 0 && rc != EINVAL) {
+      throw CThreadException("Error in thread join.... (pthread_join())", true);
+    }
+  };
 
  private:
-
-    //!
-    //! \brief  private Function to create thread.
-    //!
-    void CreateThread(bool detached)// throw(CThreadException)
-    {
-        int rc = 0;
-        if(detached)
-        {
-            pthread_attr_t attr;
-            pthread_attr_init(&attr);
-            pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-            rc = pthread_create (&m_Tid, &attr, ThreadFunc,this);
-        }
-        else
-        {
-            rc = pthread_create (&m_Tid, NULL, ThreadFunc,this);
-        }
-
-        if ( rc != 0 ){
-            throw CThreadException("Error in thread creation... (pthread_create())", true);
-        }
+  //!
+  //! \brief  private Function to create thread.
+  //!
+  void CreateThread(bool detached)  // throw(CThreadException)
+  {
+    int rc = 0;
+    if (detached) {
+      pthread_attr_t attr;
+      pthread_attr_init(&attr);
+      pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+      rc = pthread_create(&m_Tid, &attr, ThreadFunc, this);
+    } else {
+      rc = pthread_create(&m_Tid, NULL, ThreadFunc, this);
     }
 
-    //!
-    //! \brief Call back Function Passing to pthread create API
-    //!
-     static void* ThreadFunc(void* pTr)
-     {
-         Threadable* pThis = static_cast<Threadable*>(pTr);
-         pThis->Run();
-         pThis->m_Tid = 0;
-         pthread_exit(0);
-     };
+    if (rc != 0) {
+      throw CThreadException("Error in thread creation... (pthread_create())", true);
+    }
+  }
 
-    //!
-    //!  \brief Internal pthread ID..
-    //!
-     pthread_t m_Tid;
+  //!
+  //! \brief Call back Function Passing to pthread create API
+  //!
+  static void* ThreadFunc(void* pTr) {
+    Threadable* pThis = static_cast<Threadable*>(pTr);
+    pThis->Run();
+    pThis->m_Tid = 0;
+    pthread_exit(0);
+  };
+
+  //!
+  //!  \brief Internal pthread ID..
+  //!
+  pthread_t m_Tid = 0;
 };
 
 VCD_NS_END;
 
 #endif /* THREADABLE_H */
-

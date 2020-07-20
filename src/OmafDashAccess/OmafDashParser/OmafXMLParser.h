@@ -33,10 +33,11 @@
 #define OMAFXMLPARSER_H
 
 #include "../../utils/tinyxml2.h"
+#include "../OmafDashDownload/OmafCurlEasyHandler.h"
 #include "Common.h"
 
-#include "OmafXMLElement.h"
 #include "OmafMPDReader.h"
+#include "OmafXMLElement.h"
 
 VCD_OMAF_BEGIN
 
@@ -44,111 +45,115 @@ VCD_OMAF_BEGIN
 //! \class:  OmafXMLParser
 //! \brief:  OMAF XML parser
 //!
-class OmafXMLParser
-{
-public:
-    //!
-    //! \brief Constructor
-    //!
-    OmafXMLParser();
+class OmafXMLParser {
+ public:
+  //!
+  //! \brief Constructor
+  //!
+  OmafXMLParser();
 
-    //!
-    //! \brief Destructor
-    //!
-    virtual ~OmafXMLParser();
+  //!
+  //! \brief Destructor
+  //!
+  virtual ~OmafXMLParser();
 
-    //!
-    //! \brief    Generate XML tree and MPD tree
-    //!
-    //! \param    [in] url
-    //!           MPD file url
-    //!           [in] cacheDir
-    //!           cache directory
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    ODStatus Generate(string url, string cacheDir);
+  //!
+  //! \brief    Generate XML tree and MPD tree
+  //!
+  //! \param    [in] url
+  //!           MPD file url
+  //!           [in] cacheDir
+  //!           cache directory
+  //!
+  //! \return   ODStatus
+  //!           OD_STATUS_SUCCESS if success, else fail reason
+  //!
+  ODStatus Generate(string url, string cacheDir);
 
-    //!
-    //! \brief    Download MPD file
-    //!
-    //! \param    [in] url
-    //!           MPD file url
-    //!           [in] cacheDir
-    //!           cache directory
-    //!
-    //! \return   string
-    //!           the name of downloaded file
-    //!
-    string DownloadXMLFile(string url, string cacheDir);
+  //!
+  //! \brief    Download MPD file
+  //!
+  //! \param    [in] url
+  //!           MPD file url
+  //!           [in] cacheDir
+  //!           cache directory
+  //!
+  //! \return   string
+  //!           the name of downloaded file
+  //!
+  std::string DownloadXMLFile(string url, string cacheDir);
 
-    //!
-    //! \brief    Generate XML tree
-    //!
-    //! \param    [in] elmt
-    //!           root tinyxml element
-    //!
-    //! \return   OmafXMLElement
-    //!           root OMAF XML element
-    //!
-    OmafXMLElement* BuildXMLElementTree(tinyxml2::XMLElement *elmt);
+  //!
+  //! \brief    Generate XML tree
+  //!
+  //! \param    [in] elmt
+  //!           root tinyxml element
+  //!
+  //! \return   OmafXMLElement
+  //!           root OMAF XML element
+  //!
+  OmafXMLElement* BuildXMLElementTree(tinyxml2::XMLElement* elmt);
 
-    //!
-    //! \brief    Generate MPD tree with XML elements
-    //!
-    //! \param    [in] root
-    //!           root XML element
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    ODStatus BuildMPDwithXMLElements(OmafXMLElement *root);
+  //!
+  //! \brief    Generate MPD tree with XML elements
+  //!
+  //! \param    [in] root
+  //!           root XML element
+  //!
+  //! \return   ODStatus
+  //!           OD_STATUS_SUCCESS if success, else fail reason
+  //!
+  ODStatus BuildMPDwithXMLElements(OmafXMLElement* root);
 
-    //!
-    //! \brief    Get generated MPD element
-    //!
-    //! \return   MPDElement
-    //!           OMAF MPD element
-    //!
-    MPDElement* GetGeneratedMPD();
+  //!
+  //! \brief    Get generated MPD element
+  //!
+  //! \return   MPDElement
+  //!           OMAF MPD element
+  //!
+  MPDElement* GetGeneratedMPD();
 
-private:
+  void SetOmafHttpParams(const OmafDashHttpProxy& http_proxy, const OmafDashHttpParams& http_params) {
+    m_curl_params.http_proxy_ = http_proxy;
+    m_curl_params.http_params_ = http_params;
+  }
 
-    //!
-    //! \brief    Read attributes from tinyxml element
-    //!
-    //! \param    [in] element
-    //!           OMAF XML element
-    //! \param    [in] orgElement
-    //!           tinyxml element
-    //!
-    //! \return   void
-    //!
-    void ReadAttributes(OmafXMLElement* element, tinyxml2::XMLElement* orgElement);
+ private:
+  //!
+  //! \brief    Read attributes from tinyxml element
+  //!
+  //! \param    [in] element
+  //!           OMAF XML element
+  //! \param    [in] orgElement
+  //!           tinyxml element
+  //!
+  //! \return   void
+  //!
+  void ReadAttributes(OmafXMLElement* element, tinyxml2::XMLElement* orgElement);
 
-    //!
-    //! \brief    Write data to file
-    //!
-    //! \param    [in] ptr
-    //!           data pointer
-    //! \param    [in] size
-    //!           data size
-    //! \param    [in] nmemb
-    //!           data type size
-    //! \param    [in] fp
-    //!           file handle
-    //!
-    //! \return   size_t
-    //!           size of wrote data
-    //!
-    static size_t WriteData(void* ptr, size_t size, size_t nmemb, FILE* fp);
+  //!
+  //! \brief    Write data to file
+  //!
+  //! \param    [in] ptr
+  //!           data pointer
+  //! \param    [in] size
+  //!           data size
+  //! \param    [in] nmemb
+  //!           data type size
+  //! \param    [in] fp
+  //!           file handle
+  //!
+  //! \return   size_t
+  //!           size of wrote data
+  //!
+  static size_t WriteData(void* ptr, size_t size, size_t nmemb, FILE* fp);
 
-    tinyxml2::XMLDocument    *m_xmlDoc;    //!< tinyxml document
-    string                   m_path;       //!< url path
-    OmafReaderBase           *m_mpdReader; //!< MPD reader
+  tinyxml2::XMLDocument* m_xmlDoc = nullptr;  //!< tinyxml document
+  string m_path;                              //!< url path
+  OmafReaderBase* m_mpdReader;                //!< MPD reader
+  CurlParams m_curl_params;
 };
 
 VCD_OMAF_END
 
-#endif //OMAFXMLPARSER_H
+#endif  // OMAFXMLPARSER_H

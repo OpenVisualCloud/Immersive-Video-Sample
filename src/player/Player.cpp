@@ -110,16 +110,14 @@ RenderStatus Player::Open()
     this->m_mediaInfo = m_mediaSource->GetMediaInfo();
     m_mediaSource->SetActiveStream(0, 0);
 
-    if (NULL == m_renderConfig.url)
-    {
-        LOG(ERROR)<<"Wrong url"<<std::endl;
-        return RENDER_ERROR;
-    }
-    if (RENDER_STATUS_OK != m_renderManager->Initialize(m_mediaSource, m_rsFactory, m_renderContext))
-    {
-        return RENDER_ERROR;
-    }
-    m_status = PLAY;
+  if (m_renderConfig.url.empty()) {
+    LOG(ERROR) << "Wrong url" << std::endl;
+    return RENDER_ERROR;
+  }
+  if (RENDER_STATUS_OK != m_renderManager->Initialize(m_mediaSource, m_rsFactory, m_renderContext)) {
+    return RENDER_ERROR;
+  }
+  m_status = PLAY;
 
     return RENDER_STATUS_OK;
 }

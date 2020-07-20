@@ -37,371 +37,331 @@
 #ifndef MEDIAPACKET_H_
 #define MEDIAPACKET_H_
 
+#include "../utils/ns_def.h"
+#include "common.h"
 #include "general.h"
 #include "iso_structure.h"
 
-VCD_OMAF_BEGIN
+#include <memory>
 
-class MediaPacket {
-public:
-    //!
-    //! \brief  construct
-    //!
-    MediaPacket(){
-        m_pPayload = NULL;
-        m_nAllocSize = 0;
-        m_type = -1;
-        mPts = 0;
-        m_nRealSize = 0;
-        m_rwpk = NULL;
-        m_segID = 0;
-        m_qualityRanking = HIGHEST_QUALITY_RANKING;
-        memset(&m_srd, 0, sizeof(SRDInfo));
-        m_videoID = 0;
-        m_codecType = VideoCodec_HEVC;
-        m_videoWidth = 0;
-        m_videoHeight = 0;
-        m_numQuality = 0;
-        m_qtyResolution = NULL;
-        m_videoTileRows = 0;
-        m_videoTileCols = 0;
-        m_bEOS = false;
-        m_hasVideoHeader = false;
-        m_hrdSize = 0;
-        m_VPSLen = 0;
-        m_SPSLen = 0;
-        m_PPSLen = 0;
-    };
+extern "C" {
+#include "safestringlib/safe_mem_lib.h"
+}
 
-    //!
-    //! \brief  construct
-    //!
-    MediaPacket(char* buf, int size) : MediaPacket() {
-        m_nAllocSize = AllocatePacket( size );
-        memcpy(m_pPayload, buf, size);
-        m_type = -1;
-        mPts = 0;
-        m_rwpk = NULL;
-        m_segID = 0;
-        m_qualityRanking = HIGHEST_QUALITY_RANKING;
-        memset(&m_srd, 0, sizeof(SRDInfo));
-        m_videoID = 0;
-        m_codecType = VideoCodec_HEVC;
-        m_videoWidth = 0;
-        m_videoHeight = 0;
-        m_numQuality = 0;
-        m_qtyResolution = NULL;
-        m_videoTileRows = 0;
-        m_videoTileCols = 0;
-        m_bEOS = false;
-        m_hasVideoHeader = false;
-        m_VPSLen = 0;
-        m_SPSLen = 0;
-        m_PPSLen = 0;
-    };
+namespace VCD {
+namespace OMAF {
 
-    MediaPacket(MediaPacket& packet)
-    {
-        m_nAllocSize = packet.m_nAllocSize;
-        m_nRealSize = packet.m_nRealSize;
-        m_type = packet.m_type;
-        mPts = packet.mPts;
-        m_segID = packet.m_segID;
-        m_rwpk = NULL;
-        m_qualityRanking = packet.m_qualityRanking;
-        m_srd = packet.m_srd;
+class MediaPacket : public VCD::NonCopyable {
+ public:
+  //!
+  //! \brief  construct
+  //!
+  MediaPacket() = default;
 
-        m_videoID = packet.m_videoID;
-        m_codecType = packet.m_codecType;
-        m_videoWidth = packet.m_videoWidth;
-        m_videoHeight = packet.m_videoHeight;
-        m_numQuality = packet.m_numQuality;
-        m_qtyResolution = NULL;
-        m_videoTileRows = packet.m_videoTileRows;
-        m_videoTileCols = packet.m_videoTileCols;
-        m_bEOS = packet.m_bEOS;
+  //!
+  //! \brief  construct
+  //!
+  MediaPacket(char* buf, int size) {
+    if (buf && size > 0) {
+      m_nAllocSize = AllocatePacket(size);
+      memcpy_s(m_pPayload, size, buf, size);
+    }
+  };
 
-        m_hasVideoHeader = packet.m_hasVideoHeader;
-        m_VPSLen = packet.m_VPSLen;
-        m_SPSLen = packet.m_SPSLen;
-        m_PPSLen = packet.m_PPSLen;
+  //!
+  //! \brief  de-construct
+  //!
+  virtual ~MediaPacket() {
+    if (nullptr != m_pPayload) {
+      free(m_pPayload);
+      m_pPayload = nullptr;
+      m_nAllocSize = 0;
+      m_type = -1;
+      mPts = 0;
+      m_nRealSize = 0;
+      m_segID = 0;
+    }
+    if (m_rwpk) deleteRwpk();
+  };
 
-        m_pPayload = (char*)malloc(m_nRealSize);
-        memcpy(m_pPayload, packet.m_pPayload, m_nRealSize);
+  MediaPacket* InsertParams(std::vector<uint8_t> params) {
+    char* new_dest = nullptr;
+    // FIXME align size?
+    if (m_nAllocSize >= m_nRealSize + params.size()) {
+      new_dest = m_pPayload;
+    } else {
+      void* tmp = malloc(m_nRealSize + params.size());
+      new_dest = reinterpret_cast<char*>(tmp);
+      m_nAllocSize = m_nRealSize + params.size();
     }
 
-    //!
-    //! \brief  de-construct
-    //!
-    virtual ~MediaPacket(){
-        if( NULL != m_pPayload ){
-            free(m_pPayload);
-            m_pPayload = NULL;
-            m_nAllocSize = 0;
-            m_type = -1;
-            mPts = 0;
-            m_nRealSize = 0;
-            m_segID = 0;
-        }
-        if (m_rwpk != NULL)
-            deleteRwpk();
+    // 1. move origin payload
+    memmove(new_dest + params.size(), m_pPayload, m_nRealSize);
+    memcpy_s(new_dest, m_nAllocSize - m_nRealSize, params.data(), params.size());
+    m_nRealSize += params.size();
 
-        if (m_qtyResolution)
-        {
-            delete [] m_qtyResolution;
-            m_qtyResolution = NULL;
-        }
-    };
+    // this is a new buffer
+    if (new_dest != m_pPayload) {
+      free(m_pPayload);
+      m_pPayload = new_dest;
+    }
+    return this;
+  }
 
-    //!
-    //! \brief  Allocate the packet buffer, and fill the buffer with fill
-    //!
-    //! \param  [in] size
-    //!         the buffer size to be allocated
-    //! \param  [in] fill
-    //!         the init value for the buffer
-    //!
-    //! \return
-    //!         size of new allocated packet
-    //!
-    int AllocatePacket(int size, char fill = 0){
-        if( NULL != m_pPayload ){
-            free(m_pPayload);
-            m_pPayload = NULL;
-            m_nAllocSize = 0;
-        }
-
-        m_pPayload = (char*)malloc( size );
-
-        if(NULL == m_pPayload) return -1;
-
-        m_nAllocSize = size;
-        memset(m_pPayload, fill, m_nAllocSize );
-        m_nRealSize = 0;
-        return size;
-    };
-
-    //!
-    //! \brief  get the buffer pointer of the packet
-    //!
-    //! \return
-    //!         the buffer pointer
-    //!
-    char* Payload(){ return m_pPayload; };
-
-    //!
-    //! \brief  get the size of the buffer
-    //!
-    //! \return
-    //!         size of the packet's payload
-    //!
-    uint64_t Size(){ return m_nRealSize; };
-
-    //!
-    //! \brief  reallocate the payload buffer. if size > m_nAllocSize, keep the data
-    //!         in old buf to new buf;
-    //!
-    //! \return
-    //!         size of new allocated packet
-    //!
-    int ReAllocatePacket(int size){
-        if(NULL==m_pPayload)
-            return AllocatePacket(size);
-
-        if( size < m_nAllocSize )
-            return AllocatePacket(size);
-
-        char* buf = m_pPayload;
-
-        m_pPayload = (char*)malloc( size );
-
-        if(NULL == m_pPayload) return -1;
-
-        memcpy(m_pPayload, buf, m_nAllocSize);
-
-        free(buf);
-
-        m_nAllocSize = size;
-        m_nRealSize = 0;
-        return 0;
-    };
-
-    //!
-    //! \brief  Set the type for packet
-    //!
-    //! \return
-    //!
-    //!
-    void SetType(int type){m_type = type;};
-
-    //!
-    //! \brief  Get the type of the payload
-    //!
-    //! \return
-    //!         the type of the Packet payload
-    //!
-    int GetType(){return m_type;};
-
-    uint64_t GetPTS() { return mPts; };
-    void SetPTS(uint64_t pts){ mPts = pts; };
-
-    void SetRealSize(uint64_t realSize) { m_nRealSize = realSize; };
-    uint64_t GetRealSize() { return m_nRealSize; };
-
-    void SetRwpk(RegionWisePacking *rwpk) { m_rwpk = rwpk; };
-    RegionWisePacking* GetRwpk() { return m_rwpk; };
-
-    int GetSegID() { return m_segID; };
-    void SetSegID(int id){ m_segID = id; };
-
-    void SetQualityRanking(uint32_t qualityRanking) { m_qualityRanking = qualityRanking; };
-    uint32_t GetQualityRanking() { return m_qualityRanking; };
-
-    void SetSRDInfo(SRDInfo srdInfo)
-    {
-        m_srd.left   = srdInfo.left;
-        m_srd.top    = srdInfo.top;
-        m_srd.width  = srdInfo.width;
-        m_srd.height = srdInfo.height;
-    };
-
-    SRDInfo GetSRDInfo() { return m_srd; };
-
-    void     SetVideoID(uint32_t videoId) { m_videoID = videoId; };
-
-    uint32_t GetVideoID() { return m_videoID; };
-
-    void     SetCodecType(Codec_Type codecType) { m_codecType = codecType; };
-
-    Codec_Type GetCodecType() { return m_codecType; };
-
-    void     SetVideoWidth(int32_t videoWidth) { m_videoWidth = videoWidth; };
-
-    int32_t  GetVideoWidth() { return m_videoWidth; };
-
-    void     SetVideoHeight(int32_t videoHeight) { m_videoHeight = videoHeight; };
-
-    int32_t  GetVideoHeight() { return m_videoHeight; };
-
-    int32_t  SetQualityNum(int32_t numQty)
-    {
-        m_numQuality = numQty;
-
-        if (m_qtyResolution)
-        {
-            delete [] m_qtyResolution;
-            m_qtyResolution = NULL;
-        }
-
-        m_qtyResolution = new SourceResolution[m_numQuality];
-        if (!m_qtyResolution)
-            return OMAF_ERROR_NULL_PTR;
-
-        return ERROR_NONE;
+  //!
+  //! \brief  Allocate the packet buffer, and fill the buffer with fill
+  //!
+  //! \param  [in] size
+  //!         the buffer size to be allocated
+  //! \param  [in] fill
+  //!         the init value for the buffer
+  //!
+  //! \return
+  //!         size of new allocated packet
+  //!
+  int AllocatePacket(int size, char fill = 0) {
+    if (nullptr != m_pPayload) {
+      free(m_pPayload);
+      m_pPayload = nullptr;
+      m_nAllocSize = 0;
     }
 
-    int32_t  GetQualityNum() { return m_numQuality; };
+    m_pPayload = (char*)malloc(size);
 
-    int32_t  SetSourceResolution(int32_t srcId, SourceResolution resolution)
-    {
-        if (!m_qtyResolution)
-        {
-            LOG(ERROR) << "NULL quality resolution !" << std::endl;
-            return OMAF_ERROR_NULL_PTR;
-        }
+    if (nullptr == m_pPayload) return -1;
 
-        if ((srcId < 0) || (srcId > (m_numQuality - 1)))
-        {
-            LOG(ERROR) << "Invalid source index  " << srcId << " !" << std::endl;
-            return OMAF_ERROR_INVALID_DATA;
-        }
+    m_nAllocSize = size;
+    memset(m_pPayload, fill, m_nAllocSize);
+    m_nRealSize = 0;
+    return size;
+  };
 
-        m_qtyResolution[srcId].qualityRanking = resolution.qualityRanking;
-        m_qtyResolution[srcId].top            = resolution.top;
-        m_qtyResolution[srcId].left           = resolution.left;
-        m_qtyResolution[srcId].width          = resolution.width;
-        m_qtyResolution[srcId].height         = resolution.height;
+  //!
+  //! \brief  get the buffer pointer of the packet
+  //!
+  //! \return
+  //!         the buffer pointer
+  //!
+  char* Payload() { return m_pPayload; };
+  char* MovePayload() {
+    char* tmp = m_pPayload;
+    m_pPayload = nullptr;
+    return tmp;
+  }
+  //!
+  //! \brief  get the size of the buffer
+  //!
+  //! \return
+  //!         size of the packet's payload
+  //!
+  uint64_t Size() { return m_nRealSize; };
 
-        return ERROR_NONE;
-    };
+  //!
+  //! \brief  reallocate the payload buffer. if size > m_nAllocSize, keep the data
+  //!         in old buf to new buf;
+  //!
+  //! \return
+  //!         size of new allocated packet
+  //!
+  int ReAllocatePacket(size_t size) {
+    if (nullptr == m_pPayload) return AllocatePacket(size);
 
-    SourceResolution* GetSourceResolutions() { return m_qtyResolution; };
+    if (size < m_nAllocSize) return AllocatePacket(size);
 
-    void     SetVideoTileRowNum(uint32_t rowNum) { m_videoTileRows = rowNum; };
+    char* buf = m_pPayload;
 
-    uint32_t GetVideoTileRowNum() { return m_videoTileRows; };
+    m_pPayload = (char*)malloc(size);
 
-    void     SetVideoTileColNum(uint32_t colNum) { m_videoTileCols = colNum; };
+    if (nullptr == m_pPayload) return -1;
 
-    uint32_t GetVideoTileColNum() { return m_videoTileCols; };
+    memcpy_s(m_pPayload, m_nAllocSize, buf, m_nAllocSize);
 
-    void     SetEOS(bool isEOS) { m_bEOS = isEOS; };
+    free(buf);
 
-    bool     GetEOS() { return m_bEOS; };
+    m_nAllocSize = size;
+    m_nRealSize = 0;
+    return 0;
+  };
 
-    void     SetHasVideoHeader(bool hasHeader) { m_hasVideoHeader = hasHeader; };
+  //!
+  //! \brief  Set the type for packet
+  //!
+  //! \return
+  //!
+  //!
+  void SetType(int type) { m_type = type; };
 
-    void     SetVideoHeaderSize(uint32_t hrdSize) { m_hrdSize = hrdSize; };
+  //!
+  //! \brief  Get the type of the payload
+  //!
+  //! \return
+  //!         the type of the Packet payload
+  //!
+  int GetType() { return m_type; };
 
-    void     SetVPSLen(uint32_t vpsLen) { m_VPSLen = vpsLen; };
+  uint64_t GetPTS() { return mPts; };
+  void SetPTS(uint64_t pts) { mPts = pts; };
 
-    void     SetSPSLen(uint32_t spsLen) { m_SPSLen = spsLen; };
-
-    void     SetPPSLen(uint32_t ppsLen) { m_PPSLen = ppsLen; };
-
-    bool     GetHasVideoHeader() { return m_hasVideoHeader; };
-
-    uint32_t GetVideoHeaderSize() { return m_hrdSize; };
-
-    uint32_t GetVPSLen() { return m_VPSLen; };
-
-    uint32_t GetSPSLen() { return m_SPSLen; };
-
-    uint32_t GetPPSLen() { return m_PPSLen; };
-
-private:
-    char* m_pPayload;                    //!<the payload buffer of the packet
-    int   m_nAllocSize;                  //!<the allocated size of packet
-    uint64_t m_nRealSize;                //!< real size of packet
-    int   m_type;                        //!<the type of the payload
-    uint64_t mPts;
-    int   m_segID;
-    RegionWisePacking *m_rwpk;
-    uint32_t m_qualityRanking;
-    SRDInfo m_srd;
-
-    uint32_t   m_videoID;
-    Codec_Type m_codecType;
-    int32_t    m_videoWidth;
-    int32_t    m_videoHeight;
-    int32_t    m_numQuality;
-    SourceResolution *m_qtyResolution;
-    uint32_t   m_videoTileRows;
-    uint32_t   m_videoTileCols;
-    bool       m_bEOS;
-
-    bool       m_hasVideoHeader;          //!< whether the media packet includes VPS/SPS/PPS
-    uint32_t   m_hrdSize;
-    uint32_t   m_VPSLen;
-    uint32_t   m_SPSLen;
-    uint32_t   m_PPSLen;
-
-    void deleteRwpk()
-    {
-        if (m_rwpk != NULL)
-        {
-            if (m_rwpk->rectRegionPacking != NULL)
-            {
-                delete []m_rwpk->rectRegionPacking;
-                m_rwpk->rectRegionPacking = NULL;
-            }
-            delete m_rwpk;
-            m_rwpk = NULL;
-        }
+  void SetRealSize(uint64_t realSize) { m_nRealSize = realSize; };
+  uint64_t GetRealSize() { return m_nRealSize; };
+  // FIXME, refine and optimize
+  void SetRwpk(std::unique_ptr<RegionWisePacking> rwpk) { m_rwpk = std::move(rwpk); };
+  // RegionWisePacking* GetRwpk() { return m_rwpk.get(); };
+  const RegionWisePacking& GetRwpk() const { return *m_rwpk.get(); };
+  void copyRwpk(RegionWisePacking* to) {
+    if (to && m_rwpk.get()) {
+      if (to->rectRegionPacking) {
+        delete[] to->rectRegionPacking;
+      }
+      *to = *m_rwpk.get();
+      to->rectRegionPacking = new RectangularRegionWisePacking[m_rwpk->numRegions];
+      memcpy_s(to->rectRegionPacking, m_rwpk->numRegions * sizeof(RectangularRegionWisePacking),
+               m_rwpk->rectRegionPacking, m_rwpk->numRegions * sizeof(RectangularRegionWisePacking));
     }
+  }
+  void moveRwpk(RegionWisePacking* to) {
+    if (to && m_rwpk.get()) {
+      if (to->rectRegionPacking) {
+        delete[] to->rectRegionPacking;
+      }
+      *to = *m_rwpk.get();
+      m_rwpk->rectRegionPacking = nullptr;
+    }
+  }
+  int GetSegID() { return m_segID; };
+  void SetSegID(int id) { m_segID = id; };
+
+  void SetQualityRanking(QualityRank qualityRanking) { m_qualityRanking = qualityRanking; };
+  QualityRank GetQualityRanking() { return m_qualityRanking; };
+
+  void SetSRDInfo(const SRDInfo& srdInfo) {
+#if 0
+    m_srd.left = srdInfo.left;
+    m_srd.top = srdInfo.top;
+    m_srd.width = srdInfo.width;
+    m_srd.height = srdInfo.height;
+#endif
+    m_srd = srdInfo;
+  };
+
+  SRDInfo GetSRDInfo() { return m_srd; };
+
+  void SetVideoID(uint32_t videoId) { m_videoID = videoId; };
+
+  uint32_t GetVideoID() { return m_videoID; };
+
+  void SetCodecType(Codec_Type codecType) { m_codecType = codecType; };
+
+  Codec_Type GetCodecType() { return m_codecType; };
+
+  void SetVideoWidth(int32_t videoWidth) { m_videoWidth = videoWidth; };
+
+  int32_t GetVideoWidth() { return m_videoWidth; };
+
+  void SetVideoHeight(int32_t videoHeight) { m_videoHeight = videoHeight; };
+
+  int32_t GetVideoHeight() { return m_videoHeight; };
+
+  int32_t SetQualityNum(int32_t numQty) {
+    if (numQty <= 0) {
+      return OMAF_ERROR_INVALID_DATA;
+    }
+
+    m_qtyResolution.resize(numQty);
+
+    return ERROR_NONE;
+  }
+
+  int32_t GetQualityNum() { return m_qtyResolution.size(); };
+
+  int32_t SetSourceResolution(int32_t srcId, SourceResolution resolution) {
+    if (srcId >= 0 && static_cast<size_t>(srcId) < m_qtyResolution.size()) {
+      m_qtyResolution[srcId] = resolution;
+    } else {
+      LOG(ERROR) << "Invalid source index  " << srcId << " !" << std::endl;
+      return OMAF_ERROR_INVALID_DATA;
+    }
+
+    return ERROR_NONE;
+  };
+
+  SourceResolution* GetSourceResolutions() { return m_qtyResolution.data(); };
+
+  void SetVideoTileRowNum(uint32_t rowNum) { m_videoTileRows = rowNum; };
+
+  uint32_t GetVideoTileRowNum() { return m_videoTileRows; };
+
+  void SetVideoTileColNum(uint32_t colNum) { m_videoTileCols = colNum; };
+
+  uint32_t GetVideoTileColNum() { return m_videoTileCols; };
+
+  void SetEOS(bool isEOS) { m_bEOS = isEOS; };
+
+  bool GetEOS() { return m_bEOS; };
+
+  void SetHasVideoHeader(bool hasHeader) { m_hasVideoHeader = hasHeader; };
+
+  void SetVideoHeaderSize(uint32_t hrdSize) {
+    m_hrdSize = hrdSize;
+    m_hasVideoHeader = hrdSize > 0 ? true : false;
+  };
+
+  void SetVPSLen(uint32_t vpsLen) { m_VPSLen = vpsLen; };
+
+  void SetSPSLen(uint32_t spsLen) { m_SPSLen = spsLen; };
+
+  void SetPPSLen(uint32_t ppsLen) { m_PPSLen = ppsLen; };
+
+  bool GetHasVideoHeader() { return m_hasVideoHeader; };
+
+  uint32_t GetVideoHeaderSize() { return m_hrdSize; };
+
+  uint32_t GetVPSLen() { return m_VPSLen; };
+
+  uint32_t GetSPSLen() { return m_SPSLen; };
+
+  uint32_t GetPPSLen() { return m_PPSLen; };
+
+ private:
+  char* m_pPayload = nullptr;  //!< the payload buffer of the packet
+  size_t m_nAllocSize = 0;     //!< the allocated size of packet
+  size_t m_nRealSize = 0;      //!< real size of packet
+  int m_type = -1;             //!< the type of the payload
+  uint64_t mPts = 0;
+  int m_segID = 0;
+  // RegionWisePacking* m_rwpk;
+  std::unique_ptr<RegionWisePacking> m_rwpk;
+  QualityRank m_qualityRanking = HIGHEST_QUALITY_RANKING;
+  SRDInfo m_srd;
+
+  uint32_t m_videoID = 0;
+  Codec_Type m_codecType = VideoCodec_HEVC;
+  int32_t m_videoWidth = 0;
+  int32_t m_videoHeight = 0;
+  // int32_t m_numQuality = 0;
+  // SourceResolution* m_qtyResolution = nullptr_t;
+  std::vector<SourceResolution> m_qtyResolution;
+  uint32_t m_videoTileRows = 0;
+  uint32_t m_videoTileCols = 0;
+  bool m_bEOS = false;
+
+  bool m_hasVideoHeader = false;  //!< whether the media packet includes VPS/SPS/PPS
+  uint32_t m_hrdSize = 0;
+  uint32_t m_VPSLen = 0;
+  uint32_t m_SPSLen = 0;
+  uint32_t m_PPSLen = 0;
+
+  void deleteRwpk() {
+    if (m_rwpk) {
+      if (m_rwpk->rectRegionPacking != nullptr) {
+        delete[] m_rwpk->rectRegionPacking;
+        m_rwpk->rectRegionPacking = nullptr;
+      }
+      m_rwpk.reset();
+    }
+  }
 };
-
-VCD_OMAF_END;
+}  // namespace OMAF
+}  // namespace VCD
 
 #endif /* MEDIAPACKET_H */
-

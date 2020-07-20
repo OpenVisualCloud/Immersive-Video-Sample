@@ -26,7 +26,6 @@
  *
  */
 
-
 //!
 //! \file:   OmafDashSource.h
 //! \brief:
@@ -46,149 +45,136 @@
 #include "OmafTracksSelector.h"
 #include "OmafTilesStitch.h"
 
-
 using namespace VCD::OMAF;
 
 VCD_OMAF_BEGIN
 
-typedef enum{
-    STATUS_CREATED=0,
-    STATUS_READY,
-    STATUS_RUNNING,
-    STATUS_EXITING,
-    STATUS_STOPPED,
-    STATUS_UNKNOWN,
-}DASH_STATUS;
-
 typedef std::list<OmafMediaStream*> ListStream;
 
 class OmafDashSource : public OmafMediaSource, Threadable {
-public:
-    //!
-    //! \brief construct
-    //!
-    OmafDashSource();
+ public:
+  //!
+  //! \brief construct
+  //!
+  OmafDashSource();
 
-    //!
-    //! \brief de-construct
-    //!
-    virtual ~OmafDashSource();
+  //!
+  //! \brief de-construct
+  //!
+  virtual ~OmafDashSource();
 
-public:
-    //!
-    //! \brief Interface implementation from base class: OmafMediaSource
-    //!
-    virtual int OpenMedia(
-        std::string url, std::string cacheDir,
-        bool enableExtractor=true, bool enablePredictor=false,
-        std::string predictPluginName="", std::string libPath="");
-    virtual int CloseMedia();
-    virtual int GetPacket( int streamID, std::list<MediaPacket*>* pkts, bool needParams, bool clearBuf );
-    virtual int GetStatistic(DashStatisticInfo* dsInfo);
-    virtual int SetupHeadSetInfo(HeadSetInfo* clientInfo);
-    virtual int ChangeViewport(HeadPose* pose);
-    virtual int GetMediaInfo( DashMediaInfo* media_info );
-    virtual int GetTrackCount();
-    virtual int SelectSpecialSegments(int extractorTrackIdx);
-    //!
-    //! \brief Interface implementation from base class: Threadable
-    //!
-    virtual void Run();
+ public:
+  //!
+  //! \brief Interface implementation from base class: OmafMediaSource
+  //!
+  virtual int OpenMedia(std::string url, std::string cacheDir, bool enableExtractor = true,
+                        bool enablePredictor = false, std::string predictPluginName = "", std::string libPath = "");
+  virtual int CloseMedia();
+  virtual int GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool needParams, bool clearBuf);
+  virtual int GetStatistic(DashStatisticInfo* dsInfo);
+  virtual int SetupHeadSetInfo(HeadSetInfo* clientInfo);
+  virtual int ChangeViewport(HeadPose* pose);
+  virtual int GetMediaInfo(DashMediaInfo* media_info);
+  virtual int GetTrackCount();
+  virtual int SelectSpecialSegments(int extractorTrackIdx);
+  //!
+  //! \brief Interface implementation from base class: Threadable
+  //!
+  virtual void Run();
 
-private:
-    //!
-    //! \brief TimedSelect extractors or adaptation set for streams
-    //!
-    int TimedSelectSegements( );
+ private:
+  //!
+  //! \brief TimedSelect extractors or adaptation set for streams
+  //!
+  int TimedSelectSegements();
 
-    //!
-    //! \brief
-    //!
-    void StopThread();
+  //!
+  //! \brief
+  //!
+  void StopThread();
 
-    //!
-    //! \brief update mpd in dynamic mode
-    //!
-    int TimedUpdateMPD();
+  //!
+  //! \brief update mpd in dynamic mode
+  //!
+  int TimedUpdateMPD();
 
-    //!
-    //! \brief Download Segment in dynamic mode
-    //!
-    int TimedDownloadSegment( bool bFirst );
+  //!
+  //! \brief Download Segment in dynamic mode
+  //!
+  int TimedDownloadSegment(bool bFirst);
 
-    //!
-    //! \brief run thread for dynamic mpd processing
-    //!
-    void thread_dynamic();
+  //!
+  //! \brief run thread for dynamic mpd processing
+  //!
+  void thread_dynamic();
 
-    //!
-    //! \brief run thread for static mpd processing
-    //!
-    void thread_static();
+  //!
+  //! \brief run thread for static mpd processing
+  //!
+  void thread_static();
 
-    //!
-    //! \brief ClearStreams
-    //!
-    void ClearStreams();
+  //!
+  //! \brief ClearStreams
+  //!
+  void ClearStreams();
 
-    //!
-    //! \brief SeekToSeg
-    //!
-    void SeekToSeg(int seg_num);
+  //!
+  //! \brief SeekToSeg
+  //!
+  void SeekToSeg(int seg_num);
 
-    //!
-    //! \brief SetEOS
-    //!
-    int SetEOS(bool eos);
+  //!
+  //! \brief SetEOS
+  //!
+  int SetEOS(bool eos);
 
-    //!
-    //! \brief Download init Segment
-    //!
-    int DownloadInitSeg();
+  //!
+  //! \brief Download init Segment
+  //!
+  int DownloadInitSeg();
 
-    //!
-    //! \brief GetSegmentDuration
-    //!
-    uint64_t GetSegmentDuration(int stream_id);
+  //!
+  //! \brief GetSegmentDuration
+  //!
+  uint64_t GetSegmentDuration(int stream_id);
 
-    //!
-    //! \brief Get and Set current status
-    //!
-    DASH_STATUS GetStatus(){ return mStatus; };
-    void SetStatus(DASH_STATUS status){
-        pthread_mutex_lock(&mMutex);
-        mStatus = status;
-        pthread_mutex_unlock(&mMutex);
-    };
+  //!
+  //! \brief Get and Set current status
+  //!
+  DASH_STATUS GetStatus() { return mStatus; };
+  void SetStatus(DASH_STATUS status) {
+    pthread_mutex_lock(&mMutex);
+    mStatus = status;
+    pthread_mutex_unlock(&mMutex);
+  };
 
-    //!
-    //! \brief Get MPD information
-    //!
-    MPDInfo*  GetMPDInfo()
-    {
-        if(!mMPDParser)
-            return nullptr;
+  //!
+  //! \brief Get MPD information
+  //!
+  MPDInfo* GetMPDInfo() {
+    if (!mMPDParser) return nullptr;
 
-        return mMPDParser->GetMPDInfo();
-    };
+    return mMPDParser->GetMPDInfo();
+  };
 
-    int SyncTime(std::string url);
+  int SyncTime(std::string url);
 
-    int StartReadThread();
+  int StartReadThread();
 
-private:
-    OmafMPDParser*             mMPDParser;                //<! the MPD parser
-    DASH_STATUS                mStatus;                   //<! the status of the source
-    OmafTracksSelector         *m_selector;               //<! tracks selector basing on viewport
-    pthread_mutex_t            mMutex;                    //<! for synchronization
-    MPDInfo                    *mMPDinfo;                  //<! MPD information
-    int                        dcount;
-    GlogWrapper                *m_glogWrapper;
-    int                        mPreExtractorID;
-    OmafTilesStitch            *m_stitch;
+ private:
+  OmafMPDParser* mMPDParser;       //<! the MPD parser
+  DASH_STATUS mStatus;             //<! the status of the source
+  OmafTracksSelector* m_selector;  //<! tracks selector basing on viewport
+  pthread_mutex_t mMutex;          //<! for synchronization
+  MPDInfo* mMPDinfo;               //<! MPD information
+  int dcount;
+  GlogWrapper* m_glogWrapper;
+  int mPreExtractorID;
+  OmafTilesStitch* m_stitch = nullptr;
+  std::shared_ptr<OmafDashSegmentClient> dash_client_;
+  std::shared_ptr<OmafReaderManager> omaf_reader_mgr_;
 };
 
 VCD_OMAF_END;
 
 #endif /* OMAFSOURCE_H */
-

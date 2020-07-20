@@ -33,244 +33,235 @@
 
 VCD_USE_VRVIDEO;
 
-namespace{
+namespace {
 class MediaSourceTest : public testing::Test {
-public:
-    virtual void SetUp(){
+ public:
+  virtual void SetUp() {
+    url_live = "http://10.67.112.194:8080/testOMAFlive/Test.mpd";
+    // url_static = "https://10.67.119.113:443/UT_testOMAFstatic/Test.mpd";
+    // url_static = "http://10.67.119.113:8080/UT_testOMAFstatic/Test.mpd";
+    url_static = "http://10.67.112.194:8080/testOMAFstatic/Test.mpd";
+    cache = "./cache";  // getpwuid(getuid())->pw_dir + std::string("/cache");
+    pluginName = "libViewportPredict_LR.so";
+    libPath = "../../plugins/ViewportPredict_Plugin/predict_LR/";
 
-        url_live = "http://10.67.112.194:8080/testOMAFlive/Test.mpd";
-        //url_static = "https://10.67.119.113:443/UT_testOMAFstatic/Test.mpd";
-        //url_static = "http://10.67.119.113:8080/UT_testOMAFstatic/Test.mpd";
-        url_static = "http://10.67.112.194:8080/testOMAFstatic/Test.mpd";
-        cache = "./cache";//getpwuid(getuid())->pw_dir + std::string("/cache");
-        pluginName = "libViewportPredict_LR.so";
-        libPath = "../../plugins/ViewportPredict_Plugin/predict_LR/";
+    clientInfo = new HeadSetInfo;
+    //clientInfo->input_geoType = 0;
+    //clientInfo->output_geoType = E_SVIDEO_VIEWPORT;
+    clientInfo->pose = new HeadPose;
+    clientInfo->pose->yaw = -90;
+    clientInfo->pose->pitch = 0;
+    clientInfo->viewPort_hFOV = 80;
+    clientInfo->viewPort_vFOV = 80;
+    clientInfo->viewPort_Width = 960;
+    clientInfo->viewPort_Height = 960;
 
-        clientInfo = new HeadSetInfo;
-        clientInfo->pose = new HeadPose;
-        clientInfo->pose->yaw = -90;
-        clientInfo->pose->pitch = 0;
-        clientInfo->viewPort_hFOV = 80;
-        clientInfo->viewPort_vFOV = 80;
-        clientInfo->viewPort_Width = 960;
-        clientInfo->viewPort_Height = 960;
+    pose = new HeadPose;
+    pose->yaw = 90;
+    pose->pitch = 0;
+  }
 
-        pose = new HeadPose;
-        pose->yaw = 90;
-        pose->pitch = 0;
+  virtual void TearDown() {
+    free(clientInfo->pose);
+    clientInfo->pose = nullptr;
+
+    free(clientInfo);
+    clientInfo = nullptr;
+
+    free(pose);
+    pose = nullptr;
+  }
+
+  int GetFileCntUnderCache() {
+    // check the downloaded files number > 0
+    string downloadedFileCnt = "ls -l " + cache + " | grep -v ^l | wc -l";
+    std::array<char, 128> buffer;
+    std::string result;
+    FILE* pipe = popen(downloadedFileCnt.c_str(), "r");
+    if (!pipe) cout << "failed to get downloaded files count!" << endl;
+
+    while (pipe && fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
+      result += buffer.data();
     }
 
-    virtual void TearDown(){
-        free(clientInfo->pose);
-        clientInfo->pose = nullptr;
+    int32_t cnt = std::stoi(result);
 
-        free(clientInfo);
-        clientInfo = nullptr;
+    if (pipe) pclose(pipe);
 
-        free(pose);
-        pose = nullptr;
-    }
+    return cnt;
+  }
 
-    int GetFileCntUnderCache()
-    {
-        // check the downloaded files number > 0
-        string downloadedFileCnt = "ls -l " + cache + " | grep -v ^l | wc -l";
-        std::array<char, 128> buffer;
-        std::string result;
-        FILE* pipe = popen(downloadedFileCnt.c_str(), "r");
-        if(!pipe)
-            cout<<"failed to get downloaded files count!"<<endl;
-
-        while (pipe && fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
-            result += buffer.data();
-        }
-
-        int32_t cnt = std::stoi(result);
-
-        if(pipe) pclose(pipe);
-
-        return cnt;
-    }
-
-    HeadSetInfo* clientInfo;
-    HeadPose* pose;
-    std::string url_live;
-    std::string url_static;
-    std::string cache;
-    std::string pluginName;
-    std::string libPath;
+  HeadSetInfo* clientInfo;
+  HeadPose* pose;
+  std::string url_live;
+  std::string url_static;
+  std::string cache;
+  std::string pluginName;
+  std::string libPath;
 };
 
-TEST_F(MediaSourceTest, Create)
-{
-    OmafMediaSource* dashSource = new OmafDashSource();
-    EXPECT_TRUE(dashSource != NULL);
-    delete dashSource;
+TEST_F(MediaSourceTest, Create) {
+  OmafMediaSource* dashSource = new OmafDashSource();
+  EXPECT_TRUE(dashSource != NULL);
+  delete dashSource;
 }
 
-TEST_F(MediaSourceTest, OpenMedia_static)
-{
-    const string command = "rm -rf " + cache + "/*";
-    system(command.c_str());
+TEST_F(MediaSourceTest, OpenMedia_static) {
+  const string command = "rm -rf " + cache + "/*";
+  system(command.c_str());
 
-    OmafMediaSource* dashSource = new OmafDashSource();
-    EXPECT_TRUE(dashSource != NULL);
+  OmafMediaSource* dashSource = new OmafDashSource();
+  EXPECT_TRUE(dashSource != NULL);
 
-    int ret = dashSource->SetupHeadSetInfo(clientInfo);
-    EXPECT_TRUE(ret == ERROR_NONE);
+  int ret = dashSource->SetupHeadSetInfo(clientInfo);
+  EXPECT_TRUE(ret == ERROR_NONE);
 
-    ret = dashSource->OpenMedia(url_static, cache, true, false, "", "");
-    EXPECT_TRUE(ret == ERROR_NONE);
+  ret = dashSource->OpenMedia(url_static, cache, true, false, "", "");
+  EXPECT_TRUE(ret == ERROR_NONE);
 
-    sleep(5);
-    dashSource->CloseMedia();
+  sleep(5);
+  dashSource->CloseMedia();
 
-    // check the downloaded files number > 0
-    int32_t cnt = GetFileCntUnderCache();
-    EXPECT_TRUE(cnt > 1);
+  // check the downloaded files number > 0
+  int32_t cnt = GetFileCntUnderCache();
+  EXPECT_TRUE(cnt > 1);
 
-    delete dashSource;
+  delete dashSource;
 }
 
-TEST_F(MediaSourceTest, OpenMedia_live)
-{
-    const string command = "rm -rf " + cache + "/*";
-    system(command.c_str());
+TEST_F(MediaSourceTest, OpenMedia_live) {
+  const string command = "rm -rf " + cache + "/*";
+  system(command.c_str());
 
-    OmafMediaSource* dashSource = new OmafDashSource();
-    EXPECT_TRUE(dashSource != NULL);
+  OmafMediaSource* dashSource = new OmafDashSource();
+  EXPECT_TRUE(dashSource != NULL);
 
-    int ret = dashSource->SetupHeadSetInfo(clientInfo);
-    EXPECT_TRUE(ret == ERROR_NONE);
+  int ret = dashSource->SetupHeadSetInfo(clientInfo);
+  EXPECT_TRUE(ret == ERROR_NONE);
 
-    ret = dashSource->OpenMedia(url_live, cache, true, false, "", "");
-    EXPECT_TRUE(ret == ERROR_NONE);
+  ret = dashSource->OpenMedia(url_live, cache, true, false, "", "");
+  EXPECT_TRUE(ret == ERROR_NONE);
 
-    sleep(5);
-    dashSource->CloseMedia();
+  sleep(5);
+  dashSource->CloseMedia();
 
-    // check the downloaded files number > 0
-    int32_t cnt = GetFileCntUnderCache();
+  // check the downloaded files number > 0
+  int32_t cnt = GetFileCntUnderCache();
 
-    EXPECT_TRUE(cnt > 1);
+  EXPECT_TRUE(cnt > 1);
 
-    delete dashSource;
+  delete dashSource;
 }
 
-TEST_F(MediaSourceTest, OpenMedia_static_withPredictor)
-{
-    const string command = "rm -rf " + cache + "/*";
-    system(command.c_str());
+TEST_F(MediaSourceTest, OpenMedia_static_withPredictor) {
+  const string command = "rm -rf " + cache + "/*";
+  system(command.c_str());
 
-    OmafMediaSource* dashSource = new OmafDashSource();
-    EXPECT_TRUE(dashSource != NULL);
+  OmafMediaSource* dashSource = new OmafDashSource();
+  EXPECT_TRUE(dashSource != NULL);
 
-    int ret = dashSource->SetupHeadSetInfo(clientInfo);
-    EXPECT_TRUE(ret == ERROR_NONE);
+  int ret = dashSource->SetupHeadSetInfo(clientInfo);
+  EXPECT_TRUE(ret == ERROR_NONE);
 
-    ret = dashSource->OpenMedia(url_static, cache, true, true, pluginName, libPath);
-    EXPECT_TRUE(ret == ERROR_NONE);
+  ret = dashSource->OpenMedia(url_static, cache, true, true, pluginName, libPath);
+  EXPECT_TRUE(ret == ERROR_NONE);
 
-    sleep(15);
-    dashSource->CloseMedia();
+  sleep(15);
+  dashSource->CloseMedia();
 
-    // check the downloaded files number > 0
-    int32_t cnt = GetFileCntUnderCache();
+  // check the downloaded files number > 0
+  int32_t cnt = GetFileCntUnderCache();
 
-    EXPECT_TRUE(cnt > 1);
+  EXPECT_TRUE(cnt > 1);
 
-    delete dashSource;
+  delete dashSource;
 }
 
-TEST_F(MediaSourceTest, OpenMedia_live_withPredictor)
-{
-    const string command = "rm -rf " + cache + "/*";
-    system(command.c_str());
+TEST_F(MediaSourceTest, OpenMedia_live_withPredictor) {
+  const string command = "rm -rf " + cache + "/*";
+  system(command.c_str());
 
-    OmafMediaSource* dashSource = new OmafDashSource();
-    EXPECT_TRUE(dashSource != NULL);
+  OmafMediaSource* dashSource = new OmafDashSource();
+  EXPECT_TRUE(dashSource != NULL);
 
-    int ret = dashSource->SetupHeadSetInfo(clientInfo);
-    EXPECT_TRUE(ret == ERROR_NONE);
+  int ret = dashSource->SetupHeadSetInfo(clientInfo);
+  EXPECT_TRUE(ret == ERROR_NONE);
 
-    ret = dashSource->OpenMedia(url_live, cache, true, true, pluginName, libPath);
-    EXPECT_TRUE(ret == ERROR_NONE);
+  ret = dashSource->OpenMedia(url_live, cache, true, true, pluginName, libPath);
+  EXPECT_TRUE(ret == ERROR_NONE);
 
-    sleep(15);
-    dashSource->CloseMedia();
+  sleep(15);
+  dashSource->CloseMedia();
 
-    // check the downloaded files number > 0
-    int32_t cnt = GetFileCntUnderCache();
+  // check the downloaded files number > 0
+  int32_t cnt = GetFileCntUnderCache();
 
-    EXPECT_TRUE(cnt > 1);
+  EXPECT_TRUE(cnt > 1);
 
-    delete dashSource;
+  delete dashSource;
 }
 
-TEST_F(MediaSourceTest, OpenMedia_static_changeViewport)
-{
-    string command = "rm -rf " + cache + "/*";
-    system(command.c_str());
+TEST_F(MediaSourceTest, OpenMedia_static_changeViewport) {
+  string command = "rm -rf " + cache + "/*";
+  system(command.c_str());
 
-    OmafMediaSource* dashSource = new OmafDashSource();
-    EXPECT_TRUE(dashSource != NULL);
+  OmafMediaSource* dashSource = new OmafDashSource();
+  EXPECT_TRUE(dashSource != NULL);
 
-    int ret = dashSource->SetupHeadSetInfo(clientInfo);
-    EXPECT_TRUE(ret == ERROR_NONE);
+  int ret = dashSource->SetupHeadSetInfo(clientInfo);
+  EXPECT_TRUE(ret == ERROR_NONE);
 
-    ret = dashSource->OpenMedia(url_static, cache, true, false, "", "");
-    EXPECT_TRUE(ret == ERROR_NONE);
+  ret = dashSource->OpenMedia(url_static, cache, true, false, "", "");
+  EXPECT_TRUE(ret == ERROR_NONE);
 
-    int16_t vpcnt = 200;
-    while(vpcnt > 0)
-    {
-        pose->yaw += 10;
-        pose->yaw = pose->yaw > 180 ? pose->yaw - 360 : pose->yaw;
-        ret = dashSource->ChangeViewport(pose);
-        EXPECT_TRUE(ret == ERROR_NONE);
-        usleep(10000);
-        vpcnt--;
-    }
-
-    sleep(5);
-    dashSource->CloseMedia();
-
-    // check the downloaded files number > 0
-    int32_t cnt = GetFileCntUnderCache();
-
-    EXPECT_TRUE(cnt > 1);
-
-    delete dashSource;
-}
-
-TEST_F(MediaSourceTest, OpenMedia_live_changeViewport)
-{
-    const string command = "rm -rf " + cache + "/*";
-    system(command.c_str());
-
-    OmafMediaSource* dashSource = new OmafDashSource();
-    EXPECT_TRUE(dashSource != NULL);
-
-    int ret = dashSource->SetupHeadSetInfo(clientInfo);
-    EXPECT_TRUE(ret == ERROR_NONE);
-
-    ret = dashSource->OpenMedia(url_live, cache, true, false, "", "");
-    EXPECT_TRUE(ret == ERROR_NONE);
-
-    sleep(1);
-
+  int16_t vpcnt = 200;
+  while (vpcnt > 0) {
+    pose->yaw += 10;
+    pose->yaw = pose->yaw > 180 ? pose->yaw - 360 : pose->yaw;
     ret = dashSource->ChangeViewport(pose);
     EXPECT_TRUE(ret == ERROR_NONE);
+    usleep(10000);
+    vpcnt--;
+  }
 
-    sleep(4);
-    dashSource->CloseMedia();
+  sleep(5);
+  dashSource->CloseMedia();
 
-    // check the downloaded files number > 0
-    int32_t cnt = GetFileCntUnderCache();
+  // check the downloaded files number > 0
+  int32_t cnt = GetFileCntUnderCache();
 
-    EXPECT_TRUE(cnt > 1);
+  EXPECT_TRUE(cnt > 1);
 
-    delete dashSource;
+  delete dashSource;
 }
 
+TEST_F(MediaSourceTest, OpenMedia_live_changeViewport) {
+  const string command = "rm -rf " + cache + "/*";
+  system(command.c_str());
+
+  OmafMediaSource* dashSource = new OmafDashSource();
+  EXPECT_TRUE(dashSource != NULL);
+
+  int ret = dashSource->SetupHeadSetInfo(clientInfo);
+  EXPECT_TRUE(ret == ERROR_NONE);
+
+  ret = dashSource->OpenMedia(url_live, cache, true, false, "", "");
+  EXPECT_TRUE(ret == ERROR_NONE);
+
+  sleep(1);
+
+  ret = dashSource->ChangeViewport(pose);
+  EXPECT_TRUE(ret == ERROR_NONE);
+
+  sleep(4);
+  dashSource->CloseMedia();
+
+  // check the downloaded files number > 0
+  int32_t cnt = GetFileCntUnderCache();
+
+  EXPECT_TRUE(cnt > 1);
+
+  delete dashSource;
 }
+
+}  // namespace

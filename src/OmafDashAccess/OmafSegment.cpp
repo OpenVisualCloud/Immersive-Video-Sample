@@ -33,201 +33,150 @@
  * Created on May 24, 2019, 11:07 AM
  */
 
-#include <fstream>
-
-#include "OmafSegment.h"
 #include "DownloadManager.h"
-#include "OmafReaderManager.h"
+#include "OmafSegment.h"
+
+#include <fstream>
+#include <sstream>
 
 VCD_OMAF_BEGIN
 
-OmafSegment::OmafSegment()
-{
-    pthread_mutex_init(&mMutex, NULL);
-    pthread_cond_init(&mCond, NULL);
-    mSeg         = NULL;
-    mStoreFile   = true;
-    mCacheFile   = "";
-    mStatus      = SegUnknown;
-    mSegSize     = 0;
-    mInitSegment = false;
-    mData        = NULL;
-    mReEnabled   = false;
-    mSegCnt      = 0;
-    mInitSegID   = 0;
-    mSegID       = 0;
-    mQualityRanking = HIGHEST_QUALITY_RANKING;
+std::atomic_uint32_t OmafSegment::INITSEG_ID(0);
+
+OmafSegment::OmafSegment(DashSegmentSourceParams ds_params, int segCnt, bool bInitSegment)
+    : ds_params_(ds_params), seg_count_(segCnt), bInit_segment_(bInitSegment) {
+  if (bInit_segment_) {
+    initSeg_id_ = INITSEG_ID.fetch_add(1);
+    seg_id_ = initSeg_id_;
+  }
 }
 
-OmafSegment::~OmafSegment()
-{
-    pthread_mutex_destroy( &mMutex );
-    pthread_cond_destroy( &mCond );
-
-    //SAFE_DELETE(mSeg);
-    //mSeg->StopDownloadSegment((OmafDownloaderObserver*) this);
-    mSeg->DetachDownloadObserver((OmafDownloaderObserver*) this);
-
-    DOWNLOADMANAGER::GetInstance()->DeleteCacheFile(mCacheFile);
+OmafSegment::~OmafSegment() {
+  if (buse_stored_file_ && !cache_file_.empty()) {
+    DOWNLOADMANAGER::GetInstance()->DeleteCacheFile(cache_file_);
+  }
 }
 
-OmafSegment::OmafSegment(SegmentElement* pSeg, int segCnt, bool bInitSegment, bool reEnabled):OmafSegment()
-{
-    pthread_mutex_init(&mMutex, NULL);
-    pthread_cond_init(&mCond, NULL);
-    mSeg         = pSeg;
-    mStoreFile   = false;
-    mCacheFile   = "";
-    mStatus      = SegUnknown;
-    mSegSize     = 0;
-    mInitSegment = bInitSegment;
-    mReEnabled   = reEnabled;
-    mSegCnt      = segCnt;
-    mInitSegID   = 0;
-    mSegID       = 0;
-    mQualityRanking = HIGHEST_QUALITY_RANKING;
-}
-
-int OmafSegment::StartDownload()
-{
-    if(NULL == mSeg)
-    {
-        LOG(INFO)<<"==============================Segment is null!"<<endl;
-        return ERROR_NULL_PTR;
+int OmafSegment::Open(std::shared_ptr<OmafDashSegmentClient> dash_client) noexcept {
+  try {
+    if (dash_client.get() == nullptr) {
+      return ERROR_NULL_PTR;
     }
 
-    mStoreFile = DOWNLOADMANAGER::GetInstance()->UseCache();
+    dash_client_ = std::move(dash_client);
 
-    mSegSize     = 0;
+    state_ = State::CREATE;
 
-    mStatus = SegReady;
-
-    mSeg->StartDownloadSegment((OmafDownloaderObserver*) this);
-
+    // mSegElement->StartDownloadSegment((OmafDownloaderObserver *)this);
+    dash_client_->open(
+        ds_params_, [this](std::unique_ptr<VCD::OMAF::StreamBlock> sb) { this->dash_stream_.push_back(std::move(sb)); },
+        [this](OmafDashSegmentClient::State s) {
+          switch (s) {
+            case OmafDashSegmentClient::State::SUCCESS:
+              this->state_ = State::OPEN_SUCCES;
+              break;
+            case OmafDashSegmentClient::State::STOPPED:
+              this->state_ = State::OPEN_STOPPED;
+              break;
+            case OmafDashSegmentClient::State::TIMEOUT:
+              this->state_ = State::OPEN_TIMEOUT;
+              break;
+            case OmafDashSegmentClient::State::FAILURE:
+              this->state_ = State::OPEN_FAILED;
+              break;
+            default:
+              break;
+          }
+          if (this->state_change_cb_) {
+            this->state_change_cb_(this->shared_from_this(), this->state_);
+          }
+        });
     return ERROR_NONE;
+  } catch (const std::exception& ex) {
+    LOG(ERROR) << "Exception when start downloading the file: " << ds_params_.dash_url_ << ", ex: " << ex.what()
+               << std::endl;
+    return ERROR_INVALID;
+  }
 }
 
-int OmafSegment::WaitComplete()
-{
-    if( mStatus == SegDownloaded ) return ERROR_NONE;
+int OmafSegment::Stop() noexcept {
+  try {
+    if (dash_client_.get() == nullptr) {
+      return ERROR_NULL_PTR;
+    }
+    dash_client_->remove(ds_params_);
+    return ERROR_NONE;
+  } catch (const std::exception& ex) {
+    LOG(ERROR) << "Exception when start downloading the file: " << ds_params_.dash_url_ << ", ex: " << ex.what()
+               << std::endl;
+    return ERROR_INVALID;
+  }
+}
 
-    int64_t waitTime = 0;
+#if 0
+int OmafSegment::Read(uint8_t *data, size_t len) {
+  // if (NULL == mSegElement) return ERROR_NULL_PTR;
 
-    // exit the waiting if segment downloaded or wait time is more than 10 mins
-    while(mStatus != SegDownloaded && waitTime < 60000){
-        ::usleep(10000);
-        waitTime++;
+  // if (mStatus != SegDownloaded) WaitComplete();
+
+  // return mSegElement->Read(data, len);
+}
+
+int OmafSegment::Peek(uint8_t *data, size_t len) {
+  // if (NULL == mSegElement) return ERROR_NULL_PTR;
+
+  // if (mStatus != SegDownloaded) WaitComplete();
+
+  // return mSegElement->Peek(data, len);
+}
+
+int OmafSegment::Peek(uint8_t *data, size_t len, size_t offset) {
+  // if (NULL == mSegElement) return ERROR_NULL_PTR;
+
+  // if (mStatus != SegReady) WaitComplete();
+
+  // return mSegElement->Peek(data, len, offset);
+}
+
+
+int OmafSegment::Close() {
+  // if (NULL == mSegElement) return ERROR_NULL_PTR;
+
+  // if (mStatus != SegDownloading)
+  //   mSegElement->StopDownloadSegment((OmafDownloaderObserver *)this);
+
+  // SAFE_DELETE( mSegElement );
+
+  return ERROR_NONE;
+}
+#endif
+int OmafSegment::CacheToFile() noexcept {
+  try {
+    std::string fileName =
+        ds_params_.dash_url_.substr(ds_params_.dash_url_.find_last_of('/') + 1,
+                                    ds_params_.dash_url_.length() - ds_params_.dash_url_.find_last_of('/') - 1);
+    cache_file_ = DOWNLOADMANAGER::GetInstance()->GetCacheFolder() + "/" +
+                  DOWNLOADMANAGER::GetInstance()->AssignCacheFileName() + fileName;
+    if (!dash_stream_.cacheToFile(cache_file_)) {
+      LOG(ERROR) << "Failed to cache the dash to file: " << cache_file_ << std::endl;
+      return OMAF_ERROR_FILE_WRITE;
     }
 
+    VLOG(VLOG_TRACE) << "Success to cache dash to file: " << cache_file_ << ". url=" << ds_params_.dash_url_
+                     << "file size=" << dash_stream_.GetStreamSize() << std::endl;
     return ERROR_NONE;
+  } catch (const std::exception& ex) {
+    LOG(ERROR) << "Exception when cache dash to file: " << cache_file_ << std::endl;
+    return ERROR_INVALID;
+  }
 }
 
-int OmafSegment::Open( )
-{
-    return StartDownload();
+std::string OmafSegment::to_string() const noexcept {
+  std::stringstream ss;
+  ss << "segment initsegId=" << initSeg_id_;
+  ss << ", segId=" << seg_id_;
+  ss << ", url=" << ds_params_.dash_url_;
+  ss << ", file=" << cache_file_;
+  return ss.str();
 }
-
-int OmafSegment::Open( SegmentElement* pSeg )
-{
-    mSeg = pSeg;
-
-    return Open();
-}
-
-int OmafSegment::Read(uint8_t *data, size_t len)
-{
-    if(NULL == mSeg) return ERROR_NULL_PTR;
-
-    if(mStatus != SegDownloaded) WaitComplete();
-
-    return mSeg->Read(data, len);
-}
-
-int OmafSegment::Peek(uint8_t *data, size_t len)
-{
-    if(NULL == mSeg) return ERROR_NULL_PTR;
-
-    if(mStatus != SegDownloaded) WaitComplete();
-
-    return mSeg->Peek(data, len);
-}
-
-int OmafSegment::Peek(uint8_t *data, size_t len, size_t offset)
-{
-    if(NULL == mSeg) return ERROR_NULL_PTR;
-
-    if(mStatus != SegReady) WaitComplete();
-
-    return mSeg->Peek(data, len, offset);
-}
-
-int OmafSegment::Close()
-{
-    if(NULL == mSeg) return ERROR_NULL_PTR;
-
-    if(mStatus != SegDownloading) mSeg->StopDownloadSegment((OmafDownloaderObserver*) this);
-
-    return ERROR_NONE;
-}
-
-int OmafSegment::SaveToFile()
-{
-    mCacheFile = DOWNLOADMANAGER::GetInstance()->GetCacheFolder() + "/" + DOWNLOADMANAGER::GetInstance()->AssignCacheFileName();
-    mFileStream.open(mCacheFile, ios::out|ios::binary);
-
-    mData = (uint8_t*)malloc(mSegSize);
-    Read( mData, mSegSize );
-
-    mFileStream.write( (char *)mData, mSegSize);
-
-    mFileStream.close();
-
-    if (mData)
-    {
-        free(mData);
-        mData = NULL;
-    }
-
-    LOG(INFO)<<"close saved cache "<<mCacheFile<<", size= "<<mSegSize<<std::endl;
-    return ERROR_NONE;
-}
-
-void OmafSegment::DownloadDataNotify(uint64_t bytesDownloaded)
-{
-    // every time OnDownloadRateChanged called, the input bytesDownloaded
-    // is the total bytes number includes previous downloaded bytes
-    mSegSize = bytesDownloaded;
-}
-
-void OmafSegment::DownloadStatusNotify(DownloaderStatus state)
-{
-    switch(state){
-        case DOWNLOADED:
-            mStatus = SegDownloaded;
-            //LOG(INFO)<<"===============================================SaveToFile mInitSegID:"<<mInitSegID<<" mSegID:"<<mSegID<<endl;
-            if( mStoreFile ) SaveToFile();
-            //LOG(INFO)<<"===============================================SaveToFile Complete! mInitSegID:"<<mInitSegID<<" mSegID:"<<mSegID<<endl;
-            if(this->mInitSegment){
-                READERMANAGER::GetInstance()->AddInitSegment(this, mInitSegID);
-            }else{
-                READERMANAGER::GetInstance()->AddSegment(this, mInitSegID, mSegID);
-            }
-
-            break;
-        case NOT_START:
-            mStatus = SegReady;
-            break;
-        case DOWNLOADING:
-            mStatus = SegDownloading;
-            break;
-        case STOPPING:
-        case STOPPED:
-            mStatus = SegAborted;
-            break;
-        default:
-            mStatus = SegUnknown;
-            break;
-    }
-}
-
 VCD_OMAF_END

@@ -32,121 +32,121 @@
 //! on May 22, 2019, 4:09 PM
 //!
 
-
 #ifndef OMAFMPDPARSER_H
 #define OMAFMPDPARSER_H
 
-#include "general.h"
-#include "OmafMediaStream.h"
 #include "OmafDashParser/OmafXMLParser.h"
+#include "OmafMediaStream.h"
+#include "general.h"
+
+#include <mutex>
 
 using namespace VCD::OMAF;
 using namespace VCD::VRVideo;
 
 VCD_OMAF_BEGIN
 
-typedef enum{
-    MPD_NONE = 0,
-    MPD_STATIC,
-    MPD_DYNAMIC,
-}MPD_TYPE;
+typedef enum {
+  MPD_NONE = 0,
+  MPD_STATIC,
+  MPD_DYNAMIC,
+} MPD_TYPE;
 
-typedef std::vector<AdaptationSetElement*>         ADAPTATIONSETS;
-typedef std::vector<OmafMediaStream*>              OMAFSTREAMS;
-typedef std::vector<OmafAdaptationSet*>            OMAFADAPTATIONSETS;
-typedef std::map<std::string, OMAFADAPTATIONSETS>  TYPE_OMAFADAPTATIONSETS;
+typedef std::vector<AdaptationSetElement*> ADAPTATIONSETS;
+typedef std::vector<OmafMediaStream*> OMAFSTREAMS;
+typedef std::vector<OmafAdaptationSet*> OMAFADAPTATIONSETS;
+typedef std::map<std::string, OMAFADAPTATIONSETS> TYPE_OMAFADAPTATIONSETS;
 
 //!
 //! \class:   OmafMPDParser
 //! \brief:   the parser for MPD file using libdash
 //!
 class OmafMPDParser {
-public:
-    //!
-    //! \brief  construct
-    //!
-    OmafMPDParser();
+ public:
+  //!
+  //! \brief  construct
+  //!
+  OmafMPDParser();
 
-    //!
-    //! \brief  de-construct
-    //!
-    virtual ~OmafMPDParser();
+  //!
+  //! \brief  de-construct
+  //!
+  virtual ~OmafMPDParser();
 
-public:
-    //!
-    //! \brief  parse MPD and get construct media streams
-    //!
-    int ParseMPD( std::string mpd_file, OMAFSTREAMS& listStream );
+ public:
+  //!
+  //! \brief  parse MPD and get construct media streams
+  //!
+  int ParseMPD(std::string mpd_file, OMAFSTREAMS& listStream);
 
-    //!
-    //! \brief  update MPD and get construct media streams for live if needed.
-    //!
-    int UpdateMPD(OMAFSTREAMS& listStream);
+  //!
+  //! \brief  update MPD and get construct media streams for live if needed.
+  //!
+  int UpdateMPD(OMAFSTREAMS& listStream);
 
-    //!
-    //! \brief  Get MPD information.
-    //!
-    MPDInfo* GetMPDInfo();
+  //!
+  //! \brief  Get MPD information.
+  //!
+  MPDInfo* GetMPDInfo();
 
-    //!
-    //! \brief  Set cache dir.
-    //!
-    void SetCacheDir(string cache_dir) {mCacheDir = cache_dir;};
+  //!
+  //! \brief  Set cache dir.
+  //!
+  void SetCacheDir(string cache_dir) { mCacheDir = cache_dir; };
 
-    void SetExtractorEnabled(bool isExtractorEnabled) { mExtractorEnabled = isExtractorEnabled; };
+  void SetExtractorEnabled(bool isExtractorEnabled) { mExtractorEnabled = isExtractorEnabled; };
 
-    bool GetExtractorEnabled() { return mExtractorEnabled; };
+  bool GetExtractorEnabled() { return mExtractorEnabled; };
+  void SetOmafDashParams(const OmafDashParams& params) { omaf_dash_params_ = params; }
+  ProjectionFormat GetProjectionFmt() { return mPF; };
 
-    ProjectionFormat GetProjectionFmt() { return mPF; };
+ private:
+  //!
+  //! \brief construct media streams.
+  //!
+  int ParseStreams(OMAFSTREAMS& listStream);
 
-private:
+  //!
+  //! \brief Parse MPD information
+  //!
+  int ParseMPDInfo();
 
-    //!
-    //! \brief construct media streams.
-    //!
-    int ParseStreams( OMAFSTREAMS& listStream );
+  //!
+  //! \brief group all adaptationSet based on the dependency.
+  //!
+  int GroupAdaptationSet(PeriodElement* pPeriod, TYPE_OMAFADAPTATIONSETS& mapAdaptationSets);
 
-    //!
-    //! \brief Parse MPD information
-    //!
-    int ParseMPDInfo();
+  //!
+  //! \brief build up OmafMediaStreams based on the grouped AdaptationSets.
+  //!
+  int BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFSTREAMS& listStream);
 
-    //!
-    //! \brief group all adaptationSet based on the dependency.
-    //!
-    int GroupAdaptationSet(PeriodElement* pPeriod, TYPE_OMAFADAPTATIONSETS& mapAdaptationSets );
+  //!
+  //! \brief Create OmafAdaptationSet based on libDash AdaptationSetElement.
+  //! \param [in] pAS AdaptationSetElement
+  //! \return
+  //!
+  OmafAdaptationSet* CreateAdaptationSet(AdaptationSetElement* pAS, ProjectionFormat pf);
 
-    //!
-    //! \brief build up OmafMediaStreams based on the grouped AdaptationSets.
-    //!
-    int BuildStreams( TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFSTREAMS& listStream );
+  //!
+  //! \brief Judge the type of the AdaptationSet.
+  //!
+  bool ExtractorJudgement(AdaptationSetElement* pAS);
 
-    //!
-    //! \brief Create OmafAdaptationSet based on libDash AdaptationSetElement.
-    //! \param [in] pAS AdaptationSetElement
-    //! \return
-    //!
-    OmafAdaptationSet* CreateAdaptationSet(AdaptationSetElement* pAS, ProjectionFormat pf);
-
-    //!
-    //! \brief Judge the type of the AdaptationSet.
-    //!
-    bool ExtractorJudgement(AdaptationSetElement* pAS);
-
-
-private:
-    OmafXMLParser                 *mParser;
-    MPDElement                    *mMpd;          //!< the PTR for libdash MPD
-    std::string                    mMPDURL;       //!< url of MPD
-    ThreadLock*                    mLock;         //!< for synchronization
-    MPDInfo                        *mMPDInfo;     //!< the information of MPD
-    std::vector<BaseUrlElement *>  mBaseUrls;
-    ProjectionFormat               mPF;           //!< the projection format of the video content
-    std::string                    mCacheDir;     //!< cache directory
-    bool                           mExtractorEnabled; //!< if extractor track is enabled
+ private:
+  OmafXMLParser* mParser = nullptr;
+  MPDElement* mMpd = nullptr;  //!< the PTR for libdash MPD
+  std::string mMPDURL;         //!< url of MPD
+  // ThreadLock*                    mLock;
+  std::mutex mLock;
+  MPDInfo* mMPDInfo;  //!< the information of MPD
+  std::vector<BaseUrlElement*> mBaseUrls;
+  ProjectionFormat mPF;            //!< the projection format of the video content
+  std::string mCacheDir;           //!< cache directory
+  bool mExtractorEnabled = false;  //!< if extractor track is enabled
+  OmafDashParams omaf_dash_params_;
 };
 
 VCD_OMAF_END;
 
 #endif /* MPDPARSER_H */
-

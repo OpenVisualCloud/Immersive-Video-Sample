@@ -49,77 +49,79 @@
 #include "glog/logging.h"
 #include "OmafStructure.h"
 
-#define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
-#define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
+#define SAFE_DELETE(x) \
+  if (NULL != (x)) {   \
+    delete (x);        \
+    (x) = NULL;        \
+  };
+#define SAFE_FREE(x) \
+  if (NULL != (x)) { \
+    free((x));       \
+    (x) = NULL;      \
+  };
 
 VCD_OMAF_BEGIN
 
 typedef struct SourceInfo {
-    uint32_t qualityRanking;
-    int32_t  width;
-    int32_t  height;
-}SourceInfo;
+  QualityRank qualityRanking;
+  int32_t width;
+  int32_t height;
+} SourceInfo;
 
-typedef struct FRACTIONAL{
-    uint32_t     num;
-    uint32_t     den;
-}Fractional;
+typedef struct FRACTIONAL {
+  uint32_t num;
+  uint32_t den;
+} Fractional;
 
-typedef struct VIDEOINFO{
-    uint32_t     width;
-    uint32_t     height;
-    Fractional   frame_Rate;
-    uint32_t     bit_rate;
-    Fractional   sar;
-}VideoInfo;
+typedef struct VIDEOINFO {
+  uint32_t width;
+  uint32_t height;
+  Fractional frame_Rate;
+  uint32_t bit_rate;
+  Fractional sar;
+} VideoInfo;
 
-typedef struct AUDIOINFO{
-    uint32_t     channels;           ///for audio
-    uint32_t     channel_bytes;      ///for audio
-    uint32_t     sample_rate;        ///for audio
-}AudioInfo;
+typedef struct AUDIOINFO {
+  uint32_t channels;       /// for audio
+  uint32_t channel_bytes;  /// for audio
+  uint32_t sample_rate;    /// for audio
+} AudioInfo;
 
 //!
 //! \brief function to parse string to data type
 //!
-bool     parse_bool                 ( const char * const attr );
-uint32_t parse_int                  ( const char * const attr );
-uint64_t parse_long_int             ( const char * const attr );
-double   parse_double               ( const char * const attr );
-uint64_t parse_date                 ( const char * const attr );
-uint64_t parse_duration             ( const char * const duration );
-uint32_t parse_duration_u32         ( const char* const duration );
-uint32_t sys_clock                  ( );
-uint64_t sys_clock_high_res         ( );
+bool parse_bool(const char* const attr);
+uint32_t parse_int(const char* const attr);
+uint64_t parse_long_int(const char* const attr);
+double parse_double(const char* const attr);
+uint64_t parse_date(const char* const attr);
+uint64_t parse_duration(const char* const duration);
+uint32_t parse_duration_u32(const char* const duration);
+uint32_t sys_clock();
+uint64_t sys_clock_high_res();
 //!
 //! \brief function to deal with time
 //!
-time_t   mktime_utc                 ( struct tm *tm );
-int32_t  net_get_timezone           ( );
-int32_t  net_get_ntp_diff_ms        ( uint64_t ntp );
-uint64_t net_get_ntp_ts             ( );
-void     net_get_ntp                ( uint32_t *sec, uint32_t *frac );
-uint64_t net_get_utc                ( );
-void     net_set_ntp_shift          ( int32_t shift );
-uint64_t net_parse_date             ( const char *val );
+time_t mktime_utc(struct tm* tm);
+int32_t net_get_timezone();
+int32_t net_get_ntp_diff_ms(uint64_t ntp);
+uint64_t net_get_ntp_ts();
+void net_get_ntp(uint32_t* sec, uint32_t* frac);
+uint64_t net_get_utc();
+void net_set_ntp_shift(int32_t shift);
+uint64_t net_parse_date(const char* val);
 
 //!
 //! \brief function to deal with string
 //!
-void        SplitString             ( const std::string& s,
-                                      std::vector<std::string>& v,
-                                      const std::string& c );
-std::string GetSubstr               ( std::string str,
-                                      char sep,
-                                      bool bBefore );
-char*       strlwr                  ( char *s );
+void SplitString(const std::string& s, std::vector<std::string>& v, const std::string& c);
+std::string GetSubstr(std::string str, char sep, bool bBefore);
+char* strlwr(char* s);
 
-std::string PathSplice              ( std::string basePath,
-                                      std::string appendedPath);
+std::string PathSplice(std::string basePath, std::string appendedPath);
 
 int32_t StringToInt(string str);
 
 VCD_OMAF_END;
 
 #endif /* GENERAL_H */
-

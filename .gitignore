@@ -1,0 +1,10 @@
+.vscode
+build
+FFmpeg
+player/360SCVPAPI.h
+player/MediaSource/360SCVPAPI.h
+player/MediaSource/OmafDashAccessApi.h
+player/OmafStructure.h
+player/data_type.h
+player/error.h
+player/ns_def.h

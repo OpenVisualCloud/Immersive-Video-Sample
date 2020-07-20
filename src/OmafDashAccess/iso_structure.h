@@ -34,21 +34,18 @@
 #ifndef ISO_STRUCTURE_H
 #define ISO_STRUCTURE_H
 
-#include "general.h"
-#include "../isolib/include/Common.h"
 #include "../isolib/dash_parser/Mp4DataTypes.h"
+#include "../isolib/include/Common.h"
+#include "general.h"
 
 VCD_OMAF_BEGIN
 
-#define HIGHEST_QUALITY_RANKING 1
-
-typedef struct SRDInfo
-{
-    int32_t left;
-    int32_t top;
-    int32_t width;
-    int32_t height;
-}SRDInfo;
+typedef struct SRDInfo {
+  int32_t left = 0;
+  int32_t top = 0;
+  int32_t width = 0;
+  int32_t height = 0;
+} SRDInfo;
 
 using FourCC = VCD::MP4::FourCC;
 

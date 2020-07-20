@@ -41,41 +41,42 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-class GlogWrapper
-{
-public:
-    GlogWrapper(char* name){
-        if( 0 != access("./logfiles", 0) ){
-            mkdir("./logfiles", 0755 );
-        }
-        if( 0 != access("./logfiles/INFO", 0) ){
-            mkdir("./logfiles/INFO", 0755 );
-        }
-        if( 0 != access("./logfiles/WARNING", 0) ){
-            mkdir("./logfiles/WARNING", 0755 );
-        }
-        if( 0 != access("./logfiles/ERROR", 0) ){
-            mkdir("./logfiles/ERROR", 0755 );
-        }
+#define VLOG_METHOD 10
+#define VLOG_TRACE 20
 
-        google::InitGoogleLogging(name);
+class GlogWrapper {
+ public:
+  GlogWrapper(char* name) {
+    if (0 != access("./logfiles", 0)) {
+      mkdir("./logfiles", 0755);
+    }
+    if (0 != access("./logfiles/INFO", 0)) {
+      mkdir("./logfiles/INFO", 0755);
+    }
+    if (0 != access("./logfiles/WARNING", 0)) {
+      mkdir("./logfiles/WARNING", 0755);
+    }
+    if (0 != access("./logfiles/ERROR", 0)) {
+      mkdir("./logfiles/ERROR", 0755);
+    }
 
-        google::SetStderrLogging(google::ERROR);                                     //output to terminal if log level > google::INFO
-        google::SetLogDestination(google::INFO,"./logfiles/INFO/INFO_");            //set google::INFO log file prefix
-        google::SetLogDestination(google::WARNING,"./logfiles/WARNING/WARNING_");   //set google::WARNING log file prefix
-        google::SetLogDestination(google::ERROR,"./logfiles/ERROR/ERROR_");         //set google::ERROR log file prefix
-        google::SetLogFilenameExtension("log_");                                    //set the extension name of the log
+    google::InitGoogleLogging(name);
 
-        FLAGS_colorlogtostderr = true;                                              //set the color of the log which will be output to terminal
-        FLAGS_logbufsecs = 0;                                                       //buffer the log output. unit is second.
-        FLAGS_max_log_size = 100;                                                   //set the max size of log file to 100MB
-        FLAGS_stop_logging_if_full_disk = true;                                     //stop logging if disk full
-    };
-    ~GlogWrapper(){
-         google::ShutdownGoogleLogging();
-    };
-private:
+    google::SetStderrLogging(google::ERROR);                           // output to terminal if log level > google::INFO
+    google::SetLogDestination(google::INFO, "./logfiles/INFO/INFO_");  // set google::INFO log file prefix
+    google::SetLogDestination(google::WARNING, "./logfiles/WARNING/WARNING_");  // set google::WARNING log file prefix
+    google::SetLogDestination(google::ERROR, "./logfiles/ERROR/ERROR_");        // set google::ERROR log file prefix
+    google::SetLogFilenameExtension("log_");                                    // set the extension name of the log
+    google::InstallFailureSignalHandler();
 
+    FLAGS_colorlogtostderr = true;           // set the color of the log which will be output to terminal
+    FLAGS_logbufsecs = 0;                    // buffer the log output. unit is second.
+    FLAGS_max_log_size = 100;                // set the max size of log file to 100MB
+    FLAGS_stop_logging_if_full_disk = true;  // stop logging if disk full
+  };
+  ~GlogWrapper() { google::ShutdownGoogleLogging(); };
+
+ private:
 };
 
 #endif /* GLOGWRAPPER_H */

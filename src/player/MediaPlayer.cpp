@@ -107,7 +107,7 @@ RenderStatus MediaPlayer::Open()
     this->m_mediaInfo = m_mediaSource->GetMediaInfo();
     m_mediaSource->SetActiveStream(0, 0);
 
-    if (NULL == m_renderConfig.url)
+    if (m_renderConfig.url.empty())
     {
         LOG(ERROR)<<"Wrong url"<<std::endl;
         return RENDER_ERROR;

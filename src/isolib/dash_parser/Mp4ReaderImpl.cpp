@@ -2919,6 +2919,13 @@ int32_t Mp4Reader::GetHeight(uint32_t trackId, uint32_t itemId, uint32_t& imgH) 
     return GetImgDims(trackId, itemId, tempwidth, imgH);
 }
 
+int32_t Mp4Reader::GetDims(uint32_t trackId, uint32_t itemId, uint32_t& imgW, uint32_t& imgH) const {
+  if (IsInitErr()) {
+    return OMAF_MP4READER_NOT_INITIALIZED;
+  }
+
+  return GetImgDims(trackId, itemId, imgW, imgH);
+}
 
 int32_t Mp4Reader::GetPlaybackDurationInSecs(uint32_t trackId, double& durInSecs) const
 {

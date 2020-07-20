@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2019, Intel Corporation
+ * Copyright (c) 2018, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,60 +23,56 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
-
  */
 
-//!
-//! \file:   OmafDownloaderObserver.h
-//! \brief:  download observer base
-//!
+/*
+ * File:   common.h
+ * Author: media
+ *
+ * Created on 2020/04/22
+ */
+#ifndef VCD_UTILS_COMMON_H
+#define VCD_UTILS_COMMON_H
+#include <memory>
 
-#ifndef OMAFDOWNLOADEROBSERVER_H
-#define OMAFDOWNLOADEROBSERVER_H
+namespace VCD {
+class NonCopyable {
+ protected:
+  NonCopyable() = default;
 
-#include "../OmafDashParser/Common.h"
+  // Non-moveable.
+  NonCopyable(NonCopyable &&) noexcept = delete;
+  NonCopyable &operator=(NonCopyable &&) noexcept = delete;
 
-VCD_OMAF_BEGIN
-
-//!
-//! \class  OmafDownloaderObserver
-//! \brief  download observer abstract class
-//!
-class OmafDownloaderObserver
-{
-public:
-
-    //!
-    //! \brief Constructor
-    //!
-    OmafDownloaderObserver(){};
-
-    //!
-    //! \brief Destructor
-    //!
-    virtual ~OmafDownloaderObserver(){};
-
-    //!
-    //! \brief    Will be notified by downloader there is new downloaded data
-    //!
-    //! \param    [in] downloadedDataLength
-    //!           length of downloaded data
-    //!
-    //! \return   void
-    //!
-    virtual void DownloadDataNotify(uint64_t downloadedDataLength) = 0;
-
-    //!
-    //! \brief    Will be notified by downloader the status has changed
-    //!
-    //! \param    [in] status
-    //!           the changed status
-    //!
-    //! \return   void
-    //!
-    virtual void DownloadStatusNotify(DownloaderStatus status) = 0;
+  // Non-copyable.
+  NonCopyable(const NonCopyable &) = delete;
+  NonCopyable &operator=(const NonCopyable &) = delete;
 };
+}  // namespace VCD
 
-VCD_OMAF_END;
+//
+// @template make_unique_vcaa
+// @brief std11 not support this feature
+//
+template <typename T, typename... Args>
+std::unique_ptr<T> make_unique_vcd(Args &&... args) {
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
 
-#endif //OMAFDOWNLOADEROBSERVER_H
+#ifndef UNUSED
+#define UNUSED(prama) (void)prama
+#endif  // !UNUSED
+
+#ifndef IN
+#define IN
+#endif  // !IN
+
+#ifndef OUT
+#define OUT
+#endif  // !OUT
+
+#ifndef INOUT
+#define INOUT
+#endif  // !INOUT
+
+#endif  // !VCD_UTILS_COMMON_H

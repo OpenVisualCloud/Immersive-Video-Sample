@@ -31,160 +31,57 @@
 //!
 
 #include "SegmentElement.h"
-#include "../OmafDashDownload/OmafCurlDownloader.h"
+
+//#include "../OmafDashDownload/OmafCurlDownloader.h"
 
 VCD_OMAF_BEGIN
 
-SegmentElement::SegmentElement()
-{
-    m_downloader = nullptr;
-
-    m_duration = 0;
-    m_startNumber = 0;
-    m_timescale = 0;
+SegmentElement::SegmentElement() {
+  m_duration = 0;
+  m_startNumber = 0;
+  m_timescale = 0;
 }
 
-SegmentElement::~SegmentElement()
-{
-    m_media.clear();
-    m_initialization.clear();
-    m_duration = 0;
-    m_startNumber = 0;
-    m_timescale = 0;
-
-    m_url.clear(); // TBD
-
-    ResetDownload();
+SegmentElement::~SegmentElement() {
+  m_media.clear();
+  m_initialization.clear();
+  m_duration = 0;
+  m_startNumber = 0;
+  m_timescale = 0;
 }
 
+std::string SegmentElement::GenerateCompleteURL(const vector<BaseUrlElement*>& baseURL, string& representationID,
+                                                int32_t number, int32_t bandwidth, int32_t time) {
+  string combinedBaseURL;
+  for (uint32_t i = 0; i < baseURL.size() - 1; i++) {
+    auto url = baseURL[i];
+    combinedBaseURL = PathSplice(combinedBaseURL, url->GetPath());
+  }
 
-ODStatus SegmentElement::InitDownload(vector<BaseUrlElement*>& baseURL, string& representationID, int32_t number, int32_t bandwidth, int32_t time)
-{
-    string completeURL = GenerateCompleteURL(baseURL, representationID, number, bandwidth, time);
-    //LOG(INFO)<<"Download "<<completeURL<<endl;
-    if(!completeURL.length())
-    {
-        LOG(ERROR)<<"Cannot get the url for this segment!"<<endl;
-        return OD_STATUS_OPERATION_FAILED;
+  // check if it is getting the initialization segment
+  string fileName = number ? m_media : m_initialization;
+
+  // replace the reference value with real value in file name
+  vector<string> subNames;
+  SplitString(fileName, subNames, "$");
+  fileName.clear();
+  for (uint32_t i = 0; i < subNames.size(); i++) {
+    string sn = subNames[i];
+    if (sn == SEGMENT_NUMBER) {
+      sn = to_string(number);
+    } else if (sn == SEGMENT_REPRESENTATIONID) {
+      sn = representationID;
+    } else if (sn == SEGMENT_BANDWIDTH) {
+      sn = to_string(bandwidth);
+    } else if (sn == SEGMENT_TIME) {
+      sn = to_string(time);
     }
+    fileName += sn;
+  }
 
-    m_url = completeURL;
+  combinedBaseURL = PathSplice(combinedBaseURL, fileName);
 
-    m_downloader = new OmafCurlDownloader(completeURL);
-    CheckNullPtr_PrintLog_ReturnStatus(m_downloader, "Failed to create downloader.", ERROR, OD_STATUS_OPERATION_FAILED);
-
-    return OD_STATUS_SUCCESS;
-}
-
-ODStatus SegmentElement::ResetDownload()
-{
-    if(m_downloader)
-    {
-        m_downloader->Stop();
-    }
-    SAFE_DELETE(m_downloader);
-
-    m_url.clear();
-    return OD_STATUS_SUCCESS;
-}
-
-ODStatus SegmentElement::StartDownloadSegment(OmafDownloaderObserver* observer)
-{
-    CheckNullPtr_PrintLog_ReturnStatus(m_downloader, "The downloader is not created yet!", ERROR, OD_STATUS_INVALID);
-
-    //attach the observers to downloader
-    CheckAndReturn(m_downloader->ObserverAttach(observer));
-
-    m_downloader->Start();
-
-    return OD_STATUS_SUCCESS;
-}
-
-ODStatus SegmentElement::StopDownloadSegment(OmafDownloaderObserver* observer)
-{
-    if(!m_downloader)
-        return OD_STATUS_INVALID;
-
-    m_downloader->Stop();
-    if(observer) m_downloader->ObserverDetach(observer);
-    SAFE_DELETE(m_downloader);
-    m_url.clear();
-    return OD_STATUS_SUCCESS;
-}
-
-ODStatus SegmentElement::DetachDownloadObserver(OmafDownloaderObserver* observer)
-{
-    if (!m_downloader)
-        return OD_STATUS_INVALID;
-
-    if (observer)
-        m_downloader->ObserverDetach(observer);
-
-    return OD_STATUS_SUCCESS;
-}
-
-ODStatus SegmentElement::Read(uint8_t* data, size_t size)
-{
-    CheckNullPtr_PrintLog_ReturnStatus(m_downloader, "The downloader is not created yet!", ERROR, OD_STATUS_INVALID);
-
-    return m_downloader->Read(data, size);
-}
-
-ODStatus SegmentElement::Peek(uint8_t* data, size_t size)
-{
-    CheckNullPtr_PrintLog_ReturnStatus(m_downloader, "The downloader is not created yet!", ERROR, OD_STATUS_INVALID);
-
-    return m_downloader->Peek(data, size);
-}
-
-ODStatus SegmentElement::Peek(uint8_t* data, size_t size, size_t offset)
-{
-    CheckNullPtr_PrintLog_ReturnStatus(m_downloader, "The downloader is not created yet!", ERROR, OD_STATUS_INVALID);
-
-    return m_downloader->Peek(data, size, offset);
-}
-
-string SegmentElement::GenerateCompleteURL(vector<BaseUrlElement*>& baseURL, string& representationID, int32_t number, int32_t bandwidth, int32_t time)
-{
-    string combinedBaseURL;
-    for(uint32_t i = 0; i < baseURL.size() - 1 ; i++)
-    {
-        auto url = baseURL[i];
-        combinedBaseURL = PathSplice(combinedBaseURL, url->GetPath());
-    }
-
-    // check if it is getting the initialization segment
-    string fileName = number ? m_media : m_initialization;
-
-    // replace the reference value with real value in file name
-    vector<string> subNames;
-    SplitString(fileName, subNames, "$");
-    fileName.clear();
-    for( uint32_t i = 0; i < subNames.size();i++)
-    {
-        string sn = subNames[i];
-        if(sn == SEGMENT_NUMBER)
-        {
-            sn = to_string(number);
-        }
-        else if(sn == SEGMENT_REPRESENTATIONID)
-        {
-            sn = representationID;
-        }
-        else if(sn == SEGMENT_BANDWIDTH)
-        {
-            sn = to_string(bandwidth);
-        }
-        else if (sn == SEGMENT_TIME)
-        {
-            sn = to_string(time);
-        }
-        fileName += sn;
-    }
-
-    combinedBaseURL = PathSplice(combinedBaseURL, fileName);
-
-    return combinedBaseURL;
+  return combinedBaseURL;
 }
 
 VCD_OMAF_END;
