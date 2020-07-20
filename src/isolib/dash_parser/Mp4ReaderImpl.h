@@ -271,6 +271,8 @@ public:
     //!
     int32_t GetHeight(uint32_t trackId, uint32_t itemId, uint32_t& height) const;
 
+
+    int32_t GetDims(uint32_t trackId, uint32_t itemId,uint32_t& width, uint32_t& height) const;
     //!
     //! \brief  Get playback duration of specified track,
     //!         and unit is second

@@ -35,10 +35,10 @@
 #ifndef OMAFTRACKSSELECTOR_H
 #define OMAFTRACKSSELECTOR_H
 
-#include "general.h"
-#include "OmafMediaStream.h"
 #include "360SCVPViewportAPI.h"
+#include "OmafMediaStream.h"
 #include "OmafViewportPredict/ViewportPredictPlugin.h"
+#include "general.h"
 
 using namespace VCD::OMAF;
 
@@ -46,76 +46,72 @@ VCD_OMAF_BEGIN
 
 #define POSE_SIZE 10
 
-typedef struct POSEINFO{
-    HeadPose  *pose;
-    uint64_t  time;
-}PoseInfo;
+typedef struct POSEINFO {
+  HeadPose *pose;
+  uint64_t time;
+} PoseInfo;
 
 class OmafTracksSelector {
-public:
-    //!
-    //! \brief  construct
-    //!
-    OmafTracksSelector(int size = POSE_SIZE);
+ public:
+  //!
+  //! \brief  construct
+  //!
+  OmafTracksSelector(int size = POSE_SIZE);
 
-    //!
-    //! \brief  de-construct
-    //!
-    virtual ~OmafTracksSelector();
+  //!
+  //! \brief  de-construct
+  //!
+  virtual ~OmafTracksSelector();
 
-    //!
-    //! \brief  Select tracks for the stream based on the latest pose. each time
-    //!         the selector will select tracks based on the latest pose. the
-    //!         information stored in mPoseHistory can be used for prediction for
-    //!         further movement
-    //!
-    virtual int SelectTracks(OmafMediaStream *pStream) = 0;
+  //!
+  //! \brief  Select tracks for the stream based on the latest pose. each time
+  //!         the selector will select tracks based on the latest pose. the
+  //!         information stored in mPoseHistory can be used for prediction for
+  //!         further movement
+  //!
+  virtual int SelectTracks(OmafMediaStream *pStream) = 0;
 
-    //!
-    //! \brief  Set Init viewport
-    //!
-    int SetInitialViewport(
-        std::vector<Viewport*>& pView,
-        HeadSetInfo* headSetInfo,
-        OmafMediaStream* pStream);
+  //!
+  //! \brief  Set Init viewport
+  //!
+  int SetInitialViewport(std::vector<Viewport *> &pView, HeadSetInfo *headSetInfo, OmafMediaStream *pStream);
 
-    //!
-    //! \brief  Update Viewport; each time pose update will be recorded, but only
-    //!         the latest will be used when SelectTracks is called.
-    //!
-    int UpdateViewport(HeadPose* pose);
+  //!
+  //! \brief  Update Viewport; each time pose update will be recorded, but only
+  //!         the latest will be used when SelectTracks is called.
+  //!
+  int UpdateViewport(HeadPose *pose);
 
-    //!
-    //! \brief  Load viewport prediction plugin
-    //!
-    int EnablePosePrediction(std::string predictPluginName, std::string libPath);
+  //!
+  //! \brief  Load viewport prediction plugin
+  //!
+  int EnablePosePrediction(std::string predictPluginName, std::string libPath);
 
-    //!
-    //! \brief  Get the priority of the segment
-    //!
-    //virtual int GetSegmentPriority(OmafSegment *segment) = 0;
+  //!
+  //! \brief  Get the priority of the segment
+  //!
+  // virtual int GetSegmentPriority(OmafSegment *segment) = 0;
 
-    void SetProjectionFmt(ProjectionFormat projFmt) { mProjFmt = projFmt; };
+  void SetProjectionFmt(ProjectionFormat projFmt) { mProjFmt = projFmt; };
 
-private:
+ private:
+  //!
+  //! \brief  Initialize viewport prediction plugin
+  //!
+  int InitializePredictPlugins();
 
-    //!
-    //! \brief  Initialize viewport prediction plugin
-    //!
-    int InitializePredictPlugins();
-
-protected:
-    std::list<PoseInfo>               mPoseHistory;
-    int                               mSize;
-    pthread_mutex_t                   mMutex;
-    HeadPose                          *mPose;
-    void                              *m360ViewPortHandle;
-    param_360SCVP                     *mParamViewport;
-    bool                              mUsePrediction;
-    std::string                       mPredictPluginName;
-    std::string                       mLibPath;
-    std::map<std::string, ViewportPredictPlugin*> mPredictPluginMap;
-    ProjectionFormat                  mProjFmt;
+ protected:
+  std::list<PoseInfo> mPoseHistory;
+  int mSize;
+  pthread_mutex_t mMutex;
+  HeadPose *mPose;
+  void *m360ViewPortHandle;
+  param_360SCVP *mParamViewport;
+  bool mUsePrediction;
+  std::string mPredictPluginName;
+  std::string mLibPath;
+  std::map<std::string, ViewportPredictPlugin *> mPredictPluginMap;
+  ProjectionFormat mProjFmt;
 };
 
 VCD_OMAF_END;

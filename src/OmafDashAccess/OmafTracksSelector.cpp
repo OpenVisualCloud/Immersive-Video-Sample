@@ -37,194 +37,169 @@
 
 VCD_OMAF_BEGIN
 
-OmafTracksSelector::OmafTracksSelector(int size)
-{
-    pthread_mutex_init(&mMutex, NULL);
-    mSize = size;
+OmafTracksSelector::OmafTracksSelector(int size) {
+  pthread_mutex_init(&mMutex, NULL);
+  mSize = size;
+  m360ViewPortHandle = nullptr;
+  mParamViewport = nullptr;
+  mPose = nullptr;
+  mUsePrediction = false;
+  mPredictPluginName = "";
+  mLibPath = "";
+  mProjFmt = ProjectionFormat::PF_ERP;
+}
+
+OmafTracksSelector::~OmafTracksSelector() {
+  pthread_mutex_destroy(&mMutex);
+
+  if (m360ViewPortHandle) {
+    I360SCVP_unInit(m360ViewPortHandle);
     m360ViewPortHandle = nullptr;
-    mParamViewport = nullptr;
-    mPose = nullptr;
-    mUsePrediction = false;
-    mPredictPluginName = "";
-    mLibPath = "";
-    mProjFmt = ProjectionFormat::PF_ERP;
+  }
+
+  SAFE_DELETE(mParamViewport);
+
+  if (mPoseHistory.size()) {
+    for (auto &p : mPoseHistory) {
+      SAFE_DELETE(p.pose);
+    }
+
+    mPoseHistory.clear();
+  }
+
+  if (mPredictPluginMap.size()) {
+    for (auto &p : mPredictPluginMap) {
+      SAFE_DELETE(p.second);
+    }
+
+    mPredictPluginMap.clear();
+  }
+
+  mUsePrediction = false;
+
+  SAFE_DELETE(mPose);
 }
 
-OmafTracksSelector::~OmafTracksSelector()
-{
-    pthread_mutex_destroy( &mMutex );
+int OmafTracksSelector::SetInitialViewport(std::vector<Viewport *> &pView, HeadSetInfo *headSetInfo,
+                                           OmafMediaStream *pStream) {
+  if (!headSetInfo || !headSetInfo->viewPort_hFOV || !headSetInfo->viewPort_vFOV || !headSetInfo->viewPort_Width ||
+      !headSetInfo->viewPort_Height) {
+    return ERROR_INVALID;
+  }
 
-    if(m360ViewPortHandle)
-    {
-        I360SCVP_unInit(m360ViewPortHandle);
-        m360ViewPortHandle = nullptr;
-    }
+  mParamViewport = new param_360SCVP;
+  mParamViewport->usedType = E_VIEWPORT_ONLY;
+  if (mProjFmt == ProjectionFormat::PF_ERP) {
+    mParamViewport->paramViewPort.viewportWidth = headSetInfo->viewPort_Width;
+    mParamViewport->paramViewPort.viewportHeight = headSetInfo->viewPort_Height;
+    mParamViewport->paramViewPort.viewPortPitch = headSetInfo->pose->pitch;
+    mParamViewport->paramViewPort.viewPortYaw = headSetInfo->pose->yaw;
+    mParamViewport->paramViewPort.viewPortFOVH = headSetInfo->viewPort_hFOV;
+    mParamViewport->paramViewPort.viewPortFOVV = headSetInfo->viewPort_vFOV;
+    mParamViewport->paramViewPort.geoTypeInput =
+        (EGeometryType)(mProjFmt);                                    //(EGeometryType)headSetInfo->input_geoType;
+    mParamViewport->paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;  //(EGeometryType)headSetInfo->output_geoType;
+    mParamViewport->paramViewPort.tileNumRow = pStream->GetRowSize();
+    mParamViewport->paramViewPort.tileNumCol = pStream->GetColSize();
+    mParamViewport->paramViewPort.usageType = E_VIEWPORT_ONLY;
+    mParamViewport->paramViewPort.faceWidth = pStream->GetStreamHighResWidth();
+    mParamViewport->paramViewPort.faceHeight = pStream->GetStreamHighResHeight();
+    mParamViewport->paramViewPort.paramVideoFP.cols = 1;
+    mParamViewport->paramViewPort.paramVideoFP.rows = 1;
+    mParamViewport->paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
+    mParamViewport->paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
+  } else if (mProjFmt == ProjectionFormat::PF_CUBEMAP) {
+    mParamViewport->paramViewPort.viewportWidth = headSetInfo->viewPort_Width;
+    mParamViewport->paramViewPort.viewportHeight = headSetInfo->viewPort_Height;
+    mParamViewport->paramViewPort.viewPortPitch = headSetInfo->pose->pitch;
+    mParamViewport->paramViewPort.viewPortYaw = headSetInfo->pose->yaw;
+    mParamViewport->paramViewPort.viewPortFOVH = headSetInfo->viewPort_hFOV;
+    mParamViewport->paramViewPort.viewPortFOVV = headSetInfo->viewPort_vFOV;
+    mParamViewport->paramViewPort.geoTypeInput =
+        (EGeometryType)(mProjFmt);                                    //(EGeometryType)headSetInfo->input_geoType;
+    mParamViewport->paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;  //(EGeometryType)headSetInfo->output_geoType;
+    mParamViewport->paramViewPort.tileNumRow = pStream->GetRowSize() / 2;
+    mParamViewport->paramViewPort.tileNumCol = pStream->GetColSize() / 3;
+    mParamViewport->paramViewPort.usageType = E_VIEWPORT_ONLY;
+    mParamViewport->paramViewPort.faceWidth = pStream->GetStreamHighResWidth() / 3;
+    mParamViewport->paramViewPort.faceHeight = pStream->GetStreamHighResHeight() / 2;
 
-    SAFE_DELETE(mParamViewport);
+    mParamViewport->paramViewPort.paramVideoFP.cols = 3;
+    mParamViewport->paramViewPort.paramVideoFP.rows = 2;
+    mParamViewport->paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
+    mParamViewport->paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
+    mParamViewport->paramViewPort.paramVideoFP.faces[0][0].faceWidth = mParamViewport->paramViewPort.faceWidth;
+    mParamViewport->paramViewPort.paramVideoFP.faces[0][0].faceHeight = mParamViewport->paramViewPort.faceHeight;
+    mParamViewport->paramViewPort.paramVideoFP.faces[0][1].idFace = 1;
+    mParamViewport->paramViewPort.paramVideoFP.faces[0][1].rotFace = NO_TRANSFORM;
+    mParamViewport->paramViewPort.paramVideoFP.faces[0][2].idFace = 2;
+    mParamViewport->paramViewPort.paramVideoFP.faces[0][2].rotFace = NO_TRANSFORM;
+    mParamViewport->paramViewPort.paramVideoFP.faces[1][0].idFace = 3;
+    mParamViewport->paramViewPort.paramVideoFP.faces[1][0].rotFace = NO_TRANSFORM;
+    mParamViewport->paramViewPort.paramVideoFP.faces[1][1].idFace = 4;
+    mParamViewport->paramViewPort.paramVideoFP.faces[1][1].rotFace = NO_TRANSFORM;
+    mParamViewport->paramViewPort.paramVideoFP.faces[1][2].idFace = 5;
+    mParamViewport->paramViewPort.paramVideoFP.faces[1][2].rotFace = NO_TRANSFORM;
+  }
+  m360ViewPortHandle = I360SCVP_Init(mParamViewport);
+  if (!m360ViewPortHandle) return ERROR_NULL_PTR;
 
-    if(mPoseHistory.size())
-    {
-        for(auto &p:mPoseHistory)
-        {
-            SAFE_DELETE(p.pose);
-        }
+  // set current Pose;
+  mPose = new HeadPose;
+  if (!mPose) return ERROR_NULL_PTR;
 
-        mPoseHistory.clear();
-    }
+  memcpy_s(mPose, sizeof(HeadPose), headSetInfo->pose, sizeof(HeadPose));
 
-    if (mPredictPluginMap.size())
-    {
-        for (auto &p:mPredictPluginMap)
-        {
-            SAFE_DELETE(p.second);
-        }
-
-        mPredictPluginMap.clear();
-    }
-
-    mUsePrediction = false;
-
-    SAFE_DELETE(mPose);
+  return UpdateViewport(mPose);
 }
 
-int OmafTracksSelector::SetInitialViewport(
-    std::vector<Viewport*>& pView,
-    HeadSetInfo* headSetInfo,
-    OmafMediaStream* pStream)
-{
-    if(!headSetInfo || !headSetInfo->viewPort_hFOV || !headSetInfo->viewPort_vFOV
-        || !headSetInfo->viewPort_Width || !headSetInfo->viewPort_Height)
-    {
-        return ERROR_INVALID;
-    }
+int OmafTracksSelector::UpdateViewport(HeadPose *pose) {
+  if (!pose) return ERROR_NULL_PTR;
 
-    mParamViewport = new param_360SCVP;
-    mParamViewport->usedType = E_VIEWPORT_ONLY;
-    if (mProjFmt == ProjectionFormat::PF_ERP)
-    {
-        mParamViewport->paramViewPort.viewportWidth = headSetInfo->viewPort_Width;
-        mParamViewport->paramViewPort.viewportHeight = headSetInfo->viewPort_Height;
-        mParamViewport->paramViewPort.viewPortPitch = headSetInfo->pose->pitch;
-        mParamViewport->paramViewPort.viewPortYaw = headSetInfo->pose->yaw;
-        mParamViewport->paramViewPort.viewPortFOVH = headSetInfo->viewPort_hFOV;
-        mParamViewport->paramViewPort.viewPortFOVV = headSetInfo->viewPort_vFOV;
-        mParamViewport->paramViewPort.geoTypeInput = (EGeometryType)(mProjFmt);//(EGeometryType)headSetInfo->input_geoType;
-        mParamViewport->paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;//(EGeometryType)headSetInfo->output_geoType;
-        mParamViewport->paramViewPort.tileNumRow = pStream->GetRowSize();
-        mParamViewport->paramViewPort.tileNumCol = pStream->GetColSize();
-        mParamViewport->paramViewPort.usageType = E_VIEWPORT_ONLY;
-        mParamViewport->paramViewPort.faceWidth = pStream->GetStreamHighResWidth();
-        mParamViewport->paramViewPort.faceHeight = pStream->GetStreamHighResHeight();
-        mParamViewport->paramViewPort.paramVideoFP.cols = 1;
-        mParamViewport->paramViewPort.paramVideoFP.rows = 1;
-        mParamViewport->paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
-        mParamViewport->paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
-    }
-    else if (mProjFmt == ProjectionFormat::PF_CUBEMAP)
-    {
-        mParamViewport->paramViewPort.viewportWidth = headSetInfo->viewPort_Width;
-        mParamViewport->paramViewPort.viewportHeight = headSetInfo->viewPort_Height;
-        mParamViewport->paramViewPort.viewPortPitch = headSetInfo->pose->pitch;
-        mParamViewport->paramViewPort.viewPortYaw = headSetInfo->pose->yaw;
-        mParamViewport->paramViewPort.viewPortFOVH = headSetInfo->viewPort_hFOV;
-        mParamViewport->paramViewPort.viewPortFOVV = headSetInfo->viewPort_vFOV;
-        mParamViewport->paramViewPort.geoTypeInput = (EGeometryType)(mProjFmt);//(EGeometryType)headSetInfo->input_geoType;
-        mParamViewport->paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;//(EGeometryType)headSetInfo->output_geoType;
-        mParamViewport->paramViewPort.tileNumRow = pStream->GetRowSize() / 2;
-        mParamViewport->paramViewPort.tileNumCol = pStream->GetColSize() / 3;
-        mParamViewport->paramViewPort.usageType = E_VIEWPORT_ONLY;
-        mParamViewport->paramViewPort.faceWidth = pStream->GetStreamHighResWidth() / 3;
-        mParamViewport->paramViewPort.faceHeight = pStream->GetStreamHighResHeight() / 2;
+  pthread_mutex_lock(&mMutex);
 
-        mParamViewport->paramViewPort.paramVideoFP.cols = 3;
-        mParamViewport->paramViewPort.paramVideoFP.rows = 2;
-        mParamViewport->paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
-        mParamViewport->paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
-        mParamViewport->paramViewPort.paramVideoFP.faces[0][0].faceWidth = mParamViewport->paramViewPort.faceWidth;
-        mParamViewport->paramViewPort.paramVideoFP.faces[0][0].faceHeight = mParamViewport->paramViewPort.faceHeight;
-        mParamViewport->paramViewPort.paramVideoFP.faces[0][1].idFace = 1;
-        mParamViewport->paramViewPort.paramVideoFP.faces[0][1].rotFace = NO_TRANSFORM;
-        mParamViewport->paramViewPort.paramVideoFP.faces[0][2].idFace = 2;
-        mParamViewport->paramViewPort.paramVideoFP.faces[0][2].rotFace = NO_TRANSFORM;
-        mParamViewport->paramViewPort.paramVideoFP.faces[1][0].idFace = 3;
-        mParamViewport->paramViewPort.paramVideoFP.faces[1][0].rotFace = NO_TRANSFORM;
-        mParamViewport->paramViewPort.paramVideoFP.faces[1][1].idFace = 4;
-        mParamViewport->paramViewPort.paramVideoFP.faces[1][1].rotFace = NO_TRANSFORM;
-        mParamViewport->paramViewPort.paramVideoFP.faces[1][2].idFace = 5;
-        mParamViewport->paramViewPort.paramVideoFP.faces[1][2].rotFace = NO_TRANSFORM;
-    }
-    m360ViewPortHandle = I360SCVP_Init(mParamViewport);
-    if(!m360ViewPortHandle)
-        return ERROR_NULL_PTR;
+  PoseInfo pi;
+  pi.pose = new HeadPose;
+  if (!(pi.pose)) return ERROR_NULL_PTR;
+  memcpy_s(pi.pose, sizeof(HeadPose), pose, sizeof(HeadPose));
+  std::chrono::high_resolution_clock clock;
+  pi.time = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+  mPoseHistory.push_front(pi);
+  if (mPoseHistory.size() > (uint32_t)(this->mSize)) {
+    auto pit = mPoseHistory.back();
+    SAFE_DELETE(pit.pose);
+    mPoseHistory.pop_back();
+  }
 
-    //set current Pose;
-    mPose = new HeadPose;
-    if (!mPose)
-        return ERROR_NULL_PTR;
-
-    memcpy(mPose, headSetInfo->pose, sizeof(HeadPose));
-
-    return UpdateViewport(mPose);
+  pthread_mutex_unlock(&mMutex);
+  return ERROR_NONE;
 }
 
-int OmafTracksSelector::UpdateViewport(HeadPose *pose)
-{
-    if (!pose)
-        return ERROR_NULL_PTR;
-
-    pthread_mutex_lock(&mMutex);
-
-    PoseInfo pi;
-    pi.pose = new HeadPose;
-    if (!(pi.pose))
-        return ERROR_NULL_PTR;
-    memcpy(pi.pose, pose, sizeof(HeadPose));
-    std::chrono::high_resolution_clock clock;
-    pi.time = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-    mPoseHistory.push_front(pi);
-    if( mPoseHistory.size() > (uint32_t)(this->mSize) )
-    {
-        auto pit = mPoseHistory.back();
-        SAFE_DELETE(pit.pose);
-        mPoseHistory.pop_back();
-    }
-
-    pthread_mutex_unlock(&mMutex);
-    return ERROR_NONE;
+int OmafTracksSelector::EnablePosePrediction(std::string predictPluginName, std::string libPath) {
+  mUsePrediction = true;
+  mPredictPluginName.assign(predictPluginName);
+  mLibPath.assign(libPath);
+  int ret = InitializePredictPlugins();
+  return ret;
 }
 
-int OmafTracksSelector::EnablePosePrediction(
-    std::string predictPluginName,
-    std::string libPath)
-{
-    mUsePrediction = true;
-    mPredictPluginName.assign(predictPluginName);
-    mLibPath.assign(libPath);
-    int ret = InitializePredictPlugins();
+int OmafTracksSelector::InitializePredictPlugins() {
+  if (mLibPath.empty() || mPredictPluginName.empty()) {
+    LOG(ERROR) << "Viewport predict plugin path OR name is invalid!" << endl;
+    return ERROR_INVALID;
+  }
+  ViewportPredictPlugin *plugin = new ViewportPredictPlugin();
+  if (!plugin) return ERROR_NULL_PTR;
+
+  std::string pluginPath = mLibPath + mPredictPluginName;
+  int ret = plugin->LoadPlugin(pluginPath.c_str());
+  if (ret != ERROR_NONE) {
+    LOG(ERROR) << "Load plugin failed!" << endl;
+    SAFE_DELETE(plugin);
     return ret;
-}
-
-int OmafTracksSelector::InitializePredictPlugins()
-{
-    if (mLibPath.empty() || mPredictPluginName.empty())
-    {
-        LOG(ERROR)<<"Viewport predict plugin path OR name is invalid!"<<endl;
-        return ERROR_INVALID;
-    }
-    ViewportPredictPlugin *plugin = new ViewportPredictPlugin();
-    if (!plugin)
-        return ERROR_NULL_PTR;
-
-    std::string pluginPath = mLibPath + mPredictPluginName;
-    int ret = plugin->LoadPlugin(pluginPath.c_str());
-    if (ret != ERROR_NONE)
-    {
-        LOG(ERROR)<<"Load plugin failed!"<<endl;
-        SAFE_DELETE(plugin);
-        return ret;
-    }
-    mPredictPluginMap.insert(std::pair<std::string, ViewportPredictPlugin*>(mPredictPluginName, plugin));
-    return ERROR_NONE;
+  }
+  mPredictPluginMap.insert(std::pair<std::string, ViewportPredictPlugin *>(mPredictPluginName, plugin));
+  return ERROR_NONE;
 }
 
 VCD_OMAF_END

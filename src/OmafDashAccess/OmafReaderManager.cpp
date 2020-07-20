@@ -34,1455 +34,1431 @@
  */
 
 #include "OmafReaderManager.h"
+
 #include "OmafMP4VRReader.h"
+#include "OmafMediaSource.h"
+#include "OmafReader.h"
+#include "common.h"
+
 #include <math.h>
-#ifndef _ANDROID_NDK_OPTION_
-#ifdef _USE_TRACE_
-#include "../trace/Bandwidth_tp.h"
-#include "../trace/MtHQ_tp.h"
-#endif
-#endif
+#include <functional>
 
 VCD_OMAF_BEGIN
 
-#define STATUS_UNKNOWN       0
-#define STATUS_STOPPED       1
-#define STATUS_RUNNING       2
-#define STATUS_STOPPING      3
-#define STATUS_SEEKING       4
+// not support concurrency
+class OmafPacketParams : public VCD::NonCopyable {
+  friend OmafSegmentNode;
 
-static uint16_t GetTrackId(uint32_t id)
-{
-    return (id & 0xffff);
-}
+ public:
+  using Ptr = std::shared_ptr<OmafPacketParams>;
 
-static uint32_t GetCombinedTrackId(uint16_t trackId, uint16_t initSegId)
-{
-    return ((initSegId << 16) | trackId);
-}
+ public:
+  OmafPacketParams(){};
+  virtual ~OmafPacketParams(){};
 
-OmafReaderManager::OmafReaderManager()
-{
-    mCurTrkCnt = 0;
-    mEOS       = false;
-    mSource    = NULL;
-    mStatus    = STATUS_UNKNOWN;
-    mReader    = NULL;
-    mInitSegParsed = false;
-    mVPSLen = 0;
-    mSPSLen = 0;
-    mPPSLen = 0;
-    mWidth  = 0;
-    mHeight = 0;
-    mReadSync = false;
-    mExtractorEnabled = true;
-    mGlobalReadSegId = 0;
-    mGlobalReadSampleId = 0;
-}
+ public:
+  int init(std::shared_ptr<OmafReader> reader, uint32_t reader_trackId, uint32_t sampleId) noexcept;
 
-OmafReaderManager::~OmafReaderManager()
-{
-    if (m_videoHeaders.size())
-    {
-        std::map<uint32_t, std::map<uint32_t, uint8_t*>>::iterator it;
-        for (it = m_videoHeaders.begin(); it != m_videoHeaders.end(); )
-        {
-            std::map<uint32_t, uint8_t*> oneHeader = it->second;
-            std::map<uint32_t, uint8_t*>::iterator itHrd;
-            for (itHrd = oneHeader.begin(); itHrd != oneHeader.end(); )
-            {
-                uint8_t *header = itHrd->second;
-                if (header)
-                {
-                    delete [] header;
-                    header = NULL;
-                }
-                oneHeader.erase(itHrd++);
-            }
-            oneHeader.clear();
-            m_videoHeaders.erase(it++);
-        }
-        m_videoHeaders.clear();
+ private:
+  std::vector<uint8_t> params_;
+
+  //<! VPS data
+  std::vector<uint8_t> vps_;
+
+  //<! SPS data
+  std::vector<uint8_t> sps_;
+
+  //<! PPS data
+  std::vector<uint8_t> pps_;
+
+  //<! sample width
+  uint32_t width_ = 0;
+
+  //<! sample height
+  uint32_t height_ = 0;
+
+  bool binit_ = false;
+};
+
+// FIXME use better class name?
+class OmafSegmentNode : public VCD::NonCopyable {
+ public:
+  using Ptr = std::shared_ptr<OmafSegmentNode>;
+  using WPtr = std::weak_ptr<OmafSegmentNode>;
+
+ public:
+  OmafSegmentNode(std::shared_ptr<OmafReaderManager> mgr, OmafDashMode mode, std::shared_ptr<OmafReader> reader,
+                  std::shared_ptr<OmafSegment> segment, size_t depends_size = 0, bool isExtractor = false)
+      : omaf_reader_mgr_(mgr),
+        mode_(mode),
+        reader_(reader),
+        segment_(segment),
+        depends_size_(depends_size),
+        bExtractor_(isExtractor) {}
+
+  virtual ~OmafSegmentNode() {
+    VLOG(VLOG_TRACE) << "Release the segment node " << to_string() << " packet size=" << media_packets_.size()
+                     << std::endl;
+    // relase packet
+    while (media_packets_.size()) {
+      auto p = media_packets_.front();
+      if (p) {
+        delete p;
+      }
+      media_packets_.pop();
+    }
+  }
+
+ public:
+  int start(void) noexcept;
+  int parse(void) noexcept;
+  int stop(void) noexcept;
+
+  // int getPacket(std::unique_ptr<MediaPacket> &pPacket, bool needParams) noexcept;
+  int getPacket(MediaPacket *&pPacket, bool requireParams) noexcept;
+  int packetQueueSize(void) const noexcept { return media_packets_.size(); }
+  std::string to_string() const noexcept {
+    std::stringstream ss;
+
+    ss << "node, timeline=" << getTimelinePoint();
+
+    if (segment_) {
+      ss << ", " << segment_->to_string();
+    }
+    return ss.str();
+  };
+
+ public:
+  uint32_t getSegId() const noexcept {
+    if (segment_.get() != nullptr) {
+      return segment_->GetSegID();
+    }
+    return 0;
+  }
+
+  uint32_t getTrackId() const noexcept {
+    if (segment_.get() != nullptr) {
+      return segment_->GetTrackId();
+    }
+    return 0;
+  }
+
+  uint32_t getInitSegId() const noexcept {
+    if (segment_.get() != nullptr) {
+      return segment_->GetInitSegID();
+    }
+    return 0;
+  }
+  int64_t getTimelinePoint() const noexcept {
+    if (segment_.get() != nullptr) {
+      return segment_->GetTimelinePoint();
+    }
+    return 0;
+  }
+  uint64_t getPTS() {
+    if (media_packets_.size()) {
+      return media_packets_.front()->GetPTS();
+    }
+    return 0;
+  }
+  void clearPacketByPTS(uint64_t pts) {
+    while (media_packets_.size()) {
+      auto &packet = media_packets_.front();
+      if (packet->GetPTS() >= pts) {
+        break;
+      }
+      media_packets_.pop();
+    }
+  }
+
+  const std::chrono::steady_clock::time_point &startTime() const noexcept { return start_time_; };
+  bool checkTimeout(int32_t ms) const noexcept {
+    auto now = std::chrono::steady_clock::now();
+    std::chrono::milliseconds time_span = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time_);
+    return time_span.count() >= ms ? true : false;
+  }
+  size_t dependsSize() const noexcept { return depends_size_; }
+  bool isExtractor() const noexcept { return bExtractor_; }
+  bool isReady() const noexcept;
+
+  // FIXME, who own the media packets
+  // const std::list<MediaPacket *> packets() const { return media_packets_; }
+
+  void pushDepends(OmafSegmentNode::Ptr node) { depends_.push_back(std::move(node)); }
+
+  bool operator==(OmafSegment::Ptr segment) { return this->segment_ == segment; }
+
+ private:
+  int parseSegmentStream(std::shared_ptr<OmafReader> reader) noexcept;
+  int removeSegmentStream(std::shared_ptr<OmafReader> reader) noexcept;
+  int cachePackets(std::shared_ptr<OmafReader> reader) noexcept;
+  std::shared_ptr<TrackInformation> findTrackInformation(std::shared_ptr<OmafReader> reader) noexcept;
+  bool findSampleIndexRange(std::shared_ptr<TrackInformation>, size_t &begin, size_t &end) noexcept;
+  OmafPacketParams::Ptr getPacketParams() {
+    auto reader_mgr = omaf_reader_mgr_.lock();
+    if (reader_mgr) {
+      return reader_mgr->getPacketParams(segment_->GetQualityRanking());
+    }
+    return nullptr;
+  }
+  void setPacketParams(OmafPacketParams::Ptr params) {
+    auto reader_mgr = omaf_reader_mgr_.lock();
+    if (reader_mgr) {
+      reader_mgr->setPacketParams(segment_->GetQualityRanking(), std::move(params));
+    }
+  }
+
+ private:
+  std::weak_ptr<OmafReaderManager> omaf_reader_mgr_;
+
+  // dash mode
+  OmafDashMode mode_ = OmafDashMode::EXTRACTOR;
+
+  // omaf reader
+  std::weak_ptr<OmafReader> reader_;
+
+  // this dash source related segment
+  OmafSegment::Ptr segment_;
+
+  // use shared ptr or unique ptr
+  std::vector<OmafSegmentNode::Ptr> depends_;
+
+  std::chrono::steady_clock::time_point start_time_;
+
+  // packet list
+  // std::queue<std::unique_ptr<MediaPacket::Ptr>> media_packets_;
+  std::queue<MediaPacket *> media_packets_;
+
+  // OmafPacketParams::Ptr packet_params;
+
+  const size_t depends_size_ = 0;
+
+  const bool bExtractor_ = false;
+};
+
+uint32_t buildDashTrackId(uint32_t id) noexcept { return id & static_cast<uint32_t>(0xffff); }
+
+uint32_t buildReaderTrackId(uint32_t trackId, uint32_t initSegId) noexcept { return (initSegId << 16) | trackId; }
+
+OMAF_STATUS OmafReaderManager::Initialize(OmafMediaSource *pSource) noexcept {
+  try {
+    if (pSource == nullptr) {
+      LOG(ERROR) << "Invalid media source!" << std::endl;
+      return ERROR_INVALID;
     }
 
-    if (mPacketQueues.size())
-    {
-        std::map<int, PacketQueue>::iterator it;
-        for (it = mPacketQueues.begin(); it != mPacketQueues.end(); )
-        {
-            PacketQueue queue = it->second;
-            if (queue.size())
-            {
-                std::list<MediaPacket*>::iterator itPacket;
-                for (itPacket = queue.begin(); itPacket != queue.end(); )
-                {
-                    MediaPacket *packet = *itPacket;
-                    SAFE_DELETE(packet);
-                    queue.erase(itPacket++);
-                }
-                queue.clear();
-            }
-            mPacketQueues.erase(it++);
-        }
-        mPacketQueues.clear();
+    media_source_ = pSource;
+
+    reader_ = std::make_shared<OmafMP4VRReader>();
+    if (reader_.get() == nullptr) {
+      LOG(ERROR) << "Failed to create the omaf mp4 vr reader!" << std::endl;
+      return ERROR_INVALID;
     }
+    breader_working_ = true;
+    segment_reader_worker_ = std::thread(&OmafReaderManager::threadRunner, this);
 
-    Close();
-}
-
-int OmafReaderManager::Initialize( OmafMediaSource* pSource )
-{
-    mCurTrkCnt = 0;
-    mEOS       = false;
-    mSource    = pSource;
-    mStatus    = STATUS_STOPPED;
-    mReader    = new OmafMP4VRReader();
     return ERROR_NONE;
+
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to init the client reader, ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
 }
 
-int OmafReaderManager::Close()
-{
-    mStatus = STATUS_STOPPING;
-    usleep(1000);
-    mLock.lock();
-    std::map<uint32_t, std::map<uint32_t, OmafSegment*>>::iterator it;
-    for (it = m_readSegMap.begin(); it != m_readSegMap.end();)
+OMAF_STATUS OmafReaderManager::Close() noexcept {
+  try {
+    LOG(INFO) << "Close the omaf reader manager!" << std::endl;
+    breader_working_ = false;
+
     {
-        std::map<uint32_t, OmafSegment*> initSegNormalSeg = it->second;
-        for (auto& itRmSeg : initSegNormalSeg)
-        {
-            OmafSegment *rmSeg = itRmSeg.second;
-            rmSeg->Close();
-            delete rmSeg;
-            rmSeg = NULL;
-        }
-        m_readSegMap.erase(it++);
-    }
-    m_readSegMap.clear();
-    mLock.unlock();
-
-    SAFE_DELETE(mReader);
-    releaseAllSegments();
-    releasePacketQueue();
-
-    return ERROR_NONE;
-}
-
-int OmafReaderManager::AddInitSegment( OmafSegment* pInitSeg, uint32_t& nInitSegID )
-{
-    if(NULL == mReader) return ERROR_NULL_PTR;
-
-    ScopeLock readerLock(mReaderLock);
-#ifndef _ANDROID_NDK_OPTION_
-#ifdef _USE_TRACE_
-    //trace
-    const char *trackType = "init_track";
-    uint64_t segSize = pInitSeg->GetSegSize();
-    char tileRes[128] = { 0 };
-    snprintf(tileRes, 128, "%s", "none");
-    tracepoint(bandwidth_tp_provider, packed_segment_size, 0, trackType, tileRes, 0, segSize);
-#endif
-#endif
-
-    nInitSegID = mCurTrkCnt++;
-    int32_t result = mReader->parseInitializationSegment(pInitSeg, nInitSegID);
-    if (result != 0)
-    {
-        LOG(ERROR)<<"parse initialization segment failed! result= "<<result<<std::endl;
-        mCurTrkCnt--;
-        nInitSegID = -1;
-        return ERROR_INVALID;
+      std::lock_guard<std::mutex> lock(segment_opening_mutex_);
+      segment_opening_list_.clear();
     }
 
-    pInitSeg->SetInitSegID( nInitSegID );
-    pInitSeg->SetSegID( nInitSegID );
+    {
+      std::lock_guard<std::mutex> lock(segment_opened_mutex_);
+      segment_opened_list_.clear();
+      segment_opened_cv_.notify_all();
+    }
 
-    mMapSegCnt[nInitSegID] = 0;
-    ///get track information if all initialize segmentation has been parsed
-    if(mCurTrkCnt == mSource->GetTrackCount()){
-        mReader->getTrackInformations( this->mTrackInfos );
-        mLock.lock();
-        UpdateSourceTrackID();
-        mReader->setMapInitTrk(mMapInitTrk);
-        SetupStatusMap();
-        //mLock.lock();
-        mInitSegParsed = true;
-        mLock.unlock();
+    {
+      std::lock_guard<std::mutex> lock(segment_parsed_mutex_);
+      segment_parsed_list_.clear();
+    }
+
+    if (segment_reader_worker_.joinable()) {
+      breader_working_ = false;
+      segment_reader_worker_.join();
     }
 
     return ERROR_NONE;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to close the client reader, ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
 }
 
-void OmafReaderManager::UpdateSourceTrackID()
-{
-    for(auto it=mTrackInfos.begin(); it != mTrackInfos.end(); it++){
-        TrackInformation *trackInfo = *it;
-        for( int i = 0; i < mSource->GetStreamCount(); i++ ){
-            OmafMediaStream* pStream = mSource->GetStream(i);
-            std::map<int, OmafAdaptationSet*> pMediaAS = pStream->GetMediaAdaptationSet();
-            auto as_it = pMediaAS.begin();
-            for( ; as_it != pMediaAS.end(); as_it++){
-                OmafAdaptationSet* pAS = (OmafAdaptationSet*) as_it->second;
-                if(pAS->GetInitSegment()->GetSegID() == trackInfo->initSegmentId){
-                    uint16_t actualTrackId = GetTrackId(trackInfo->trackId);
-                    pAS->SetTrackNumber(actualTrackId);
-                    mMapInitTrk[trackInfo->initSegmentId] = actualTrackId;//trackInfo->trackId;
-                    mMapSegCnt[trackInfo->initSegmentId] = 0;
-                    mMapSegStatus[actualTrackId].sampleIndex.mCurrentAddSegment = 0;
-                    mMapSegStatus[actualTrackId].sampleIndex.mCurrentReadSegment = 1;
-                    mMapSegStatus[actualTrackId].sampleIndex.mGlobalSampleIndex = 0;
-                    mMapSegStatus[actualTrackId].sampleIndex.mGlobalStartSegment = 0;
-                    mMapSegStatus[actualTrackId].sampleIndex.mSegmentSampleIndex = 0;
-                    mMapSegStatus[actualTrackId].listActiveSeg.clear();
-                    break;
-                }
-            }
+OMAF_STATUS OmafReaderManager::OpenInitSegment(std::shared_ptr<OmafSegment> pInitSeg) noexcept {
+  try {
+    if (pInitSeg.get() == nullptr) {
+      LOG(ERROR) << "The init segment is empty!" << std::endl;
+      return ERROR_INVALID;
+    }
 
-            if (as_it != pMediaAS.end())
-            {
-                break;
-            }
+    pInitSeg->RegisterStateChange([this](std::shared_ptr<OmafSegment> pInitSeg, OmafSegment::State state) {
+      this->initSegmentStateChange(std::move(pInitSeg), state);
+    });
+    OMAF_STATUS ret = pInitSeg->Open(dash_client_);
+    if (ret != ERROR_NONE) {
+      LOG(ERROR) << "Failed to open the init segment, code= " << ret << std::endl;
+      return ret;
+    }
 
-            std::map<int, OmafExtractor*> pExtratorAS = pStream->GetExtractors();
-            for(auto extractor_it = pExtratorAS.begin(); extractor_it != pExtratorAS.end(); extractor_it++){
-                OmafExtractor* pExAS = (OmafExtractor*) extractor_it->second;
-                if(pExAS->GetInitSegment()->GetSegID() == trackInfo->initSegmentId){
-                    uint16_t actualTrackId = GetTrackId(trackInfo->trackId);
-                    pExAS->SetTrackNumber(actualTrackId);
-                    mMapInitTrk[trackInfo->initSegmentId] = actualTrackId;//trackInfo->trackId;
+    return ERROR_NONE;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to add the init segment, ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
+}
 
-                    mMapSegCnt[trackInfo->initSegmentId] = 0;
-                    mMapSegStatus[actualTrackId].sampleIndex.mCurrentAddSegment = 0;
-                    mMapSegStatus[actualTrackId].sampleIndex.mCurrentReadSegment = 1;
-                    mMapSegStatus[actualTrackId].sampleIndex.mGlobalSampleIndex = 0;
-                    mMapSegStatus[actualTrackId].sampleIndex.mGlobalStartSegment = 0;
-                    mMapSegStatus[actualTrackId].sampleIndex.mSegmentSampleIndex = 0;
-                    mMapSegStatus[actualTrackId].listActiveSeg.clear();
+OMAF_STATUS OmafReaderManager::OpenLocalInitSegment(std::shared_ptr<OmafSegment> pInitSeg) noexcept {
+  try {
+    if (pInitSeg.get() == nullptr) {
+      LOG(ERROR) << "The init segment is empty!" << std::endl;
+      return ERROR_INVALID;
+    }
+    pInitSeg->SetState(OmafSegment::State::OPEN_SUCCES);
+    this->initSegmentStateChange(std::move(pInitSeg), OmafSegment::State::OPEN_SUCCES);
 
-                    break;
-                }
-            }
+    return ERROR_NONE;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to add the local init segment, ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
+}
+
+OMAF_STATUS OmafReaderManager::OpenSegment(std::shared_ptr<OmafSegment> pSeg, bool isExtracotr) noexcept {
+  try {
+    size_t depends_size = 0;
+    auto d_it = initSegId_depends_map_.find(pSeg->GetInitSegID());
+    if (d_it != initSegId_depends_map_.end()) {
+      depends_size = d_it->second.size();
+    }
+
+    pSeg->RegisterStateChange([this](std::shared_ptr<OmafSegment> segment, OmafSegment::State state) {
+      this->normalSegmentStateChange(std::move(segment), state);
+    });
+
+    OmafSegmentNode::Ptr new_node = std::make_shared<OmafSegmentNode>(shared_from_this(), work_params_.mode_, reader_,
+                                                                      std::move(pSeg), depends_size, isExtracotr);
+    {
+      std::unique_lock<std::mutex> lock(segment_opening_mutex_);
+
+      bool newTimeslide = true;
+      for (auto &nodeset : segment_opening_list_) {
+        if (nodeset.timeline_point_ == new_node->getTimelinePoint()) {
+          nodeset.segment_nodes_.push_back(new_node);
+          newTimeslide = false;
+          break;
         }
+      }  // end for segment_opening_list_
+
+      if (newTimeslide) {
+        OmafSegmentNodeTimedSet nodeset;
+        nodeset.timeline_point_ = new_node->getTimelinePoint();
+        nodeset.create_time_ = std::chrono::steady_clock::now();
+        nodeset.segment_nodes_.push_back(new_node);
+        segment_opening_list_.emplace_back(nodeset);
+      }
     }
+
+    OMAF_STATUS ret = new_node->start();
+    if (ret != ERROR_NONE) {
+      LOG(ERROR) << "Failed to open the segment, code= " << ret << std::endl;
+      return ret;
+    }
+    return ERROR_NONE;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to add segment, ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
 }
 
-int OmafReaderManager::AddSegment( OmafSegment* pSeg, uint32_t nInitSegID, uint32_t& nSegID)
-{
-    if(NULL == mReader) return ERROR_NULL_PTR;
-
-    mLock.lock();
-
-    int64_t segCnt = -1;
-    // update the segment count for this track (get according to nInitSegID) with last element of m_readSegMap
-    // , if it is not chose before
-    if(pSeg->IsReEnabled())
-    {
-        if(m_readSegMap.size())
-            segCnt = pSeg->GetSegCount();//m_readSegMap.rbegin()->first;
-        else
-            LOG(WARNING)<<"viewport changed but size of m_readSegMap is 0, failed to update segment count!!"<<endl;
-
-        mMapSegCnt[nInitSegID] = segCnt - 1;
+OMAF_STATUS OmafReaderManager::OpenLocalSegment(std::shared_ptr<OmafSegment> segment, bool isExtractor) noexcept {
+  try {
+    size_t depends_size = 0;
+    auto d_it = initSegId_depends_map_.find(segment->GetInitSegID());
+    if (d_it != initSegId_depends_map_.end()) {
+      depends_size = d_it->second.size();
     }
 
-    nSegID = ++(mMapSegCnt[nInitSegID]);
-    //LOG(INFO)<<"now nSegID = "<<nSegID<<", pSeg->IsReEnabled() = "<<pSeg->IsReEnabled()<<", segCnt = "<<segCnt<<endl;
-#ifndef _ANDROID_NDK_OPTION_
-#ifdef _USE_TRACE_
-    //trace
-    int trackIndex = mMapInitTrk[nInitSegID];
-    if (mMapSegStatus[trackIndex].depTrackIDs.size())
+    OmafSegmentNode::Ptr new_node = std::make_shared<OmafSegmentNode>(shared_from_this(), work_params_.mode_, reader_,
+                                                                      segment, depends_size, isExtractor);
     {
-        const char *trackType = "extractor_track";
-        uint64_t segSize = pSeg->GetSegSize();
-        char tileRes[128] = { 0 };
-        snprintf(tileRes, 128, "%s", "none");
-        tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, segSize);
-    }
-    else
-    {
-        const char *trackType = "tile_track";
-        uint64_t segSize = pSeg->GetSegSize();
-        char tileRes[128] = { 0 };
-        snprintf(tileRes, 128, "%s", "none");
-        tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, segSize);
-    }
-#endif
-#endif
+      std::unique_lock<std::mutex> lock(segment_opening_mutex_);
 
-    auto it = m_readSegMap.begin();
-    for ( ; it != m_readSegMap.end(); it++)
+      bool newTimeslide = true;
+      for (auto &nodeset : segment_opening_list_) {
+        if (nodeset.timeline_point_ == new_node->getTimelinePoint()) {
+          nodeset.segment_nodes_.push_back(new_node);
+          newTimeslide = false;
+          break;
+        }
+      }  // end for segment_opening_list_
+
+      if (newTimeslide) {
+        OmafSegmentNodeTimedSet nodeset;
+        nodeset.timeline_point_ = new_node->getTimelinePoint();
+        nodeset.create_time_ = std::chrono::steady_clock::now();
+        nodeset.segment_nodes_.push_back(new_node);
+        segment_opening_list_.emplace_back(nodeset);
+      }
+    }
+    segment->SetState(OmafSegment::State::OPEN_SUCCES);
+    this->normalSegmentStateChange(std::move(segment), OmafSegment::State::OPEN_SUCCES);
+
+    return ERROR_NONE;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to add segment, ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
+}
+
+OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPacket, bool requireParams) noexcept {
+  try {
+    OMAF_STATUS ret = ERROR_NONE;
+
+    bool bpacket_readed = false;
+
+    // while (!bpacket_readed) {
     {
-        if (it->first == nSegID)
-        {
+      std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
+
+      // 1. read the required packet
+      for (auto &nodeset : segment_parsed_list_) {
+        std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
+        while (it != nodeset.segment_nodes_.end()) {
+          auto &node = *it;
+          VLOG(VLOG_TRACE) << "Require trackid=" << trackID << ", node trackid=" << node->getTrackId() << std::endl;
+          if (node->getTrackId() == trackID) {
+            ret = node->getPacket(pPacket, requireParams);
+            if (ret == ERROR_NONE) {
+              bpacket_readed = true;
+            }
+            timeline_point_ = node->getTimelinePoint();
+            if (0 == node->packetQueueSize()) {
+              VLOG(VLOG_TRACE) << "Node count=" << node.use_count() << "." << node->to_string() << std::endl;
+              nodeset.segment_nodes_.erase(it);
+            }
+
             break;
+          }
+          it++;
         }
+      }
     }
+    if (!bpacket_readed) {
+      // FIXME, this may a bug for using the timeline point as segment number
+      if (work_params_.stream_type_ == DASH_STREAM_DYNMIC || !checkEOS(timeline_point_)) {
+        pPacket = nullptr;
 
-    if (it == m_readSegMap.end())
-    {
-        std::map<uint32_t, OmafSegment*> initSegNormalSeg;
-        initSegNormalSeg.insert(std::make_pair(nInitSegID, pSeg));
-        m_readSegMap.insert(std::make_pair(nSegID, initSegNormalSeg));
+        ret = ERROR_NULL_PACKET;
+      } else {
+        ret = ERROR_NONE;
+        pPacket = new MediaPacket();
+        pPacket->SetEOS(true);
+      }
     }
-    else
-    {
-        std::map<uint32_t, OmafSegment*>* initSegNormalSeg;
-        initSegNormalSeg = &(m_readSegMap[nSegID]);
-        initSegNormalSeg->insert(std::make_pair(nInitSegID, pSeg));
+    //  if (!bpacket_readed) {
+    //    LOG(INFO) << "Wait dash segment parsed!" << std::endl;
+    //    segment_parsed_cv_.wait(lock);
+    //   }
+    //  }  // end while
+
+    // 2. sync timeline point for outside reading
+    // drop all dashset whose timeline point is less than timeline point
+    if (timeline_point_ != -1) {
+      VLOG(VLOG_TRACE) << "To clear the timeline point <" << timeline_point_ << std::endl;
+      std::lock_guard<std::mutex> lock(segment_parsed_mutex_);
+      std::list<OmafSegmentNodeTimedSet>::iterator it = segment_parsed_list_.begin();
+      while (it != segment_parsed_list_.end() && it->timeline_point_ < timeline_point_) {
+        it = segment_parsed_list_.erase(it);  // 'it' will move to next when calling erase
+      }
     }
-
-    mLock.unlock();
-
-    /// need to check segment completion for each extractor in a stream;
-    UpdateSegmentStatus(nInitSegID, nSegID, segCnt);
-
-    return ERROR_NONE;
+    return ret;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to read frame for trackid=" << trackID << ", ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
 }
 
-int OmafReaderManager::ParseSegment(
-    uint32_t nSegID,
-    uint32_t nInitSegID,
-    uint32_t& qualityRanking,
-    SRDInfo *srd)
-{
-    if (NULL == mReader) return ERROR_NULL_PTR;
-    if (!mExtractorEnabled && !srd)
-    {
-        LOG(ERROR) << "SRD can't be NULL !" << endl;
-        return ERROR_INVALID;
+inline bool OmafReaderManager::isEmpty(std::mutex &mutex, const std::list<OmafSegmentNodeTimedSet> &nodes) noexcept {
+  try {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (nodes.empty()) {
+      return true;
+    }
+    if (nodes.size() > 1) {
+      return false;
     }
 
-    int ret = ERROR_NONE;
-
-    std::map<uint32_t, OmafSegment*> initSegNormalSeg;
-    initSegNormalSeg = m_readSegMap[nSegID];
-    OmafSegment *pSeg = initSegNormalSeg[nInitSegID];
-    if(!pSeg)
-    {
-        LOG(ERROR) << "cannot get segment with ID "<<nSegID<<endl;
-        return ERROR_INVALID;
-    }
-    pSeg->Close();
-    if (!mExtractorEnabled)
-    {
-        qualityRanking = pSeg->GetQualityRanking();
-
-        SRDInfo srdInfo = pSeg->GetSRDInfo();
-        srd->left = srdInfo.left;
-        srd->top  = srdInfo.top;
-        srd->width = srdInfo.width;
-        srd->height = srdInfo.height;
-    }
-    else
-    {
-        qualityRanking = 0;
+    const OmafSegmentNodeTimedSet &node_set = nodes.front();
+    if (node_set.segment_nodes_.empty()) {
+      return true;
     }
 
-    ret = mReader->parseSegment(pSeg, nInitSegID, nSegID );
+    return false;
 
-    if( 0 != ret )
-    {
-        LOG(ERROR) << "parseSegment return error "<<ret<<endl;
-        return ERROR_INVALID;
-    }
-
-    if (mExtractorEnabled)
-    {
-        for (int i = 0; i < mSource->GetStreamCount(); i++)
-        {
-            OmafMediaStream *pStream = mSource->GetStream(i);
-            if (pStream->HasExtractor())
-            {
-                std::list<OmafExtractor*> extractors = pStream->GetEnabledExtractor();
-                for (auto it = extractors.begin(); it != extractors.end(); it++)
-                {
-                    OmafExtractor *pExt = (OmafExtractor*)(*it);
-
-                    uint32_t extractorTrackId = pExt->GetTrackNumber();
-                    OmafSegment *initSegment = pExt->GetInitSegment();
-                    uint32_t initSegIndex = initSegment->GetInitSegID();
-                    if (nInitSegID == initSegIndex)
-                    {
-                        if ((uint32_t)(mMapSegStatus[extractorTrackId].segStatus[nSegID]) == (mMapSegStatus[extractorTrackId].depTrackIDs.size() + 1))
-                        {
-                            std::vector<TrackInformation*> readTrackInfos;
-                            mReader->getTrackInformations( readTrackInfos );
-                            mSegTrackInfos[nSegID] = readTrackInfos;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else
-    {
-        std::vector<TrackInformation*> readTrackInfos;
-        mReader->getTrackInformations( readTrackInfos );
-        std::map<uint32_t, std::vector<TrackInformation*>>::iterator itTrackInfo;
-        itTrackInfo = mSegTrackInfos.find(nSegID);
-        if (itTrackInfo != mSegTrackInfos.end())
-        {
-            mSegTrackInfos.erase(itTrackInfo);
-        }
-
-        mSegTrackInfos[nSegID] = readTrackInfos;
-    }
-
-    return ERROR_NONE;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to check the empty"
+               << ", ex: " << ex.what() << std::endl;
+    return false;
+  }
 }
 
-void OmafReaderManager::SetupStatusMap()
-{
-    for( int i = 0; i < mSource->GetStreamCount(); i++ ){
-        OmafMediaStream* pStream = mSource->GetStream(i);
-        std::map<int, OmafExtractor*> pExtratorAS = pStream->GetExtractors();
-        for(auto as_it = pExtratorAS.begin(); as_it != pExtratorAS.end(); as_it++){
-            OmafExtractor* pExAS = (OmafExtractor*) as_it->second;
-            int trackID = pExAS->GetTrackNumber();
-            std::list<int> listDepTracks = pExAS->GetDependTrackID();
-            mMapSegStatus[trackID].depTrackIDs = listDepTracks;
-        }
+bool OmafReaderManager::checkEOS(int64_t segment_num) noexcept {
+  try {
+    if (media_source_ == nullptr) {
+      return true;
     }
+
+    bool eos = true;
+
+    // set EOS when all stream meet eos
+    for (int i = 0; i < media_source_->GetStreamCount(); i++) {
+      OmafMediaStream *pStream = media_source_->GetStream(i);
+      if (pStream) {
+        uint64_t segmentDur = pStream->GetSegmentDuration();
+        if (segmentDur == 0) {
+          continue;
+        }
+
+        double tmpSegNum = static_cast<double>(work_params_.duration_) / 1000.0 / static_cast<double>(segmentDur);
+        int64_t totalSegNum = static_cast<int64_t>(tmpSegNum);
+        totalSegNum = abs(tmpSegNum - totalSegNum) < 1e-6 ? totalSegNum : totalSegNum + 1;
+
+        if (segment_num < totalSegNum) {
+          eos = false;
+          break;
+        }
+      }
+    }
+    if (eos) {
+      if (!isEmpty(segment_opening_mutex_, segment_opening_list_)) {
+        LOG(INFO) << "segment opening list is not empty!" << std::endl;
+        eos = false;
+      }
+    }
+    if (eos) {
+      if (!isEmpty(segment_opened_mutex_, segment_opened_list_)) {
+        LOG(INFO) << "segment opened list is not empty!" << std::endl;
+        eos = false;
+      }
+    }
+    if (eos) {
+      if (!isEmpty(segment_parsed_mutex_, segment_parsed_list_)) {
+        LOG(INFO) << "segment parsed list is not empty!" << std::endl;
+        eos = false;
+      }
+    }
+    if (eos) {
+      LOG(INFO) << "Meet EOS" << std::endl;
+    }
+    return eos;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to check the eos"
+               << ", ex: " << ex.what() << std::endl;
+    return true;
+  }
 }
 
-void OmafReaderManager::UpdateSegmentStatus(uint32_t nInitSegID, uint32_t nSegID, int64_t segCnt)
-{
-    mLock.lock();
-    int trackId = mMapInitTrk[nInitSegID];
-    if (mExtractorEnabled)
-    {
-        if (mMapSegStatus[trackId].depTrackIDs.size())
-        {
-            if (nSegID > mMapSegStatus[trackId].segStatus.size())
-            {
-                mMapSegStatus[trackId].segStatus[nSegID] = 0;
-            }
-            mMapSegStatus[trackId].segStatus[nSegID]++;
-            // only update mCurrentReadSegment if segCnt is updated with viewport changed
-            if(segCnt != -1)
-            {
-                mMapSegStatus[trackId].sampleIndex.mCurrentReadSegment = segCnt;
-            }
+OMAF_STATUS OmafReaderManager::GetPacketQueueSize(uint32_t trackID, size_t &size) noexcept {
+  try {
+    std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
+    for (auto &nodeset : segment_parsed_list_) {
+      for (auto &node : nodeset.segment_nodes_) {
+        if (node->getTrackId() == trackID) {
+          size = node->packetQueueSize();
+          return ERROR_NONE;
         }
-
-        for( auto it=mMapSegStatus.begin(); it!=mMapSegStatus.end(); it++ ){
-            for(auto id  = mMapSegStatus[it->first].depTrackIDs.begin();
-                     id != mMapSegStatus[it->first].depTrackIDs.end();
-                     id++ ){
-                if( *id == mMapInitTrk[nInitSegID] ){
-                    if (nSegID > mMapSegStatus[it->first].segStatus.size())
-                    {
-                        mMapSegStatus[it->first].segStatus[nSegID] = 0;
-                    }
-                    mMapSegStatus[it->first].segStatus[nSegID]++;
-                    mMapSegStatus[it->first].listActiveSeg.push_back(nSegID);
-                    mMapSegStatus[it->first].sampleIndex.mCurrentAddSegment = nSegID;
-                    break;
-                }
-            }
-        }
-    }
-    else
-    {
-        for( auto it = mMapSegStatus.begin(); it != mMapSegStatus.end(); it++ ){
-            if( (it->first) == trackId ){
-                if (nSegID > mMapSegStatus[it->first].segStatus.size())
-                {
-                    mMapSegStatus[it->first].segStatus[nSegID] = 0;
-                }
-                mMapSegStatus[it->first].segStatus[nSegID]++;
-                mMapSegStatus[it->first].listActiveSeg.push_back(nSegID);
-                mMapSegStatus[it->first].sampleIndex.mCurrentAddSegment = nSegID;
-                break;
-            }
-        }
+      }
     }
 
-    mLock.unlock();
+    return ERROR_INVALID;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to read packet size for trackid=" << trackID << ", ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
+}
+uint64_t OmafReaderManager::GetOldestPacketPTSForTrack(int trackId) {
+  try {
+    std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
+    for (auto &nodeset : segment_parsed_list_) {
+      for (auto &node : nodeset.segment_nodes_) {
+        if (node->getTrackId() == static_cast<uint32_t>(trackId)) {
+          return node->getPTS();
+        }
+      }
+    }
+
+    return 0;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to read packet size for trackid=" << trackId << ", ex: " << ex.what() << std::endl;
+    return 0;
+  }
+}
+void OmafReaderManager::RemoveOutdatedPacketForTrack(int trackId, uint64_t currPTS) {
+  try {
+    std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
+    for (auto &nodeset : segment_parsed_list_) {
+      for (auto &node : nodeset.segment_nodes_) {
+        if (node->getTrackId() == static_cast<uint32_t>(trackId)) {
+          node->clearPacketByPTS(currPTS);
+        }
+      }
+    }
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to read packet size for trackid=" << trackId << ", ex: " << ex.what() << std::endl;
+  }
 }
 
-int OmafReaderManager::Seek( )
-{
-    DashMediaInfo info;
-    mSource->GetMediaInfo( &info );
-    int type = info.streaming_type;
-    if(type != 1) return ERROR_INVALID;
-
-    /// seek
-    mStatus=STATUS_SEEKING;
-
-    releaseAllSegments( );
-    releasePacketQueue();
-
-    mStatus=STATUS_RUNNING;
-
-    for (int i = 0; i < info.stream_count; i++)
-    {
-        if (info.stream_info[i].codec)
-        {
-            delete [] (info.stream_info[i].codec);
-            info.stream_info[i].codec = NULL;
-        }
-        if (info.stream_info[i].mime_type)
-        {
-            delete [] (info.stream_info[i].mime_type);
-            info.stream_info[i].mime_type = NULL;
-        }
+void OmafReaderManager::initSegmentStateChange(std::shared_ptr<OmafSegment> pInitSeg,
+                                               OmafSegment::State state) noexcept {
+  try {
+    if (state != OmafSegment::State::OPEN_SUCCES) {
+      LOG(FATAL) << "Failed to open the init segment, state= " << static_cast<int>(state) << std::endl;
+      return;
     }
 
-    return ERROR_NONE;
-}
-
-void OmafReaderManager::RemoveTrackFromPacketQueue(list<int>& trackIDs)
-{
-    mPacketLock.lock();
-    for(auto &it : trackIDs)
-    {
-        PacketQueue pPackQ = mPacketQueues[it];
-        for (std::list<MediaPacket*>::iterator iter = pPackQ.begin() ; iter != pPackQ.end(); iter++)
-        {
-            MediaPacket *mediaPacket = *iter;
-            delete mediaPacket;
-            mediaPacket = NULL;
-        }
-        mPacketQueues.erase(it);
-    }
-    mPacketLock.unlock();
-}
-
-int OmafReaderManager::GetNextFrame( int trackID, MediaPacket*& pPacket, bool needParams )
-{
-    mPacketLock.lock();
-    if( mPacketQueues[trackID].empty()){
-        LOG(INFO)<< "track for " << trackID << " Empty packets queue !" <<endl;
-        DashMediaInfo info;
-        mSource->GetMediaInfo(&info);
-        if (info.streaming_type == 1)
-        {
-            bool isEOSNow = false;
-            mLock.lock();
-            isEOSNow = mEOS;
-            mLock.unlock();
-            if (isEOSNow)
-            {
-                LOG(INFO)<< "EOS Now !" << endl;
-                pPacket = new MediaPacket();
-                pPacket->SetEOS(true);
-                mPacketLock.unlock();
-                for (int i = 0; i < info.stream_count; i++)
-                {
-                    if (info.stream_info[i].codec)
-                    {
-                        delete [] (info.stream_info[i].codec);
-                        info.stream_info[i].codec = NULL;
-                    }
-                    if (info.stream_info[i].mime_type)
-                    {
-                        delete [] (info.stream_info[i].mime_type);
-                        info.stream_info[i].mime_type = NULL;
-                    }
-                }
-                return ERROR_NONE;
-            }
-            else
-            {
-                pPacket = NULL;
-                mPacketLock.unlock();
-                for (int i = 0; i < info.stream_count; i++)
-                {
-                    if (info.stream_info[i].codec)
-                    {
-                        delete [] (info.stream_info[i].codec);
-                        info.stream_info[i].codec = NULL;
-                    }
-                    if (info.stream_info[i].mime_type)
-                    {
-                        delete [] (info.stream_info[i].mime_type);
-                        info.stream_info[i].mime_type = NULL;
-                    }
-                }
-                return ERROR_NULL_PACKET;
-            }
-        }
-        else
-        {
-            pPacket = NULL;
-            mPacketLock.unlock();
-            for (int i = 0; i < info.stream_count; i++)
-            {
-                if (info.stream_info[i].codec)
-                {
-                    delete [] (info.stream_info[i].codec);
-                    info.stream_info[i].codec = NULL;
-                }
-                if (info.stream_info[i].mime_type)
-                {
-                    delete [] (info.stream_info[i].mime_type);
-                    info.stream_info[i].mime_type = NULL;
-                }
-            }
-            return ERROR_NULL_PACKET;
-        }
+    // 1. parse the segment
+    OMAF_STATUS ret = reader_->parseInitializationSegment(pInitSeg.get(), pInitSeg->GetInitSegID());
+    if (ret != ERROR_NONE) {
+      LOG(FATAL) << "parse initialization segment failed! code= " << ret << std::endl;
+      return;
     }
 
-    pPacket = mPacketQueues[trackID].front();
-    mPacketQueues[trackID].pop_front();
-    LOG(INFO)<<"========mPacketQueues size========:"<<mPacketQueues[trackID].size() << " for track "<< trackID <<std::endl;
-    mPacketLock.unlock();
+    initSeg_ready_count_++;
 
-    if (needParams)
-    {
-        uint32_t qualityRanking = pPacket->GetQualityRanking();
-        std::map<uint32_t, uint8_t*> header = m_videoHeaders[qualityRanking];
-        if (0 == header.size())
-        {
-            LOG(ERROR) << "Invalid VPS/SPS/PPS in getting packet ! " << endl;
-            return OMAF_ERROR_INVALID_DATA;
-        }
-        std::map<uint32_t, uint8_t*>::iterator itHrd;
-        itHrd = header.begin();
-        uint32_t headerSize = itHrd->first;
-        uint8_t *headerData = itHrd->second;
-        MediaPacket *newPacket = new MediaPacket();
-        uint32_t newSize = headerSize + pPacket->Size();
-        newPacket->ReAllocatePacket(newSize);
-        newPacket->SetRealSize(newSize);
-
-        char *origData = pPacket->Payload();
-        char *newData  = newPacket->Payload();
-        if(!origData || !newData)
-        {
-            LOG(ERROR)<<" data ptr is null !"<<endl;
-            SAFE_DELETE(newPacket);
-            return OMAF_ERROR_NULL_PTR;
-        }
-        memcpy(newData, headerData, headerSize);
-        memcpy(newData + headerSize, origData, pPacket->Size());
-        RegionWisePacking *newRwpk = new RegionWisePacking;
-        RegionWisePacking *pRwpk = pPacket->GetRwpk();
-        if(!newRwpk || !pRwpk)
-        {
-            LOG(ERROR)<<"rwpk ptr is null!"<<endl;
-            SAFE_DELETE(newPacket);
-            SAFE_DELETE(newRwpk);
-            return OMAF_ERROR_NULL_PTR;
-        }
-        *newRwpk = *pRwpk;
-        newRwpk->rectRegionPacking = new RectangularRegionWisePacking[newRwpk->numRegions];
-        memcpy(newRwpk->rectRegionPacking, pRwpk->rectRegionPacking, pRwpk->numRegions * sizeof(RectangularRegionWisePacking));
-        newPacket->SetRwpk(newRwpk);
-        newPacket->SetType(pPacket->GetType());
-        newPacket->SetPTS(pPacket->GetPTS());
-        newPacket->SetSegID(pPacket->GetSegID());
-        newPacket->SetQualityNum(pPacket->GetQualityNum());
-        SourceResolution* newSrcRes = new SourceResolution[pPacket->GetQualityNum()];
-        memcpy(newSrcRes, pPacket->GetSourceResolutions(), pPacket->GetQualityNum() * sizeof(SourceResolution));
-        for (int32_t i=0;i<pPacket->GetQualityNum();i++)
-        {
-            newPacket->SetSourceResolution(i, newSrcRes[i]);
-            //cout<<"copy sourceRes:"<<newPacket->GetSourceResolutions()[i].qualityRanking<<" "<<newPacket->GetSourceResolutions()[i].top<<" "<<newPacket->GetSourceResolutions()[i].left<<" "<<newPacket->GetSourceResolutions()[i].width<<" "<<newPacket->GetSourceResolutions()[i].height<<endl;
-        }
-        newPacket->SetQualityRanking(pPacket->GetQualityRanking());
-        newPacket->SetSRDInfo(pPacket->GetSRDInfo());
-        newPacket->SetCodecType(pPacket->GetCodecType());
-        newPacket->SetHasVideoHeader(true);
-        //LOG(INFO)<<"SetHasVideoHeader: "<<trackID<<endl;
-        newPacket->SetVideoHeaderSize(headerSize);
-        if (qualityRanking == HIGHEST_QUALITY_RANKING)
-        {
-            newPacket->SetVPSLen(mVPSLen);
-            newPacket->SetSPSLen(mSPSLen);
-            newPacket->SetPPSLen(mPPSLen);
-        }
-
-        delete pPacket;
-        pPacket = newPacket;
+    // 2 get the track information when all init segment parsed
+    if (initSegParsedCount() == media_source_->GetTrackCount() && !IsInitSegmentsParsed()) {
+      buildInitSegmentInfo();
     }
-    return ERROR_NONE;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to parse the init segment, ex: " << ex.what() << std::endl;
+  }
 }
 
-int OmafReaderManager::GetPacketQueueSize(int trackID, int& size)
-{
-    mPacketLock.lock();
-    size = mPacketQueues[trackID].size();
-    mPacketLock.unlock();
-    return ERROR_NONE;
-}
+void OmafReaderManager::buildInitSegmentInfo(void) noexcept {
+  try {
+    std::lock_guard<std::mutex> lock(initSeg_mutex_);
+    // 1. get the track information
+    std::vector<TrackInformation *> track_infos;
+    reader_->getTrackInformations(track_infos);
 
-int OmafReaderManager::ReadNextSegment(
-    int trackID,
-    uint16_t initSegID,
-    bool isExtractor,
-    std::vector<TrackInformation*> readTrackInfos,
-    bool& segmentChanged,
-    uint32_t qualityRanking,
-    SRDInfo *srd)
-{
-    if(NULL == mReader) return ERROR_NULL_PTR;
-    int32_t ret = ERROR_NONE;
+    // 2. go through the track information
+    for (auto track : track_infos) {
+      if (track == nullptr) {
+        LOG(ERROR) << "Meet empty track!" << std::endl;
+        continue;
+      }
 
-    SampleIndex *sampleIdx = &(mMapSegStatus[trackID].sampleIndex);
+      // FIXME there would has bug, if more than one stream.
+      // or we need update the logic for more than one stream
+      for (int i = 0; i < media_source_->GetStreamCount(); i++) {
+        OmafMediaStream *pStream = media_source_->GetStream(i);
 
-    LOG(INFO) << "Begin to read segment " << sampleIdx->mCurrentReadSegment <<" for track "<<trackID<< endl;
-#ifndef _ANDROID_NDK_OPTION_
-#ifdef _USE_TRACE_
-    tracepoint(mthq_tp_provider, T5_read_start_time, sampleIdx->mCurrentReadSegment);
-#endif
-#endif
-    TrackInformation *trackInfo = nullptr;
-    for ( auto &itTrack : readTrackInfos)
-    {
-        if (GetTrackId(itTrack->trackId) == trackID)
-        {
-            trackInfo = itTrack;
+        // 2.1.1 check the adaptation set
+        std::map<int, OmafAdaptationSet *> pMediaAS = pStream->GetMediaAdaptationSet();
+        for (auto as : pMediaAS) {
+          OmafAdaptationSet *pAS = (OmafAdaptationSet *)as.second;
+          // FIXME GetInitSegID or GetSegID
+          if (pAS->GetInitSegment()->GetInitSegID() == track->initSegmentId) {
+            auto dash_track_id = buildDashTrackId(track->trackId);
+            pAS->SetTrackNumber(static_cast<int>(dash_track_id));
+            pAS->GetInitSegment()->SetTrackId(dash_track_id);
+            initSeg_trackIds_map_[track->initSegmentId] = dash_track_id;
+            trackIds_initSeg_map_[dash_track_id] = track->initSegmentId;
+            LOG(INFO) << "Initse id=" << track->initSegmentId << ",trackid=" << dash_track_id << std::endl;
             break;
+          }
+        }  // end for adaptation set loop
+
+        // 2.1.2 if has init the track, then loop to next
+        if (initSeg_trackIds_map_.find(track->initSegmentId) != initSeg_trackIds_map_.end()) {
+          break;
         }
+
+        // 2.1.3 check the extractors
+        std::map<int, OmafExtractor *> pExtratorAS = pStream->GetExtractors();
+        for (auto &extractor : pExtratorAS) {
+          OmafExtractor *pExAS = extractor.second;
+          // FIXME GetInitSegID or GetSegID
+          if (pExAS->GetInitSegment()->GetInitSegID() == track->initSegmentId) {
+            auto dash_track_id = buildDashTrackId(track->trackId);
+            pExAS->SetTrackNumber(static_cast<int>(dash_track_id));
+            pExAS->GetInitSegment()->SetTrackId(dash_track_id);
+            initSeg_trackIds_map_[track->initSegmentId] = dash_track_id;
+            trackIds_initSeg_map_[dash_track_id] = track->initSegmentId;
+            LOG(INFO) << "Initse id=" << track->initSegmentId << ",trackid=" << dash_track_id << std::endl;
+            break;
+          }
+        }  // end for extractors loop
+      }    // end stream loop
+    }      // end for track loop
+    bInitSeg_all_ready_ = true;
+
+    // 2.2 setup the id map
+    setupTrackIdMap();
+
+    // 3.1 release the track informations
+    for (auto &track : track_infos) {
+      if (track) {
+        delete track;
+        track = nullptr;
+      }
     }
-    if (!trackInfo)
-    {
-        LOG(ERROR) << "The specified track is not found " << endl;
-        return ERROR_NOT_FOUND;
+    track_infos.clear();
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to parse the init segment, ex: " << ex.what() << std::endl;
+  }
+}
+
+void OmafReaderManager::setupTrackIdMap(void) noexcept {
+  try {
+    for (int i = 0; i < media_source_->GetStreamCount(); i++) {
+      OmafMediaStream *pStream = media_source_->GetStream(i);
+      std::map<int, OmafExtractor *> pExtratorAS = pStream->GetExtractors();
+      for (auto extractor : pExtratorAS) {
+        OmafExtractor *pExAS = extractor.second;
+        uint32_t track_id = pExAS->GetTrackNumber();
+        std::list<int> depends_track_ids = pExAS->GetDependTrackID();
+        if (trackIds_initSeg_map_.find(track_id) != trackIds_initSeg_map_.end()) {
+          auto &initSeg_id = trackIds_initSeg_map_[track_id];
+          initSegId_depends_map_[initSeg_id] = std::vector<uint32_t>();
+          for (auto depend_id : depends_track_ids) {
+            if (trackIds_initSeg_map_.find(depend_id) != trackIds_initSeg_map_.end()) {
+              auto depend_initSeg_id = trackIds_initSeg_map_[depend_id];
+              initSegId_depends_map_[initSeg_id].push_back(depend_initSeg_id);
+            }
+          }
+        }
+      }  // end for extractors
+    }    // end for media stream
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to set up track map, ex: " << ex.what() << std::endl;
+  }
+}
+
+void OmafReaderManager::normalSegmentStateChange(std::shared_ptr<OmafSegment> segment,
+                                                 OmafSegment::State state) noexcept {
+  try {
+    // 0. check params
+    if (segment.get() == nullptr) {
+      LOG(ERROR) << "Empty segment!" << std::endl;
+      return;
     }
 
-    if (sampleIdx->mCurrentReadSegment > sampleIdx->mCurrentAddSegment)
+    OmafSegmentNode::Ptr opened_dash_node;
+
+    // 1. remove from the opening list
     {
-        LOG(ERROR) << "Can't read not added segment ! " << endl;
+      std::lock_guard<std::mutex> lock(segment_opening_mutex_);
+      for (auto &nodeset : segment_opening_list_) {
+        if (nodeset.timeline_point_ == segment->GetTimelinePoint()) {
+          std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
+          while (it != nodeset.segment_nodes_.end()) {
+            auto &node = (*(*it).get());
+            if (node == segment) {
+              opened_dash_node = std::move(*it);
+              nodeset.segment_nodes_.erase(it);
+              break;
+            }
+            it++;
+          }
+        }
+      }
+    }
+
+    if (opened_dash_node.get() == nullptr) {
+      LOG(WARNING) << "Can't find the dash node for coming segment!" << std::endl;
+      return;
+    }
+
+    // 2. append to the dash opened list
+    {
+      std::lock_guard<std::mutex> lock(segment_opened_mutex_);
+      bool new_timeline_point = true;
+      if (work_params_.mode_ == OmafDashMode::EXTRACTOR) {
+        // this is a dash node built from extractor
+        // build depends based on extractor
+        if (opened_dash_node->isExtractor()) {
+          for (auto &nodeset : segment_opened_list_) {
+            if (nodeset.timeline_point_ == opened_dash_node->getTimelinePoint()) {
+              new_timeline_point = false;
+              std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
+
+              // put all depends node into depend
+              const auto &depends = initSegId_depends_map_[opened_dash_node->getInitSegId()];
+
+              while (it != nodeset.segment_nodes_.end()) {
+                // check whether this dash node is belong the target dash's depends
+                auto initSeg_id = (*it)->getInitSegId();
+                auto is_in_depend = false;
+                for (auto id : depends) {
+                  if (id == initSeg_id) {
+                    is_in_depend = true;
+                    break;
+                  }
+                }  // end for id
+
+                if (is_in_depend) {
+                  // remove from the list and push to depends
+                  opened_dash_node->pushDepends(std::move(*it));
+                  // it will move to next when calling erase
+                  it = nodeset.segment_nodes_.erase(it);
+                } else {
+                  it++;
+                }
+              }  // end while
+
+              nodeset.segment_nodes_.push_back(std::move(opened_dash_node));
+              break;
+            }  // end for if same timeslide
+          }    // end for dash_opened_list loop
+        } else {
+          // this is a dash node built from the general segment
+          for (auto &nodeset : segment_opened_list_) {
+            if (nodeset.timeline_point_ == opened_dash_node->getTimelinePoint()) {
+              new_timeline_point = false;
+              // while loop all node in the dash nodes,
+              // the opend_dash_node maybe added to more than one dash node who built from extractor
+              // the detail structure depend on the media stream's extractor logic
+              // FIXME, if one segment belong to different extractor at the same time, the logix has bug now.
+              // it should update the logic of parse in the dash_node
+              //
+              bool bfind_extractor = false;
+              for (auto &node : nodeset.segment_nodes_) {
+                // this is a extractor
+                if (node->isExtractor()) {
+                  const auto &depends = initSegId_depends_map_[node->getInitSegId()];
+                  for (auto id : depends) {
+                    // this dash node is in depends of the node
+                    if (id == opened_dash_node->getInitSegId()) {
+                      bfind_extractor = true;
+                      node->pushDepends(std::move(opened_dash_node));
+                      break;
+                    }
+                  }  // end for auto id
+                }
+              }  // end for auto node
+              if (!bfind_extractor) {
+                nodeset.segment_nodes_.push_back(std::move(opened_dash_node));
+              }
+              break;
+            }
+          }  // end for nodeset
+        }
+      } else {
+        // not extractor mode
+        for (auto &nodeset : segment_opened_list_) {
+          if (nodeset.timeline_point_ == opened_dash_node->getTimelinePoint()) {
+            nodeset.segment_nodes_.push_back(std::move(opened_dash_node));
+            new_timeline_point = false;
+            break;
+          }
+        }
+      }
+
+      if (new_timeline_point) {
+        bool to_append = true;
+        if (!segment_opened_list_.empty()) {
+          auto &tail_nodeset = segment_opened_list_.back();
+          // the nodeset queue's timeline should increase one by one
+          if (opened_dash_node->getTimelinePoint() <= tail_nodeset.timeline_point_) {
+            LOG(WARNING) << "Try to insert the timeline:" << opened_dash_node->getTimelinePoint()
+                         << ", which <=" << tail_nodeset.timeline_point_ << std::endl;
+            to_append = false;
+          }
+        }
+        if (to_append) {
+          OmafSegmentNodeTimedSet nodeset;
+          nodeset.timeline_point_ = opened_dash_node->getTimelinePoint();
+          nodeset.create_time_ = std::chrono::steady_clock::now();
+          nodeset.segment_nodes_.push_back(std::move(opened_dash_node));
+          segment_opened_list_.emplace_back(nodeset);
+        }
+      }
+
+      // TODO, refine the logic,
+      // we may send the notify by checking all segment ready for extractor mode
+      segment_opened_cv_.notify_all();
+    }  // end of append to the dash opened list
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when set up track map, ex: " << ex.what() << std::endl;
+  }
+}
+
+void OmafReaderManager::threadRunner() noexcept {
+  try {
+    LOG(INFO) << "Start the reader runner!" << std::endl;
+
+    while (breader_working_) {
+      // 1. find the ready segment/dash_node opend list
+      OmafSegmentNode::Ptr ready_dash_node = findReadySegmentNode();
+
+      // 1.1 no ready dash node, then wait
+      if (ready_dash_node.get() == nullptr) {
+        std::unique_lock<std::mutex> lock(segment_opened_mutex_);
+        segment_opened_cv_.wait(lock);
+        continue;
+      }
+
+      // 2. parse the ready segment/dash_node
+      const int64_t timeline_point = ready_dash_node->getTimelinePoint();
+      LOG(INFO) << "Get ready segment! timeline=" << timeline_point << std::endl;
+      OMAF_STATUS ret = ready_dash_node->parse();
+
+      // 3. move the parsed segment/dash_node to parsed list
+      if (ret == ERROR_NONE) {
+        LOG(INFO) << "Success to parsed dash segment! timeline=" << timeline_point << std::endl;
+        std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
+        bool new_timeline_point = true;
+        for (auto &nodeset : segment_parsed_list_) {
+          if (nodeset.timeline_point_ == timeline_point) {
+            nodeset.segment_nodes_.push_back(std::move(ready_dash_node));
+            new_timeline_point = false;
+            break;
+          }
+        }
+        if (new_timeline_point) {
+          OmafSegmentNodeTimedSet nodeset;
+          nodeset.timeline_point_ = timeline_point;
+          nodeset.create_time_ = std::chrono::steady_clock::now();
+          nodeset.segment_nodes_.push_back(std::move(ready_dash_node));
+          segment_parsed_list_.emplace_back(nodeset);
+        }
+        segment_parsed_cv_.notify_all();
+      } else {
+        LOG(ERROR) << "Failed to parse " << ready_dash_node->to_string() << std::endl;
+      }
+
+      // 4. clear dash set whose timeline point older than current ready segment/dash_node
+      // we use simple logic to main the dash node sets
+      // we will remove older dash nodes
+      clearOlderSegmentSet(timeline_point);
+    }
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception in reader runner, ex: " << ex.what() << std::endl;
+  }
+
+  LOG(INFO) << "Exit from the reader runner!" << std::endl;
+}
+
+OmafSegmentNode::Ptr OmafReaderManager::findReadySegmentNode() noexcept {
+  try {
+    OmafSegmentNode::Ptr ready_dash_node;
+    std::unique_lock<std::mutex> lock(segment_opened_mutex_);
+    for (auto &nodeset : segment_opened_list_) {
+      VLOG(VLOG_TRACE) << "To find the ready node set timeline=" << nodeset.timeline_point_ << std::endl;
+
+      // 1.1.1 try to find the ready node
+      std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
+      while (it != nodeset.segment_nodes_.end()) {
+        auto &node = *it;
+        if (node->isReady()) {
+          if (work_params_.mode_ == OmafDashMode::EXTRACTOR) {
+            if (node->isExtractor()) {
+              ready_dash_node = std::move(node);
+            }
+          } else {
+            ready_dash_node = std::move(node);
+          }
+
+          if (ready_dash_node.get() != nullptr) {
+            break;
+          }
+        }
+        it++;
+      }  // end while
+
+      // 1.1.2 find the ready node, exit and return
+      if (ready_dash_node.get() != nullptr) {
+        nodeset.segment_nodes_.erase(it);
+        break;
+      }
+
+      // 1.2.1 no ready node found, then check whether timeout
+      bool btimeout = true;
+      for (auto node : nodeset.segment_nodes_) {
+        if (!node->checkTimeout(work_params_.segment_timeout_ms_)) {
+          btimeout = false;
+          break;
+        }
+      }
+
+      // 1.2.2 some node not timeout, still wait
+      if (!btimeout) {
+        // do nothing, wait the data ready
+        break;
+      }
+
+      // 1.3 all nodes timeout, then move to next timeline point's nodeset
+      continue;
+    }  // end for nodeset loop
+
+    return ready_dash_node;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when find the ready dash node, ex: " << ex.what() << std::endl;
+    return nullptr;
+  }
+}
+
+void OmafReaderManager::clearOlderSegmentSet(int64_t timeline_point) noexcept {
+  try {
+    {
+      // 1. clear the opening list to save the network bandwith
+      std::lock_guard<std::mutex> lock(segment_opening_mutex_);
+      std::list<OmafSegmentNodeTimedSet>::iterator it = segment_opening_list_.begin();
+      while ((it != segment_opening_list_.end()) && (it->timeline_point_ < timeline_point)) {
+        LOG(INFO) << "Removing older dash opening list, timeline=" << it->timeline_point_ << std::endl;
+        for (auto &node : it->segment_nodes_) {
+          node->stop();
+        }
+        it = segment_opening_list_.erase(it);
+      }
+    }
+
+    {
+      // 2. clear the opened dash node list
+      std::lock_guard<std::mutex> lock(segment_opened_mutex_);
+      std::list<OmafSegmentNodeTimedSet>::iterator it = segment_opened_list_.begin();
+      while ((it != segment_opened_list_.end()) && (it->timeline_point_ < timeline_point)) {
+        LOG(INFO) << "Removing older dash opened list, timeline=" << it->timeline_point_ << std::endl;
+        it = segment_opened_list_.erase(it);
+      }
+    }
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when clear the older dash set, whose timeline is older than" << timeline_point
+               << ", ex: " << ex.what() << std::endl;
+  }
+}
+
+// FIXME, dims and vps/sps/pps may not in the same sample
+int OmafPacketParams::init(std::shared_ptr<OmafReader> reader, uint32_t reader_trackId, uint32_t sampleId) noexcept {
+  try {
+    // 1. read width and heigh
+    OMAF_STATUS ret = reader->getDims(reader_trackId, sampleId, width_, height_);
+    if (ret) {
+      LOG(ERROR) << "Failed to get sample dims !" << endl;
+      return ret;
+    }
+    if (!width_ || !height_) {
+      LOG(ERROR) << "Failed to get the dims!" << std::endl;
+      return OMAF_ERROR_INVALID_DATA;
+    }
+
+    // 2. read vps/sps/pps params
+    std::vector<VCD::OMAF::DecoderSpecificInfo> parameterSets;
+    ret = reader->getDecoderConfiguration(reader_trackId, sampleId, parameterSets);
+    if (ret) {
+      LOG(ERROR) << "Failed to get VPS/SPS/PPS ! " << endl;
+      return ret;
+    }
+
+    for (auto const &parameter : parameterSets) {
+      if (parameter.codecSpecInfoType == VCD::MP4::HEVC_VPS) {
+        vps_.resize(parameter.codecSpecInfoBits.size);
+        for (size_t i = 0; i < parameter.codecSpecInfoBits.size; i++) {
+          vps_[i] = parameter.codecSpecInfoBits[i];
+        }
+      }
+
+      if (parameter.codecSpecInfoType == VCD::MP4::HEVC_SPS) {
+        sps_.resize(parameter.codecSpecInfoBits.size);
+        for (size_t i = 0; i < parameter.codecSpecInfoBits.size; i++) {
+          sps_[i] = parameter.codecSpecInfoBits[i];
+        }
+      }
+
+      if (parameter.codecSpecInfoType == VCD::MP4::HEVC_PPS) {
+        pps_.resize(parameter.codecSpecInfoBits.size);
+        for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++) {
+          pps_[i] = parameter.codecSpecInfoBits[i];
+        }
+      }
+    }
+
+    binit_ = vps_.size() && sps_.size() && pps_.size();
+
+    params_.resize(vps_.size() + sps_.size() + pps_.size());
+    memcpy_s(params_.data(), params_.size(), vps_.data(), vps_.size());
+    memcpy_s(params_.data() + vps_.size(), sps_.size(), sps_.data(), sps_.size());
+    memcpy_s(params_.data() + vps_.size() + sps_.size(), pps_.size(), pps_.data(), pps_.size());
+
+    return binit_ ? ERROR_NONE : ERROR_INVALID;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to init the packet params, ex: " << ex.what() << std::endl;
+    binit_ = false;
+    return ERROR_INVALID;
+  }
+}
+
+int OmafSegmentNode::parse() noexcept {
+  try {
+    auto reader = reader_.lock();
+    if (reader.get() == nullptr) {
+      LOG(ERROR) << "The omaf reader is empty!" << std::endl;
+      return ERROR_NULL_PTR;
+    }
+
+    OMAF_STATUS ret = ERROR_NONE;
+    // 1.1 calling depends to parse the segment
+    for (auto &node : depends_) {
+      ret = node->parseSegmentStream(reader);
+      if (ERROR_NONE != ret) {
+        LOG(ERROR) << "Failed to parse the dependent node " << node->to_string() << ". Error code=" << ret << std::endl;
+        return ret;
+      }
+    }
+
+    // 1.2 parse self
+    ret = parseSegmentStream(reader);
+    if (ERROR_NONE != ret) {
+      LOG(ERROR) << "Failed to parse " << this->to_string() << ". Error code=" << ret << std::endl;
+      return ret;
+    }
+
+    // 2 cache packets from the reader
+    ret = cachePackets(reader);
+    if (ERROR_NONE != ret) {
+      LOG(ERROR) << "Failed to read packet from " << this->to_string() << ". Error code=" << ret << std::endl;
+      return ERROR_INVALID;
+    }
+
+    // 3.1 remove self segment from reader
+    ret = removeSegmentStream(reader);
+    if (ERROR_NONE != ret) {
+      LOG(ERROR) << "Failed to remove segment from reader. " << this->to_string() << ". Error code=" << ret
+                 << std::endl;
+      return ERROR_INVALID;
+    }
+
+    // 3.2 remove segment of depends from reader
+    for (auto &node : depends_) {
+      ret = node->removeSegmentStream(reader);
+      if (ERROR_NONE != ret) {
+        LOG(ERROR) << "Failed to remove dependent segment form reader. " << node->to_string() << ". Rrror code=" << ret
+                   << std::endl;
+        return ret;
+      }
+    }
+    return ERROR_NONE;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when parse the segment! ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
+}
+
+int OmafSegmentNode::start(void) noexcept {
+  try {
+    OMAF_STATUS ret = ERROR_NONE;
+    if (segment_.get() == nullptr) {
+      LOG(ERROR) << "Try to open the empty segment!" << std::endl;
+      return ERROR_INVALID;
+    }
+
+    auto reader_mgr = omaf_reader_mgr_.lock();
+    if (reader_mgr.get() == nullptr) {
+      LOG(ERROR) << "The reader manager is empty!" << std::endl;
+      return ERROR_NULL_PTR;
+    }
+
+    start_time_ = std::chrono::steady_clock::now();
+    ret = segment_->Open(reader_mgr->dash_client_);
+    if (ret != ERROR_NONE) {
+      LOG(ERROR) << "Failed to open the segment!" << std::endl;
+      return ret;
+    }
+
+    return ERROR_NONE;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when open the segment, ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
+}
+
+int OmafSegmentNode::stop(void) noexcept {
+  try {
+    OMAF_STATUS ret = ERROR_NONE;
+    if (segment_.get() == nullptr) {
+      LOG(ERROR) << "Try to stop the empty segment!" << std::endl;
+      return ERROR_INVALID;
+    }
+    ret = this->segment_->Stop();
+    if (ret != ERROR_NONE) {
+      LOG(WARNING) << "Failed to stop the segment!" << std::endl;
+    }
+
+    for (auto &node : depends_) {
+      node->stop();
+    }
+    return ret;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when stop the segment, ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
+}
+
+int OmafSegmentNode::parseSegmentStream(std::shared_ptr<OmafReader> reader) noexcept {
+  try {
+    return reader->parseSegment(segment_.get(), segment_->GetInitSegID(), segment_->GetSegID());
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when parse the segment! ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
+}
+
+int OmafSegmentNode::removeSegmentStream(std::shared_ptr<OmafReader> reader) noexcept {
+  try {
+    return reader->invalidateSegment(segment_->GetInitSegID(), segment_->GetSegID());
+
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when remove the segment from reader! ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
+}
+
+// int OmafSegmentNode::getPacket(std::unique_ptr<MediaPacket> &pPacket, bool needParams) {
+int OmafSegmentNode::getPacket(MediaPacket *&pPacket, bool requireParams) noexcept {
+  try {
+    if (media_packets_.size() <= 0) {
+      LOG(ERROR) << "There is no packets" << std::endl;
+      return ERROR_NULL_PACKET;
+    }
+
+    pPacket = media_packets_.front();
+    media_packets_.pop();
+    if (requireParams) {
+      auto packet_params = getPacketParams();
+      if (packet_params.get() == nullptr || !packet_params->binit_) {
+        LOG(ERROR) << "Invalid VPS/SPS/PPS in getting packet ! " << std::endl;
         return OMAF_ERROR_INVALID_DATA;
+      }
+      pPacket->InsertParams(packet_params->params_);
+      pPacket->SetVPSLen(packet_params->vps_.size());
+      pPacket->SetSPSLen(packet_params->sps_.size());
+      pPacket->SetPPSLen(packet_params->pps_.size());
+      pPacket->SetVideoHeaderSize(packet_params->params_.size());
     }
-
-    if (!isExtractor && (0 == qualityRanking))
-    {
-        LOG(ERROR) << "INCORRECT quality ranking for tile track !" << endl;
-        return OMAF_ERROR_INVALID_DATA;
-    }
-
-    if (!isExtractor && !srd)
-    {
-        LOG(ERROR) << "NULL SRD info for tile track !" << endl;
-        return OMAF_ERROR_INVALID_DATA;
-    }
-
-    std::map<uint32_t, uint32_t> segSizeMap;
-
-    for (uint32_t sampIndex = 0; sampIndex < trackInfo->sampleProperties.size; sampIndex++)
-    {
-        segSizeMap[trackInfo->sampleProperties[sampIndex].segmentId] = 0;
-    }
-    int32_t beginSampleId = -1;
-
-    for (uint32_t sampIndex = 0; sampIndex < trackInfo->sampleProperties.size; sampIndex++)
-    {
-        segSizeMap[trackInfo->sampleProperties[sampIndex].segmentId]++;
-        if (beginSampleId == -1 && trackInfo->sampleProperties[sampIndex].segmentId == sampleIdx->mCurrentReadSegment)
-        {
-            beginSampleId = trackInfo->sampleProperties[sampIndex].sampleId;
-        }
-    }
-
-    if(beginSampleId == -1) return OMAF_ERROR_INVALID_DATA;
-
-    for ( ; beginSampleId < (int32_t)(segSizeMap[sampleIdx->mCurrentReadSegment]); beginSampleId++)
-    {
-        int sample = beginSampleId;
-
-        uint32_t combinedTrackId = GetCombinedTrackId(trackID, initSegID);
-
-        if (!mWidth || !mHeight)
-        {
-            ret = mReader->getWidth(combinedTrackId, sample, mWidth);
-            if (ret)
-            {
-                LOG(ERROR) << "Failed to get sample width !" << endl;
-                return ret;
-            }
-
-            if (mWidth == 0)
-            {
-                LOG(ERROR) << "Get invalid sample width !" << endl;
-                return OMAF_ERROR_INVALID_DATA;
-            }
-
-            ret = mReader->getHeight(combinedTrackId, sample, mHeight);
-            if (ret)
-            {
-                LOG(ERROR) << "Failed to get sample height !" << endl;
-                return ret;
-            }
-
-            if (mHeight == 0)
-            {
-                LOG(ERROR) << "Get invalid sample height !" << endl;
-                return OMAF_ERROR_INVALID_DATA;
-            }
-
-            LOG(INFO) << "Get sample width " << mWidth << " and sample height " << mHeight << " !" << endl;
-        }
-
-        MediaPacket* packet = new MediaPacket();
-        uint32_t packetSize = ((mWidth * mHeight * 3) / 2 ) / 2;
-        packet->ReAllocatePacket(packetSize);
-
-        std::map<uint32_t, std::map<uint32_t, uint8_t*>>::iterator itVideoHrd;
-        itVideoHrd = m_videoHeaders.find(qualityRanking);
-        if (itVideoHrd == m_videoHeaders.end())
-        {
-            uint8_t vps[256];
-            uint8_t vpsLen = 0;
-            uint8_t sps[256];
-            uint8_t spsLen = 0;
-            uint8_t pps[256];
-            uint8_t ppsLen = 0;
-            memset(vps, 0, 256);
-            memset(sps, 0, 256);
-            memset(pps, 0, 256);
-
-            std::vector<VCD::OMAF::DecoderSpecificInfo> parameterSets;
-            ret = mReader->getDecoderConfiguration(combinedTrackId, sample, parameterSets);
-            if (ret)
-            {
-                LOG(ERROR) << "Failed to get VPS/SPS/PPS ! " << endl;
-                return ret;
-            }
-
-            for (auto const& parameter : parameterSets)
-            {
-                if (parameter.codecSpecInfoType == VCD::MP4::HEVC_VPS)
-                {
-                    vpsLen = parameter.codecSpecInfoBits.size;
-                    for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
-                    {
-                        vps[i] = parameter.codecSpecInfoBits[i];
-                    }
-                }
-
-
-                if (parameter.codecSpecInfoType == VCD::MP4::HEVC_SPS)
-                {
-                    spsLen = parameter.codecSpecInfoBits.size;
-                    for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
-                    {
-                        sps[i] = parameter.codecSpecInfoBits[i];
-                    }
-                }
-
-                if (parameter.codecSpecInfoType == VCD::MP4::HEVC_PPS)
-                {
-                    ppsLen = parameter.codecSpecInfoBits.size;
-                    for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
-                    {
-                        pps[i] = parameter.codecSpecInfoBits[i];
-                    }
-                }
-            }
-
-            std::map<uint32_t, uint8_t*> oneHeader;
-            uint32_t headerSize = vpsLen + spsLen + ppsLen;
-            uint8_t *headerData = new uint8_t[headerSize];
-            if (!headerData)
-                return OMAF_ERROR_NULL_PTR;
-
-            memcpy(headerData, vps, vpsLen);
-            memcpy(headerData + vpsLen, sps, spsLen);
-            memcpy(headerData + vpsLen + spsLen, pps, ppsLen);
-            oneHeader.insert(std::make_pair(headerSize, headerData));
-            m_videoHeaders.insert(std::make_pair(qualityRanking, oneHeader));
-
-            if (qualityRanking == HIGHEST_QUALITY_RANKING)
-            {
-                mVPSLen = vpsLen;
-                mSPSLen = spsLen;
-                mPPSLen = ppsLen;
-            }
-        }
-
-        if (isExtractor)
-        {
-            ret = mReader->getExtractorTrackSampleData(combinedTrackId, sample, (char *)(packet->Payload()), packetSize );
-        }
-        else
-        {
-            ret =  mReader->getTrackSampleData(combinedTrackId, sample, (char *)(packet->Payload()), packetSize );
-        }
-        if (ret == OMAF_MEMORY_TOO_SMALL_BUFFER )
-        {
-            LOG(ERROR) << "The frame size has exceeded the maximum packet size" << endl;
-            return ret;
-        }
-        else if (ret)
-        {
-            LOG(ERROR) << "Failed to get packet " << (sampleIdx->mGlobalSampleIndex + beginSampleId) << " for track " << trackID << " and error is " << ret << endl;
-            return ret;
-        }
-
-        RegionWisePacking *pRwpk = new RegionWisePacking;
-
-        ret = mReader->getPropertyRegionWisePacking(combinedTrackId, sample, pRwpk);
-        if (ret == OMAF_MEMORY_TOO_SMALL_BUFFER )
-        {
-            LOG(ERROR) << "The frame size has exceeded the maximum packet size" << endl;
-            return ret;
-        }
-        else if (ret)
-        {
-            LOG(ERROR) << "Failed to get packet " << (sampleIdx->mGlobalSampleIndex + beginSampleId) << " for track " << trackID << " and error is " << ret << endl;
-            return ret;
-        }
-
-        packet->SetRwpk(pRwpk);
-        packet->SetPTS((uint64_t)(mGlobalReadSampleId) + (uint64_t)(beginSampleId));
-
-        packet->SetQualityRanking(qualityRanking);
-        if (!isExtractor)
-        {
-            packet->SetSRDInfo(*srd);
-        }
-        else
-        {
-            packet->SetQualityNum(2);
-            vector<uint32_t> boundLeft(1);// num of quality is limited to 2.
-            vector<uint32_t> boundTop(1);
-            for (int j = packet->GetRwpk()->numRegions - 1; j >= 0; j--)
-            {
-                if (packet->GetRwpk()->rectRegionPacking[j].projRegLeft == 0 && packet->GetRwpk()->rectRegionPacking[j].projRegTop == 0
-                    && !(packet->GetRwpk()->rectRegionPacking[j].packedRegLeft == 0 && packet->GetRwpk()->rectRegionPacking[j].packedRegTop == 0))
-                {
-                    boundLeft.push_back(packet->GetRwpk()->rectRegionPacking[j].packedRegLeft);
-                    boundTop.push_back(packet->GetRwpk()->rectRegionPacking[j].packedRegTop);
-                    break;
-                }
-            }
-            for (int idx = 0; idx < packet->GetQualityNum(); idx++)
-            {
-                SourceResolution srcRes;
-                srcRes.qualityRanking = idx + 1;
-                srcRes.top = boundTop[idx];
-                srcRes.left = boundLeft[idx];
-                srcRes.height = packet->GetRwpk()->packedPicHeight;
-                if (idx == 0)
-                {
-                    srcRes.width = boundLeft[idx+1] - boundLeft[idx];
-                }
-                else
-                {
-                    srcRes.width = packet->GetRwpk()->packedPicWidth - boundLeft[idx];
-                }
-                packet->SetSourceResolution(idx, srcRes);
-            }
-        }
-
-        packet->SetRealSize(packetSize);
-        packet->SetSegID(trackInfo->sampleProperties[beginSampleId - 1].segmentId);
-        mPacketLock.lock();
-        mPacketQueues[trackID].push_back(packet);
-        mPacketLock.unlock();
-    }
-
-    LOG(INFO) << "Segment " << trackInfo->sampleProperties[beginSampleId - 1].segmentId << " for track " << trackID << " has been read !" << endl;
-#ifndef _ANDROID_NDK_OPTION_
-#ifdef _USE_TRACE_
-    tracepoint(mthq_tp_provider, T6_read_end_time, trackInfo->sampleProperties[beginSampleId - 1].segmentId);
-#endif
-#endif
-    sampleIdx->mCurrentReadSegment++;
-    sampleIdx->mGlobalSampleIndex += beginSampleId;
-    LOG(INFO) << "Total read " << sampleIdx->mGlobalSampleIndex << " samples for track " << trackID <<" now !" << endl;
-
-    removeSegment(initSegID, sampleIdx->mCurrentReadSegment - 1);
-
-    SegStatus st = mMapSegStatus[trackID];
-    std::list<int>::iterator itRef = st.depTrackIDs.begin();
-    for ( ; itRef != st.depTrackIDs.end(); itRef++)
-    {
-        int refTrack = *itRef;
-
-        TrackInformation *refTrackInfo = nullptr;
-        for ( auto &itRefInfo : readTrackInfos)
-        {
-            if (GetTrackId(itRefInfo->trackId) == refTrack)
-            {
-                refTrackInfo = itRefInfo;
-                break;
-            }
-        }
-
-        if(refTrackInfo) removeSegment(refTrackInfo->initSegmentId, sampleIdx->mCurrentReadSegment - 1);
-
-    }
-
-    for(auto &it : readTrackInfos)
-    {
-        SAFE_DELETE(it);
-    }
-    readTrackInfos.clear();
-
     return ERROR_NONE;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when read the frame! ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
 }
 
-static bool IsSelectionChanged(std::map<int, OmafAdaptationSet*> selection1, std::map<int, OmafAdaptationSet*> selection2)
-{
-    bool isChanged = false;
-
-    if (selection1.size() && selection2.size())
-    {
-        if (selection1.size() != selection2.size())
-        {
-            isChanged = true;
-        }
-        else
-        {
-            std::map<int, OmafAdaptationSet*>::iterator it1;
-            for (it1 = selection1.begin(); it1 != selection1.end(); it1++)
-            {
-                OmafAdaptationSet *as1 = it1->second;
-                std::map<int, OmafAdaptationSet*>::iterator it2;
-                for (it2 = selection2.begin(); it2 != selection2.end(); it2++)
-                {
-                    OmafAdaptationSet *as2 = it2->second;
-                    if (as1 == as2)
-                    {
-                        break;
-                    }
-                }
-                if (it2 == selection2.end())
-                {
-                    isChanged = true;
-                    break;
-                }
-            }
-        }
+int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
+  try {
+    OMAF_STATUS ret = ERROR_NONE;
+    std::shared_ptr<TrackInformation> track_info = findTrackInformation(reader);
+    if (track_info.get() == nullptr) {
+      LOG(FATAL) << "Failed to find the sepcial track information." << this->to_string() << std::endl;
+      return ERROR_INVALID;
     }
 
-    return isChanged;
-}
-
-void OmafReaderManager::Run()
-{
-    bool go_on = true;
-    if(NULL == mSource) return;
-
-    bool bSegChange = false;
-
-    mStatus = STATUS_RUNNING;
-
-    bool prevPoseChanged = false;
-
-    while(go_on && mStatus != STATUS_STOPPED){
-        mLock.lock();
-
-        // exit the waiting if segment is parsed or wait time is more than 10 mins
-        int64_t waitTime = 0;
-        while (!mInitSegParsed && waitTime < 600000)
-        {
-            mLock.unlock();
-            ::usleep(1000);
-            mLock.lock();
-            waitTime++;
-        }
-        mLock.unlock();
-
-        if( mStatus==STATUS_STOPPING ){
-            mStatus = STATUS_STOPPED;
-            break;
-        }
-
-        if(mStatus==STATUS_SEEKING){
-            continue;
-        }
-        DashMediaInfo info;
-
-        mSource->GetMediaInfo( &info );
-        int type = info.streaming_type;
-
-        if(type == 1 && mEOS) break;
-
-        /// begin to read packet for each stream
-        for( int i = 0; i < mSource->GetStreamCount(); i++ ){
-            if( mStatus==STATUS_STOPPING ){
-                mStatus = STATUS_STOPPED;
-                break;
-            }
-            OmafMediaStream* pStream = mSource->GetStream(i);
-            if(pStream->HasExtractor()){
-                std::list<OmafExtractor*> extractors = pStream->GetEnabledExtractor();
-                for(auto it=extractors.begin(); it!=extractors.end(); it++){
-                    OmafExtractor* pExt = (OmafExtractor*)(*it);
-                    SegStatus *st = &(mMapSegStatus[pExt->GetTrackNumber()]);
-                    uint32_t qualityRanking = 0;
-
-                    ///if static mode, check EOS
-                    if(type == 1){
-                        uint64_t segmentDur = pStream->GetSegmentDuration();
-                        if (segmentDur == 0)
-                        {
-                            return;
-                        }
-                        float tmpSegNum = float(info.duration) / 1000 / segmentDur;
-                        uint32_t totalSegNum = abs(tmpSegNum - uint32_t(tmpSegNum)) < 1e-6 ? uint32_t(tmpSegNum) : uint32_t(tmpSegNum) + 1;
-                        if (st->sampleIndex.mCurrentReadSegment > totalSegNum)
-                        {
-#ifndef _ANDROID_NDK_OPTION_
-#ifdef _USE_TRACE_
-                            //trace
-                            uint32_t dependentTracksNum = st->depTrackIDs.size();
-                            uint32_t *dependentTracksIdx = new uint32_t[dependentTracksNum];
-                            if (!dependentTracksIdx)
-                                return;
-
-                            memset(dependentTracksIdx, 0, dependentTracksNum * sizeof(uint32_t));
-                            std::list<int>::iterator itDep = st->depTrackIDs.begin();
-                            uint32_t index = 0;
-                            for ( ; itDep != st->depTrackIDs.end(); itDep++)
-                            {
-                                dependentTracksIdx[index] = (uint32_t)(*itDep);
-                                index++;
-                            }
-
-                            tracepoint(bandwidth_tp_provider, extractor_track_dependent_info,
-                                pExt->GetTrackNumber(), dependentTracksNum, dependentTracksIdx);
-                            delete [] dependentTracksIdx;
-                            dependentTracksIdx = NULL;
-
-                            const char *dashMode = "static";
-                            uint32_t streamsNum = (uint32_t)(info.stream_count);
-                            uint64_t *streamBitrate = new uint64_t[streamsNum];
-                            if (!streamBitrate)
-                                return;
-
-                            memset(streamBitrate, 0, streamsNum * sizeof(uint64_t));
-
-                            float frameRate = (float)(info.stream_info[0].framerate_num) / (float)(info.stream_info[0].framerate_den);
-                            uint32_t totalFramesNum = (uint32_t)((info.duration * frameRate) / 1000);
-                            tracepoint(bandwidth_tp_provider, segmentation_info,
-                                dashMode, segmentDur, frameRate,
-                                streamsNum, streamBitrate, totalFramesNum, totalSegNum);
-
-                            delete [] streamBitrate;
-                            streamBitrate = NULL;
-                            printf("Run here ~~~~~~\n");
+    size_t sample_begin = 0;
+    size_t sample_end = 0;
+    if (!findSampleIndexRange(track_info, sample_begin, sample_end)) {
+      LOG(ERROR) << "Failed to find the sample range for segment. " << this->to_string() << std::endl;
+      return ERROR_INVALID;
+    }
+#if 0
+    if (sample_begin < 1) {
+      LOG(FATAL) << "The begin sample id is less than 1, whose value =" << sample_begin << "." << this->to_string()
+                 << std::endl;
+      return ERROR_INVALID;
+    }
 #endif
-#endif
+    auto packet_params = getPacketParams();
+    for (size_t sample = sample_begin; sample < sample_end; sample++) {
+      uint32_t reader_track_id = buildReaderTrackId(segment_->GetTrackId(), segment_->GetInitSegID());
 
-                            mLock.lock();
-                            this->mEOS = true;
-                            mLock.unlock();
-                            return;
-                        }
-                    }
-
-                    // exit the waiting if segment downloaded or wait time is more than 10 mins
-                    int64_t waitTime = 0;
-                    mLock.lock();
-                    while (st->sampleIndex.mCurrentReadSegment > st->sampleIndex.mCurrentAddSegment && mStatus!=STATUS_STOPPING && waitTime < 600000)
-                    {
-                        LOG(INFO) << "New segment " << st->sampleIndex.mCurrentReadSegment << " hasn't come, then wait !" << endl;
-                        mLock.unlock();
-                        ::usleep(1000);
-                        mLock.lock();
-                        waitTime++;
-                    }
-                    mLock.unlock();
-
-                    if( mStatus==STATUS_STOPPING ){
-                        mStatus = STATUS_STOPPED;
-                          break;
-                    }
-
-                    if((uint32_t)(st->segStatus[st->sampleIndex.mCurrentReadSegment]) == (st->depTrackIDs.size() + 1)){
-                        LOG(INFO)<<"Now will parse Segment "<<st->sampleIndex.mCurrentReadSegment<<endl;
-#ifndef _ANDROID_NDK_OPTION_
-#ifdef _USE_TRACE_
-                        tracepoint(mthq_tp_provider, T4_parse_start_time, st->sampleIndex.mCurrentReadSegment);
-#endif
-#endif
-                        uint16_t trackID = pExt->GetTrackNumber();
-                        uint16_t initSegID = 0;
-                        for (auto& idPair : mMapInitTrk)
-                        {
-                            if (idPair.second == trackID)
-                            {
-                                initSegID = idPair.first;
-                                break;
-                            }
-                        }
-
-
-                        std::list<int>::iterator itRef = st->depTrackIDs.begin();
-                        for ( ; itRef != st->depTrackIDs.end(); itRef++)
-                        {
-                            int refTrack = *itRef;
-                            uint32_t initSegIndex = 0;
-
-                            for (auto& idPair : mMapInitTrk)
-                            {
-                                if (idPair.second == refTrack)
-                                {
-                                    initSegIndex = idPair.first;
-                                    break;
-                                }
-                            }
-
-                            ParseSegment(st->sampleIndex.mCurrentReadSegment, initSegIndex, qualityRanking, NULL);
-
-                        }
-
-                        ParseSegment(st->sampleIndex.mCurrentReadSegment, initSegID, qualityRanking, NULL);
-                        std::vector<TrackInformation*> readTrackInfos = mSegTrackInfos[st->sampleIndex.mCurrentReadSegment];
-                        this->ReadNextSegment(trackID, initSegID, true, readTrackInfos, bSegChange, HIGHEST_QUALITY_RANKING, NULL);
-                        mSegTrackInfos.erase(st->sampleIndex.mCurrentReadSegment - 1);
-
-                        RemoveReadSegmentFromMap();
-                    }else{
-                        ::usleep(100);
-                    }
-                }
-            }else{
-                std::map<int, OmafAdaptationSet*> mapAS = pStream->GetSelectedTileTracks();
-                LOG(INFO)<<"Selected tile tracks number is: "<<mapAS.size()<<" in reader manager!"<<endl;
-		        bool hasPoseChanged = false;
-		        uint32_t processedNum = 0;
-                for(auto as_it = mapAS.begin(); as_it != mapAS.end(); as_it++){
-                    OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
-                    SRDInfo srdInfo;
-                    //LOG(INFO)<<"Selected track: "<<pAS->GetTrackNumber()<<endl;
-                    SegStatus *st = &(mMapSegStatus[pAS->GetTrackNumber()]);
-                    if(type == 1){
-                        uint64_t segmentDur = pStream->GetSegmentDuration();
-                        if (segmentDur == 0)
-                        {
-                            return;
-                        }
-                        float tmpSegNum = float(info.duration) / 1000 / segmentDur;
-                        uint32_t totalSegNum = abs(tmpSegNum - uint32_t(tmpSegNum)) < 1e-6 ? uint32_t(tmpSegNum) : uint32_t(tmpSegNum) + 1;
-                        if (st->sampleIndex.mCurrentReadSegment > totalSegNum)
-                        {
-                            mLock.lock();
-                            this->mEOS = true;
-                            mLock.unlock();
-                            printf("EOS has been gotten \n");
-                            return;
-                        }
-                    }
-                    uint16_t trackID = pAS->GetTrackNumber();
-                    uint16_t initSegID = 0;
-                    uint32_t qualityRanking = 0;
-                    for (auto& idPair : mMapInitTrk)
-                    {
-                        if (idPair.second == trackID)
-                        {
-                            initSegID = idPair.first;
-                            break;
-                        }
-                    }
-                    // exit the waiting if segment downloaded or wait time is more than 10 mins
-                    int64_t waitTime = 0;
-                    mLock.lock();
-                    if (prevPoseChanged)
-                    {
-                        st->sampleIndex.mCurrentReadSegment = mGlobalReadSegId;
-                        st->sampleIndex.mGlobalSampleIndex  = mGlobalReadSampleId;
-                    }
-                    //LOG(INFO)<<st->sampleIndex.mCurrentReadSegment<<" "<<st->sampleIndex.mCurrentAddSegment<<endl;
-                    if ((st->sampleIndex.mCurrentReadSegment < st->sampleIndex.mCurrentAddSegment))
-                    {
-                        std::map<int, OmafAdaptationSet*> mapAS1 = pStream->GetSelectedTileTracks();
-                        bool isPoseChanged = IsSelectionChanged(mapAS, mapAS1);
-                        if (isPoseChanged)
-                        {
-                            LOG(INFO) << "When track  "<< pAS->GetTrackNumber()<< " , pose changed" <<endl;
-                            hasPoseChanged = true;
-                            mGlobalReadSegId = st->sampleIndex.mCurrentAddSegment;
-                        }
-
-                    }
-                    while (st->sampleIndex.mCurrentReadSegment > st->sampleIndex.mCurrentAddSegment && mStatus!=STATUS_STOPPING && waitTime < 600000)
-                    {
-                        std::map<int, OmafAdaptationSet*> mapAS1 = pStream->GetSelectedTileTracks();
-                        bool isPoseChanged = IsSelectionChanged(mapAS, mapAS1);
-                        if (isPoseChanged)
-                        {
-                            LOG(INFO) << "When track  "<< pAS->GetTrackNumber()<< " , pose changed" <<endl;
-                            hasPoseChanged = true;
-                            mLock.unlock();
-                            break;
-                        }
-                        LOG(INFO) << "New segment " << st->sampleIndex.mCurrentReadSegment << " hasn't come, then wait !" << endl;
-                        mLock.unlock();
-                        ::usleep(1000);
-                        mLock.lock();
-                        waitTime++;
-                    }
-                    if (hasPoseChanged)
-                    {
-                        prevPoseChanged = true;
-                        break;
-                    }
-                    mLock.unlock();
-
-                    if( mStatus==STATUS_STOPPING ){
-                        mStatus = STATUS_STOPPED;
-                        break;
-                    }
-
-                    LOG(INFO) << "Now will parse Segment  " << st->sampleIndex.mCurrentReadSegment << endl;
-                    ParseSegment(st->sampleIndex.mCurrentReadSegment, initSegID, qualityRanking, &srdInfo);
-
-                    std::vector<TrackInformation*> readTrackInfos = mSegTrackInfos[st->sampleIndex.mCurrentReadSegment];
-                    this->ReadNextSegment(trackID, initSegID, false, readTrackInfos, bSegChange, qualityRanking, &srdInfo);
-                    mSegTrackInfos.erase(st->sampleIndex.mCurrentReadSegment - 1);
-                    RemoveReadSegmentFromMap();
-                    processedNum++;
-                    //LOG(INFO) << "For current frame,  " << processedNum << "  tiles have been read !" << endl;
-                    if (processedNum == mapAS.size())
-                    {
-	                    mGlobalReadSegId = st->sampleIndex.mCurrentReadSegment;
-                        mGlobalReadSampleId = st->sampleIndex.mGlobalSampleIndex;
-		            }
-                }
-
-                if (prevPoseChanged && !hasPoseChanged)
-                    prevPoseChanged = false;
-            }
+      if (packet_params.get() == nullptr) {
+        packet_params = std::make_shared<OmafPacketParams>();
+      }
+      if (!packet_params->binit_) {
+        ret = packet_params->init(reader, reader_track_id, sample);
+        if (ret != ERROR_NONE) {
+          LOG(ERROR) << "Failed to read the packet params include width/height/vps/sps/pps!" << std::endl;
+          return ret;
         }
+        this->setPacketParams(packet_params);
+      }
 
-        for(int i=0; i<info.stream_count; i++)
-        {
-            if (info.stream_info[i].codec)
-            {
-                delete [] (info.stream_info[i].codec);
-                info.stream_info[i].codec = NULL;
-            }
-            if (info.stream_info[i].mime_type)
-            {
-                delete [] (info.stream_info[i].mime_type);
-                info.stream_info[i].mime_type = NULL;
-            }
-        }
-    }
-}
-
-// Keep more than 1 element in m_readSegMap for segment count update if viewport changed
-void OmafReaderManager::RemoveReadSegmentFromMap()
-{
-    if(m_readSegMap.size() < 2) return;
-
-    for(auto &it:m_readSegMap)
-    {
-        if(m_readSegMap.size() < 2)
-            break;
-        std::map<uint32_t, OmafSegment*> initSegNormalSeg = it.second;
-        if (it.first < mGlobalReadSegId)
-        {
-            for (auto& itRmSeg : initSegNormalSeg)
-            {
-                OmafSegment *rmSeg = itRmSeg.second;
-                //LOG(INFO)<<"Now will delete seg for track "<<itRmSeg.first<<endl;
-                delete rmSeg;
-                rmSeg = NULL;
-            }
-            initSegNormalSeg.clear();
-            //LOG(INFO)<<"Now will erase "<<it.first<<" segs"<<endl;
-            m_readSegMap.erase(it.first);
-        }
-    }
-}
-
-void OmafReaderManager::releaseAllSegments( )
-{
-    ScopeLock managerLock(mLock);
-
-     for(auto it=mMapSegStatus.begin(); it!=mMapSegStatus.end(); it++){
-
-         SegStatus *s = &(it->second);
-         s->sampleIndex.mCurrentAddSegment = 0;
-         s->sampleIndex.mCurrentReadSegment = 0;
-         s->sampleIndex.mGlobalSampleIndex = 0;
-         s->sampleIndex.mGlobalStartSegment = 0;
-         s->sampleIndex.mSegmentSampleIndex = 0;
-         s->listActiveSeg.clear();
-     }
-}
-
-void OmafReaderManager::setNextSampleId(int trackID, uint32_t id, bool& segmentChanged)
-{
-    size_t indexInSegment = 0;
-
-    TrackInformation *trackInfo = nullptr;
-    for (auto &itTrack : mTrackInfos)
-    {
-        if (GetTrackId(itTrack->trackId) == trackID)
-        {
-            trackInfo = itTrack;
-            break;
-        }
-    }
-
-    if (!trackInfo)
-    {
-        LOG(ERROR) << "Failed to get track information !" << std::endl;
-        return;
-    }
-
-    for (size_t index = 0; index < trackInfo->sampleProperties.size; index++)
-    {
-        if (trackInfo->sampleProperties[index].sampleId == id)
-        {
-            mMapSegStatus[trackID].sampleIndex.mGlobalSampleIndex = static_cast<uint32_t>(index);
-            mMapSegStatus[trackID].sampleIndex.mSegmentSampleIndex = static_cast<uint32_t>(indexInSegment);
-            break;
-        }
-        if (trackInfo->sampleProperties[index].segmentId == mMapSegStatus[trackID].sampleIndex.mCurrentReadSegment)
-        {
-            indexInSegment++;
-        }
-    }
-}
-
-uint32_t OmafReaderManager::removeSegment(uint32_t initSegmentId, uint32_t segmentId)
-{
-    LOG(INFO) << "removeSegment " << segmentId << " for track " << mMapInitTrk[initSegmentId] << endl;
-
-    ScopeLock managerLock(mLock);
-
-    int32_t result = mReader->invalidateSegment(initSegmentId, segmentId);
-
-    if (result != 0){
-        LOG(ERROR) << "removeSegment Failed " << segmentId << endl;
+      // cache packets
+      // std::shared_ptr<MediaPacket> packet = make_unique_vcd<MediaPacket>;
+      MediaPacket *packet = new MediaPacket();
+      if (packet == nullptr) {
+        LOG(ERROR) << "Failed to create the packet!" << std::endl;
         return ERROR_INVALID;
-    }
+      }
+      uint32_t packet_size = ((packet_params->width_ * packet_params->height_ * 3) >> 1) >> 1;
+      // FIXME, we need refine the packet buffer. we may include the vps/pps/sps here
+      packet->ReAllocatePacket(packet_size);
 
-    if (mMapSegStatus[mMapInitTrk[initSegmentId]].listActiveSeg.size() > 0)
-    {
-        std::list<int>::iterator it = mMapSegStatus[mMapInitTrk[initSegmentId]].listActiveSeg.begin();
+      if (mode_ == OmafDashMode::EXTRACTOR) {
+        ret = reader->getExtractorTrackSampleData(reader_track_id, sample, static_cast<char *>(packet->Payload()),
+                                                  packet_size);
+      } else {
+        ret = reader->getTrackSampleData(reader_track_id, sample, static_cast<char *>(packet->Payload()), packet_size);
+      }
+      if (ret != ERROR_NONE) {
+        LOG(ERROR) << "Failed to read sample data from reader, code= " << ret << std::endl;
+        return ret;
+      }
 
-        for ( ; it != mMapSegStatus[mMapInitTrk[initSegmentId]].listActiveSeg.end();)
-        {
-            if ((uint32_t)(*it) == segmentId)
-            {
-                it = mMapSegStatus[mMapInitTrk[initSegmentId]].listActiveSeg.erase(it);
-            }
-            else
-            {
-                it++;
-            }
+      std::unique_ptr<RegionWisePacking> pRwpk = make_unique_vcd<RegionWisePacking>();
+      ret = reader->getPropertyRegionWisePacking(reader_track_id, sample, pRwpk.get());
+      if (ret != ERROR_NONE) {
+        LOG(ERROR) << "Failed to read region wise packing data from reader, code= " << ret << std::endl;
+        return ret;
+      }
+      packet->SetRwpk(std::move(pRwpk));
+      packet->SetPTS(this->getTimelinePoint());  // FIXME, to compute pts
+
+      // for later binding
+      packet->SetQualityRanking(segment_->GetQualityRanking());
+
+      if (mode_ == OmafDashMode::EXTRACTOR) {
+        packet->SetQualityNum(MAX_QUALITY_NUM);
+        vector<uint32_t> boundLeft(1);  // num of quality is limited to 2.
+        vector<uint32_t> boundTop(1);
+        const RegionWisePacking &rwpk = packet->GetRwpk();
+        for (int j = rwpk.numRegions - 1; j >= 0; j--) {
+          if (rwpk.rectRegionPacking[j].projRegLeft == 0 && rwpk.rectRegionPacking[j].projRegTop == 0 &&
+              !(rwpk.rectRegionPacking[j].packedRegLeft == 0 && rwpk.rectRegionPacking[j].packedRegTop == 0)) {
+            boundLeft.push_back(rwpk.rectRegionPacking[j].packedRegLeft);
+            boundTop.push_back(rwpk.rectRegionPacking[j].packedRegTop);
+            break;
+          }
         }
+        for (int idx = 0; idx < packet->GetQualityNum(); idx++) {
+          SourceResolution srcRes;
+          srcRes.qualityRanking = static_cast<QualityRank>(idx + 1);
+          srcRes.top = boundTop[idx];
+          srcRes.left = boundLeft[idx];
+          srcRes.height = rwpk.packedPicHeight;
+          if (idx == 0) {
+            srcRes.width = boundLeft[idx + 1] - boundLeft[idx];
+          } else {
+            srcRes.width = rwpk.packedPicWidth - boundLeft[idx];
+          }
+          packet->SetSourceResolution(idx, srcRes);
+          // cout<<"sourceRes:"<<srcRes.qualityRanking<<" "<<srcRes.top<<" "<<srcRes.left<<" "<<srcRes.width<<"
+          // "<<srcRes.height<<endl;
+        }
+      } else {
+        packet->SetSRDInfo(segment_->GetSRDInfo());
+      }
+
+      packet->SetRealSize(packet_size);
+      VLOG(VLOG_TRACE) << "Sample id=" << sample << std::endl;
+      // packet->SetSegID(track_info->sampleProperties[sample - 1].segmentId);
+      packet->SetSegID(track_info->sampleProperties[sample].segmentId);
+      // media_packets_.push_back(std::move(packet));
+      media_packets_.push(packet);
     }
-    LOG(INFO) << "~~Now active list has segments " << mMapSegStatus[mMapInitTrk[initSegmentId]].listActiveSeg.size() << endl;
     return ERROR_NONE;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when read packets! ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
 }
 
-void OmafReaderManager::releasePacketQueue()
-{
-    ScopeLock packetLock(mPacketLock);
-    for(auto it=mPacketQueues.begin(); it!=mPacketQueues.end(); it++){
-        PacketQueue queue = (*it).second;
-        for(auto qu_it=queue.begin(); qu_it!=queue.end(); qu_it++){
-            MediaPacket* pkt = (MediaPacket*)(*qu_it);
-            delete pkt;
-            pkt = NULL;
-        }
-        queue.clear();
+std::shared_ptr<TrackInformation> OmafSegmentNode::findTrackInformation(std::shared_ptr<OmafReader> reader) noexcept {
+  try {
+    std::vector<TrackInformation *> track_infos;
+
+    OMAF_STATUS ret = reader->getTrackInformations(track_infos);
+    if (ERROR_NONE != ret) {
+      LOG(ERROR) << "Failed to get the trackinformation list from reader, code=" << ret << std::endl;
+      return nullptr;
     }
+
+    // get the required track information and release the old data
+    std::shared_ptr<TrackInformation> track_info;
+    for (auto &track : track_infos) {
+      if (track != nullptr) {
+        if (buildDashTrackId(track->trackId) == segment_->GetTrackId()) {
+          track_info = std::make_shared<TrackInformation>();
+          *(track_info.get()) = *track;
+        }
+        delete track;
+      }
+
+      track = nullptr;
+    }
+    track_infos.clear();
+
+    return std::move(track_info);
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when find the track information! ex: " << ex.what() << std::endl;
+    return nullptr;
+  }
+}
+
+bool OmafSegmentNode::findSampleIndexRange(std::shared_ptr<TrackInformation> track_info, size_t &begin,
+                                           size_t &end) noexcept {
+  try {
+    if (track_info.get() == nullptr) {
+      return false;
+    }
+    bool found = false;
+    for (size_t index = 0; index < track_info->sampleProperties.size; index++) {
+      if (segment_->GetSegID() == track_info->sampleProperties[index].segmentId) {
+        end++;
+        if (!found) {
+          found = true;
+          begin = track_info->sampleProperties[index].sampleId;
+        }
+      }
+    }
+    return found;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when find the start index! ex: " << ex.what() << std::endl;
+    return false;
+  }
+}
+
+bool OmafSegmentNode::isReady() const noexcept {
+  try {
+    if (segment_.get() == nullptr) {
+      LOG(ERROR) << "The segment is empty!" << std::endl;
+      return false;
+    }
+
+    if (segment_->GetState() != OmafSegment::State::OPEN_SUCCES) {
+      LOG(WARNING) << "The segment is not in open success. state=" << static_cast<int>(segment_->GetState())
+                   << std::endl;
+      return false;
+    }
+
+    if (bExtractor_) {
+      if (depends_.size() != depends_size_) {
+        return false;
+      }
+      for (auto &node : depends_) {
+        if (!node->isReady()) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Exception when check segement state. ex: " << ex.what() << std::endl;
+    return false;
+  }
 }
 
 VCD_OMAF_END

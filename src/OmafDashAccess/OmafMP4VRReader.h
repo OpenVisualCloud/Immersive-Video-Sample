@@ -78,7 +78,9 @@ public:
 
     virtual int32_t getHeight(uint32_t trackId, uint32_t sampleId, uint32_t& height) const  ;
 
-    virtual int32_t getPlaybackDurationInSecs(uint32_t trackId, double& durationInSecs) const  ;
+  virtual int32_t getDims(uint32_t trackId, uint32_t sampleId, uint32_t& width, uint32_t& height) const;
+
+  virtual int32_t getPlaybackDurationInSecs(uint32_t trackId, double& durationInSecs) const;
 
     virtual int32_t getTrackSampleListByType(uint32_t trackId, VCD::OMAF::TrackSampleType sampleType,
                                              std::vector<uint32_t>& sampleIds) const  ;

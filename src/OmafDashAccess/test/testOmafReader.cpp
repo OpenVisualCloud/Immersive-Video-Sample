@@ -36,369 +36,475 @@
 #include "../OmafReader.h"
 #include "../OmafMP4VRReader.h"
 
+#include <list>
+
 VCD_USE_VROMAF;
 VCD_USE_VRVIDEO;
 
+// comments
+// this is not a good unit-test cases :(
+
 namespace {
-class OmafReaderTest : public testing::Test
-{
-public:
-    virtual void SetUp()
-    {
-        std::string mpdUrl = "./segs_for_readertest/Test.mpd";
+class OmafReaderTest : public testing::Test {
+ public:
+  virtual void SetUp() {
+    std::string mpdUrl = "./segs_for_readertest/Test.mpd";
 
-        m_mpdParser = new OmafMPDParser();
-        if (!m_mpdParser)
-            return;
+    m_mpdParser = new OmafMPDParser();
+    if (!m_mpdParser) return;
+    m_mpdParser->SetExtractorEnabled(true);
 
-        m_mpdParser->ParseMPD(mpdUrl, m_listStream);
+    int ret = m_mpdParser->ParseMPD(mpdUrl, m_listStream);
+    EXPECT_TRUE(ret == ERROR_NONE);
+    // m_mpdParser->GetMPDInfo();
 
-        m_mpdParser->GetMPDInfo();
+    m_reader = new OmafMP4VRReader();
+    if (!m_reader) return;
+  }
+  virtual void TearDown() {
+    SAFE_DELETE(m_mpdParser);
+    SAFE_DELETE(m_reader);
+  }
+  uint32_t buildDashTrackId(uint32_t id) noexcept { return id & static_cast<uint32_t>(0xffff); }
+  uint32_t buildReaderTrackId(uint32_t trackId, uint32_t initSegId) noexcept { return (initSegId << 16) | trackId; }
+  std::shared_ptr<TrackInformation> findTrackInformation(OmafReader *reader, uint32_t tackId) noexcept {
+    try {
+      std::vector<TrackInformation *> track_infos;
 
-        m_reader = new OmafMP4VRReader();
-        if (!m_reader)
-            return;
+      OMAF_STATUS ret = reader->getTrackInformations(track_infos);
+      if (ERROR_NONE != ret) {
+        LOG(ERROR) << "Failed to get the trackinformation list from reader, code=" << ret << std::endl;
+        return nullptr;
+      }
 
+      // get the required track information and release the old data
+      std::shared_ptr<TrackInformation> track_info;
+      for (auto &track : track_infos) {
+        if (track != nullptr) {
+          if (buildDashTrackId(track->trackId) == tackId) {
+            track_info = std::make_shared<TrackInformation>();
+            *(track_info.get()) = *track;
+          }
+          delete track;
+        }
+
+        track = nullptr;
+      }
+      track_infos.clear();
+
+      return std::move(track_info);
+    } catch (const std::exception &ex) {
+      LOG(ERROR) << "Exception when find the track information! ex: " << ex.what() << std::endl;
+      return nullptr;
     }
-    virtual void TearDown()
-    {
-        SAFE_DELETE(m_mpdParser);
-        SAFE_DELETE(m_reader);
-    }
+  }
 
-    OmafMPDParser                 *m_mpdParser;
-    OMAFSTREAMS                   m_listStream;
-    OmafReader                    *m_reader;
+  bool findSampleIndexRange(std::shared_ptr<TrackInformation> track_info, uint32_t segid, size_t &begin,
+                            size_t &end) noexcept {
+    try {
+      if (track_info.get() == nullptr) {
+        return false;
+      }
+      bool found = false;
+      for (size_t index = 0; index < track_info->sampleProperties.size; index++) {
+        if (segid == track_info->sampleProperties[index].segmentId) {
+          end++;
+          if (!found) {
+            found = true;
+            begin = track_info->sampleProperties[index].sampleId;
+          }
+        }
+      }
+      return found;
+    } catch (const std::exception &ex) {
+      LOG(ERROR) << "Exception when find the start index! ex: " << ex.what() << std::endl;
+      return false;
+    }
+  }
+
+  OmafMPDParser *m_mpdParser;
+  OMAFSTREAMS m_listStream;
+  OmafReader *m_reader;
 };
 
-TEST_F(OmafReaderTest, ParseInitialSegment)
-{
-    int ret = ERROR_NONE;
-    uint32_t initSegID = 0;
-    std::vector<TrackInformation*> trackInfos;
-    std::map<int32_t, int32_t> mapSegCnt;
-    std::string cacheFileName;
-    char storedFileName[1024];
+TEST_F(OmafReaderTest, ParseInitialSegment) {
+  int ret = ERROR_NONE;
+  uint32_t initSegID = 0;
+  std::vector<TrackInformation *> trackInfos;
 
-    for (auto it = m_listStream.begin(); it != m_listStream.end(); it++)
-    {
-        OmafMediaStream *stream = (OmafMediaStream*)(*it);
-        EXPECT_TRUE(stream != NULL);
+  std::string cacheFileName;
+  char storedFileName[1024];
 
-        std::map<int, OmafAdaptationSet*> normalAS = stream->GetMediaAdaptationSet();
-        std::map<int, OmafExtractor*> extractorAS  = stream->GetExtractors();
+  for (auto it = m_listStream.begin(); it != m_listStream.end(); it++) {
+    OmafMediaStream *stream = (OmafMediaStream *)(*it);
+    EXPECT_TRUE(stream != NULL);
 
-        for (auto itAS = normalAS.begin(); itAS != normalAS.end(); itAS++)
-        {
-            OmafAdaptationSet *pAS = (OmafAdaptationSet*)(itAS->second);
-            EXPECT_TRUE(pAS != NULL);
+    std::map<int, OmafAdaptationSet *> normalAS = stream->GetMediaAdaptationSet();
+    std::map<int, OmafExtractor *> extractorAS = stream->GetExtractors();
 
-            ret = pAS->LoadLocalInitSegment();
-            EXPECT_TRUE(ret == ERROR_NONE);
+    for (auto itAS = normalAS.begin(); itAS != normalAS.end(); itAS++) {
+      OmafAdaptationSet *pAS = (OmafAdaptationSet *)(itAS->second);
+      EXPECT_TRUE(pAS != NULL);
 
-            OmafSegment *initSeg = pAS->GetInitSegment();
-            EXPECT_TRUE(initSeg != NULL);
+      ret = pAS->LoadLocalInitSegment();
+      EXPECT_TRUE(ret == ERROR_NONE);
 
-            memset(storedFileName, 0, 1024);
-            std::string repId = pAS->GetRepresentationId();
-            snprintf(storedFileName, 1024, "./segs_for_readertest/%s.init.mp4", repId.c_str());
-            cacheFileName = storedFileName;
+      OmafSegment::Ptr initSeg = pAS->GetInitSegment();
+      EXPECT_TRUE(initSeg != NULL);
 
-            initSeg->SetSegmentCacheFile(cacheFileName);
-            initSeg->SetSegStored();
-            ret = m_reader->parseInitializationSegment(initSeg, initSegID);
-            EXPECT_TRUE(ret == ERROR_NONE);
+      memset(storedFileName, 0, 1024);
+      std::string repId = pAS->GetRepresentationId();
+      snprintf(storedFileName, 1024, "./segs_for_readertest/%s.init.mp4", repId.c_str());
 
-            initSeg->SetInitSegID(initSegID);
-            initSeg->SetSegID(initSegID);
+      cacheFileName = storedFileName;
 
-            mapSegCnt[initSegID] = 0;
+      initSeg->SetSegmentCacheFile(cacheFileName);
+      initSeg->SetSegStored();
+      ret = m_reader->parseInitializationSegment(initSeg.get(), initSegID);
+      EXPECT_TRUE(ret == ERROR_NONE);
 
-            initSegID++;
-        }
-
-        for (auto itAS = extractorAS.begin(); itAS != extractorAS.end(); itAS++)
-        {
-            OmafExtractor *extractor = (OmafExtractor*)(itAS->second);
-            EXPECT_TRUE(extractor != NULL);
-
-            ret = extractor->LoadLocalInitSegment();
-            EXPECT_TRUE(ret == ERROR_NONE);
-
-            OmafSegment *initSeg = extractor->GetInitSegment();
-            EXPECT_TRUE(initSeg != NULL);
-
-            memset(storedFileName, 0, 1024);
-            std::string repId = extractor->GetRepresentationId();
-            snprintf(storedFileName, 1024, "./segs_for_readertest/%s.init.mp4", repId.c_str());
-            cacheFileName = storedFileName;
-
-            initSeg->SetSegmentCacheFile(cacheFileName);
-            initSeg->SetSegStored();
-            ret = m_reader->parseInitializationSegment(initSeg, initSegID);
-            EXPECT_TRUE(ret == ERROR_NONE);
-
-            initSeg->SetInitSegID(initSegID);
-            initSeg->SetSegID(initSegID);
-
-            mapSegCnt[initSegID] = 0;
-
-            initSegID++;
-        }
+      initSegID++;
     }
 
-    EXPECT_TRUE(initSegID == 18);
+    for (auto itAS = extractorAS.begin(); itAS != extractorAS.end(); itAS++) {
+      OmafExtractor *extractor = (OmafExtractor *)(itAS->second);
+      EXPECT_TRUE(extractor != NULL);
+
+      ret = extractor->LoadLocalInitSegment();
+      EXPECT_TRUE(ret == ERROR_NONE);
+
+      OmafSegment::Ptr initSeg = extractor->GetInitSegment();
+      EXPECT_TRUE(initSeg != NULL);
+
+      memset(storedFileName, 0, 1024);
+      std::string repId = extractor->GetRepresentationId();
+      snprintf(storedFileName, 1024, "./segs_for_readertest/%s.init.mp4", repId.c_str());
+
+      cacheFileName = storedFileName;
+
+      initSeg->SetSegmentCacheFile(cacheFileName);
+      initSeg->SetSegStored();
+      ret = m_reader->parseInitializationSegment(initSeg.get(), initSegID);
+      EXPECT_TRUE(ret == ERROR_NONE);
+
+      initSegID++;
+    }
+  }
+
+  EXPECT_TRUE(initSegID == 18);
+
+  try {
+    // 1. get the track information
 
     m_reader->getTrackInformations(trackInfos);
+    // 2. go through the track information
+    for (auto track : trackInfos) {
+      if (track == nullptr) {
+        LOG(ERROR) << "Meet empty track!" << std::endl;
+        continue;
+      }
 
-/*
-    uint16_t idx = 0;
-    for ( auto it = trackInfos.begin(); it != trackInfos.end(); it++)
-    {
-        TrackInformation trackInfo = *it;
-        idx++;
+      // FIXME there would has bug, if more than one stream.
+      // or we need update the logic for more than one stream
+      for (auto &pStream : m_listStream) {
+        // 2.1.1 check the adaptation set
+        std::map<int, OmafAdaptationSet *> pMediaAS = pStream->GetMediaAdaptationSet();
+        for (auto as : pMediaAS) {
+          OmafAdaptationSet *pAS = (OmafAdaptationSet *)as.second;
+          // FIXME GetInitSegID or GetSegID
+          if (pAS->GetInitSegment()->GetInitSegID() == track->initSegmentId) {
+            auto dash_track_id = buildDashTrackId(track->trackId);
+            pAS->SetTrackNumber(static_cast<int>(dash_track_id));
+            pAS->GetInitSegment()->SetTrackId(dash_track_id);
 
-        //EXPECT_TRUE(trackInfo.trackId == idx);
-        //EXPECT_TRUE(trackInfo.initSegId == (idx - 1));
-        //EXPECT_TRUE(trackInfo.alternateGroupID ==
-        //printf("trackInfo.alternateGroupID %d \n", trackInfo.alternateGroupId);
-        //printf("trackInfo.features %d \n", trackInfo.features);
-        //printf("trackInfo.vrFeatures %d \n", trackInfo.vrFeatures);
-        //printf("trackInfo.maxSampleSize %d \n", trackInfo.maxSampleSize);
-        //printf("trackInfo.timeScale %d \n", trackInfo.timeScale);
-        //printf("trackInfo.hasTypeInformation %d \n", trackInfo.hasTypeInformation);
-        //EXPECT_TRUE(trackInfo.frameRate.den == 1);
-        //EXPECT_TRUE(trackInfo.frameRate.num == 25);
+            LOG(INFO) << "Initse id=" << track->initSegmentId << ",trackid=" << dash_track_id << std::endl;
+            break;
+          }
+        }  // end for adaptation set loop
 
-        //EXPECT_TRUE(trackInfo.trackURI.size() != 0);
-        for (auto it1 = trackInfo.trackURI.begin();
-            it1 != trackInfo.trackURI.end(); it1++)
-        {
-            //printf("The character in trackURI is %c \n", (*it1));
-        }
+        // 2.1.3 check the extractors
+        std::map<int, OmafExtractor *> pExtratorAS = pStream->GetExtractors();
+        for (auto &extractor : pExtratorAS) {
+          OmafExtractor *pExAS = extractor.second;
+          // FIXME GetInitSegID or GetSegID
+          if (pExAS->GetInitSegment()->GetInitSegID() == track->initSegmentId) {
+            auto dash_track_id = buildDashTrackId(track->trackId);
+            pExAS->SetTrackNumber(static_cast<int>(dash_track_id));
+            pExAS->GetInitSegment()->SetTrackId(dash_track_id);
 
-        //EXPECT_TRUE(trackInfo.alternateTrackIds.size() != 0);
-        for (auto it1 = trackInfo.alternateTrackIds.begin();
-            it1 != trackInfo.alternateTrackIds.end(); it1++)
-        {
-            //printf("The value in alternateTrackIds is %d \n", (*it1));
-        }
+            LOG(INFO) << "Initse id=" << track->initSegmentId << ",trackid=" << dash_track_id << std::endl;
+            break;
+          }
+        }  // end for extractors loop
+      }    // end stream loop
+    }      // end for track loop
 
-        //EXPECT_TRUE(trackInfo.referenceTrackIds.size() != 0);
-        for (auto it1 = trackInfo.referenceTrackIds.begin();
-            it1 != trackInfo.referenceTrackIds.end(); it1++)
-        {
-            TypeToTrackIDs referenceTrackId = *it1;
-            //printf("referenceTrackId.type is %s \n", referenceTrackId.type);
-            //EXPECT_TRUE(referenceTrackId.trackIds.size() != 0);
-            for (auto it2 = referenceTrackId.trackIds.begin();
-                it2 != referenceTrackId.trackIds.end(); it2++)
-            {
-                //printf("reference track id is %d \n", (*it2));
-            }
-        }
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to parse the init segment, ex: " << ex.what() << std::endl;
+  }
 
-        //EXPECT_TRUE(trackInfo.trackGroupIds.size() != 0);
-        for (auto it1 = trackInfo.trackGroupIds.begin();
-            it1 != trackInfo.trackGroupIds.end(); it1++)
-        {
-            TypeToTrackIDs trackGroupId = *it1;
-            //printf("trackGroupId.type is %s \n", trackGroupId.type);
-            //EXPECT_TRUE(trackGroupId.trackIds.size() != 0);
-            for (auto it2 = trackGroupId.trackIds.begin();
-                it2 != trackGroupId.trackIds.end(); it2++)
-            {
-                //printf("track id in trackGroupIds is %d \n", (*it2));
-            }
-        }
+  /*
+      uint16_t idx = 0;
+      for ( auto it = trackInfos.begin(); it != trackInfos.end(); it++)
+      {
+          TrackInformation trackInfo = *it;
+          idx++;
 
-        //EXPECT_TRUE(trackInfo.sampleProperties.size() != 0);
-        for (auto it1 = trackInfo.sampleProperties.begin();
-            it1 != trackInfo.sampleProperties.end(); it1++)
-        {
-            SampleInformation info = *it1;
-            //printf("sample info earliestTimestamp %ld \n", info.earliestTimestamp);
-            //printf("sample info earliestTimestampTS %ld \n", info.earliestTimestampTS);
-            //printf("sample info sampleDescriptionIndex %d \n", info.sampleDescriptionIndex);
-            //printf("sample info initSegmentId %d \n", info.initSegmentId);
-            //printf("sample info sampleDurationTS %ld \n", info.sampleDurationTS);
-            //printf("sample info sampleEntryType %s \n", info.sampleEntryType);
-            //printf("sample info sampleId %d \n", info.sampleId);
-            //printf("sample info segmentId %d \n", info.segmentId);
-            //printf("sample info sampleType %d \n", info.sampleType);
-            //printf("sample info sampleFlags flagsAsUInt %d \n", info.sampleFlags.flagsAsUInt);
-            //printf("sample info sampleFlags flags is_leading %d \n", info.sampleFlags.flags.is_leading);
-            //printf("sample info sampleFlags flags reserved %d \n", info.sampleFlags.flags.reserved);
-            //printf("sample info sampleFlags flags sample_degradation_priority %d \n", info.sampleFlags.flags.sample_degradation_priority);
-            //printf("sample info sampleFlags flags sample_has_redundancy %d \n", info.sampleFlags.flags.sample_has_redundancy);
-            //printf("sample info sampleFlags flags sample_depends_on %d \n", info.sampleFlags.flags.sample_depends_on);
-            //printf("sample info sampleFlags flags sample_is_non_sync_sample %d \n", info.sampleFlags.flags.sample_is_non_sync_sample);
-            //printf("sample info sampleFlags flags sample_padding_value %d \n", info.sampleFlags.flags.sample_padding_value);
-        }
+          //EXPECT_TRUE(trackInfo.trackId == idx);
+          //EXPECT_TRUE(trackInfo.initSegId == (idx - 1));
+          //EXPECT_TRUE(trackInfo.alternateGroupID ==
+          //printf("trackInfo.alternateGroupID %d \n", trackInfo.alternateGroupId);
+          //printf("trackInfo.features %d \n", trackInfo.features);
+          //printf("trackInfo.vrFeatures %d \n", trackInfo.vrFeatures);
+          //printf("trackInfo.maxSampleSize %d \n", trackInfo.maxSampleSize);
+          //printf("trackInfo.timeScale %d \n", trackInfo.timeScale);
+          //printf("trackInfo.hasTypeInformation %d \n", trackInfo.hasTypeInformation);
+          //EXPECT_TRUE(trackInfo.frameRate.den == 1);
+          //EXPECT_TRUE(trackInfo.frameRate.num == 25);
+
+          //EXPECT_TRUE(trackInfo.trackURI.size() != 0);
+          for (auto it1 = trackInfo.trackURI.begin();
+              it1 != trackInfo.trackURI.end(); it1++)
+          {
+              //printf("The character in trackURI is %c \n", (*it1));
+          }
+
+          //EXPECT_TRUE(trackInfo.alternateTrackIds.size() != 0);
+          for (auto it1 = trackInfo.alternateTrackIds.begin();
+              it1 != trackInfo.alternateTrackIds.end(); it1++)
+          {
+              //printf("The value in alternateTrackIds is %d \n", (*it1));
+          }
+
+          //EXPECT_TRUE(trackInfo.referenceTrackIds.size() != 0);
+          for (auto it1 = trackInfo.referenceTrackIds.begin();
+              it1 != trackInfo.referenceTrackIds.end(); it1++)
+          {
+              TypeToTrackIDs referenceTrackId = *it1;
+              //printf("referenceTrackId.type is %s \n", referenceTrackId.type);
+              //EXPECT_TRUE(referenceTrackId.trackIds.size() != 0);
+              for (auto it2 = referenceTrackId.trackIds.begin();
+                  it2 != referenceTrackId.trackIds.end(); it2++)
+              {
+                  //printf("reference track id is %d \n", (*it2));
+              }
+          }
+
+          //EXPECT_TRUE(trackInfo.trackGroupIds.size() != 0);
+          for (auto it1 = trackInfo.trackGroupIds.begin();
+              it1 != trackInfo.trackGroupIds.end(); it1++)
+          {
+              TypeToTrackIDs trackGroupId = *it1;
+              //printf("trackGroupId.type is %s \n", trackGroupId.type);
+              //EXPECT_TRUE(trackGroupId.trackIds.size() != 0);
+              for (auto it2 = trackGroupId.trackIds.begin();
+                  it2 != trackGroupId.trackIds.end(); it2++)
+              {
+                  //printf("track id in trackGroupIds is %d \n", (*it2));
+              }
+          }
+
+          //EXPECT_TRUE(trackInfo.sampleProperties.size() != 0);
+          for (auto it1 = trackInfo.sampleProperties.begin();
+              it1 != trackInfo.sampleProperties.end(); it1++)
+          {
+              SampleInformation info = *it1;
+              //printf("sample info earliestTimestamp %ld \n", info.earliestTimestamp);
+              //printf("sample info earliestTimestampTS %ld \n", info.earliestTimestampTS);
+              //printf("sample info sampleDescriptionIndex %d \n", info.sampleDescriptionIndex);
+              //printf("sample info initSegmentId %d \n", info.initSegmentId);
+              //printf("sample info sampleDurationTS %ld \n", info.sampleDurationTS);
+              //printf("sample info sampleEntryType %s \n", info.sampleEntryType);
+              //printf("sample info sampleId %d \n", info.sampleId);
+              //printf("sample info segmentId %d \n", info.segmentId);
+              //printf("sample info sampleType %d \n", info.sampleType);
+              //printf("sample info sampleFlags flagsAsUInt %d \n", info.sampleFlags.flagsAsUInt);
+              //printf("sample info sampleFlags flags is_leading %d \n", info.sampleFlags.flags.is_leading);
+              //printf("sample info sampleFlags flags reserved %d \n", info.sampleFlags.flags.reserved);
+              //printf("sample info sampleFlags flags sample_degradation_priority %d \n",
+     info.sampleFlags.flags.sample_degradation_priority);
+              //printf("sample info sampleFlags flags sample_has_redundancy %d \n",
+     info.sampleFlags.flags.sample_has_redundancy);
+              //printf("sample info sampleFlags flags sample_depends_on %d \n",
+     info.sampleFlags.flags.sample_depends_on);
+              //printf("sample info sampleFlags flags sample_is_non_sync_sample %d \n",
+     info.sampleFlags.flags.sample_is_non_sync_sample);
+              //printf("sample info sampleFlags flags sample_padding_value %d \n",
+     info.sampleFlags.flags.sample_padding_value);
+          }
+      }
+  */
+  std::list<OmafSegment::Ptr> cached_segments;  // dirty implmentation
+
+  for (auto it = m_listStream.begin(); it != m_listStream.end(); it++) {
+    OmafMediaStream *stream = (OmafMediaStream *)(*it);
+    EXPECT_TRUE(stream != NULL);
+
+    std::map<int, OmafAdaptationSet *> normalAS = stream->GetMediaAdaptationSet();
+    std::map<int, OmafExtractor *> extractorAS = stream->GetExtractors();
+
+    for (auto itAS = normalAS.begin(); itAS != normalAS.end(); itAS++) {
+      OmafAdaptationSet *pAS = (OmafAdaptationSet *)(itAS->second);
+      EXPECT_TRUE(pAS != NULL);
+
+      pAS->Enable(true);
+
+      ret = pAS->LoadLocalSegment();
+      EXPECT_TRUE(ret == ERROR_NONE);
+
+      OmafSegment::Ptr newSeg = pAS->GetLocalNextSegment();
+      EXPECT_TRUE(newSeg != NULL);
+
+      memset(storedFileName, 0, 1024);
+      std::string repId = pAS->GetRepresentationId();
+      snprintf(storedFileName, 1024, "./segs_for_readertest/%s.1.mp4", repId.c_str());
+      cacheFileName = storedFileName;
+      LOG(INFO) << "segment file=" << cacheFileName << ", init seg=" << newSeg->GetInitSegID()
+                << ", segid=" << newSeg->GetSegID() << std::endl;
+      newSeg->SetSegmentCacheFile(cacheFileName);
+      newSeg->SetSegStored();
+
+      ret = m_reader->parseSegment(newSeg.get(), newSeg->GetInitSegID(), newSeg->GetSegID());
+
+      EXPECT_TRUE(ret == ERROR_NONE);
+      cached_segments.push_back(std::move(newSeg));
+      // ret = m_reader->getTrackInformations(trackInfos);
+      // EXPECT_TRUE(ret == ERROR_NONE);
     }
-*/
-    for (auto it = m_listStream.begin(); it != m_listStream.end(); it++)
-    {
-        OmafMediaStream *stream = (OmafMediaStream*)(*it);
-        EXPECT_TRUE(stream != NULL);
 
-        std::map<int, OmafAdaptationSet*> normalAS = stream->GetMediaAdaptationSet();
-        std::map<int, OmafExtractor*> extractorAS  = stream->GetExtractors();
+    for (auto itAS = extractorAS.begin(); itAS != extractorAS.end(); itAS++) {
+      OmafExtractor *extractor = (OmafExtractor *)(itAS->second);
+      EXPECT_TRUE(extractor != NULL);
 
-        for (auto itAS = normalAS.begin(); itAS != normalAS.end(); itAS++)
-        {
-            OmafAdaptationSet *pAS = (OmafAdaptationSet*)(itAS->second);
-            EXPECT_TRUE(pAS != NULL);
+      extractor->Enable(true);
 
-            pAS->Enable(true);
+      ret = extractor->LoadLocalSegment();
+      EXPECT_TRUE(ret == ERROR_NONE);
 
-            ret = pAS->LoadLocalSegment();
-            EXPECT_TRUE(ret == ERROR_NONE);
+      OmafSegment::Ptr newSeg = extractor->GetLocalNextSegment();
+      EXPECT_TRUE(newSeg != NULL);
 
-            OmafSegment *newSeg = pAS->GetLocalNextSegment();
-            EXPECT_TRUE(newSeg != NULL);
+      memset(storedFileName, 0, 1024);
+      std::string repId = extractor->GetRepresentationId();
+      snprintf(storedFileName, 1024, "./segs_for_readertest/%s.1.mp4", repId.c_str());
 
-            OmafSegment *initSeg = pAS->GetInitSegment();
-            EXPECT_TRUE(initSeg != NULL);
+      cacheFileName = storedFileName;
+      LOG(INFO) << "segment file=" << cacheFileName << ", init seg=" << newSeg->GetInitSegID()
+                << ", segid=" << newSeg->GetSegID() << std::endl;
+      newSeg->SetSegmentCacheFile(cacheFileName);
+      newSeg->SetSegStored();
 
-            memset(storedFileName, 0, 1024);
-            std::string repId = pAS->GetRepresentationId();
-            snprintf(storedFileName, 1024, "./segs_for_readertest/%s.1.mp4", repId.c_str());
-            cacheFileName = storedFileName;
+      ret = m_reader->parseSegment(newSeg.get(), newSeg->GetInitSegID(), newSeg->GetSegID());
+      EXPECT_TRUE(ret == ERROR_NONE);
+      cached_segments.push_back(std::move(newSeg));
+      // only parse one extractor
+      break;
+    }
+  }
 
-            newSeg->SetSegmentCacheFile(cacheFileName);
-            newSeg->SetSegStored();
-            uint32_t initSegID = initSeg->GetInitSegID();
-            uint32_t segID = ++(mapSegCnt[initSegID]);
-            ret = m_reader->parseSegment(newSeg, initSegID, segID);
-            EXPECT_TRUE(ret == ERROR_NONE);
+  ret = m_reader->getTrackInformations(trackInfos);
+  EXPECT_TRUE(ret == ERROR_NONE);
 
-            ret = m_reader->getTrackInformations(trackInfos);
-            EXPECT_TRUE(ret == ERROR_NONE);
+  FILE *fp = NULL;
+  char fileName[256];
+  memset(fileName, 0, 256);
+
+  uint8_t vps[256] = {0};
+  uint8_t sps[256] = {0};
+  uint8_t pps[256] = {0};
+  uint8_t vpsLen = 0;
+  uint8_t spsLen = 0;
+  uint8_t ppsLen = 0;
+  for (auto it = m_listStream.begin(); it != m_listStream.end(); it++) {
+    OmafMediaStream *stream = (OmafMediaStream *)(*it);
+    std::map<int, OmafExtractor *> extractorAS = stream->GetExtractors();
+    for (auto &it : stream->GetExtractors()) {
+      OmafExtractor *extractor = it.second;
+      // for (uint32_t initSegIndex = 10; initSegIndex < 18; initSegIndex++) {
+      // uint32_t correspondTrackIdx = initSegIndex + 990;
+      // uint32_t trackIdx = (initSegIndex << 16) | correspondTrackIdx;
+
+      auto trackId = extractor->GetTrackNumber();
+      auto initsegid = extractor->GetInitSegment()->GetInitSegID();
+      auto trackIdx = buildReaderTrackId(trackId, initsegid);
+      LOG(INFO) << "The trackid=" << trackId << ", init setid=" << initsegid << ", reader trackid=" << trackIdx
+                << std::endl;
+
+      snprintf(fileName, 256, "Viewport%d.h265", initsegid - 999);
+      fp = fopen(fileName, "wb+");
+      EXPECT_TRUE(fp != NULL);
+      if (!fp) continue;
+
+      auto trackInf = findTrackInformation(m_reader, trackId);
+      size_t begin = 0;
+      size_t end = 0;
+      auto segId = 1;
+      if (findSampleIndexRange(trackInf, segId, begin, end)) {
+        LOG(INFO) << "The begin index=" << begin << ", end=" << end << std::endl;
+      }
+
+      uint32_t sampleIdx = begin;
+      for (; sampleIdx < end; sampleIdx++) {
+        uint32_t packetSize = ((7680 * 3840 * 3) / 2) / 2;
+        MediaPacket *packet = new MediaPacket();
+        if (NULL == packet) {
+          break;
+        }
+        packet->ReAllocatePacket(packetSize);
+
+        if (!packet->Payload()) {
+          delete packet;
+          break;
         }
 
-        for (auto itAS = extractorAS.begin(); itAS != extractorAS.end(); itAS++)
-        {
-            OmafExtractor *extractor = (OmafExtractor*)(itAS->second);
-            EXPECT_TRUE(extractor != NULL);
+        ret = m_reader->getExtractorTrackSampleData(trackIdx, sampleIdx, (char *)(packet->Payload()), packetSize);
+        LOG(INFO) << "Extractor track sample data, ret=" << ret << std::endl;
+        EXPECT_TRUE(ret == ERROR_NONE);
 
-            extractor->Enable(true);
+        if (sampleIdx == 0) {
+          std::vector<VCD::OMAF::DecoderSpecificInfo> parameterSets;
+          ret = m_reader->getDecoderConfiguration(trackIdx, sampleIdx, parameterSets);
+          EXPECT_TRUE(ret == ERROR_NONE);
 
-            ret = extractor->LoadLocalSegment();
-            EXPECT_TRUE(ret == ERROR_NONE);
+          for (auto const &parameter : parameterSets) {
+            if (parameter.codecSpecInfoType == VCD::MP4::HEVC_VPS) {
+              vpsLen = parameter.codecSpecInfoBits.size;
+              for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++) {
+                vps[i] = parameter.codecSpecInfoBits[i];
+              }
+            }
 
-            OmafSegment *newSeg = extractor->GetLocalNextSegment();
-            EXPECT_TRUE(newSeg != NULL);
+            if (parameter.codecSpecInfoType == VCD::MP4::HEVC_SPS) {
+              spsLen = parameter.codecSpecInfoBits.size;
+              for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++) {
+                sps[i] = parameter.codecSpecInfoBits[i];
+              }
+            }
 
-            OmafSegment *initSeg = extractor->GetInitSegment();
-            EXPECT_TRUE(initSeg != NULL);
+            if (parameter.codecSpecInfoType == VCD::MP4::HEVC_PPS) {
+              ppsLen = parameter.codecSpecInfoBits.size;
+              for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++) {
+                pps[i] = parameter.codecSpecInfoBits[i];
+              }
+            }
+          }
 
-            memset(storedFileName, 0, 1024);
-            std::string repId = extractor->GetRepresentationId();
-            snprintf(storedFileName, 1024, "./segs_for_readertest/%s.1.mp4", repId.c_str());
-            cacheFileName = storedFileName;
-
-            newSeg->SetSegmentCacheFile(cacheFileName);
-            newSeg->SetSegStored();
-            uint32_t initSegID = initSeg->GetInitSegID();
-            uint32_t segID = ++(mapSegCnt[initSegID]);
-            ret = m_reader->parseSegment(newSeg, initSegID, segID);
-            EXPECT_TRUE(ret == ERROR_NONE);
-
-            ret = m_reader->getTrackInformations(trackInfos);
-            EXPECT_TRUE(ret == ERROR_NONE);
+          fwrite(vps, 1, vpsLen, fp);
+          fwrite(sps, 1, spsLen, fp);
+          fwrite(pps, 1, ppsLen, fp);
         }
+
+        fwrite((uint8_t *)(packet->Payload()), 1, packetSize, fp);
+
+        delete packet;
+        packet = NULL;
+      }
+      // }
+      break;
     }
 
-    FILE *fp = NULL;
-    char fileName[256];
-    memset(fileName, 0, 256);
-
-    uint8_t vps[256] = { 0 };
-    uint8_t sps[256] = { 0 };
-    uint8_t pps[256] = { 0 };
-    uint8_t vpsLen = 0;
-    uint8_t spsLen = 0;
-    uint8_t ppsLen = 0;
-    for (uint32_t initSegIndex = 10; initSegIndex < 18; initSegIndex++)
-    {
-        uint32_t correspondTrackIdx = initSegIndex + 990;
-        uint32_t trackIdx = ( initSegIndex << 16 ) | correspondTrackIdx;
-
-        snprintf(fileName, 256, "Viewport%d.h265", correspondTrackIdx - 999);
-        fp = fopen(fileName, "wb+");
-        EXPECT_TRUE(fp != NULL);
-        if(!fp) continue;
-
-        uint32_t sampleIdx = 0;
-        for ( ; sampleIdx < 25; sampleIdx++)
-        {
-            uint32_t packetSize = ((7680 * 3840 * 3) / 2) / 2;
-            MediaPacket *packet = new MediaPacket();
-            if (NULL == packet)
-            {
-                break;
-            }
-            packet->ReAllocatePacket(packetSize);
-
-            if(!packet->Payload())
-            {
-                delete packet;
-                break;
-            }
-
-            ret = m_reader->getExtractorTrackSampleData(trackIdx, sampleIdx, (char*)(packet->Payload()), packetSize);
-            EXPECT_TRUE(ret == ERROR_NONE);
-
-            if (sampleIdx == 0)
-            {
-                std::vector<VCD::OMAF::DecoderSpecificInfo> parameterSets;
-                ret = m_reader->getDecoderConfiguration(trackIdx, sampleIdx, parameterSets);
-                EXPECT_TRUE(ret == ERROR_NONE);
-
-                for (auto const& parameter : parameterSets)
-                {
-                    if (parameter.codecSpecInfoType == VCD::MP4::HEVC_VPS)
-                    {
-                        vpsLen = parameter.codecSpecInfoBits.size;
-                        for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
-                        {
-                            vps[i] = parameter.codecSpecInfoBits[i];
-                        }
-                    }
-
-                    if (parameter.codecSpecInfoType == VCD::MP4::HEVC_SPS)
-                    {
-                        spsLen = parameter.codecSpecInfoBits.size;
-                        for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
-                        {
-                            sps[i] = parameter.codecSpecInfoBits[i];
-                        }
-                    }
-
-                    if (parameter.codecSpecInfoType == VCD::MP4::HEVC_PPS)
-                    {
-                        ppsLen = parameter.codecSpecInfoBits.size;
-                        for (uint32_t i = 0; i < parameter.codecSpecInfoBits.size; i++)
-                        {
-                            pps[i] = parameter.codecSpecInfoBits[i];
-                        }
-                    }
-                }
-
-                fwrite(vps, 1, vpsLen, fp);
-                fwrite(sps, 1, spsLen, fp);
-                fwrite(pps, 1, ppsLen, fp);
-            }
-
-            fwrite((uint8_t*)(packet->Payload()), 1, packetSize, fp);
-
-            delete packet;
-            packet = NULL;
-        }
-
-        fclose(fp);
-        fp = NULL;
-    }
-}
-}
+    fclose(fp);
+    fp = NULL;
+  }
+}  // namespace
+}  // namespace

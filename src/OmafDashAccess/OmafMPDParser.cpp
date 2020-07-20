@@ -27,250 +27,240 @@
  */
 
 #include "OmafMPDParser.h"
-#include "OmafExtractor.h"
 #include <typeinfo>
+#include "OmafExtractor.h"
 
 VCD_OMAF_BEGIN
 
-OmafMPDParser::OmafMPDParser()
-{
-    mParser = nullptr;
-    this->mMpd = NULL;
-    this->mMPDURL = "";
-    this->mCacheDir = "";
-    this->mLock = new ThreadLock();
-    mMPDInfo = nullptr;
-    mPF = PF_UNKNOWN;
-    mExtractorEnabled = true;
+OmafMPDParser::OmafMPDParser() {
+  mParser = nullptr;
+  this->mMpd = nullptr;
+  this->mMPDURL = "";
+  this->mCacheDir = "";
+  // this->mLock = new ThreadLock();
+  mMPDInfo = nullptr;
+  mPF = PF_UNKNOWN;
 }
 
-OmafMPDParser::~OmafMPDParser()
-{
-    SAFE_DELETE(mParser);
-    //SAFE_DELETE(mMpd);
-    SAFE_DELETE(mLock);
+OmafMPDParser::~OmafMPDParser() {
+  SAFE_DELETE(mParser);
+  // SAFE_DELETE(mMpd);
+  // SAFE_DELETE(mLock);
 }
 
-int OmafMPDParser::ParseMPD( std::string mpd_file, OMAFSTREAMS& listStream )
-{
-    int ret = ERROR_NONE;
+int OmafMPDParser::ParseMPD(std::string mpd_file, OMAFSTREAMS& listStream) {
+  int ret = ERROR_NONE;
 
-    if(nullptr == mParser)
-        mParser = new OmafXMLParser();
+  if (nullptr == mParser) {
+    mParser = new OmafXMLParser();
+    mParser->SetOmafHttpParams(omaf_dash_params_.http_proxy_, omaf_dash_params_.http_params_);
+  }
 
-    mLock->lock();
+  // mLock->lock();
+  std::lock_guard<std::mutex> lock(mLock);
 
-    mMPDURL = mpd_file;
+  mMPDURL = mpd_file;
 
-    ODStatus st = mParser->Generate(const_cast<char *>(mMPDURL.c_str()), mCacheDir);
-    if(st != OD_STATUS_SUCCESS)
-    {
-        mLock->unlock();
-        LOG(INFO)<<"failed to parse MPD file."<<endl;
-        return st;
-    }
+  LOG(INFO) << "To parse the mpd file: " << mMPDURL << std::endl;
 
-    mMpd = mParser->GetGeneratedMPD();
+  ODStatus st = mParser->Generate(const_cast<char*>(mMPDURL.c_str()), mCacheDir);
+  if (st != OD_STATUS_SUCCESS) {
+    // mLock->unlock();
+    LOG(ERROR) << "Failed to load MPD file: " << mpd_file << std::endl;
+    return st;
+  }
 
-    if(NULL == mMpd){
-        mLock->unlock();
-        return ERROR_PARSE;
-    }
+  mMpd = mParser->GetGeneratedMPD();
+  if (nullptr == mMpd) {
+    LOG(ERROR) << "Failed to get the generated mpd!" << std::endl;
+    return ERROR_PARSE;
+  }
 
-    ret = ParseMPDInfo();
-
-    if(ret != ERROR_NONE) {
-        mLock->unlock();
-        return ret;
-    }
-
-    ret = ParseStreams(listStream);
-
-    if(ret != ERROR_NONE) {
-        mLock->unlock();
-        return ret;
-    }
-
-    mLock->unlock();
-
+  ret = ParseMPDInfo();
+  if (ret != ERROR_NONE) {
+    LOG(ERROR) << "Failed to parse MPD file: " << mpd_file << std::endl;
     return ret;
+  }
+
+  ret = ParseStreams(listStream);
+  if (ret != ERROR_NONE) {
+    LOG(ERROR) << "Failed to parse media streams from MPD file: " << mpd_file << std::endl;
+    return ret;
+  }
+
+  // mLock->unlock();
+
+  return ERROR_NONE;
 }
 
-int OmafMPDParser::ParseMPDInfo()
-{
-    mMPDInfo = new MPDInfo;
-    if(!mMPDInfo)
-        return ERROR_NULL_PTR;
+int OmafMPDParser::ParseMPDInfo() {
+  mMPDInfo = new MPDInfo;
+  if (!mMPDInfo) return ERROR_NULL_PTR;
 
-    auto baseUrl = mMpd->GetBaseUrls().back();
-    mMPDInfo->mpdPathBaseUrl               = baseUrl->GetPath();
-    mMPDInfo->profiles                     = mMpd->GetProfiles();
-    mMPDInfo->type                         = mMpd->GetType();
+  auto baseUrl = mMpd->GetBaseUrls().back();
+  mMPDInfo->mpdPathBaseUrl = baseUrl->GetPath();
+  mMPDInfo->profiles = mMpd->GetProfiles();
+  mMPDInfo->type = mMpd->GetType();
 
-    mMPDInfo->media_presentation_duration  = parse_duration( mMpd->GetMediaPresentationDuration().c_str()    );
-    mMPDInfo->availabilityStartTime        = parse_date    ( mMpd->GetAvailabilityStartTime().c_str()        );
-    mMPDInfo->availabilityEndTime          = parse_date    ( mMpd->GetAvailabilityEndTime().c_str()          );
-    mMPDInfo->max_segment_duration         = parse_duration     ( mMpd->GetMaxSegmentDuration().c_str()           );
-    mMPDInfo->min_buffer_time              = parse_duration     ( mMpd->GetMinBufferTime().c_str()                );
-    mMPDInfo->minimum_update_period        = parse_duration     ( mMpd->GetMinimumUpdatePeriod().c_str()          );
-    mMPDInfo->suggested_presentation_delay = parse_int     ( mMpd->GetSuggestedPresentationDelay().c_str()   );
-    mMPDInfo->time_shift_buffer_depth      = parse_duration     ( mMpd->GetTimeShiftBufferDepth().c_str()         );
+  if (!mMpd->GetMediaPresentationDuration().empty()) {
+    mMPDInfo->media_presentation_duration = parse_duration(mMpd->GetMediaPresentationDuration().c_str());
+  }
 
-    mBaseUrls = mMpd->GetBaseUrls();
-    // Get all base urls except the last one
-    for(uint32_t i = 0; i < mBaseUrls.size() - 1 ; i++)
-    {
-        mMPDInfo->baseURL.push_back(mBaseUrls[i]->GetPath());
-    }
+  if (!mMpd->GetAvailabilityStartTime().empty()) {
+    mMPDInfo->availabilityStartTime = parse_date(mMpd->GetAvailabilityStartTime().c_str());
+  }
+  if (!mMpd->GetAvailabilityEndTime().empty()) {
+    mMPDInfo->availabilityEndTime = parse_date(mMpd->GetAvailabilityEndTime().c_str());
+  }
+  if (!mMpd->GetMaxSegmentDuration().empty()) {
+    mMPDInfo->max_segment_duration = parse_duration(mMpd->GetMaxSegmentDuration().c_str());
+  }
+  if (!mMpd->GetMinBufferTime().empty()) {
+    mMPDInfo->min_buffer_time = parse_duration(mMpd->GetMinBufferTime().c_str());
+  }
+  if (!mMpd->GetMinimumUpdatePeriod().empty()) {
+    mMPDInfo->minimum_update_period = parse_duration(mMpd->GetMinimumUpdatePeriod().c_str());
+  }
+  if (!mMpd->GetSuggestedPresentationDelay().empty()) {
+    mMPDInfo->suggested_presentation_delay = parse_int(mMpd->GetSuggestedPresentationDelay().c_str());
+  }
+  if (!mMpd->GetTimeShiftBufferDepth().empty()) {
+    mMPDInfo->time_shift_buffer_depth = parse_duration(mMpd->GetTimeShiftBufferDepth().c_str());
+  }
 
-    mPF = mMpd->GetProjectionFormat();
+  mBaseUrls = mMpd->GetBaseUrls();
+  // Get all base urls except the last one
+  for (uint32_t i = 0; i < mBaseUrls.size() - 1; i++) {
+    mMPDInfo->baseURL.push_back(mBaseUrls[i]->GetPath());
+  }
 
-    return ERROR_NONE;
+  mPF = mMpd->GetProjectionFormat();
+
+  return ERROR_NONE;
 }
 
-int OmafMPDParser::UpdateMPD(OMAFSTREAMS& listStream)
-{
-    return ParseMPD(this->mMPDURL, listStream);
-}
+int OmafMPDParser::UpdateMPD(OMAFSTREAMS& listStream) { return ParseMPD(this->mMPDURL, listStream); }
 
-MPDInfo* OmafMPDParser::GetMPDInfo()
-{
-    return this->mMPDInfo;
-}
+MPDInfo* OmafMPDParser::GetMPDInfo() { return this->mMPDInfo; }
 
 //!
 //! \brief construct media streams.
 //!
-int OmafMPDParser::ParseStreams( OMAFSTREAMS& listStream )
-{
-    int ret = ERROR_NONE;
+int OmafMPDParser::ParseStreams(OMAFSTREAMS& listStream) {
+  int ret = ERROR_NONE;
 
-    std::vector<PeriodElement *> Periods = mMpd->GetPeriods();
-    if(Periods.size() == 0)
-        return ERROR_NO_VALUE;
+  std::vector<PeriodElement*> Periods = mMpd->GetPeriods();
+  if (Periods.size() == 0) return ERROR_NO_VALUE;
 
-    //processing only the first period;
-    PeriodElement *pPeroid = Periods[0];
+  // processing only the first period;
+  PeriodElement* pPeroid = Periods[0];
 
-    TYPE_OMAFADAPTATIONSETS adapt_sets;
+  TYPE_OMAFADAPTATIONSETS adapt_sets;
 
-    ret = GroupAdaptationSet( pPeroid, adapt_sets );
+  ret = GroupAdaptationSet(pPeroid, adapt_sets);
 
-    ret = BuildStreams( adapt_sets, listStream );
+  ret = BuildStreams(adapt_sets, listStream);
 
-    return ret;
+  return ret;
 }
 
-int OmafMPDParser::GroupAdaptationSet(PeriodElement* pPeriod, TYPE_OMAFADAPTATIONSETS& mapAdaptationSets )
-{
-    ADAPTATIONSETS AdaptationSets = pPeriod->GetAdaptationSets();
+int OmafMPDParser::GroupAdaptationSet(PeriodElement* pPeriod, TYPE_OMAFADAPTATIONSETS& mapAdaptationSets) {
+  ADAPTATIONSETS AdaptationSets = pPeriod->GetAdaptationSets();
 
-    /// so far, we supposed that there will be only one viewpoint in the mpd,
-    /// so all Adaptation sets are belong to the same audio-visual content.
-    /// FIXIT, if there are multiple viewpoints.
-    for(auto it = AdaptationSets.begin(); it != AdaptationSets.end(); it++ ){
-        AdaptationSetElement *pAS = (AdaptationSetElement*) (*it);
-        OmafAdaptationSet* pOmafAS = CreateAdaptationSet(pAS, mPF);
+  /// so far, we supposed that there will be only one viewpoint in the mpd,
+  /// so all Adaptation sets are belong to the same audio-visual content.
+  /// FIXIT, if there are multiple viewpoints.
+  for (auto it = AdaptationSets.begin(); it != AdaptationSets.end(); it++) {
+    AdaptationSetElement* pAS = (AdaptationSetElement*)(*it);
+    OmafAdaptationSet* pOmafAS = CreateAdaptationSet(pAS, mPF);
 
-        /// catalog the Adaptation according to the media type: video, audio, etc
-        std::string type   = GetSubstr(pOmafAS->GetMimeType(), '/', true);
+    /// catalog the Adaptation according to the media type: video, audio, etc
+    std::string type = GetSubstr(pOmafAS->GetMimeType(), '/', true);
 
-        mapAdaptationSets[type].push_back(pOmafAS);
-    }
+    mapAdaptationSets[type].push_back(pOmafAS);
+  }
 
-    return ERROR_NONE;
+  return ERROR_NONE;
 }
 
-int OmafMPDParser::BuildStreams( TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFSTREAMS& listStream )
-{
-    int ret = ERROR_NONE;
-    uint32_t allExtractorCnt = 0;
-    std::map<std::string, OmafMediaStream*> streamsMap;
-    for(auto it = mapAdaptationSets.begin(); it != mapAdaptationSets.end(); it++){
-        OMAFADAPTATIONSETS ASs = it->second;
-        std::string type = it->first;
+int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFSTREAMS& listStream) {
+  int ret = ERROR_NONE;
+  uint32_t allExtractorCnt = 0;
+  std::map<std::string, OmafMediaStream*> streamsMap;
+  for (auto it = mapAdaptationSets.begin(); it != mapAdaptationSets.end(); it++) {
+    OMAFADAPTATIONSETS ASs = it->second;
+    std::string type = it->first;
 
-        OmafMediaStream* pStream = new OmafMediaStream();
-        auto mainASit = ASs.begin();
+    OmafMediaStream* pStream = new OmafMediaStream();
+    auto mainASit = ASs.begin();
 
-        for(auto as_it = ASs.begin(); as_it != ASs.end(); as_it++){
-            OmafAdaptationSet* pOmafAs = (OmafAdaptationSet*)(*as_it);
-            pOmafAs->SetBaseURL(mBaseUrls);
-	    if ( typeid(*pOmafAs) == typeid( OmafExtractor ) ){
-                if (mExtractorEnabled)
-                {
-                    OmafExtractor *tmpOmafAs = (OmafExtractor*)pOmafAs;
-                    pStream->AddExtractor(tmpOmafAs);
-                    pStream->SetExtratorAdaptationSet(tmpOmafAs);
-                }
-            }else{
-                pStream->AddAdaptationSet(pOmafAs);
-                if(pOmafAs->IsMain())
-                {
-                    pOmafAs->SetProjectionFormat(mPF);
-                    pStream->SetMainAdaptationSet(pOmafAs);
-                    mainASit = as_it;
-                }
-            }
+    for (auto as_it = ASs.begin(); as_it != ASs.end(); as_it++) {
+      OmafAdaptationSet* pOmafAs = (OmafAdaptationSet*)(*as_it);
+      pOmafAs->SetBaseURL(mBaseUrls);
+      if (typeid(*pOmafAs) == typeid(OmafExtractor)) {
+        if (mExtractorEnabled) {
+          OmafExtractor* tmpOmafAs = (OmafExtractor*)pOmafAs;
+          pStream->AddExtractor(tmpOmafAs);
+          pStream->SetExtratorAdaptationSet(tmpOmafAs);
         }
-
-        std::map<int, OmafExtractor*> extractors = pStream->GetExtractors();
-        if (extractors.size())
-        {
-            allExtractorCnt++;
+      } else {
+        pStream->AddAdaptationSet(pOmafAs);
+        if (pOmafAs->IsMain()) {
+          pOmafAs->SetProjectionFormat(mPF);
+          pStream->SetMainAdaptationSet(pOmafAs);
+          mainASit = as_it;
         }
+      }
+    }
 
-        // remove main AS from AdaptationSets for it has no real data
-        ASs.erase(mainASit);
+    std::map<int, OmafExtractor*> extractors = pStream->GetExtractors();
+    if (extractors.size()) {
+      allExtractorCnt++;
+    }
 
-        streamsMap.insert(std::make_pair(type, pStream));
+    // remove main AS from AdaptationSets for it has no real data
+    ASs.erase(mainASit);
+
+    streamsMap.insert(std::make_pair(type, pStream));
+  }
+  LOG(INFO) << "allExtractorCnt" << allExtractorCnt << endl;
+  if (allExtractorCnt < mapAdaptationSets.size()) {
+    if (mExtractorEnabled) {
+      LOG(INFO) << "There isn't extractor track from MPD parsing, extractor track enablement should be false !"
+                << std::endl;
+      mExtractorEnabled = false;
+      ret = OMAF_INVALID_EXTRACTOR_ENABLEMENT;
     }
-    LOG(INFO)<<"allExtractorCnt"<<allExtractorCnt<<endl;
-    if (allExtractorCnt < mapAdaptationSets.size())
-    {
-        if (mExtractorEnabled)
-        {
-            LOG(INFO) << "There isn't extractor track from MPD parsing, extractor track enablement should be false !" << std::endl;
-            mExtractorEnabled = false;
-            ret = OMAF_INVALID_EXTRACTOR_ENABLEMENT;
-        }
-    }
-    std::map<std::string, OmafMediaStream*>::iterator itStream;
-    for (itStream = streamsMap.begin(); itStream != streamsMap.end(); itStream++)
-    {
-        std::string type = itStream->first;
-        OmafMediaStream *stream = itStream->second;
-        stream->SetEnabledExtractor(mExtractorEnabled);
-        stream->InitStream(type);
-        listStream.push_back(stream);
-    }
-    return ret;
+  }
+  std::map<std::string, OmafMediaStream*>::iterator itStream;
+  for (itStream = streamsMap.begin(); itStream != streamsMap.end(); itStream++) {
+    std::string type = itStream->first;
+    OmafMediaStream* stream = itStream->second;
+    stream->SetEnabledExtractor(mExtractorEnabled);
+    stream->InitStream(type);
+    listStream.push_back(stream);
+  }
+  return ret;
 }
 
-OmafAdaptationSet* OmafMPDParser::CreateAdaptationSet(AdaptationSetElement* pAS, ProjectionFormat pf)
-{
-    if( ExtractorJudgement(pAS) ){
-        return new OmafExtractor(pAS, pf);
-    }
-    return new OmafAdaptationSet(pAS, pf);
+OmafAdaptationSet* OmafMPDParser::CreateAdaptationSet(AdaptationSetElement* pAS, ProjectionFormat pf) {
+  if (ExtractorJudgement(pAS)) {
+    return new OmafExtractor(pAS, pf);
+  }
+  return new OmafAdaptationSet(pAS, pf);
 }
 
-bool OmafMPDParser::ExtractorJudgement(AdaptationSetElement* pAS)
-{
-    PreselValue *sel = pAS->GetPreselection();
-    if(sel)
-        return true;
+bool OmafMPDParser::ExtractorJudgement(AdaptationSetElement* pAS) {
+  PreselValue* sel = pAS->GetPreselection();
+  if (sel) return true;
 
-    ///FIXME, if @DependencyID has multiple dependency ID, then set it as extractor.
-    std::vector<std::string> depIDs = pAS->GetRepresentations()[0]->GetDependencyIDs();
-    if( depIDs.size() > 0 )
-    {
-        return true;
-    }
+  /// FIXME, if @DependencyID has multiple dependency ID, then set it as extractor.
+  std::vector<std::string> depIDs = pAS->GetRepresentations()[0]->GetDependencyIDs();
+  if (depIDs.size() > 0) {
+    return true;
+  }
 
-    return false;
-
+  return false;
 }
 
 VCD_OMAF_END
-

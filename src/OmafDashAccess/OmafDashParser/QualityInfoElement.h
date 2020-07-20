@@ -36,144 +36,141 @@
 
 VCD_OMAF_BEGIN
 
-class QualityInfoElement: public OmafElementBase
-{
-public:
+class QualityInfoElement : public OmafElementBase {
+ public:
+  //!
+  //! \brief Constructor
+  //!
+  QualityInfoElement();
 
-    //!
-    //! \brief Constructor
-    //!
-    QualityInfoElement();
+  //!
+  //! \brief Destructor
+  //!
+  virtual ~QualityInfoElement();
 
-    //!
-    //! \brief Destructor
-    //!
-    virtual ~QualityInfoElement();
+  //!
+  //! \brief    Set function for m_quality_ranking member
+  //!
+  //! \param    [in] int32_t
+  //!           value to set
+  //! \param    [in] m_quality_ranking
+  //!           m_quality_ranking member in class
+  //! \param    [in] QualityRanking
+  //!           m_quality_ranking name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(int32_t, m_quality_ranking, QualityRanking);
 
-    //!
-    //! \brief    Set function for m_quality_ranking member
-    //!
-    //! \param    [in] int32_t
-    //!           value to set
-    //! \param    [in] m_quality_ranking
-    //!           m_quality_ranking member in class
-    //! \param    [in] QualityRanking
-    //!           m_quality_ranking name in class
-    //!
-    //! \return   void
-    //!
-    MEMBER_SET_AND_GET_FUNC(int32_t, m_quality_ranking, QualityRanking);
+  //!
+  //! \brief    Set function for m_orig_width member
+  //!
+  //! \param    [in] int32_t
+  //!           value to set
+  //! \param    [in] m_orig_width
+  //!           m_orig_width member in class
+  //! \param    [in] OrigWidth
+  //!           m_orig_width name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(int32_t, m_orig_width, OrigWidth);
 
-    //!
-    //! \brief    Set function for m_orig_width member
-    //!
-    //! \param    [in] int32_t
-    //!           value to set
-    //! \param    [in] m_orig_width
-    //!           m_orig_width member in class
-    //! \param    [in] OrigWidth
-    //!           m_orig_width name in class
-    //!
-    //! \return   void
-    //!
-    MEMBER_SET_AND_GET_FUNC(int32_t, m_orig_width, OrigWidth);
+  //!
+  //! \brief    Set function for m_orig_height member
+  //!
+  //! \param    [in] int32_t
+  //!           value to set
+  //! \param    [in] m_orig_height
+  //!           m_orig_height member in class
+  //! \param    [in] OrigHeight
+  //!           m_orig_height name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(int32_t, m_orig_height, OrigHeight);
 
-    //!
-    //! \brief    Set function for m_orig_height member
-    //!
-    //! \param    [in] int32_t
-    //!           value to set
-    //! \param    [in] m_orig_height
-    //!           m_orig_height member in class
-    //! \param    [in] OrigHeight
-    //!           m_orig_height name in class
-    //!
-    //! \return   void
-    //!
-    MEMBER_SET_AND_GET_FUNC(int32_t, m_orig_height, OrigHeight);
+  //!
+  //! \brief    Set function for m_centre_azimuth member
+  //!
+  //! \param    [in] int32_t
+  //!           value to set
+  //! \param    [in] m_centre_azimuth
+  //!           m_centre_azimuth member in class
+  //! \param    [in] CentreAzimuth
+  //!           m_centre_azimuth name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(int32_t, m_centre_azimuth, CentreAzimuth);
 
-    //!
-    //! \brief    Set function for m_centre_azimuth member
-    //!
-    //! \param    [in] int32_t
-    //!           value to set
-    //! \param    [in] m_centre_azimuth
-    //!           m_centre_azimuth member in class
-    //! \param    [in] CentreAzimuth
-    //!           m_centre_azimuth name in class
-    //!
-    //! \return   void
-    //!
-    MEMBER_SET_AND_GET_FUNC(int32_t, m_centre_azimuth, CentreAzimuth);
+  //!
+  //! \brief    Set function for m_centre_elevation member
+  //!
+  //! \param    [in] int32_t
+  //!           value to set
+  //! \param    [in] m_centre_elevation
+  //!           m_centre_elevation member in class
+  //! \param    [in] CentreElevation
+  //!           m_centre_elevation name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(int32_t, m_centre_elevation, CentreElevation);
 
-    //!
-    //! \brief    Set function for m_centre_elevation member
-    //!
-    //! \param    [in] int32_t
-    //!           value to set
-    //! \param    [in] m_centre_elevation
-    //!           m_centre_elevation member in class
-    //! \param    [in] CentreElevation
-    //!           m_centre_elevation name in class
-    //!
-    //! \return   void
-    //!
-    MEMBER_SET_AND_GET_FUNC(int32_t, m_centre_elevation, CentreElevation);
+  //!
+  //! \brief    Set function for m_centre_tilt member
+  //!
+  //! \param    [in] int32_t
+  //!           value to set
+  //! \param    [in] m_centre_tilt
+  //!           m_centre_tilt member in class
+  //! \param    [in] CentreTilt
+  //!           m_centre_tilt name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(int32_t, m_centre_tilt, CentreTilt);
 
-    //!
-    //! \brief    Set function for m_centre_tilt member
-    //!
-    //! \param    [in] int32_t
-    //!           value to set
-    //! \param    [in] m_centre_tilt
-    //!           m_centre_tilt member in class
-    //! \param    [in] CentreTilt
-    //!           m_centre_tilt name in class
-    //!
-    //! \return   void
-    //!
-    MEMBER_SET_AND_GET_FUNC(int32_t, m_centre_tilt, CentreTilt);
+  //!
+  //! \brief    Set function for m_azimuth_range member
+  //!
+  //! \param    [in] int32_t
+  //!           value to set
+  //! \param    [in] m_azimuth_range
+  //!           m_azimuth_range member in class
+  //! \param    [in] AzimuthRange
+  //!           m_azimuth_range name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(int32_t, m_azimuth_range, AzimuthRange);
 
-    //!
-    //! \brief    Set function for m_azimuth_range member
-    //!
-    //! \param    [in] int32_t
-    //!           value to set
-    //! \param    [in] m_azimuth_range
-    //!           m_azimuth_range member in class
-    //! \param    [in] AzimuthRange
-    //!           m_azimuth_range name in class
-    //!
-    //! \return   void
-    //!
-    MEMBER_SET_AND_GET_FUNC(int32_t, m_azimuth_range, AzimuthRange);
+  //!
+  //! \brief    Set function for m_elevation_range member
+  //!
+  //! \param    [in] int32_t
+  //!           value to set
+  //! \param    [in] m_elevation_range
+  //!           m_elevation_range member in class
+  //! \param    [in] ElevationRange
+  //!           m_elevation_range name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(int32_t, m_elevation_range, ElevationRange);
 
-    //!
-    //! \brief    Set function for m_elevation_range member
-    //!
-    //! \param    [in] int32_t
-    //!           value to set
-    //! \param    [in] m_elevation_range
-    //!           m_elevation_range member in class
-    //! \param    [in] ElevationRange
-    //!           m_elevation_range name in class
-    //!
-    //! \return   void
-    //!
-    MEMBER_SET_AND_GET_FUNC(int32_t, m_elevation_range, ElevationRange);
-
-private:
-
-    int32_t m_quality_ranking;  //!< the quality_ranking attribute
-    int32_t m_orig_width;       //!< the orig_width attribute
-    int32_t m_orig_height;      //!< the orig_height attribute
-    int32_t m_centre_azimuth;   //!< the centre_azimuth attribute
-    int32_t m_centre_elevation; //!< the centre_elevation attribute
-    int32_t m_centre_tilt;      //!< the centre_tilt attribute
-    int32_t m_azimuth_range;    //!< the azimuth_range attribute
-    int32_t m_elevation_range;  //!< the elevation_range attribute
+ private:
+  int32_t m_quality_ranking;   //!< the quality_ranking attribute
+  int32_t m_orig_width;        //!< the orig_width attribute
+  int32_t m_orig_height;       //!< the orig_height attribute
+  int32_t m_centre_azimuth;    //!< the centre_azimuth attribute
+  int32_t m_centre_elevation;  //!< the centre_elevation attribute
+  int32_t m_centre_tilt;       //!< the centre_tilt attribute
+  int32_t m_azimuth_range;     //!< the azimuth_range attribute
+  int32_t m_elevation_range;   //!< the elevation_range attribute
 };
 
 VCD_OMAF_END;
 
-#endif //QUALITYINFOELEMENT_H
+#endif  // QUALITYINFOELEMENT_H

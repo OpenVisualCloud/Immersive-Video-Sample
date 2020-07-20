@@ -33,172 +33,167 @@
 #ifndef STREAM_H
 #define STREAM_H
 
+#include <fstream>
+#include <mutex>  //std::mutex, std::unique_lock
+
 #include "../OmafDashParser/Common.h"
+#include "../common.h"
+#include "../isolib/dash_parser/Mp4StreamIO.h"
 
-VCD_USE_VRVIDEO;
+extern "C" {
+#include "safestringlib/safe_mem_lib.h"
+}
 
-VCD_OMAF_BEGIN
-
+namespace VCD {
+namespace OMAF {
 //!
-//! \class  StreamInfo
+//! \class  StreamBlock
 //! \brief  Stream Information, including data and data size
 //!
-class StreamInfo
-{
-public:
+class StreamBlock : public VCD::NonCopyable {
+ public:
+  //!
+  //! \brief Constructor
+  //!
+  StreamBlock() = default;
 
-    //!
-    //! \brief Constructor
-    //!
-    StreamInfo()
-    {
-        data   = NULL;
-        length = 0;
+  StreamBlock(char *data, int64_t size) : data_(data), size_(size), capacity_(size), bOwner_(false) {}
+  //!
+  //! \brief Destructor
+  //!
+  ~StreamBlock() {
+    if (bOwner_ && data_ != nullptr) {
+      delete[] data_;
+      data_ = nullptr;
     }
-
-    //!
-    //! \brief Constructor with parameter
-    //!
-    StreamInfo(char* d, uint64_t l):StreamInfo()
-    {
-        data = d;
-        length = l;
+    size_ = 0;
+  }
+  char *buf() noexcept { return data_; }
+  const char *cbuf() const noexcept { return data_; }
+  int64_t size() const noexcept { return size_; }
+  int64_t capacity() const noexcept { return capacity_; }
+  bool size(int64_t size) {
+    if (size <= capacity_ && size > 0) {
+      size_ = size;
+      return true;
     }
-
-    //!
-    //! \brief Destructor
-    //!
-    ~StreamInfo()
-    {
-        SAFE_DELETE(data);
-        length = 0;
+    return false;
+  }
+  void *resize(int64_t size) {
+    if (bOwner_) {
+      if (size > capacity_) {
+        if (data_) {
+          delete[] data_;
+        }
+        data_ = new char[size];
+        capacity_ = size;
+      }
+      return data_;
+    } else {
+      return nullptr;
     }
+  }
 
-    char*            data;   //<! stream data
-    uint64_t         length; //<! length of data
+ private:
+  // stream data
+  char *data_ = nullptr;
+  // length of data
+  int64_t size_ = 0;
+  int64_t capacity_ = 0;
+  const bool bOwner_ = true;
 };
 
+class StreamBlocks : public VCD::NonCopyable, public VCD::MP4::StreamIO {
+ public:
+  StreamBlocks() = default;
+  ~StreamBlocks() {}
 
-//!
-//! \class  Stream
-//! \brief  Stream class, which will store sub-streams
-//!
-class Stream: public ThreadLock
-{
-public:
+ public:
+  offset_t ReadStream(char *buffer, offset_t size) {
+    std::lock_guard<std::mutex> lock(stream_mutex_);
 
-    //!
-    //! \brief Constructor
-    //!
-    Stream();
+    offset_t offset = offset_;
 
-    //!
-    //! \brief Destructor
-    //!
-    ~Stream();
-
-    //!
-    //! \brief    Add sub-stream
-    //!
-    //! \param    [in] streamData
-    //!           sub-stream data
-    //! \param    [in] streamLen
-    //!           sub-stream length
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    ODStatus AddSubStream(char* streamData, uint64_t streamLen);
-
-    //!
-    //! \brief    Get given size sub-stream
-    //!
-    //! \param    [in] streamData
-    //!           sub-stream data
-    //! \param    [in] streamDataLen
-    //!           sub-stream length
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    ODStatus GetStream(char* streamData, uint64_t streamDataLen);
-
-    //!
-    //! \brief    Peek given size sub-stream
-    //!
-    //! \param    [in] streamData
-    //!           sub-stream data
-    //! \param    [in] streamDataLen
-    //!           sub-stream length
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    ODStatus PeekStream(char* streamData, uint64_t streamDataLen);
-
-    //!
-    //! \brief    Peek given size sub-stream with offset
-    //!
-    //! \param    [in] streamData
-    //!           sub-stream data
-    //! \param    [in] streamDataLen
-    //!           sub-stream length
-    //! \param    [in] offset
-    //!           stream offset that read should start
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    ODStatus PeekStream(char* streamData, uint64_t streamDataLen, size_t offset);
-
-    //!
-    //! \brief    Mark this stream reached EOS
-    //!
-    //! \return   ODStatus
-    //!           OD_STATUS_SUCCESS if success, else fail reason
-    //!
-    ODStatus ReachedEOS();
-
-    //!
-    //! \brief    Get if the strean reached EOS
-    //!
-    //! \return   bool
-    //!           true if EOS reached, else false
-    //!
-    bool IsEOS(){return m_eos;}
-
-    //!
-    //! \brief    Get total stream length
-    //!
-    //! \return   uint64_t
-    //!           total stream length
-    //!
-    uint64_t GetTotalStreamLength(){return m_totalLength;}
-
-private:
-
-    //!
-    //! \brief    get number of sub-streams
-    //!
-    //! \return   size_t
-    //!           number of sub-streams
-    //!
-    size_t GetDownloadedListSize()
-    {
-        m_lock.lock();
-        auto listSize = m_listDownloadedStreams.size();
-        m_lock.unlock();
-
-        return listSize;
+    std::list<std::unique_ptr<StreamBlock>>::const_iterator it = stream_blocks_.cbegin();
+    while (it != stream_blocks_.cend()) {
+      if (offset < (*it)->size()) {
+        break;
+      }
+      offset -= (*it)->size();
+      ++it;
     }
 
-    list<StreamInfo*>       m_listDownloadedStreams;    //!< list stores all downloaded sub-streams
-    ThreadLock              m_lock;                     //!< for downloaded streams synchronize
-    bool                    m_eos;                      //!< flag for end of stream
-    condition_variable      m_cv;                       //!< condition variable for streams
-    uint64_t                m_totalLength;              //!< the total length of stream
+    offset_t readSize = 0;
+    while (it != stream_blocks_.cend()) {
+      if (readSize >= size) break;
+
+      offset_t copySize = 0;
+      offset_t dataSize = (*it)->size() - offset;
+      if ((size - readSize) >= dataSize) {
+        copySize = dataSize;
+      } else {
+        copySize = size - readSize;
+      }
+
+      memcpy_s(buffer + readSize, copySize, (*it)->cbuf() + offset, copySize);
+      readSize += copySize;
+      offset = 0;  // set offset to 0 for coming blocks
+      ++it;
+    }
+
+    offset_ += readSize;
+
+    return readSize;
+  };
+
+  bool SeekAbsoluteOffset(offset_t offset) {
+    std::lock_guard<std::mutex> lock(stream_mutex_);
+    offset_ = offset;  // FIXME same logic with old file solution
+    return true;
+  };
+
+  offset_t TellOffset() { return offset_; };
+
+  offset_t GetStreamSize() {
+    std::lock_guard<std::mutex> lock(stream_mutex_);
+    return stream_size_;
+  };
+
+ public:
+  void push_back(std::unique_ptr<StreamBlock> sb) noexcept {
+    std::lock_guard<std::mutex> lock(stream_mutex_);
+    stream_size_ += sb->size();
+    stream_blocks_.push_back(std::move(sb));
+  }
+
+  bool cacheToFile(std::string &filename) noexcept {
+    std::ofstream of;  //<! file handle for writing
+    try {
+      of.open(filename, ios::out | ios::binary);
+
+      for (auto &sb : stream_blocks_) {
+        of.write(sb->cbuf(), sb->size());
+      }
+
+      of.close();
+      return true;
+    } catch (const std::exception &ex) {
+      LOG(ERROR) << "Exception when cache the file: " << filename << ", ex: " << ex.what() << std::endl;
+      if (of.is_open()) {
+        of.close();
+      }
+      return false;
+    }
+  }
+
+ private:
+  std::list<std::unique_ptr<StreamBlock>> stream_blocks_;
+
+  std::mutex stream_mutex_;
+  offset_t stream_size_ = 0;
+  offset_t offset_ = 0;
 };
+}  // namespace OMAF
+}  // namespace VCD
 
-VCD_OMAF_END;
-
-#endif //STREAM_H
+#endif  // STREAM_H

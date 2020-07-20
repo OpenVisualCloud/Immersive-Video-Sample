@@ -24,7 +24,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 /*
  * File:   OmafDashAccessApi.h
  * Author: Zhang, Andrew
@@ -36,9 +35,10 @@
 #define OMAFDASHACCESSAPI_H
 
 #include <stdint.h>
-#include "error.h"
-#include "data_type.h"
+
 #include "360SCVPAPI.h"
+#include "data_type.h"
+#include "error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,13 +46,55 @@ extern "C" {
 
 typedef void* Handler;
 
+typedef struct _omafHttpProxy {
+  char* http_proxy;
+  char* https_proxy;
+  char* no_proxy;
+  char* proxy_user;
+  char* proxy_passwd;
+} OmafHttpProxy;
+
+typedef struct _omafHttpParams {
+  long conn_timeout;
+  long total_timeout;
+  int32_t retry_times;
+  int ssl_verify_peer;
+  int ssl_verify_host;
+} OmafHttpParams;
+
+typedef struct _omafStatisticsParams {
+  int32_t window_size_ms;
+  int enable;
+} OmafStatisticsParams;
+
+typedef struct _omafSynchronizerParams {
+  int32_t segment_range_size;
+  int enable;
+} OmafSynchronizerParams;
+
+typedef struct _omafPredictorParams {
+  char* name;
+  char* libpath;
+  int enable;
+} OmafPredictorParams;
+
+typedef struct _omafDashParams {
+  OmafHttpProxy proxy;
+  OmafHttpParams http_params;
+  OmafStatisticsParams statistic_params;
+  OmafSynchronizerParams synchronizer_params;
+  OmafPredictorParams predictor_params;
+  long max_parallel_transfers;
+  int segment_open_timeout_ms;
+} OmafParams;
+
 /*
  * the enum for source type; more type will be added in future
  */
-typedef enum{
-    DefaultSource = 0,
-    MultiResSource,
-    Reserved
+typedef enum {
+  DefaultSource = 0,
+  MultiResSource,
+  Reserved,
 } SourceType;
 
 /*
@@ -61,11 +103,12 @@ typedef enum{
  * cache_path : the directory to store cached downloaded files; a default path
  *              will be used if it is ""
  */
-typedef struct DASHSTREAMINGCLIENT{
-    const char*        media_url;
-    SourceType         source_type;
-    const char*        cache_path;
-    bool               enable_extractor;
+typedef struct DASHSTREAMINGCLIENT {
+  SourceType source_type;
+  OmafParams omaf_params;
+  const char* media_url;
+  const char* cache_path;
+  bool enable_extractor;
 } DashStreamingClient;
 
 /*
@@ -73,7 +116,7 @@ typedef struct DASHSTREAMINGCLIENT{
  * params: pCtx - [in] the structure for the necessary parameters to handle an dash stream
  * return: the handle created for the API
  */
-Handler OmafAccess_Init( DashStreamingClient* pCtx);
+Handler OmafAccess_Init(DashStreamingClient* pCtx);
 
 /*
  * description: API to open a dash stream
@@ -84,7 +127,8 @@ Handler OmafAccess_Init( DashStreamingClient* pCtx);
  *         libPath - [in] plugin library path
  * return: the error return from the API
  */
-int OmafAccess_OpenMedia( Handler hdl, DashStreamingClient* pCtx, bool enablePredictor, char *predictPluginName, char *libPath);
+int OmafAccess_OpenMedia(Handler hdl, DashStreamingClient* pCtx, bool enablePredictor, char* predictPluginName,
+                         char* libPath);
 
 /*
  * description: API to seek a stream. only work with static mode. not implement yet.
@@ -92,14 +136,14 @@ int OmafAccess_OpenMedia( Handler hdl, DashStreamingClient* pCtx, bool enablePre
  *         time - [in] the position to be seek
  * return: the error return from the API
  */
-int OmafAccess_SeekMedia( Handler hdl, uint64_t time );
+int OmafAccess_SeekMedia(Handler hdl, uint64_t time);
 
 /*
  * description: API to close a dash stream
  * params: hdl - [in]handler created with DashStreaming_Init
  * return: the error return from the API
  */
-int OmafAccess_CloseMedia( Handler hdl );
+int OmafAccess_CloseMedia(Handler hdl);
 
 /*
  * description: API to get information of opened dashed stream
@@ -107,7 +151,7 @@ int OmafAccess_CloseMedia( Handler hdl );
  *         info - [out] the media info of opened dash media
  * return: the error return from the API
  */
-int OmafAccess_GetMediaInfo( Handler hdl, DashMediaInfo* info );
+int OmafAccess_GetMediaInfo(Handler hdl, DashMediaInfo* info);
 
 /*
  * description: API to get packets according to stream id in the dash media. As for viewport-based
@@ -123,7 +167,8 @@ int OmafAccess_GetMediaInfo( Handler hdl, DashMediaInfo* info );
  * return: the error return from the API, ERROR_EOS means reach end of
  *         stream for static source
  */
-int OmafAccess_GetPacket( Handler hdl, int stream_id, DashPacket* packet, int* size, uint64_t* pts, bool needParams, bool clearBuf );
+int OmafAccess_GetPacket(Handler hdl, int stream_id, DashPacket* packet, int* size, uint64_t* pts, bool needParams,
+                         bool clearBuf);
 
 /*
  * description: API to set InitViewport before downloading segment.
@@ -131,7 +176,7 @@ int OmafAccess_GetPacket( Handler hdl, int stream_id, DashPacket* packet, int* s
  *         clientInfo - [in] the headset info which is needed to calculate viewport
  * return: the error return from the API
  */
-int OmafAccess_SetupHeadSetInfo( Handler hdl, HeadSetInfo* clientInfo);
+int OmafAccess_SetupHeadSetInfo(Handler hdl, HeadSetInfo* clientInfo);
 
 /*
  * description: API to update Viewport when input shows that viewport is changed
@@ -139,7 +184,7 @@ int OmafAccess_SetupHeadSetInfo( Handler hdl, HeadSetInfo* clientInfo);
  *         pose - [in] changed pose info
  * return: the error return from the API
  */
-int OmafAccess_ChangeViewport( Handler hdl, HeadPose* pose);
+int OmafAccess_ChangeViewport(Handler hdl, HeadPose* pose);
 
 /*
  * description: API to get statistic data such as bandwith etc.
@@ -147,7 +192,7 @@ int OmafAccess_ChangeViewport( Handler hdl, HeadPose* pose);
  *         info - [out] the information current statistic data
  * return: the error return from the API
  */
-int OmafAccess_Statistic( Handler hdl, DashStatisticInfo* info );
+int OmafAccess_Statistic(Handler hdl, DashStatisticInfo* info);
 
 /*
  * description: API to Close the Handle and release relative resources after dealing with
@@ -155,13 +200,10 @@ int OmafAccess_Statistic( Handler hdl, DashStatisticInfo* info );
  * params: hdl - [in] handler created with DashStreaming_Init
  * return: the error return from the API
  */
-int OmafAccess_Close( Handler hdl );
-
+int OmafAccess_Close(Handler hdl);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* VRDASHSTREAMINGAPI_H */
-
-

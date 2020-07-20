@@ -37,53 +37,42 @@
 
 VCD_OMAF_BEGIN
 
-OmafExtractor::OmafExtractor()
-{
-}
+OmafExtractor::OmafExtractor() {}
 
-OmafExtractor::~OmafExtractor()
-{
-}
+OmafExtractor::~OmafExtractor() {}
 
-OmafExtractor::OmafExtractor( AdaptationSetElement* pAdaptationSet, ProjectionFormat pf )
-:OmafAdaptationSet(pAdaptationSet, pf)
-{
-}
+OmafExtractor::OmafExtractor(AdaptationSetElement* pAdaptationSet, ProjectionFormat pf)
+    : OmafAdaptationSet(pAdaptationSet, pf) {}
 
-void OmafExtractor::AddDependAS(OmafAdaptationSet* as)
-{
-    std::vector<int> vecID;
+void OmafExtractor::AddDependAS(OmafAdaptationSet* as) {
+  std::vector<int> vecID;
 
-    if(NULL != this->mPreselID){
-        vecID = mPreselID->SelAsIDs;
+  if (nullptr != this->mPreselID) {
+    vecID = mPreselID->SelAsIDs;
+  }
+  if (1 < this->mDependIDs.size()) {
+    vecID = mDependIDs;
+  }
+
+  for (auto it = vecID.begin(); it != vecID.end(); it++) {
+    int id = int(*it);
+    if (id == as->GetID()) {
+      this->mAdaptationSets[id] = as;
+      return;
     }
-    if(1 < this->mDependIDs.size()){
-        vecID = mDependIDs;
-    }
-
-    for(auto it = vecID.begin(); it != vecID.end(); it++){
-        int id = int (*it);
-        if( id == as->GetID() ){
-            this->mAdaptationSets[id] = as;
-            return;
-        }
-    }
+  }
 }
 
-std::list<int> OmafExtractor::GetDependTrackID()
-{
-    std::list<int> trackList;
-    for(auto it=mAdaptationSets.begin(); it!=mAdaptationSets.end(); it++){
-        OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
-        trackList.push_back(pAS->GetTrackNumber());
-    }
+std::list<int> OmafExtractor::GetDependTrackID() {
+  std::list<int> trackList;
+  for (auto it = mAdaptationSets.begin(); it != mAdaptationSets.end(); it++) {
+    OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
+    trackList.push_back(pAS->GetTrackNumber());
+  }
 
-    return trackList;
+  return trackList;
 }
 
-SampleData* OmafExtractor::ReadSample( )
-{
-    return NULL;
-}
+SampleData* OmafExtractor::ReadSample() { return nullptr; }
 
 VCD_OMAF_END;

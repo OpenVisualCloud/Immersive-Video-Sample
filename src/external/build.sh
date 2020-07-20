@@ -141,19 +141,19 @@ build_test(){
           -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
         g++ -L/usr/local/lib testMediaSource.o \
           ../googletest/googletest/build/libgtest.a -o \
-          testMediaSource -I/usr/local/include/ -lOmafDashAccess \
+          testMediaSource -I/usr/local/include/ -lOmafDashAccess -lsafestring_shared \
           -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib && \
         g++ -L/usr/local/lib testMPDParser.o \
           ../googletest/googletest/build/libgtest.a -o \
-          testMPDParser -I/usr/local/include/ -lOmafDashAccess \
+          testMPDParser -I/usr/local/include/ -lOmafDashAccess -lsafestring_shared \
           -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib && \
         g++ -L/usr/local/lib testOmafReader.o \
           ../googletest/googletest/build/libgtest.a -o \
-          testOmafReader -I/usr/local/include/ -lOmafDashAccess \
+          testOmafReader -I/usr/local/include/ -lOmafDashAccess -lsafestring_shared \
           -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib && \
         g++ -L/usr/local/lib testOmafReaderManager.o \
           ../googletest/googletest/build/libgtest.a -o \
-          testOmafReaderManager -I/usr/local/include/ -lOmafDashAccess\
+          testOmafReaderManager -I/usr/local/include/ -lOmafDashAccess -lsafestring_shared\
           -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib
 
     # Compile VROmafPacking test

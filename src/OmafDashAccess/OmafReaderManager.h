@@ -33,232 +33,154 @@
 //! Created on May 28, 2019, 1:41 PM
 //!
 
-#ifndef OMAFEXTRATORREADER_H
-#define OMAFEXTRATORREADER_H
+#ifndef OMAFMP4READERMGR_H
+#define OMAFMP4READERMGR_H
 
-#include "general.h"
-#include "OmafReader.h"
 #include "MediaPacket.h"
+#include "general.h"
+
 #include "OmafMediaSource.h"
-#include "OmafDashSource.h"
+#include "OmafReader.h"
+
+#include <atomic>
+#include <chrono>
+#include <list>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <thread>
 
 VCD_OMAF_BEGIN
 
-typedef std::list<MediaPacket*> PacketQueue;
+using PacketQueue = std::list<MediaPacket *>;
 
-struct SampleIndex
-{
-    SampleIndex()
-        : mCurrentAddSegment(0)
-        , mCurrentReadSegment(1)
-        , mSegmentSampleIndex(0)
-        , mGlobalStartSegment(0)
-        , mGlobalSampleIndex(0)
-    {}
+enum class OmafDashMode { EXTRACTOR = 0, LATER_BINDING = 1 };
 
-    uint32_t mCurrentAddSegment;
-    uint32_t mCurrentReadSegment;
-    uint32_t mSegmentSampleIndex;
-    uint32_t mGlobalStartSegment;
-    uint32_t mGlobalSampleIndex;
+class OmafSegmentNode;
+class OmafPacketParams;
+
+struct _omafSegmentNodeTimedSet {
+  int64_t timeline_point_ = -1;
+  std::chrono::steady_clock::time_point create_time_;
+  std::list<std::shared_ptr<OmafSegmentNode>> segment_nodes_;
 };
 
-typedef struct SegStatus{
-    SampleIndex         sampleIndex;
-    std::list<int>      depTrackIDs;
-    std::map<int, int>  segStatus;     //<! segment ID & the count of Read depend segment
-                                       //<! assuming segment ID is increased synchronized
-    std::list<int>      listActiveSeg;
-}SegStatus;
+using OmafSegmentNodeTimedSet = struct _omafSegmentNodeTimedSet;
 
-class OmafReaderManager : public Threadable{
-public:
-    OmafReaderManager();
-    virtual ~OmafReaderManager();
-public:
-    //!  \brief initialize the reader with MediaSource
-    //!
-    int Initialize( OmafMediaSource* pSource );
+class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_this<OmafReaderManager> {
+  friend OmafSegmentNode;
 
-    //!  \brief close the reader
-    //!
-    int Close();
+ public:
+  struct _params {
+    OmafDashMode mode_;
+    DashStreamType stream_type_ = DASH_STREAM_DYNMIC;
+    size_t duration_ = 0;
+    int32_t segment_timeout_ms_ = 3000;  // ms
+  };
 
-    //!  \brief add init Segment for reading after it is downloaded
-    //!
-    int AddInitSegment( OmafSegment* pInitSeg, uint32_t& nInitSegID );
+  using OmafReaderParams = struct _params;
 
-    //!  \brief add Segment for reading after it is downloaded
-    //!
-    int AddSegment( OmafSegment* pSeg, uint32_t nInitSegID, uint32_t& nSegID);
+ public:
+  using Ptr = std::shared_ptr<OmafReaderManager>;
 
-    int ParseSegment(
-        uint32_t nSegID,
-        uint32_t nInitSegID,
-        uint32_t& qualityRanking,
-        SRDInfo *srd);
+ public:
+  OmafReaderManager(std::shared_ptr<OmafDashSegmentClient> client, OmafReaderParams params)
+      : dash_client_(client), work_params_(params) {}
+  virtual ~OmafReaderManager() { Close(); }
 
-    //!  \brief Get Next packet from packet queue. each track has a packet queue
-    //!
-    int GetNextFrame( int trackID, MediaPacket*& pPacket, bool needParams );
+ public:
+  //!  \brief initialize the reader with MediaSource
+  //!
+  OMAF_STATUS Initialize(OmafMediaSource *pSource) noexcept;
 
-    //!  \brief Get mPacketQueue[trackID] size
-    //!
-    int GetPacketQueueSize(int trackID, int& size);
+  //!  \brief close the reader
+  //!
+  OMAF_STATUS Close() noexcept;
 
-    //!  \brief Get initial segments parse status.
-    //!
-    bool isAllInitSegParsed()
-    {
-        bool isParsed = false;
-        mLock.lock();
-        isParsed = mInitSegParsed;
-        mLock.unlock();
-        return isParsed;
-    };
+  //!  \brief add init Segment for reading after it is downloaded
+  //!
+  OMAF_STATUS OpenInitSegment(std::shared_ptr<OmafSegment> pInitSeg) noexcept;
+  OMAF_STATUS OpenLocalInitSegment(std::shared_ptr<OmafSegment> pInitSeg) noexcept;
 
-    void SetExtractorEnabled(bool extractorEnabled) { mExtractorEnabled = extractorEnabled; };
-    bool isEOSGot()
-    {
-        bool isEOS = false;
-        mLock.lock();
-        isEOS = mEOS;
-        mLock.unlock();
-        return isEOS;
-    };
+  //!  \brief add Segment for reading after it is downloaded
+  //!
+  OMAF_STATUS OpenSegment(std::shared_ptr<OmafSegment> pSeg, bool isExtractor = false) noexcept;
+  OMAF_STATUS OpenLocalSegment(std::shared_ptr<OmafSegment> pSeg, bool isExtractor = false) noexcept;
 
-    uint64_t GetOldestPacketPTSForTrack(int trackId)
-    {
-        MediaPacket *onePacket = NULL;
-        uint64_t oldestPTS = 0;
-        mPacketLock.lock();
-        if (mPacketQueues[trackId].size() > 0)
-        {
-            onePacket = mPacketQueues[trackId].front();
-            if (onePacket)
-            {
-                oldestPTS = onePacket->GetPTS();
-            }
-        }
-        mPacketLock.unlock();
-        return oldestPTS;
-    }
+  //!  \brief Get Next packet from packet queue. each track has a packet queue
+  //!
+  OMAF_STATUS GetNextPacket(uint32_t trackID, MediaPacket *&pPacket, bool requireParams) noexcept;
 
-    void RemoveOutdatedPacketForTrack(int trackId, uint64_t currPTS)
-    {
-        mPacketLock.lock();
-        if (mPacketQueues[trackId].size() > 0)
-        {
-            std::list<MediaPacket*>::iterator it;
-            for(it = mPacketQueues[trackId].begin(); it != mPacketQueues[trackId].end(); )
-            {
-                MediaPacket *onePkt = *it;
-                if (onePkt)
-                {
-                    uint64_t pts = onePkt->GetPTS();
-                    if (pts < currPTS)
-                    {
-                        SAFE_DELETE(onePkt);
-                        mPacketQueues[trackId].erase(it++);
-                    }
-                    else
-                    {
-                        it++;
-                    }
-                }
-            }
-        }
-        mPacketLock.unlock();
-    }
+  //!  \brief Get mPacketQueue[trackID] size
+  //!
+  OMAF_STATUS GetPacketQueueSize(uint32_t trackID, size_t &size) noexcept;
 
-public:
-    //!  \brief call when seeking
-    //!
-    int Seek( );
+  //!  \brief Get initial segments parse status.
+  //!
+  inline bool IsInitSegmentsParsed() { return bInitSeg_all_ready_.load(); };
 
-    void RemoveTrackFromPacketQueue(list<int>& trackIDs);
+  uint64_t GetOldestPacketPTSForTrack(int trackId);
+  void RemoveOutdatedPacketForTrack(int trackId, uint64_t currPTS);
 
-public:
-    //!  \brief the thread routine to read packet for each active track
-    //!
-    virtual void Run();
+ private:
+  void threadRunner() noexcept;
+  std::shared_ptr<OmafSegmentNode> findReadySegmentNode() noexcept;
+  void clearOlderSegmentSet(int64_t timeline_point) noexcept;
+  bool checkEOS(int64_t segment_num) noexcept;
+  bool isEmpty(std::mutex &mutex, const std::list<OmafSegmentNodeTimedSet> &nodes) noexcept;
 
-private:
-    //!  \brief read packet for trackID
-    //!
-    int  ReadNextSegment(
-        int trackID,
-        uint16_t initSegID,
-        bool isExtractor,
-        std::vector<TrackInformation*> readTrackInfos,
-        bool& segmentChanged,
-        uint32_t qualityRanking,
-        SRDInfo *srd);
+ private:
+  inline int initSegParsedCount(void) noexcept { return initSeg_ready_count_.load(); }
+  void buildInitSegmentInfo(void) noexcept;
+  void setupTrackIdMap(void) noexcept;
 
-    //!  \brief Setup Track information for each stream and relative adaptation set
-    //!
-    void UpdateSourceTrackID();
+ private:
+  void initSegmentStateChange(std::shared_ptr<OmafSegment>, OmafSegment::State) noexcept;
+  void normalSegmentStateChange(std::shared_ptr<OmafSegment>, OmafSegment::State) noexcept;
 
-    //!  \brief Update SegmentStatus based on stream. if there is extractor in the stream, need
-    //!         to considering the segments for each referenced segment by the extractor. Extractor
-    //!         can work only all referenced segment are ready.
-    void UpdateSegmentStatus(uint32_t nInitSegID, uint32_t nSegID, int64_t segCnt);
+  std::shared_ptr<OmafPacketParams> getPacketParams(uint32_t qualityRanking) noexcept {
+    return omaf_packet_params_[qualityRanking];
+  }
+  void setPacketParams(uint32_t qualityRanking, std::shared_ptr<OmafPacketParams> params) {
+    omaf_packet_params_[qualityRanking] = std::move(params);
+  }
 
-    //!  \brief setup the structure to track the IDs and status of all segment
-    //!
-    void SetupStatusMap();
+ private:
+  std::shared_ptr<OmafDashSegmentClient> dash_client_;
 
-    //!  \brief release all use Segment
-    //!
-    void releaseAllSegments( );
+  OmafReaderParams work_params_;
+  int64_t timeline_point_ = -1;
+  // omaf reader
+  std::thread segment_reader_worker_;
+  bool breader_working_ = false;
 
-    //!  \brief remove segment for reader based on initSegmentID & SegmentID
-    //!
-    uint32_t removeSegment(uint32_t initSegmentId, uint32_t segmentId);
+  std::shared_ptr<OmafReader> reader_;
 
-    //!  \brief release all packets in the packet queues
-    //!
-    void releasePacketQueue();
+  std::mutex segment_opening_mutex_;
+  std::list<OmafSegmentNodeTimedSet> segment_opening_list_;
+  std::mutex segment_opened_mutex_;
+  std::condition_variable segment_opened_cv_;
+  std::list<OmafSegmentNodeTimedSet> segment_opened_list_;
+  std::mutex segment_parsed_mutex_;
+  std::condition_variable segment_parsed_cv_;
+  std::list<OmafSegmentNodeTimedSet> segment_parsed_list_;
 
-    //!  \brief release all use Segment
-    //!
-    void setNextSampleId(int trackID, uint32_t id, bool& segmentChanged);
+  OmafMediaSource *media_source_ = nullptr;
+  std::map<uint32_t, std::shared_ptr<OmafPacketParams>> omaf_packet_params_;
 
-    void RemoveReadSegmentFromMap();
+  std::mutex initSeg_mutex_;
 
-private:
-    OmafReader*                     mReader;          //<! the Reader implementation
-    std::map<int, PacketQueue>      mPacketQueues;    //<! <trackID, PacketQueue>
-    std::vector<TrackInformation*>   mTrackInfos;      //<! track information of the opened media
-    std::map<uint32_t, std::vector<TrackInformation*>> mSegTrackInfos; //<! seg id and its corresponding track infos
-    int                             mCurTrkCnt;       //<! ID base for Init Segment
-    OmafMediaSource*                mSource;          //<! reference to the source
-    std::map<int, int>              mMapSegCnt;       //<! ID base for segment based on each InitSeg
-    std::map<int, SegStatus>        mMapSegStatus;    //<! Segment status for each track
-    std::map<int, int>              mMapInitTrk;      //<! ID pair for InitSegID to TrackID;
-    ThreadLock                      mLock;            //<! for synchronization
-    ThreadLock                      mReaderLock;      //<! lock for reader synchronization
-    ThreadLock                      mPacketLock;      //<! lock for packet queue synchronization
-    bool                            mEOS;             //<! flag for end of stream
-    int                             mStatus;          //<! thread status: 0: runing; 1: stopping, 2. stopped;
-    bool                            mReadSync;        //<! need to read  the frame at the bound of I frame (GOP boundary)
-    bool                            mInitSegParsed;   //<! flag for noting all initial segments have been parsed
-    uint8_t                         mVPSLen;          //<! VPS size for the main stream
-    uint8_t                         mSPSLen;          //<! SPS size for the main stream
-    uint8_t                         mPPSLen;          //<! PPS size for the main stream
-    uint32_t                        mWidth;           //<! sample width
-    uint32_t                        mHeight;          //<! sample height
-    std::map<uint32_t, std::map<uint32_t, OmafSegment*>> m_readSegMap; //<! map of <segId, std::map<initSegId, Segment>>
-    bool                            mExtractorEnabled;
-    std::map<uint32_t, std::map<uint32_t, uint8_t*>>     m_videoHeaders; //<! map of <qualityRanking, <headerSize, headerData>> for streams
+  //<! ID pair for InitSegID to TrackID;
+  std::map<uint32_t, uint32_t> initSeg_trackIds_map_;
+  //<! ID pair for TrackID to InitSegID;
+  std::map<uint32_t, uint32_t> trackIds_initSeg_map_;
+  // map < initSeg_id, depends_initSeg_ids>
+  std::map<uint32_t, std::vector<uint32_t>> initSegId_depends_map_;
 
-    uint32_t                        mGlobalReadSegId;
-    uint64_t                        mGlobalReadSampleId;
+  std::atomic_int initSeg_ready_count_{0};
+  std::atomic_bool bInitSeg_all_ready_{false};
 };
+// using READERMANAGER = Singleton<OmafReaderManager>;
+VCD_OMAF_END
 
-typedef Singleton<OmafReaderManager> READERMANAGER;
-
-VCD_OMAF_END;
-
-#endif /* OMAFEXTRATORREADER_H */
-
+#endif  // OMAFMP4READERMGR_H

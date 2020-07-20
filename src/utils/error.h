@@ -34,6 +34,7 @@
 #ifndef ERROR_H
 #define ERROR_H
 
+typedef int OMAF_STATUS;
 #define ERROR_NONE                               0
 #define ERROR_INVALID                            -1
 #define ERROR_PARSE                              -2
@@ -108,4 +109,5 @@
 #define OMAF_ERROR_TILES_MERGE_RWPK              -102
 #define OMAF_ERROR_GENERATE_RWPK                 -103
 #define OMAF_INVALID_EXTRACTOR_ENABLEMENT        -104
+#define OMAF_ERROR_FILE_WRITE                    -105
 #endif /* ERROR_H */

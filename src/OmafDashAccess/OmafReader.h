@@ -232,6 +232,7 @@ public:
     //!
     virtual int32_t getHeight(uint32_t trackId, uint32_t sampleId, uint32_t& height) const = 0;
 
+  virtual int32_t getDims(uint32_t trackId, uint32_t sampleId, uint32_t& width, uint32_t& height) const = 0;
     //!
     //! \brief  Get playback duration of specified track,
     //!         and unit is second
