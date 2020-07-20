@@ -202,7 +202,7 @@ int32_t  parse_hevc_specialinfo(hevc_specialInfo* pSpecialInfo, HEVCState* hevc,
 
     if (byteCnt > 0)
     {
-        memcpy(pSpecialInfo->ptr, pSpecialInfo->ptr + byteCnt, ptr_size);
+        memcpy_s(pSpecialInfo->ptr, ptr_size, pSpecialInfo->ptr + byteCnt, ptr_size);
         pSpecialInfo->ptr_size = ptr_size;
     }
     int32_t nalCnt = hevc_import_ffextradata(pSpecialInfo, hevc, nalsize, spsCnt, bParse);
@@ -236,7 +236,7 @@ int32_t parse_tiles_info(hevc_gen_tiledstream* pGenTilesStream)
             uint8_t * pBufferSliceCur = pSliceCur->pTiledBitstreamBuffer;
             int32_t lenSlice = pSliceCur->inputBufferLen;
             uint32_t nalsize[200];
-            memset(nalsize, 0, sizeof(nalsize));
+            memset_s(nalsize, sizeof(nalsize), 0);
 
             pSpecialInfo->ptr = pBufferSliceCur;
             pSpecialInfo->ptr_size = lenSlice;
@@ -288,8 +288,8 @@ int32_t parse_tiles_info(hevc_gen_tiledstream* pGenTilesStream)
 
                 HEVC_PPS *pps = &pSliceCur->hevcSlice->pps[pSliceCur->hevcSlice->last_parsed_pps_id];
 
-                memset(pSliceCur->columnWidth, 0, sizeof(pSliceCur->columnWidth));
-                memset(pSliceCur->rowHeight, 0, sizeof(pSliceCur->rowHeight));
+                memset_s(pSliceCur->columnWidth, sizeof(pSliceCur->columnWidth), 0);
+                memset_s(pSliceCur->rowHeight, sizeof(pSliceCur->rowHeight), 0);
                 if(!pps->tiles_enabled_flag)
                 {
                     pSliceCur->tilesWidthCount  = 1;
@@ -400,7 +400,7 @@ void*   genTiledStream_Init(param_gen_tiledStream* pParamGenTiledStream)
     hevc_gen_tiledstream *pGen = (hevc_gen_tiledstream *)malloc(sizeof(hevc_gen_tiledstream));
     if (!pGen)
         return NULL;
-    memset(pGen, 0, sizeof(hevc_gen_tiledstream));
+    memset_s(pGen, sizeof(hevc_gen_tiledstream), 0);
     pGen->pTiledBitstreams = (oneStream_info**)malloc(pParamGenTiledStream->tilesHeightCount
                                                        * pParamGenTiledStream->tilesWidthCount
                                                        * sizeof(oneStream_info *));
@@ -427,7 +427,7 @@ void*   genTiledStream_Init(param_gen_tiledStream* pParamGenTiledStream)
                 pGen->pTiledBitstreams[i*pGen->tilesWidthCount + j]->hevcSlice = (HEVCState*)malloc(sizeof(HEVCState));
                 if (pGen->pTiledBitstreams[i*pGen->tilesWidthCount + j]->hevcSlice)
                 {
-                    memset(pGen->pTiledBitstreams[i*pGen->tilesWidthCount + j]->hevcSlice, 0, sizeof(HEVCState));
+                    memset_s(pGen->pTiledBitstreams[i*pGen->tilesWidthCount + j]->hevcSlice, sizeof(HEVCState), 0);
                     pGen->pTiledBitstreams[i*pGen->tilesWidthCount + j]->hevcSlice->sps_active_idx = -1;
                 }
 

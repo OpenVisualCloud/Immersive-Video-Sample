@@ -29,6 +29,10 @@
 #include <fstream>
 #include "../360SCVPAPI.h"
 
+extern "C" {
+    #include "safestringlib/safe_mem_lib.h"
+}
+
 namespace{
 class I360SCVPTest : public testing::Test {
 public:
@@ -44,7 +48,7 @@ public:
       frameHeightlow = 768;
       bufferlen = frameWidth * frameHeight * 3 / 2;
       bufferlenlow = frameWidthlow * frameHeightlow * 3 / 2;
-      memset((void*)&param, 0, sizeof(param_360SCVP));
+      memset_s((void*)&param, sizeof(param_360SCVP), 0);
       pInputBuffer = new unsigned char[bufferlen];
       pInputBufferlow = new unsigned char[bufferlenlow];
       pOutputBuffer = new unsigned char[bufferlen];
@@ -499,7 +503,7 @@ TEST_F(I360SCVPTest, GenerateRWPK)
     {
         while (num)
         {
-            memset(pRectRegionPackTmp, 0, sizeof(RectangularRegionWisePacking));
+            memset_s(pRectRegionPackTmp, sizeof(RectangularRegionWisePacking), 0);
             pRectRegionPackTmp++;
             num--;
         }
@@ -577,7 +581,7 @@ TEST_F(I360SCVPTest, SetViewportSEI)
     }
 
     pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
-    memset(pTiledBitstreamTotal, 0, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info));
+    memset_s(pTiledBitstreamTotal, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info), 0);
     EXPECT_TRUE(pTiledBitstreamTotal != NULL);
 
     param_oneStream_info *ptemp = pTiledBitstreamTotal;
@@ -589,7 +593,7 @@ TEST_F(I360SCVPTest, SetViewportSEI)
             ptemp->tilesHeightCount = 1;
             ptemp->tilesWidthCount = 1;
             ptemp->inputBufferLen = 4096;
-            memcpy(ptemp->pTiledBitstreamBuffer, pInputBuffer, 4096);
+            memcpy_s(ptemp->pTiledBitstreamBuffer, 4096, pInputBuffer, 4096);
             ptemp++;
         }
     }
@@ -652,7 +656,7 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
     {
         while (num)
         {
-            memset(pRectRegionPackTmp, 0, sizeof(RectangularRegionWisePacking));
+            memset_s(pRectRegionPackTmp, 0, sizeof(RectangularRegionWisePacking), 0);
             pRectRegionPackTmp++;
             num--;
         }
@@ -689,7 +693,7 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
     }
 
     pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
-    memset(pTiledBitstreamTotal, 0, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info));
+    memset_s(pTiledBitstreamTotal, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info), 0);
     EXPECT_TRUE(pTiledBitstreamTotal != NULL);
 
     param_oneStream_info *ptemp = pTiledBitstreamTotal;
@@ -701,7 +705,7 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
             ptemp->tilesHeightCount = 1;
             ptemp->tilesWidthCount = 1;
             ptemp->inputBufferLen = 4096;
-            memcpy(ptemp->pTiledBitstreamBuffer, pInputBuffer, 4096);
+            memcpy_s(ptemp->pTiledBitstreamBuffer, 4096, pInputBuffer, 4096);
             ptemp++;
         }
     }
@@ -781,7 +785,7 @@ TEST_F(I360SCVPTest, SetRotationSEI)
     }
 
    pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
-    memset(pTiledBitstreamTotal, 0, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info));
+    memset_s(pTiledBitstreamTotal, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info), 0);
     EXPECT_TRUE(pTiledBitstreamTotal != NULL);
 
     param_oneStream_info *ptemp = pTiledBitstreamTotal;
@@ -793,7 +797,7 @@ TEST_F(I360SCVPTest, SetRotationSEI)
             ptemp->tilesHeightCount = 1;
             ptemp->tilesWidthCount = 1;
             ptemp->inputBufferLen = 4096;
-            memcpy(ptemp->pTiledBitstreamBuffer, pInputBuffer, 4096);
+            memcpy_s(ptemp->pTiledBitstreamBuffer, 4096, pInputBuffer, 4096);
             ptemp++;
         }
     }
@@ -834,7 +838,7 @@ TEST_F(I360SCVPTest, SetFramePackingSEI)
     }
 
     FramePacking framepack;
-    memset(&framepack, 0, sizeof(FramePacking));
+    memset_s(&framepack, sizeof(FramePacking), 0);
     framepack.frame0GridX = 10;
     framepack.frame0GridY = 10;
     framepack.frame1GridX = 100;
@@ -873,7 +877,7 @@ TEST_F(I360SCVPTest, SetFramePackingSEI)
     }
 
     pTiledBitstreamTotal = new param_oneStream_info[param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum];
-    memset(pTiledBitstreamTotal, 0, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info));
+    memset_s(pTiledBitstreamTotal, param.paramPicInfo.tileHeightNum*param.paramPicInfo.tileWidthNum * sizeof(param_oneStream_info), 0);
     EXPECT_TRUE(pTiledBitstreamTotal != NULL);
 
     param_oneStream_info *ptemp = pTiledBitstreamTotal;
@@ -885,7 +889,7 @@ TEST_F(I360SCVPTest, SetFramePackingSEI)
             ptemp->tilesHeightCount = 1;
             ptemp->tilesWidthCount = 1;
             ptemp->inputBufferLen = 4096;
-            memcpy(ptemp->pTiledBitstreamBuffer, pInputBuffer, 4096);
+            memcpy_s(ptemp->pTiledBitstreamBuffer, 4096, pInputBuffer, 4096);
             ptemp++;
         }
     }

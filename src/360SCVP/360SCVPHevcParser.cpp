@@ -926,7 +926,7 @@ static bool hevc_parseVPSExt(HEVC_VPS *pVPSHevc, GTS_BitStream *bs)
         num_pred_layers[iNuhLId] = pred;
     }
 
-    memset(layer_id_in_list_flag, 0, 64*sizeof(uint8_t));
+    memset_s(layer_id_in_list_flag, 64*sizeof(uint8_t), 0);
     independ = 0;
     for (i = 0; i < maxLayers; i++) {
         iNuhLId = pVPSHevc->layer_id_in_nuh[i];
@@ -1343,7 +1343,7 @@ static int32_t gts_media_hevc_read_sps_bs(GTS_BitStream *bs, HEVCState *hevc, ui
     if (vps_id>=16) {
         return -1;
     }
-    memset(&ptl, 0, sizeof(ptl));
+    memset_s(&ptl, sizeof(ptl), 0);
     max_sub_layers_minus1 = 0;
     sps_ext_or_max_sub_layers_minus1 = 0;
     if (layer_id == 0)
@@ -1678,7 +1678,7 @@ int32_t gts_media_hevc_parse_nalu(hevc_specialInfo* pSpecialInfo, int8_t *data, 
     uint16_t* payloadType = &pSpecialInfo->seiPayloadType;
     int32_t specialID = 0;
 
-    memcpy(&SliceInfo, &hevc->s_info, sizeof(HEVCSliceInfo));
+    memcpy_s(&SliceInfo, sizeof(HEVCSliceInfo), &hevc->s_info, sizeof(HEVCSliceInfo));
 
     hevc->s_info.entry_point_start_bits = -1;
     hevc->s_info.payload_start_offset = -1;
@@ -1776,7 +1776,7 @@ int32_t gts_media_hevc_parse_nalu(hevc_specialInfo* pSpecialInfo, int8_t *data, 
     }
     if (is_slice)
         hevc_compute_poc(&SliceInfo);
-    memcpy(&hevc->s_info, &SliceInfo, sizeof(HEVCSliceInfo));
+    memcpy_s(&hevc->s_info, sizeof(HEVCSliceInfo), &SliceInfo, sizeof(HEVCSliceInfo));
 
 exit:
     if (bs) gts_bs_del(bs);
@@ -1934,7 +1934,7 @@ int32_t hevc_read_RwpkSEI(int8_t *pRWPKBits, uint32_t RWPKBitsSize, RegionWisePa
     {
         RectangularRegionWisePacking region;
         uint8_t packed8Bits = gts_bs_read_int(bs, 8);
-        memset(&region, 0, sizeof(RectangularRegionWisePacking));
+        memset_s(&region, sizeof(RectangularRegionWisePacking), 0);
         region.guardBandFlag = (packed8Bits >> 4) & 0x01;
         // read RectRegionPacking
         region.projRegWidth = gts_bs_read_int(bs, 32);
@@ -1961,7 +1961,7 @@ int32_t hevc_read_RwpkSEI(int8_t *pRWPKBits, uint32_t RWPKBitsSize, RegionWisePa
             region.gbType2 = (packed16Bits >> 6) & 0x07;
             region.gbType3 = (packed16Bits >> 3) & 0x07;
         }
-        memcpy(&pRWPK->rectRegionPacking[i], &region, sizeof(RectangularRegionWisePacking));
+        memcpy_s(&pRWPK->rectRegionPacking[i], sizeof(RectangularRegionWisePacking), &region, sizeof(RectangularRegionWisePacking));
     }
     pRWPK->numHiRegions = gts_bs_read_int(bs, 8);
     pRWPK->lowResPicWidth = gts_bs_read_int(bs, 32);

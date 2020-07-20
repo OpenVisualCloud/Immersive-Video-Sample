@@ -59,11 +59,11 @@ int32_t init_one_bitstream(oneStream_info **pBs)
     pTiledBitstreams = (oneStream_info *)malloc(sizeof(oneStream_info));
     if (!pTiledBitstreams)
         return -1;
-    memset(pTiledBitstreams, 0, sizeof(oneStream_info));
+    memset_s(pTiledBitstreams, sizeof(oneStream_info), 0);
     pTiledBitstreams->hevcSlice = (HEVCState*)malloc(sizeof(HEVCState));
     if(pTiledBitstreams->hevcSlice)
     {
-        memset(pTiledBitstreams->hevcSlice, 0, sizeof(HEVCState));
+        memset_s(pTiledBitstreams->hevcSlice, sizeof(HEVCState), 0);
         pTiledBitstreams->hevcSlice->sps_active_idx = -1;
     }
     pTiledBitstreams->outputBufferLen = 0;
@@ -158,10 +158,10 @@ int32_t merge_header(GTS_BitStream *bs, oneStream_info* pSlice, uint8_t **pBitst
     HEVCState *hevc = pSlice->hevcSlice;
 
     hevc_specialInfo specialInfo;
-    memset(&specialInfo, 0, sizeof(hevc_specialInfo));
+    memset_s(&specialInfo, sizeof(hevc_specialInfo), 0);
     specialInfo.ptr = pBufferSliceCur;
     specialInfo.ptr_size = lenSlice;
-    memset(nalsize, 0, sizeof(nalsize));
+    memset_s(nalsize, sizeof(nalsize), 0);
     uint64_t bs_position = bs->position;
     int32_t spsCnt;
     parse_hevc_specialinfo(&specialInfo, hevc, nalsize, &specialLen, &spsCnt, 0);
@@ -174,7 +174,7 @@ int32_t merge_header(GTS_BitStream *bs, oneStream_info* pSlice, uint8_t **pBitst
     {
         if (orgHevc)
         {
-            memcpy(orgHevc, hevc, sizeof(HEVCState));
+            memcpy_s(orgHevc, sizeof(HEVCState), hevc, sizeof(HEVCState));
         }
 
         // Choose LR header if HR and LR exist
@@ -198,7 +198,7 @@ int32_t merge_header(GTS_BitStream *bs, oneStream_info* pSlice, uint8_t **pBitst
     bs_position = bs->position;
 
     //copy slice data
-    memcpy(pBitstreamCur, pBufferSliceCur + specialLen, nalsize[SLICE_DATA]);
+    memcpy_s(pBitstreamCur, nalsize[SLICE_DATA], pBufferSliceCur + specialLen, nalsize[SLICE_DATA]);
     pBitstreamCur += nalsize[SLICE_DATA];
     bs->position += nalsize[SLICE_DATA];
     pSlice->outputBufferLen += nalsize[SLICE_DATA];
@@ -388,7 +388,7 @@ void* tile_merge_Init(param_mergeStream *mergeStreamParams)
     hevc_mergeStream *mergeStream = (hevc_mergeStream *)malloc(sizeof(hevc_mergeStream));
     if(!mergeStream)
         return NULL;
-    memset(mergeStream, 0, sizeof(hevc_mergeStream));
+    memset_s(mergeStream, sizeof(hevc_mergeStream), 0);
 
     int32_t HR_ntile = mergeStreamParams->highRes.selectedTilesCount;
     int32_t LR_ntile = mergeStreamParams->lowRes.selectedTilesCount;
@@ -396,7 +396,7 @@ void* tile_merge_Init(param_mergeStream *mergeStreamParams)
     copy_tile_params(&(mergeStream->lowRes), &(mergeStreamParams->lowRes));
 
     mergeStream->slice_segment_address = (int32_t *)malloc((HR_ntile+LR_ntile) * sizeof(int32_t));
-    memset(mergeStream->slice_segment_address, 0, (HR_ntile+LR_ntile) * sizeof(int32_t));
+    memset_s(mergeStream->slice_segment_address, (HR_ntile+LR_ntile) * sizeof(int32_t), 0);
 
     mergeStream->inputBistreamsLen = 0;
 
