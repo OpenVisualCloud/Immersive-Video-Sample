@@ -38,7 +38,7 @@
 
 Geometry::Geometry()
 {
-    memset(&m_sVideoInfo, 0, sizeof(struct SVideoInfo));
+    memset_s(&m_sVideoInfo, sizeof(struct SVideoInfo), 0);
     m_iMarginX = m_iMarginY =0;
 
     m_bPadded = false;

@@ -25,6 +25,9 @@
  */
 #include "360SCVPBitstream.h"
 #include "assert.h"
+extern "C" {
+    #include "safestringlib/safe_mem_lib.h"
+}
 
 void* gts_malloc(size_t size)
 {
@@ -65,7 +68,7 @@ GTS_BitStream *gts_bs_new(const int8_t *buffer, uint64_t BufferSize, uint32_t mo
 
     tmp = (GTS_BitStream *)gts_malloc(sizeof(GTS_BitStream));
     if (!tmp) return NULL;
-    memset(tmp, 0, sizeof(GTS_BitStream));
+    memset_s(tmp, sizeof(GTS_BitStream), 0);
 
     tmp->original = (int8_t*)buffer;
     tmp->size = BufferSize;
@@ -287,7 +290,7 @@ uint32_t gts_bs_read_data(GTS_BitStream *bs, int8_t *data, uint32_t nbBytes)
         case GTS_BITSTREAM_READ:
         case  GTS_BITSTREAM_WRITE:
         case GTS_BITSTREAM_WRITE_DYN:
-            memcpy(data, bs->original + bs->position, nbBytes);
+            memcpy_s(data, nbBytes, bs->original + bs->position, nbBytes);
             bs->position += nbBytes;
             return nbBytes;
         default:
@@ -425,7 +428,7 @@ uint32_t gts_bs_write_byte(GTS_BitStream *bs, uint8_t byte, uint32_t countLoop)
         totalSize = bs->position + countLoop;
         if (totalSize  > bs->size)
             return 0;
-        memset(bs->original + bs->position, byte, countLoop);
+        memset_s(bs->original + bs->position, countLoop, byte);
         bs->position += countLoop;
         return countLoop;
     case GTS_BITSTREAM_WRITE_DYN:
@@ -445,7 +448,7 @@ uint32_t gts_bs_write_byte(GTS_BitStream *bs, uint8_t byte, uint32_t countLoop)
                 return 0;
             bs->size = dynSize;
         }
-        memset(bs->original + bs->position, byte, countLoop);
+        memset_s(bs->original + bs->position, countLoop, byte);
         bs->position += countLoop;
         return countLoop;
     case GTS_BITSTREAM_FILE_READ:
@@ -488,7 +491,7 @@ uint32_t gts_bs_write_data(GTS_BitStream *bs, const int8_t *data, uint32_t nbByt
                     return 0;
                 bs->size = new_size;
             }
-            memcpy(bs->original + bs->position, data, nbBytes);
+            memcpy_s(bs->original + bs->position, nbBytes, data, nbBytes);
             bs->position += nbBytes;
             return nbBytes;
         case GTS_BITSTREAM_FILE_READ:
@@ -507,7 +510,7 @@ uint32_t gts_bs_write_data(GTS_BitStream *bs, const int8_t *data, uint32_t nbByt
                     bs->buffer_io_size = newSize;
                 }
             }
-            memcpy(bs->buffer_io+bs->buffer_written, data, nbBytes);
+            memcpy_s(bs->buffer_io+bs->buffer_written, nbBytes, data, nbBytes);
             bs->buffer_written += nbBytes;
             return nbBytes;
 
@@ -518,7 +521,7 @@ uint32_t gts_bs_write_data(GTS_BitStream *bs, const int8_t *data, uint32_t nbByt
         case  GTS_BITSTREAM_WRITE:
             if (bs->position + nbBytes > bs->size)
                 return 0;
-            memcpy(bs->original + bs->position, data, nbBytes);
+            memcpy_s(bs->original + bs->position, nbBytes, data, nbBytes);
             bs->position += nbBytes;
             return nbBytes;
         default:

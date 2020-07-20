@@ -46,12 +46,12 @@ TstitchStream::TstitchStream()
     m_hevcState = new HEVCState;
     if (m_hevcState)
     {
-        memset(m_hevcState, 0, sizeof(HEVCState));
+        memset_s(m_hevcState, sizeof(HEVCState), 0);
         m_hevcState->sps_active_idx = -1;
     }
-    memset(&m_pViewportParam, 0, sizeof(generateViewPortParam));
-    memset(&m_mergeStreamParam, 0, sizeof(param_mergeStream));
-    memset(&m_streamStitch, 0, sizeof(param_gen_tiledStream));
+    memset_s(&m_pViewportParam, sizeof(generateViewPortParam), 0);
+    memset_s(&m_mergeStreamParam, sizeof(param_mergeStream), 0);
+    memset_s(&m_streamStitch, sizeof(param_gen_tiledStream), 0);
     m_pViewport = NULL;
     m_pMergeStream = NULL;
     m_pSteamStitch = NULL;
@@ -89,7 +89,7 @@ TstitchStream::TstitchStream()
     m_startCodesSize = 0;
     m_nalType = 0;
     m_projType = 0;
-    memset(&m_sliceType, 0, sizeof(SliceType));
+    memset_s(&m_sliceType, sizeof(SliceType), 0);
     m_usedType = 0;
     m_xTopLeftNet = 0;
     m_yTopLeftNet = 0;
@@ -99,24 +99,24 @@ TstitchStream::TstitchStream()
 TstitchStream::TstitchStream(TstitchStream& other)
 {
     m_pOutTile = new TileDef[1000];
-    memcpy(m_pOutTile, other.m_pOutTile, 1000 * sizeof(TileDef));
+    memcpy_s(m_pOutTile, 1000 * sizeof(TileDef), other.m_pOutTile, 1000 * sizeof(TileDef));
     m_pUpLeft = new point[6];
-    memcpy(m_pUpLeft, other.m_pUpLeft, 6 * sizeof(point));
+    memcpy_s(m_pUpLeft, 6 * sizeof(point), other.m_pUpLeft, 6 * sizeof(point));
     m_pDownRight = new point[6];
-    memcpy(m_pDownRight, other.m_pDownRight, 6 * sizeof(point));
+    memcpy_s(m_pDownRight, 6 * sizeof(point), other.m_pDownRight, 6 * sizeof(point));
     m_pNalInfo[0] = new nal_info[1000];
-    memcpy(m_pNalInfo[0], other.m_pNalInfo[0], 1000 * sizeof(nal_info));
+    memcpy_s(m_pNalInfo[0], 1000 * sizeof(nal_info), other.m_pNalInfo[0], 1000 * sizeof(nal_info));
     m_pNalInfo[1] = new nal_info[1000];
-    memcpy(m_pNalInfo[1], other.m_pNalInfo[1], 1000 * sizeof(nal_info));
+    memcpy_s(m_pNalInfo[1], 1000 * sizeof(nal_info), other.m_pNalInfo[1], 1000 * sizeof(nal_info));
     m_hevcState = new HEVCState;
     if (m_hevcState)
     {
-        memcpy(m_hevcState, other.m_hevcState, sizeof(HEVCState));
+        memcpy_s(m_hevcState, sizeof(HEVCState), other.m_hevcState, sizeof(HEVCState));
     }
 
-    memcpy(&m_pViewportParam, &(other.m_pViewportParam), sizeof(generateViewPortParam));
-    memcpy(&m_mergeStreamParam, &(other.m_mergeStreamParam), sizeof(param_mergeStream));
-    memcpy(&m_streamStitch, &(other.m_streamStitch), sizeof(param_gen_tiledStream));
+    memcpy_s(&m_pViewportParam, sizeof(generateViewPortParam), &(other.m_pViewportParam), sizeof(generateViewPortParam));
+    memcpy_s(&m_mergeStreamParam, sizeof(param_mergeStream), &(other.m_mergeStreamParam), sizeof(param_mergeStream));
+    memcpy_s(&m_streamStitch, sizeof(param_gen_tiledStream), &(other.m_streamStitch), sizeof(param_gen_tiledStream));
     m_pViewport = NULL;
     m_pMergeStream = NULL;
     m_pSteamStitch = NULL;
@@ -144,9 +144,9 @@ TstitchStream::TstitchStream(TstitchStream& other)
     m_tileHeightCountOri[0] = other.m_tileHeightCountOri[0];
     m_tileHeightCountOri[1] = other.m_tileHeightCountOri[1];
     m_specialInfo[0] = new unsigned char[200];
-    memcpy(m_specialInfo[0], other.m_specialInfo[0], 200 * sizeof(unsigned char));
+    memcpy_s(m_specialInfo[0], 200 * sizeof(unsigned char), other.m_specialInfo[0], 200 * sizeof(unsigned char));
     m_specialInfo[1] = new unsigned char[200];
-    memcpy(m_specialInfo[1], other.m_specialInfo[1], 200 * sizeof(unsigned char));
+    memcpy_s(m_specialInfo[1], 200 * sizeof(unsigned char), other.m_specialInfo[1], 200 * sizeof(unsigned char));
     m_sliceHeaderLen = other.m_sliceHeaderLen;
     m_dstWidthNet = other.m_dstWidthNet;
     m_dstHeightNet = other.m_dstHeightNet;
@@ -162,7 +162,7 @@ TstitchStream::TstitchStream(TstitchStream& other)
     m_data = NULL;
     m_startCodesSize = other.m_startCodesSize;
     m_nalType = other.m_nalType;
-    memcpy(&m_sliceType, &(other.m_sliceType), sizeof(SliceType));
+    memcpy_s(&m_sliceType, sizeof(SliceType), &(other.m_sliceType), sizeof(SliceType));
     m_usedType = other.m_usedType;
     m_xTopLeftNet = other.m_xTopLeftNet;
     m_yTopLeftNet = other.m_yTopLeftNet;
@@ -494,7 +494,7 @@ int32_t TstitchStream::parseNals(param_360SCVP* pParamStitchStream, int32_t pars
     param_oneStream_info  TiledBitstream;
     void* pGenStream;
 
-    memset(&GenStreamParam, 0, sizeof(param_gen_tiledStream));
+    memset_s(&GenStreamParam, sizeof(param_gen_tiledStream), 0);
     GenStreamParam.pts = 0;
     GenStreamParam.tilesHeightCount = 1;
     GenStreamParam.tilesWidthCount = 1;
@@ -516,7 +516,7 @@ int32_t TstitchStream::parseNals(param_360SCVP* pParamStitchStream, int32_t pars
         if (m_specialDataLen[streamIdx] > 0)
         {
             memmove(TiledBitstream.pTiledBitstreamBuffer + m_specialDataLen[streamIdx], TiledBitstream.pTiledBitstreamBuffer, pParamStitchStream->inputBitstreamLen);
-            memcpy(TiledBitstream.pTiledBitstreamBuffer, m_specialInfo[streamIdx], m_specialDataLen[streamIdx]);
+            memcpy_s(TiledBitstream.pTiledBitstreamBuffer, m_specialDataLen[streamIdx], m_specialInfo[streamIdx], m_specialDataLen[streamIdx]);
             TiledBitstream.inputBufferLen += m_specialDataLen[streamIdx];
         }
     }
@@ -543,27 +543,27 @@ int32_t TstitchStream::parseNals(param_360SCVP* pParamStitchStream, int32_t pars
         oneStream_info * pSlice = pGenTilesStream->pTiledBitstreams[0];
         if (((pGenTilesStream->parseType == E_PARSER_ONENAL)) && m_bSPSReady && m_bPPSReady)
         {
-            memcpy(pSlice->hevcSlice->sps, m_hevcState->sps,  6 * sizeof(HEVC_SPS));
+            memcpy_s(pSlice->hevcSlice->sps, 6 * sizeof(HEVC_SPS), m_hevcState->sps,  6 * sizeof(HEVC_SPS));
             pSlice->hevcSlice->last_parsed_sps_id = m_hevcState->last_parsed_sps_id;
-            memcpy(pSlice->hevcSlice->pps, m_hevcState->pps, 16 * sizeof(HEVC_PPS));
+            memcpy_s(pSlice->hevcSlice->pps, 16 * sizeof(HEVC_PPS), m_hevcState->pps, 16 * sizeof(HEVC_PPS));
             pSlice->hevcSlice->last_parsed_pps_id = m_hevcState->last_parsed_pps_id;
         }
 
         genTiledStream_parseNals(&GenStreamParam, pGenStream);
 
         if(pGenTilesStream->parseType != E_PARSER_ONENAL)
-            memcpy(m_hevcState, pSlice->hevcSlice, sizeof(HEVCState));
+            memcpy_s(m_hevcState, sizeof(HEVCState), pSlice->hevcSlice, sizeof(HEVCState));
         else
         {
             if (GenStreamParam.nalType == GTS_HEVC_NALU_SEQ_PARAM)
             {
-                memcpy(m_hevcState->sps, pSlice->hevcSlice->sps, 16 * sizeof(HEVC_SPS));
+                memcpy_s(m_hevcState->sps, 16 * sizeof(HEVC_SPS), pSlice->hevcSlice->sps, 16 * sizeof(HEVC_SPS));
                 m_hevcState->last_parsed_sps_id = pSlice->hevcSlice->last_parsed_sps_id;
                 m_bSPSReady = 1;
             }
             if (GenStreamParam.nalType == GTS_HEVC_NALU_PIC_PARAM)
             {
-                memcpy(m_hevcState->pps, pSlice->hevcSlice->pps, 16 * sizeof(HEVC_PPS));
+                memcpy_s(m_hevcState->pps, 16 * sizeof(HEVC_SPS), pSlice->hevcSlice->pps, 16 * sizeof(HEVC_PPS));
                 m_hevcState->last_parsed_pps_id = pSlice->hevcSlice->last_parsed_pps_id;
                 m_bPPSReady = 1;
             }
@@ -575,7 +575,7 @@ int32_t TstitchStream::parseNals(param_360SCVP* pParamStitchStream, int32_t pars
         if (GenStreamParam.specialLen)
         {
             m_specialDataLen[streamIdx] = GenStreamParam.specialLen;
-            memcpy(m_specialInfo[streamIdx], TiledBitstream.pTiledBitstreamBuffer, m_specialDataLen[streamIdx]);
+            memcpy_s(m_specialInfo[streamIdx], m_specialDataLen[streamIdx], TiledBitstream.pTiledBitstreamBuffer, m_specialDataLen[streamIdx]);
         }
         m_specialDataLen[streamIdx] = GenStreamParam.specialLen;
         m_nalType = GenStreamParam.nalType;
@@ -734,7 +734,7 @@ int32_t TstitchStream::doMerge(param_360SCVP* pParamStitchStream)
         ret = EncRWPKSEI(&m_dstRwpk, pParamStitchStream->pOutputSEI, &pParamStitchStream->outputSEILen);
 
     pParamStitchStream->outputBitstreamLen = m_mergeStreamParam.outputiledbistreamlen;
-    memcpy(pParamStitchStream->pOutputBitstream, m_mergeStreamParam.pOutputBitstream, m_mergeStreamParam.outputiledbistreamlen);
+    memcpy_s(pParamStitchStream->pOutputBitstream, m_mergeStreamParam.outputiledbistreamlen, m_mergeStreamParam.pOutputBitstream, m_mergeStreamParam.outputiledbistreamlen);
 
     return ret;
 }
@@ -966,7 +966,7 @@ int32_t TstitchStream::merge_one_tile(uint8_t **pBitstream, oneStream_info* pSli
         return GTS_BAD_PARAM;
 
     hevc_specialInfo specialInfo;
-    memset(&specialInfo, 0, sizeof(hevc_specialInfo));
+    memset_s(&specialInfo, sizeof(hevc_specialInfo), 0);
     specialInfo.ptr = pBufferSliceCur;
     specialInfo.ptr_size = lenSlice;
 
@@ -975,7 +975,7 @@ int32_t TstitchStream::merge_one_tile(uint8_t **pBitstream, oneStream_info* pSli
     hevc->pps[hevc->last_parsed_pps_id].tiles_enabled_flag
         = hevc->pps[hevc->last_parsed_pps_id].org_tiles_enabled_flag;
 
-    memset(nalsize, 0, sizeof(nalsize));
+    memset_s(nalsize, sizeof(nalsize), 0);
     uint64_t bs_position = bs->position;
     int32_t spsCnt;
     parse_hevc_specialinfo(&specialInfo, hevc, nalsize, &specialLen, &spsCnt, 0);
@@ -1045,7 +1045,7 @@ int32_t TstitchStream::merge_one_tile(uint8_t **pBitstream, oneStream_info* pSli
     bs_position = bs->position;
 
     //copy slice data
-    memcpy(pBitstreamCur, pBufferSliceCur + specialLen, nalsize[SLICE_DATA]);
+    memcpy_s(pBitstreamCur, nalsize[SLICE_DATA], pBufferSliceCur + specialLen, nalsize[SLICE_DATA]);
     pBitstreamCur += nalsize[SLICE_DATA];
     bs->position += nalsize[SLICE_DATA];
     pBufferSliceCur += specialLen + nalsize[SLICE_DATA];
@@ -1152,7 +1152,7 @@ int32_t  TstitchStream::getRWPKInfo(RegionWisePacking *pRWPK)
     int32_t ret = 0;
     if (!pRWPK)
         return -1;
-    memcpy(pRWPK, &m_dstRwpk, sizeof(RegionWisePacking));
+    memcpy_s(pRWPK, sizeof(RegionWisePacking),  &m_dstRwpk, sizeof(RegionWisePacking));
     return ret;
 }
 
@@ -1247,11 +1247,11 @@ int32_t  TstitchStream::GeneratePPS(param_360SCVP* pParamStitchStream, TileArran
     {
         // parsing the origin pps
         hevc_specialInfo specialInfo;
-        memset(&specialInfo, 0, sizeof(hevc_specialInfo));
+        memset_s(&specialInfo, sizeof(hevc_specialInfo), 0);
         specialInfo.ptr = pParamStitchStream->pInputBitstream;
         specialInfo.ptr_size = pParamStitchStream->inputBitstreamLen;
         uint32_t nalsize[20];
-        memset(nalsize, 0, sizeof(nalsize));
+        memset_s(nalsize, sizeof(nalsize), 0);
         int32_t spsCnt;
         ret = hevc_import_ffextradata(&specialInfo, m_hevcState, nalsize, &spsCnt, 0);
         if (ret < 0)
@@ -1262,7 +1262,7 @@ int32_t  TstitchStream::GeneratePPS(param_360SCVP* pParamStitchStream, TileArran
             bsWrite = NULL;
             return ret;
         }
-        memcpy(&hevcTmp, m_hevcState, sizeof(HEVCState));
+        memcpy_s(&hevcTmp, sizeof(HEVCState), m_hevcState, sizeof(HEVCState));
         if (hevcTmp.last_parsed_pps_id > 63)
         {
             gts_bs_del(bs);
@@ -1341,11 +1341,11 @@ int32_t  TstitchStream::GenerateSPS(param_360SCVP* pParamStitchStream)
     {
         // parsing the origin sps
         hevc_specialInfo specialInfo;
-        memset(&specialInfo, 0, sizeof(hevc_specialInfo));
+        memset_s(&specialInfo, sizeof(hevc_specialInfo), 0);
         specialInfo.ptr = pParamStitchStream->pInputBitstream;
         specialInfo.ptr_size = pParamStitchStream->inputBitstreamLen;
         uint32_t nalsize[20];
-        memset(nalsize, 0, sizeof(nalsize));
+        memset_s(nalsize, sizeof(nalsize), 0);
         int32_t spsCnt;
         ret = hevc_import_ffextradata(&specialInfo, m_hevcState, nalsize, &spsCnt, 0);
         if (ret < 0)
@@ -1365,7 +1365,7 @@ int32_t  TstitchStream::GenerateSPS(param_360SCVP* pParamStitchStream)
             return ret;
         }
         // modify the sps
-        memcpy(&hevcTmp, m_hevcState, sizeof(HEVCState));
+        memcpy_s(&hevcTmp, sizeof(HEVCState), m_hevcState, sizeof(HEVCState));
         HEVC_SPS *sps = &hevcTmp.sps[0];
         /*
         if (!sps)
@@ -1433,10 +1433,10 @@ int32_t  TstitchStream::GenerateSliceHdr(param_360SCVP* pParam360SCVP, int32_t n
         uint32_t nalsize[20];
         hevc_specialInfo specialInfo;
         int32_t spsCnt;
-        memset(&specialInfo, 0, sizeof(hevc_specialInfo));
+        memset_s(&specialInfo, sizeof(hevc_specialInfo), 0);
         specialInfo.ptr = pParam360SCVP->pInputBitstream;
         specialInfo.ptr_size = pParam360SCVP->inputBitstreamLen;
-        memset(nalsize, 0, sizeof(nalsize));
+        memset_s(nalsize, sizeof(nalsize), 0);
         ret = hevc_import_ffextradata(&specialInfo, m_hevcState, nalsize, &spsCnt, 0);
         if (ret < 0)
         {
@@ -1447,7 +1447,7 @@ int32_t  TstitchStream::GenerateSliceHdr(param_360SCVP* pParam360SCVP, int32_t n
             return ret;
         }
         // modify the sliceheader
-        memcpy(&hevcTmp, m_hevcState, sizeof(HEVCState));
+        memcpy_s(&hevcTmp, sizeof(HEVCState), m_hevcState, sizeof(HEVCState));
 
         HEVC_SPS *sps = &(hevcTmp.sps[0]);
         sps->width = pParam360SCVP->destWidth;

@@ -77,8 +77,8 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
             cTAppConvCfg->m_paramVideoFP.faces[i][j].rotFace = pParamGenViewport->m_paramVideoFP.faces[i][j].rotFace;
         }
     }
-    memset(&cTAppConvCfg->m_sourceSVideoInfo, 0, sizeof(struct SVideoInfo));
-    memset(&cTAppConvCfg->m_codingSVideoInfo, 0, sizeof(struct SVideoInfo));
+    memset_s(&cTAppConvCfg->m_sourceSVideoInfo, sizeof(struct SVideoInfo), 0);
+    memset_s(&cTAppConvCfg->m_codingSVideoInfo, sizeof(struct SVideoInfo), 0);
     cTAppConvCfg->m_iCodingFaceWidth = pParamGenViewport->m_iViewportWidth;
     cTAppConvCfg->m_iCodingFaceHeight = pParamGenViewport->m_iViewportHeight;
     cTAppConvCfg->m_codingSVideoInfo.viewPort.fPitch = pParamGenViewport->m_viewPort_fPitch;
@@ -688,8 +688,8 @@ TgenViewport::TgenViewport()
     m_faceSizeAlignment = 8;
     m_pUpLeft = new SPos[FACE_NUMBER];//
     m_pDownRight = new SPos[FACE_NUMBER];//
-    memset(&m_codingSVideoInfo, 0, sizeof(SVideoInfo));
-    memset(&m_sourceSVideoInfo, 0, sizeof(SVideoInfo));
+    memset_s(&m_codingSVideoInfo, sizeof(SVideoInfo), 0);
+    memset_s(&m_sourceSVideoInfo, sizeof(SVideoInfo), 0);
     m_iCodingFaceWidth = 0;
     m_iCodingFaceHeight = 0;
     m_iSourceWidth = 0;
@@ -730,8 +730,8 @@ TgenViewport& TgenViewport::operator=(const TgenViewport& src)
         return *this;
     // memcpy(m_faceSizeAlignment, src.m_faceSizeAlignment, sizeof(int32_t));
     this->m_faceSizeAlignment = src.m_faceSizeAlignment;
-    memcpy(this->m_pUpLeft, src.m_pUpLeft, sizeof(SPos));
-    memcpy(this->m_pDownRight, src.m_pDownRight, sizeof(SPos));
+    memcpy_s(this->m_pUpLeft, sizeof(SPos), src.m_pUpLeft, sizeof(SPos));
+    memcpy_s(this->m_pDownRight, sizeof(SPos), src.m_pDownRight, sizeof(SPos));
     this->m_codingSVideoInfo = src.m_codingSVideoInfo;
     this->m_sourceSVideoInfo = src.m_sourceSVideoInfo;
     this->m_iCodingFaceWidth = src.m_iCodingFaceHeight;
@@ -746,7 +746,8 @@ TgenViewport& TgenViewport::operator=(const TgenViewport& src)
     this->m_usageType = src.m_usageType;
     if (this->m_srd && src.m_srd)
     {
-        memcpy(this->m_srd, src.m_srd, FACE_NUMBER*m_tileNumRow*m_tileNumCol*sizeof(ITileInfo));
+        int32_t totalTileInfoSize = FACE_NUMBER*m_tileNumRow*m_tileNumCol*sizeof(ITileInfo);
+        memcpy_s(this->m_srd, totalTileInfoSize, src.m_srd, totalTileInfoSize);
     }
     return *this;
 }

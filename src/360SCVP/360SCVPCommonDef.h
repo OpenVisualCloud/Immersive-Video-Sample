@@ -28,6 +28,10 @@
 #define __360SCVP_COMMONDEF__
 #include "stdint.h"
 
+extern "C" {
+    #include "safestringlib/safe_mem_lib.h"
+}
+
 typedef enum SLICE_TYPE {
     SLICE_B = 0,
     SLICE_P = 1,
