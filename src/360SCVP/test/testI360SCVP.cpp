@@ -656,7 +656,7 @@ TEST_F(I360SCVPTest, SetRWPKSEI)
     {
         while (num)
         {
-            memset_s(pRectRegionPackTmp, 0, sizeof(RectangularRegionWisePacking), 0);
+            memset_s(pRectRegionPackTmp, sizeof(RectangularRegionWisePacking), 0);
             pRectRegionPackTmp++;
             num--;
         }
