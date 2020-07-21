@@ -94,6 +94,7 @@ TstitchStream::TstitchStream()
     m_xTopLeftNet = 0;
     m_yTopLeftNet = 0;
     m_dstRwpk = RegionWisePacking();
+    m_glogWrapper = new GlogWrapper((char*)"glog360SCVP");
 }
 
 TstitchStream::TstitchStream(TstitchStream& other)
@@ -168,6 +169,7 @@ TstitchStream::TstitchStream(TstitchStream& other)
     m_yTopLeftNet = other.m_yTopLeftNet;
     m_dstRwpk = RegionWisePacking();
     m_dstRwpk = other.m_dstRwpk;
+    m_glogWrapper = new GlogWrapper((char*)"glog360SCVP");
 }
 
 TstitchStream::~TstitchStream()
@@ -203,6 +205,10 @@ TstitchStream::~TstitchStream()
     if (m_specialInfo[1]) {
         delete []m_specialInfo[1];
         m_specialInfo[1] = nullptr;
+    }
+    if(m_glogWrapper) {
+        delete (m_glogWrapper);
+        m_glogWrapper = NULL;
     }
 }
 
@@ -605,7 +611,7 @@ int32_t TstitchStream::feedParamToGenStream(param_360SCVP* pParamStitchStream)
     param_oneStream_info *pTmpLowHdr = m_mergeStreamParam.lowRes.pHeader;
     pTmpLowHdr->pTiledBitstreamBuffer = pParamStitchStream->pInputLowBitstream;
     pTmpLowHdr->inputBufferLen = m_specialDataLen[1];
-    printf("the tiled idx=");
+    LOG(INFO) << "the tiled idx = ";
 
     tile_merge_reset(m_pMergeStream);
 
@@ -623,7 +629,7 @@ int32_t TstitchStream::feedParamToGenStream(param_360SCVP* pParamStitchStream)
 
             pTmpHigh[idx]->inputBufferLen = (pTmpTile->idx!=0) ? m_pNalInfo[0][pTmpTile->idx].nalLen : m_pNalInfo[0][pTmpTile->idx].nalLen- m_specialDataLen[0];
             pTmpHigh[idx]->pTiledBitstreamBuffer = (pTmpTile->idx != 0) ? m_pNalInfo[0][pTmpTile->idx].pNalStream : m_pNalInfo[0][pTmpTile->idx].pNalStream + m_specialDataLen[0];
-            printf(" %d ", pTmpTile->idx);
+            LOG(INFO) << pTmpTile->idx;
             pTmpTile++;
             idx++;
         }
@@ -639,11 +645,10 @@ int32_t TstitchStream::feedParamToGenStream(param_360SCVP* pParamStitchStream)
 
             pTmpLow[idx]->inputBufferLen = (idx != 0) ? m_pNalInfo[1][idx].nalLen : m_pNalInfo[1][idx].nalLen - m_specialDataLen[1];
             pTmpLow[idx]->pTiledBitstreamBuffer = (idx != 0) ? m_pNalInfo[1][idx].pNalStream : m_pNalInfo[1][idx].pNalStream + m_specialDataLen[1];
-            printf(" %d ", idx);
+            LOG(INFO) << idx;
             idx++;
         }
     }
-    printf("\n");
     return 0;
 }
 
@@ -665,7 +670,7 @@ int32_t TstitchStream::getViewPortTiles()
         ret = genViewport_process(&m_pViewportParam, m_pViewport);
     if (ret)
     {
-        printf("gen viewport process error!\n");
+        LOG(ERROR) << "gen viewport process error!";
         return -1;
     }
     if(m_usedType == E_MERGE_AND_VIEWPORT)
