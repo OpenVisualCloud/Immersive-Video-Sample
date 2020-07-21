@@ -51,7 +51,7 @@ namespace OMAF {
 enum class SegmentTemplateType { SEGTEMPLATE_NUMBER = 0, SEGTEMPLATE_TIME = 1 };
 struct _segmentSyncNode {
   SegmentTemplateType type_ = SegmentTemplateType::SEGTEMPLATE_NUMBER;
-  int32_t bandwith_;
+  int32_t bandwith_ = 0;
   union _segment_value {
     int64_t number_;
     int64_t time_;

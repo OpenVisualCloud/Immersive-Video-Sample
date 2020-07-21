@@ -335,8 +335,15 @@ uint64_t parse_duration(const char * const duration)
         s = atof(sep2);
         *sep1 = 'S';
     }
-
-    return (uint64_t)((h*3600+m*60+s)*(uint64_t)1000);
+    if (h*3600+m*60+s < ULLONG_MAX)
+    {
+        return (uint64_t)((h*3600+m*60+s)*(uint64_t)1000);
+    }
+    else
+    {
+        LOG(ERROR) << "[MPD] Error parsing duration: time overflow\n";
+        return ERROR_PARSE;
+    }
 }
 
 uint32_t mpd_parse_duration_u32(const char* const duration)

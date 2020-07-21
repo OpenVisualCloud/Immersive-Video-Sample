@@ -118,7 +118,11 @@ int OmafAdaptationSet::Initialize(AdaptationSetElement* pAdaptationSet) {
         mTileInfo = new TileDef;
         if (!mTileInfo)
             return OMAF_ERROR_NULL_PTR;
-
+        if (NULL == mSRD)
+        {
+          LOG(ERROR) << " SRD information is invalid! " << std::endl;
+          return OMAF_ERROR_NULL_PTR;
+        }
         mTileInfo->x = mSRD->get_X();
         mTileInfo->y = mSRD->get_Y();
     }
@@ -243,7 +247,7 @@ int OmafAdaptationSet::LoadLocalSegment() {
   params.timeline_point_ = static_cast<int64_t>(mSegNum);
   OmafSegment::Ptr pSegment = std::make_shared<OmafSegment>(params, mSegNum, false);
 #endif
-  if (nullptr == pSegment) {
+  if (NULL == pSegment) {
     LOG(ERROR) << "Create OmafSegment for AdaptationSet: " << this->mID << " Number: " << mActiveSegNum << " failed"
                << endl;
 
@@ -417,7 +421,7 @@ int OmafAdaptationSet::DownloadSegment() {
   // reset the re-enable flag, since it will be updated with different viewport
   if (mReEnable) mReEnable = false;
 
-  if (nullptr == pSegment) {
+  if (NULL == pSegment) {
     LOG(ERROR) << "Create OmafSegment for AdaptationSet: " << this->mID << " Number: " << mActiveSegNum << " failed"
                << endl;
 

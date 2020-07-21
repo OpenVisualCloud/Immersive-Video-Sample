@@ -55,7 +55,7 @@ OMAF_STATUS OmafCurlMultiDownloader::init(const CurlParams& p, OmafDownloadTask:
 
     // 3. create the easy downloader pool
     downloader_pool_ = make_unique_vcd<OmafCurlEasyDownloaderPool>(max_parallel_ << 1);
-    if (downloader_pool_.get() == nullptr) {
+    if (downloader_pool_ == NULL) {
       LOG(ERROR) << "Failed to create the downloader pool!" << std::endl;
       return ERROR_NULL_PTR;
     }
@@ -376,7 +376,7 @@ OMAF_STATUS OmafCurlMultiDownloader::startTaskDownload(void) noexcept {
   try {
     // start a new task
     if ((run_task_map_.size() < static_cast<size_t>(max_parallel_transfers_)) && (ready_task_list_.size() > 0)) {
-      OmafDownloadTask::Ptr task;
+      OmafDownloadTask::Ptr task = NULL;
       {
         std::lock_guard<std::mutex> lock(ready_task_list_mutex_);
         task = std::move(ready_task_list_.front());
@@ -384,7 +384,7 @@ OMAF_STATUS OmafCurlMultiDownloader::startTaskDownload(void) noexcept {
         ready_task_list_.pop_front();
       }
       OMAF_STATUS ret = ERROR_NONE;
-      if (task.get() != nullptr) {
+      if (task != NULL) {
         ret = createTransfer(task);
         if (ret == ERROR_NONE) {
           ret = startTransfer(task);
@@ -395,6 +395,11 @@ OMAF_STATUS OmafCurlMultiDownloader::startTaskDownload(void) noexcept {
         } else {
           LOG(ERROR) << "Failed to create the transfer!" << std::endl;
         }
+      }
+      else
+      {
+        LOG(ERROR) << "Download task failed to create!" << std::endl;
+        return ERROR_NULL_PTR;
       }
       VLOG(VLOG_TRACE) << "2-task id" << task->id() << ", task count=" << task.use_count() << std::endl;
     }

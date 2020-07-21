@@ -168,7 +168,6 @@ class OmafDashSource : public OmafMediaSource, Threadable {
   pthread_mutex_t mMutex;          //<! for synchronization
   MPDInfo* mMPDinfo;               //<! MPD information
   int dcount;
-  GlogWrapper* m_glogWrapper;
   int mPreExtractorID;
   OmafTilesStitch* m_stitch = nullptr;
   std::shared_ptr<OmafDashSegmentClient> dash_client_;

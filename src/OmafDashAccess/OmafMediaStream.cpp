@@ -44,6 +44,7 @@ OmafMediaStream::OmafMediaStream() {
   m_stitch = NULL;
   m_needParams = false;
   m_currFrameIdx = 0;
+  m_status = STATUS_UNKNOWN;
   pthread_mutex_init(&mMutex, NULL);
   pthread_mutex_init(&mCurrentMutex, NULL);
   pthread_mutex_init(&m_packetsMutex, NULL);

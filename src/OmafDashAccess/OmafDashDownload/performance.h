@@ -137,8 +137,8 @@ class WindowCounter : public VCD::NonCopyable {
     for (auto &node : time_points_) {
       data_.sum_value_total_ += node->value_;
     }
-    if (time_points_.size()) {
-      data_.avr_value_window_ = static_cast<double>(data_.sum_value_total_) / static_cast<double>(time_points_.size());
+    if (time_points_.size() > 0) {
+      data_.avr_value_window_ = static_cast<double>(data_.sum_value_total_) / time_points_.size();
     }
 
     return data_;

@@ -149,6 +149,7 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
 }
 
 int main(int32_t argc, char *argv[]) {
+  GlogWrapper m_glogWrapper((char*)"Render");
   // 1. input from xml configuration
   struct RenderConfig renderConfig;
   if (!parseRenderFromXml("config.xml", renderConfig)) {
