@@ -267,9 +267,19 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::open(const SourceParams &ds_params, O
     // this is a download request with new timeline
     if (new_timeline) {
       TaskList::Ptr tl = std::make_shared<TaskList>();
+      if (tl == NULL) {
+        LOG(ERROR) << "Task list create failed!" << std::endl;
+        return ERROR_NULL_PTR;
+      }
       tl->timeline_point_ = ds_params.timeline_point_;
       int priority = static_cast<int>(ds_params.priority_);
-      tl->tasks_[priority].push_back(task);
+      if (priority < PRIORITYTASKSIZE){
+        tl->tasks_[priority].push_back(task);
+      }else
+      {
+        LOG(ERROR) << "Priority " << priority << " is invalid, the max task size is " << PRIORITYTASKSIZE << std::endl;
+        return ERROR_INVALID;
+      }
 
       if (!task_queue_.empty()) {
         auto &tail_tasks = task_queue_.back();

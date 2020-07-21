@@ -160,15 +160,16 @@ OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pSt
   // get Content Coverage from 360SCVP library
   CCDef* outCC = new CCDef;
   ret = I360SCVP_getContentCoverage(m360ViewPortHandle, outCC);
-  if (ret != 0) return NULL;
+  if (ret != 0)
+  {
+    SAFE_DELETE(outCC);
+    return NULL;
+  }
 
   // get the extractor with largest intersection
   OmafExtractor* selectedExtractor = GetNearestExtractor(pStream, outCC);
 
-  if (outCC) {
-    delete outCC;
-    outCC = nullptr;
-  }
+  SAFE_DELETE(outCC);
 
   return selectedExtractor;
 }
@@ -221,6 +222,7 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
     ViewportAngle angle;
     angle.yaw = it->pose->yaw;
     angle.pitch = it->pose->pitch;
+    angle.roll = 0;
     pose_history.push_front(angle);
   }
   pthread_mutex_unlock(&mMutex);

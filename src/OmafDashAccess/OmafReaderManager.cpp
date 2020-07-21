@@ -1314,6 +1314,7 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
       }
       if (ret != ERROR_NONE) {
         LOG(ERROR) << "Failed to read sample data from reader, code= " << ret << std::endl;
+        SAFE_DELETE(packet);
         return ret;
       }
 

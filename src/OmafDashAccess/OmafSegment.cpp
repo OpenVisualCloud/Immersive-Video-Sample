@@ -49,6 +49,7 @@ OmafSegment::OmafSegment(DashSegmentSourceParams ds_params, int segCnt, bool bIn
     initSeg_id_ = INITSEG_ID.fetch_add(1);
     seg_id_ = initSeg_id_;
   }
+  mQualityRanking = INVALID_QUALITY_RANKING;
 }
 
 OmafSegment::~OmafSegment() {

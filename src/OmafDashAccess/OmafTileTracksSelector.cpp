@@ -264,6 +264,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     if (selectedTilesNum <= 0 || selectedTilesNum > 1024)
     {
         LOG(ERROR) << "Failed to get tiles information in viewport !" << endl;
+        SAFE_DELETE(tilesInViewport);
         return selectedTracks;
     }
 
@@ -403,6 +404,7 @@ std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
         ViewportAngle angle;
         angle.yaw = it->pose->yaw;
         angle.pitch = it->pose->pitch;
+        angle.roll = 0;
         pose_history.push_front(angle);
     }
     pthread_mutex_unlock(&mMutex);

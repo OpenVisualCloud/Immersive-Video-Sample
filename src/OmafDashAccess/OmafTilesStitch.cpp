@@ -47,6 +47,7 @@ OmafTilesStitch::OmafTilesStitch() {
   m_mainMergedTileCols = 0;
   m_needHeaders = false;
   m_isInitialized = false;
+  m_projFmt = PF_UNKNOWN;
 }
 
 OmafTilesStitch::~OmafTilesStitch() {
@@ -174,6 +175,11 @@ int32_t OmafTilesStitch::Initialize(std::map<uint32_t, MediaPacket *> &firstFram
   }
 
   std::set<QualityRank>::iterator itQuality = m_allQualities.begin();
+  if (itQuality == m_allQualities.end())
+  {
+      LOG(ERROR) << " Quality set is empty! " << std::endl;
+      return OMAF_ERROR_INVALID_DATA;
+  }
   auto firstQuality = *itQuality;
   if (firstQuality != HIGHEST_QUALITY_RANKING) {
     LOG(ERROR) << "Invalid quality ranking value  " << static_cast<int>(firstQuality) << "  for the highest quality !"
@@ -218,6 +224,11 @@ int32_t OmafTilesStitch::Initialize(std::map<uint32_t, MediaPacket *> &firstFram
   std::map<uint32_t, MediaPacket *> highestQualityPackets;
   highestQualityPackets = m_selectedTiles[firstQuality];
   it = highestQualityPackets.begin();
+  if (it == highestQualityPackets.end())
+  {
+      LOG(ERROR) << "Highest quality packets map is empty!" << std::endl;
+      return OMAF_ERROR_INVALID_DATA;
+  }
   MediaPacket *tilePacket = it->second;
   if (!tilePacket) {
     LOG(ERROR) << "nullptr Media Packet !" << std::endl;
@@ -392,6 +403,11 @@ int32_t OmafTilesStitch::UpdateSelectedTiles(std::map<uint32_t, MediaPacket *> &
   allQualities.clear();
 
   std::set<QualityRank>::iterator itQuality = m_allQualities.begin();
+  if (itQuality == m_allQualities.end())
+  {
+      LOG(ERROR) << " Quality set is empty! " << std::endl;
+      return OMAF_ERROR_INVALID_DATA;
+  }
   auto firstQuality = *itQuality;
   if (firstQuality != HIGHEST_QUALITY_RANKING) {
     LOG(ERROR) << "Invalid quality ranking value  " << static_cast<int>(firstQuality) << "  for the highest quality !"
@@ -457,6 +473,11 @@ std::map<QualityRank, TilesMergeArrangement *> OmafTilesStitch::CalculateTilesMe
     std::map<uint32_t, MediaPacket *>::iterator itPacket;
 
     itPacket = packets.begin();
+    if (itPacket == packets.end())
+    {
+        LOG(ERROR) << "Packet map is empty!" << std::endl;
+        return tilesMergeArr;
+    }
     MediaPacket *onePacket = itPacket->second;
     SRDInfo srd = onePacket->GetSRDInfo();
     oneTileWidth = srd.width;
@@ -490,12 +511,16 @@ std::map<QualityRank, TilesMergeArrangement *> OmafTilesStitch::CalculateTilesMe
     oneArr->tilesLayout.tileRowsNum = tileRowsNum;
     oneArr->tilesLayout.tileColsNum = tileColsNum;
     oneArr->tilesLayout.tileRowHeight = new uint16_t[oneArr->tilesLayout.tileRowsNum];
-    if (!(oneArr->tilesLayout.tileRowHeight)) return tilesMergeArr;
-
+    if (!(oneArr->tilesLayout.tileRowHeight))
+    {
+        SAFE_DELETE(oneArr);
+        return tilesMergeArr;
+    }
     oneArr->tilesLayout.tileColWidth = new uint16_t[oneArr->tilesLayout.tileColsNum];
     if (!(oneArr->tilesLayout.tileColWidth)) {
       delete[](oneArr->tilesLayout.tileRowHeight);
       oneArr->tilesLayout.tileRowHeight = nullptr;
+      SAFE_DELETE(oneArr);
       return tilesMergeArr;
     }
 
@@ -950,6 +975,11 @@ int32_t OmafTilesStitch::GenerateOutputMergedPackets() {
     if (arrangeChanged && m_mergedVideoHeaders[qualityRanking].size()) {
       std::map<uint32_t, uint8_t *> oneVideoHeader = m_mergedVideoHeaders[qualityRanking];
       std::map<uint32_t, uint8_t *>::iterator itHdr = oneVideoHeader.begin();
+      if (itHdr == oneVideoHeader.end())
+      {
+          LOG(ERROR) << "Video header map is empty!" << std::endl;
+          return OMAF_ERROR_INVALID_DATA;
+      }
       uint8_t *headers = itHdr->second;
       if (headers) {
         delete[] headers;
@@ -1035,6 +1065,11 @@ int32_t OmafTilesStitch::GenerateOutputMergedPackets() {
       if (qualityRanking != HIGHEST_QUALITY_RANKING) {
         if (0 == oneVideoHeader.size()) {
           itPacket = packets.begin();
+          if (itPacket == packets.end())
+          {
+              LOG(ERROR) << "Packets map is empty!" << std::endl;
+              return OMAF_ERROR_INVALID_DATA;
+          }
           MediaPacket *onePacket = itPacket->second;
           if (!(onePacket->GetHasVideoHeader())) {
             LOG(ERROR) << "There should be video headers here !" << std::endl;
@@ -1202,12 +1237,16 @@ int32_t OmafTilesStitch::GenerateOutputMergedPackets() {
       oneArr->tilesLayout.tileRowsNum = existedArr->tilesLayout.tileRowsNum;
       oneArr->tilesLayout.tileColsNum = existedArr->tilesLayout.tileColsNum;
       oneArr->tilesLayout.tileRowHeight = new uint16_t[oneArr->tilesLayout.tileRowsNum];
-      if (!(oneArr->tilesLayout.tileRowHeight)) return OMAF_ERROR_NULL_PTR;
-
+      if (!(oneArr->tilesLayout.tileRowHeight))
+      {
+          SAFE_DELETE(oneArr);
+          return OMAF_ERROR_NULL_PTR;
+      }
       oneArr->tilesLayout.tileColWidth = new uint16_t[oneArr->tilesLayout.tileColsNum];
       if (!(oneArr->tilesLayout.tileColWidth)) {
         delete[](oneArr->tilesLayout.tileRowHeight);
         oneArr->tilesLayout.tileRowHeight = nullptr;
+        SAFE_DELETE(oneArr);
         return OMAF_ERROR_NULL_PTR;
       }
 

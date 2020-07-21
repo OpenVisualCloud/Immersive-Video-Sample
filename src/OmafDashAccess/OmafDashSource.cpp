@@ -58,7 +58,6 @@ OmafDashSource::OmafDashSource() {
   m_selector = nullptr;
   mMPDinfo = nullptr;
   dcount = 1;
-  m_glogWrapper = new GlogWrapper((char*)"glogAccess");
   mPreExtractorID = 0;
   m_stitch = nullptr;
 }
@@ -71,7 +70,6 @@ OmafDashSource::~OmafDashSource() {
   SAFE_DELETE(mMPDinfo);
   mViewPorts.clear();
   ClearStreams();
-  SAFE_DELETE(m_glogWrapper);
   SAFE_DELETE(m_stitch);
 }
 
@@ -143,12 +141,17 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enable
 
     OmafDashSegmentHttpClient::Ptr http_source =
         OmafDashSegmentHttpClient::create(omaf_dash_params_.max_parallel_transfers_);
-    if (http_source.get() != nullptr) {
+    if (http_source) {
       http_source->setProxy(omaf_dash_params_.http_proxy_);
       http_source->setParams(omaf_dash_params_.http_params_);
       if (omaf_dash_params_.stats_params_.enable_) {
         http_source->setStatisticsWindows(omaf_dash_params_.stats_params_.window_size_ms_);
       }
+    }
+    else
+    {
+      LOG(ERROR) << "http source failed to create!" << std::endl;
+      return ERROR_NULL_PTR;
     }
     ret = http_source->start();
     if (ERROR_NONE != ret) {
