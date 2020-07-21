@@ -26,6 +26,7 @@
 #ifndef _360SCVP_IMPL_H_
 #define _360SCVP_IMPL_H_
 #include "360SCVPHevcTilestream.h"
+#include "../utils/GlogWrapper.h"
 
 class TstitchStream
 {
@@ -124,6 +125,7 @@ public:
     int32_t  DecRWPKSEI(RegionWisePacking* pRWPK, uint8_t *pRWPKBits, uint32_t RWPKBitsSize);
     int32_t  getContentCoverage(CCDef* pOutCC);
     TileDef* getSelectedTile();
+    GlogWrapper *m_glogWrapper;
 
 protected:
     int32_t initMerge(param_360SCVP* pParamStitchStream, int32_t sliceSize);

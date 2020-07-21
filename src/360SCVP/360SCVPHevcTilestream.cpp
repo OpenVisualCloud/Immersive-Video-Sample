@@ -30,6 +30,7 @@
 #include "360SCVPHevcParser.h"
 #include "360SCVPHevcEncHdr.h"
 #include "360SCVPTiledstreamAPI.h"
+#include "../utils/GlogWrapper.h"
 
 int32_t hevc_import_ffextradata(hevc_specialInfo* pSpecialInfo, HEVCState* hevc, uint32_t *pSize, int32_t *spsCnt, int32_t bParse)
 {
@@ -512,7 +513,7 @@ int32_t  genTiledStream_parseNals(param_gen_tiledStream* pParamGenTiledStream, v
     if (!pParamGenTiledStream || !pGenHandle)
     {
         ret = 1;
-        printf("the pointer of input paramter is NULL\n");
+        LOG(ERROR) << "the pointer of input paramter is NULL";
         return ret;
     }
     hevc_gen_tiledstream* pGenTilesStream = (hevc_gen_tiledstream*)pGenHandle;
@@ -560,7 +561,7 @@ int32_t   genTiledStream_getParam(void* pGenHandle, uint32_t id, uint8_t** pValu
 
     if (!pGenHandle || !pValue)
     {
-        printf("the input pointer is null\n");
+        LOG(ERROR) << "the input pointer is null";
         return -1;
     }
     hevc_gen_tiledstream* pGenTilesStream = (hevc_gen_tiledstream*)pGenHandle;
@@ -588,7 +589,7 @@ int32_t   genTiledStream_setParam(void* pGenHandle, uint32_t id, uint8_t* pValue
 {
     if (!pGenHandle || !pValue)
     {
-        printf("the input pointer is null\n");
+        LOG(WARNING) << "the input pointer is null";
         return 1;
     }
 

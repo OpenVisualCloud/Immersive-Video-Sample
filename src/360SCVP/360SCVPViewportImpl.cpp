@@ -37,6 +37,7 @@
 #include "360SCVPViewPort.h"
 #include "360SCVPViewportImpl.h"
 #include "360SCVPViewportAPI.h"
+#include "../utils/GlogWrapper.h"
 #ifdef WIN32
 #define strdup _strdup
 #endif
@@ -123,7 +124,7 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
 
             viewPortWidth = floor((float)(viewPortWidth) / (float)(cTAppConvCfg->m_srd[0].tilewidth) + 0.499) * cTAppConvCfg->m_srd[0].tilewidth;
             viewPortHeightmax = floor((float)(viewPortHeight) / (float)(cTAppConvCfg->m_srd[0].tileheight) + 0.499) * cTAppConvCfg->m_srd[0].tileheight;
-            printf("viewPortWidthMax = %d viewPortHeightMax = %d, tile_width %d, tile_height %d\n", viewPortWidth, viewPortHeightmax, cTAppConvCfg->m_srd[0].tilewidth, cTAppConvCfg->m_srd[0].tileheight);
+            LOG(INFO) << "viewPortWidthMax = " << viewPortWidth << " viewPortHeightMax = " << viewPortHeightmax << " tile_width " << cTAppConvCfg->m_srd[0].tilewidth << " tile_height " << cTAppConvCfg->m_srd[0].tileheight;
 
             maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 1);
             if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
@@ -162,7 +163,7 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
             viewPortHeight = int32_t(pDownRight->y - pUpLeft->y);
             if (viewPortHeightmax < viewPortHeight)
                 viewPortHeightmax = viewPortHeight;
-            printf("viewPortWidthMax = %d viewPortHeightMax = %d\n", viewPortWidth, viewPortHeightmax);
+            LOG(INFO) << "viewPortWidthMax = " << viewPortWidth << " viewPortHeightMax = " << viewPortHeightmax;
 
             pUpLeft++;
             pDownRight++;
@@ -800,7 +801,7 @@ int32_t TgenViewport::parseCfg(  )
     m_sourceSVideoInfo.iFaceHeight = m_iInputHeight;
     if(!m_faceSizeAlignment)
     {
-        printf("FaceSizeAlignment must be greater than 0, it is reset to 8 (default value).\n");
+        LOG(WARNING) << "FaceSizeAlignment must be greater than 0, it is reset to 8 (default value).";
         m_faceSizeAlignment = 8;
     }
     // if(m_faceSizeAlignment &1) // && numberToChromaFormat(tmpInputChromaFormat)==CHROMA_420
@@ -989,7 +990,7 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
         pTmpDownRight->y = m_pDownRight->y;
     }
     dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
-    printf("\n Total Time for tile selection: %12.3f sec.\n", dResult);
+    LOG(INFO) << "Total Time for tile selection: " << dResult;
     return 0;
 }
 
@@ -1041,7 +1042,7 @@ int32_t  TgenViewport::convert()
     }
 
     dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
-    printf("\n Total Time: %12.3f sec.\n", dResult);
+    LOG(INFO) << "Total Time: " << dResult << " sec.";
 
     if(pcInputGeomtry)
     {

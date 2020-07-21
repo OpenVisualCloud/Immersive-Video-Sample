@@ -32,6 +32,7 @@
 #include "360SCVPHevcEncHdr.h"
 #include "360SCVPHevcParser.h"
 #include "360SCVPMergeStreamAPI.h"
+#include "../utils/GlogWrapper.h"
 
 int32_t gcd(int32_t a, int32_t b)
 {
@@ -265,7 +266,7 @@ int32_t get_merge_solution(hevc_mergeStream *mergeStream)
         // Check if the input tile number is legitimate
         if(height == 0 || HR_hc == 0 || height % LR_tile_h || HR_ntile % HR_hc || LR_ntile % (height / LR_tile_h))
         {
-            printf("The input tile number is not legitimate!\n");
+            LOG(ERROR) << "The input tile number is not legitimate!";
             return -1;
         }
 
