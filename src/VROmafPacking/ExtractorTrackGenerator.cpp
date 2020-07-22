@@ -370,6 +370,20 @@ int32_t ExtractorTrackGenerator::Initialize()
     m_viewInfo->tileNumRow     = (m_initInfo->viewportInfo)->tileInCol;
     m_viewInfo->tileNumCol     = (m_initInfo->viewportInfo)->tileInRow;
     m_viewInfo->usageType      = E_PARSER_ONENAL;
+    if ((EGeometryType)((m_initInfo->viewportInfo)->inGeoType) == E_SVIDEO_EQUIRECT)
+    {
+        m_viewInfo->paramVideoFP.rows = 1;
+        m_viewInfo->paramVideoFP.cols = 1;
+        m_viewInfo->paramVideoFP.faces[0][0].idFace = 0;
+        m_viewInfo->paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
+        m_viewInfo->paramVideoFP.faces[0][0].faceWidth = m_viewInfo->faceWidth;
+        m_viewInfo->paramVideoFP.faces[0][0].faceHeight = m_viewInfo->faceHeight;
+    }
+    else
+    {
+        LOG(ERROR) << "Now extractor track isn't supported for other projection format than ERP !" << std::endl;
+        return OMAF_ERROR_INVALID_PROJECTIONTYPE;
+    }
 
     ret = I360SCVP_SetParameter(m_360scvpHandle, ID_SCVP_PARAM_VIEWPORT, (void*)m_viewInfo);
     if (ret)
