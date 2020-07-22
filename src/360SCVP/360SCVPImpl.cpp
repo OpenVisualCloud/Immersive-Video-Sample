@@ -521,7 +521,7 @@ int32_t TstitchStream::parseNals(param_360SCVP* pParamStitchStream, int32_t pars
         }
         if (m_specialDataLen[streamIdx] > 0)
         {
-            memmove(TiledBitstream.pTiledBitstreamBuffer + m_specialDataLen[streamIdx], TiledBitstream.pTiledBitstreamBuffer, pParamStitchStream->inputBitstreamLen);
+            memmove_s(TiledBitstream.pTiledBitstreamBuffer + m_specialDataLen[streamIdx], pParamStitchStream->inputBitstreamLen, TiledBitstream.pTiledBitstreamBuffer, pParamStitchStream->inputBitstreamLen);
             memcpy_s(TiledBitstream.pTiledBitstreamBuffer, m_specialDataLen[streamIdx], m_specialInfo[streamIdx], m_specialDataLen[streamIdx]);
             TiledBitstream.inputBufferLen += m_specialDataLen[streamIdx];
         }
