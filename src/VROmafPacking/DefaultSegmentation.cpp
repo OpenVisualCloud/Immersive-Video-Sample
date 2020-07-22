@@ -627,15 +627,21 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
 
 int32_t DefaultSegmentation::VideoEndSegmentation()
 {
-    std::map<uint8_t, MediaStream*>::iterator it = m_streamMap->begin();
-    for ( ; it != m_streamMap->end(); it++)
+    if (m_streamMap->size())
     {
-        MediaStream *stream = it->second;
-        if (stream->GetMediaType() == VIDEOTYPE)
+        std::map<uint8_t, MediaStream*>::iterator it = m_streamMap->begin();
+        for ( ; it != m_streamMap->end(); it++)
         {
-            int32_t ret = EndEachVideo(stream);
-            if (ret)
-                return ret;
+            MediaStream *stream = it->second;
+            if (stream)
+            {
+                if (stream->GetMediaType() == VIDEOTYPE)
+                {
+                    int32_t ret = EndEachVideo(stream);
+                    if (ret)
+                        return ret;
+                }
+            }
         }
     }
 

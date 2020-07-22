@@ -58,6 +58,9 @@ Handler VROmafPackingInit(InitialInfo *initInfo)
 int32_t VROmafPackingWriteSegment(Handler hdl, uint8_t streamIdx, FrameBSInfo *frameInfo)
 {
     OmafPackage *omafPackage = (OmafPackage*)hdl;
+    if (!omafPackage)
+        return OMAF_ERROR_NULL_PTR;
+
     int32_t ret = omafPackage->OmafPacketStream(streamIdx, frameInfo);
     if (ret)
         return ret;
@@ -68,6 +71,9 @@ int32_t VROmafPackingWriteSegment(Handler hdl, uint8_t streamIdx, FrameBSInfo *f
 int32_t VROmafPackingEndStreams(Handler hdl)
 {
     OmafPackage *omafPackage = (OmafPackage*)hdl;
+    if (!omafPackage)
+        return OMAF_ERROR_NULL_PTR;
+
     int32_t ret = omafPackage->OmafEndStreams();
     if (ret)
         return ret;
@@ -78,9 +84,10 @@ int32_t VROmafPackingEndStreams(Handler hdl)
 int32_t VROmafPackingClose(Handler hdl)
 {
     OmafPackage *omafPackage = (OmafPackage*)hdl;
-
-    delete omafPackage;
-    omafPackage = NULL;
-
+    if (omafPackage)
+    {
+        delete omafPackage;
+        omafPackage = NULL;
+    }
     return ERROR_NONE;
 }

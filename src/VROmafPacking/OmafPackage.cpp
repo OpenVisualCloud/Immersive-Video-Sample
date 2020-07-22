@@ -224,10 +224,12 @@ int32_t OmafPackage::OmafPacketStream(uint8_t streamIdx, FrameBSInfo *frameInfo)
 
 int32_t OmafPackage::OmafEndStreams()
 {
-    int32_t ret = m_segmentation->VideoEndSegmentation();
-    if (ret)
-        return ret;
-
+    if (m_segmentation)
+    {
+        int32_t ret = m_segmentation->VideoEndSegmentation();
+        if (ret)
+            return ret;
+    }
     //pthread_join(m_threadId, NULL);
 
     return ERROR_NONE;
