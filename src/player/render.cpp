@@ -53,7 +53,17 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
     XMLDocument config;
     config.LoadFile(xml_file.c_str());
     XMLElement *info = config.RootElement();
+    if (NULL == info)
+    {
+      LOG(ERROR) << " XML parse failed! " << std::endl;
+      return RENDER_ERROR;
+    }
 
+    if (!info->FirstChildElement("windowWidth") || !info->FirstChildElement("windowHeight"))
+    {
+      LOG(ERROR) << " invalid params for windowWidth OR windowHeight! " << std::endl;
+      return RENDER_ERROR;
+    }
     renderConfig.windowWidth = atoi(info->FirstChildElement("windowWidth")->GetText());
     renderConfig.windowHeight = atoi(info->FirstChildElement("windowHeight")->GetText());
     if (renderConfig.windowWidth < MINWINDOWLEN || renderConfig.windowWidth > MAXWINDOWLEN ||
@@ -62,11 +72,21 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
                  << MAXWINDOWLEN << ")!" << std::endl;
       return RENDER_ERROR;
     }
+    if (!info->FirstChildElement("url"))
+    {
+      LOG(ERROR) << " invalid params for url! " << std::endl;
+      return RENDER_ERROR;
+    }
     renderConfig.url = info->FirstChildElement("url")->GetText();
     // string fileType(renderConfig.url + strlen(renderConfig.url) - 3, renderConfig.url + strlen(renderConfig.url));
     string fileType = renderConfig.url.substr(renderConfig.url.size() - 3);
     if (fileType != "mpd") {
       LOG(ERROR) << "---INVALID url input! (only remote mpd file supported)---" << std::endl;
+      return RENDER_ERROR;
+    }
+    if (!info->FirstChildElement("sourceType"))
+    {
+      LOG(ERROR) << " invalid params for sourceType! " << std::endl;
       return RENDER_ERROR;
     }
     renderConfig.sourceType =
@@ -84,16 +104,31 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       return RENDER_ERROR;
     }
 #endif /* LOW_LATENCY_USAGE */
+    if (!info->FirstChildElement("decoderType"))
+    {
+      LOG(ERROR) << " invalid params for decoderType! " << std::endl;
+      return RENDER_ERROR;
+    }
     renderConfig.decoderType =
         atoi(info->FirstChildElement("decoderType")->GetText());  // VAAPI_DECODER=1 or SW_DECODER=0
     if (renderConfig.decoderType != 0) {
       LOG(ERROR) << "---INVALID decoder type input (0:software decoder)---" << std::endl;
       return RENDER_ERROR;
     }
+    if (!info->FirstChildElement("contextType"))
+    {
+      LOG(ERROR) << " invalid params for contextType! " << std::endl;
+      return RENDER_ERROR;
+    }
     renderConfig.contextType =
         atoi(info->FirstChildElement("contextType")->GetText());  // EGL_CONTEXT=1 or GLFW_CONTEXT=0
     if (renderConfig.contextType != 0) {
       LOG(ERROR) << "---INVALID context type input (0:GLFW context)---" << std::endl;
+      return RENDER_ERROR;
+    }
+    if (!info->FirstChildElement("useDMABuffer"))
+    {
+      LOG(ERROR) << " invalid params for useDMABuffer! " << std::endl;
       return RENDER_ERROR;
     }
     renderConfig.useDMABuffer =
@@ -103,11 +138,21 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       LOG(ERROR) << "---INVALID useDMABuffer input (0:not use DMA buffer)---" << std::endl;
       return RENDER_ERROR;
     }
+    if (!info->FirstChildElement("enableExtractor"))
+    {
+      LOG(ERROR) << " invalid params for enableExtractor! " << std::endl;
+      return RENDER_ERROR;
+    }
     renderConfig.enableExtractor =
         atoi(info->FirstChildElement("enableExtractor")
-                 ->GetText());  // It is only valid for hardware decoding + EGL_CONTEXT if it is set as 1
+                 ->GetText());  // 1: for LaterBinding 0: for extractor track
     if (renderConfig.enableExtractor != 0 && renderConfig.enableExtractor != 1) {
       LOG(ERROR) << "---INVALID enableExtractor input (1: for LaterBinding 0: for extractor track)---" << std::endl;
+      return RENDER_ERROR;
+    }
+    if (!info->FirstChildElement("viewportHFOV") || !info->FirstChildElement("viewportVFOV"))
+    {
+      LOG(ERROR) << " invalid params for viewportHFOV or viewportVFOV! " << std::endl;
       return RENDER_ERROR;
     }
     renderConfig.viewportHFOV = atoi(info->FirstChildElement("viewportHFOV")->GetText());
@@ -115,6 +160,11 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
     if (renderConfig.viewportHFOV < MINFOV || renderConfig.viewportHFOV > MAXFOV ||
         renderConfig.viewportVFOV < MINFOV || renderConfig.viewportVFOV > MAXFOV) {
       LOG(ERROR) << "---INVALID viewportHFOV or viewportVFOV input!---" << std::endl;
+      return RENDER_ERROR;
+    }
+    if (!info->FirstChildElement("viewportWidth") || !info->FirstChildElement("viewportHeight"))
+    {
+      LOG(ERROR) << " invalid params for viewportWidth or viewportHeight! " << std::endl;
       return RENDER_ERROR;
     }
     renderConfig.viewportWidth = atoi(info->FirstChildElement("viewportWidth")->GetText());
@@ -125,15 +175,22 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
                  << std::endl;
       return RENDER_ERROR;
     }
+    if (!info->FirstChildElement("cachePath"))
+    {
+      LOG(ERROR) << " invalid params for cachePath! " << std::endl;
+      return RENDER_ERROR;
+    }
     renderConfig.cachePath = info->FirstChildElement("cachePath")->GetText();
 
     // predictor option
     XMLElement *predictor = info->FirstChildElement("predict");
     if (predictor) {
       const XMLAttribute *enable = predictor->FirstAttribute();
+      if (NULL == enable) return RENDER_ERROR;
       renderConfig.enablePredictor = atoi(enable->Value());
       renderConfig.predictPluginName = "";
       renderConfig.libPath = "";
+      if (!predictor->FirstChildElement("plugin") || !predictor->FirstChildElement("path")) return RENDER_ERROR;
       if (renderConfig.enablePredictor) {
         renderConfig.predictPluginName = predictor->FirstChildElement("plugin")->GetText();
         renderConfig.libPath = predictor->FirstChildElement("path")->GetText();

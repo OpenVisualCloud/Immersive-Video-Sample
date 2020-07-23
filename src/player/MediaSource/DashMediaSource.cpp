@@ -168,6 +168,11 @@ RenderStatus DashMediaSource::GetStreamDumpedOptionParams() {
   XMLDocument config;
   config.LoadFile("config.xml");
   XMLElement *info = config.RootElement();
+  if (NULL == info)
+  {
+    LOG(ERROR) << " XML parse failed! " << std::endl;
+    return RENDER_ERROR;
+  }
   XMLElement *dumpedElem = info->FirstChildElement("StreamDumpedOption");
   if (NULL == dumpedElem) {
     m_needStreamDumped = false;

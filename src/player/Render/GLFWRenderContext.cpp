@@ -115,14 +115,29 @@ RenderStatus GLFWRenderContext::GetMotionOptionParams()
     XMLDocument config;
     config.LoadFile("config.xml");
     XMLElement *info = config.RootElement();
+    if (NULL == info)
+    {
+        LOG(ERROR) << " XML parse failed! " << std::endl;
+        return RENDER_ERROR;
+    }
     XMLElement *motionElem = info->FirstChildElement("testMotionOption");
     if (NULL == motionElem)
     {
         return RENDER_ERROR;
     }
     const XMLAttribute *attOfMotion = motionElem->FirstAttribute();
+    if (NULL == attOfMotion)
+    {
+        LOG(ERROR) << "XML parse failed!" << std::endl;
+        return RENDER_ERROR;
+    }
     m_motionConfig.mode = new char[128]();
     memcpy_s(m_motionConfig.mode, strlen(attOfMotion->Value()), attOfMotion->Value(), strlen(attOfMotion->Value()));
+    if (!motionElem->FirstChildElement("freq") || !motionElem->FirstChildElement("timeInterval"))
+    {
+        LOG(ERROR) << " freq OR timeInterval is invalid! " << std::endl;
+        return RENDER_ERROR;
+    }
     m_motionConfig.freq = atoi(motionElem->FirstChildElement("freq")->GetText());
     m_motionConfig.timeInterval = atoi(motionElem->FirstChildElement("timeInterval")->GetText());
     return RENDER_STATUS_OK;
