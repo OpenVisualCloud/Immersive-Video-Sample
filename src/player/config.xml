@@ -9,6 +9,7 @@
     <sourceType>0</sourceType>
     <!-- enableExtractor 0 is false and 1 is true -->
     <enableExtractor>0</enableExtractor>
+    <StreamDumpedOption>0</StreamDumpedOption>
     <!-- viewport settings -->
     <viewportHFOV>80</viewportHFOV>
     <viewportVFOV>80</viewportVFOV>
@@ -18,6 +19,9 @@
     <cachePath>/tmp/cache</cachePath>
     <!-- log level: INFO < WARNING < ERROR < FATAL -->
     <minLogLevel>WARNING</minLogLevel>
+    <!-- limited video decoder resolution -->
+    <maxVideoDecodeWidth>2560</maxVideoDecodeWidth>
+    <maxVideoDecodeHeight>2560</maxVideoDecodeHeight>
     <!-- for WebRTC parameters -->
     <resolution>8k</resolution>
     <server_url>http://10.67.112.207:3001</server_url>

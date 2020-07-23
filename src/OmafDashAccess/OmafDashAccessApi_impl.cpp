@@ -53,6 +53,7 @@ Handler OmafAccess_Init(DashStreamingClient *pCtx) {
 
   VCD::OMAF::OmafDashParams omaf_dash_params;
   const OmafParams &omaf_params = pCtx->omaf_params;
+  // for download
   if (omaf_params.proxy.http_proxy) {
     omaf_dash_params.http_proxy_.http_proxy_ = std::string(omaf_params.proxy.http_proxy);
   }
@@ -110,7 +111,13 @@ Handler OmafAccess_Init(DashStreamingClient *pCtx) {
   if (omaf_params.segment_open_timeout_ms > 0) {
     omaf_dash_params.segment_open_timeout_ms_ = omaf_params.segment_open_timeout_ms;
   }
-
+  // for stitch
+  if (omaf_params.max_decode_width > 0) {
+    omaf_dash_params.max_decode_width_ = omaf_params.max_decode_width;
+  }
+  if (omaf_params.max_decode_height > 0) {
+    omaf_dash_params.max_decode_height_ = omaf_params.max_decode_height;
+  }
   LOG(INFO) << omaf_dash_params.to_string() << std::endl;
   pSource->SetOmafDashParams(omaf_dash_params);
 

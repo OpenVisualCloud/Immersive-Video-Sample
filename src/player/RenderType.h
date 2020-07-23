@@ -141,6 +141,9 @@ struct RenderConfig {
   uint32_t renderInterval;
   // glog level output setting
   int32_t minLogLevel;
+  // for stitching
+  uint32_t maxVideoDecodeWidth;
+  uint32_t maxVideoDecodeHeight;
 };
 
 struct MotionConfig {

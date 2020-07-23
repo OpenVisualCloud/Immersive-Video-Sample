@@ -79,6 +79,7 @@ typedef struct _omafPredictorParams {
 } OmafPredictorParams;
 
 typedef struct _omafDashParams {
+  //for download
   OmafHttpProxy proxy;
   OmafHttpParams http_params;
   OmafStatisticsParams statistic_params;
@@ -86,6 +87,9 @@ typedef struct _omafDashParams {
   OmafPredictorParams predictor_params;
   long max_parallel_transfers;
   int segment_open_timeout_ms;
+  //for stitch
+  uint32_t max_decode_width;
+  uint32_t max_decode_height;
 } OmafParams;
 
 /*

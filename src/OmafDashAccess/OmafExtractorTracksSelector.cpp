@@ -226,8 +226,8 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
       pose_history.push_front(angle);
     }
   }
-  ViewportAngle* predict_angle = plugin->Predict(pose_history);
-  if (predict_angle == NULL) {
+  std::vector<ViewportAngle*> predict_angles = plugin->Predict(pose_history);
+  if (predict_angles.empty()) {
     LOG(ERROR) << "predictPose_func return an invalid value!" << endl;
     return extractors;
   }
@@ -250,13 +250,16 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
 #endif
 #endif
     SAFE_DELETE(previousPose);
-    SAFE_DELETE(predict_angle);
+    for (uint32_t i = 0; i < predict_angles.size(); i++)
+    {
+      SAFE_DELETE(predict_angles[i]);
+    }
     return extractors;
   }
   // to select extractor;
   HeadPose* predictPose = new HeadPose;
-  predictPose->yaw = predict_angle->yaw;
-  predictPose->pitch = predict_angle->pitch;
+  predictPose->yaw = predict_angles[0]->yaw;
+  predictPose->pitch = predict_angles[0]->pitch;
   OmafExtractor* selectedExtractor = SelectExtractor(pStream, predictPose);
   if (selectedExtractor && previousPose) {
     extractors.push_back(selectedExtractor);
@@ -271,7 +274,11 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   }
   SAFE_DELETE(previousPose);
   SAFE_DELETE(predictPose);
-  SAFE_DELETE(predict_angle);
+  for (uint32_t i = 0; i < predict_angles.size(); i++)
+  {
+    SAFE_DELETE(predict_angles[i]);
+  }
+  predict_angles.clear();
   return extractors;
 }
 

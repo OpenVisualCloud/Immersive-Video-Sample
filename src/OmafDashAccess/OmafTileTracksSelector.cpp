@@ -108,10 +108,10 @@ bool IsSelectionChanged(TracksMap selection1, TracksMap selection2)
 int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
 {
     TracksMap selectedTracks;
-    if (mUsePrediction)
+    if (mUsePrediction) // using prediction
     {
-        std::map<int, TracksMap> predictedTracks = GetTileTracksByPosePrediction(pStream);
-        if (predictedTracks.empty())
+        std::map<int, TracksMap> predictedTracksMap = GetTileTracksByPosePrediction(pStream);
+        if (predictedTracksMap.empty())
         {
             if (mPoseHistory.size() < POSE_SIZE)
             {
@@ -120,15 +120,24 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
         }
         else
         {
-            std::map<int, TracksMap>::iterator it;
-            it = predictedTracks.begin();
-            selectedTracks = it->second;
+            // fetch union set of predictedTracksMap
+            std::map<int, TracksMap>::iterator it = predictedTracksMap.begin();
+            for ( ; it != predictedTracksMap.end(); it++)
+            {
+                TracksMap oneTracks = it->second;
+                TracksMap::iterator iter = oneTracks.begin();
+                for ( ; iter != oneTracks.end(); iter++)
+                {
+                    // ignore when key is identical.
+                    selectedTracks.insert(*iter);
+                }
+            }
         }
 
-        if (predictedTracks.size())
+        if (predictedTracksMap.size())
         {
-            std::map<int, TracksMap>::iterator it;
-            for (it = predictedTracks.begin(); it != predictedTracks.end(); it++)
+            std::map<int, TracksMap>::iterator it = predictedTracksMap.begin();
+            for ( ; it != predictedTracksMap.end(); it++)
             {
                 if ((it->second).size())
                 {
@@ -136,10 +145,10 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
                 }
             }
 
-            predictedTracks.clear();
+            predictedTracksMap.clear();
         }
     }
-    else
+    else // not using prediction
     {
         selectedTracks = GetTileTracksByPose(pStream);
     }
@@ -375,19 +384,47 @@ std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
     OmafMediaStream *pStream)
 {
     std::map<int, TracksMap> predictedTracks;
+    int64_t historySize = 0;
+    HeadPose* previousPose = NULL;
     {
         std::lock_guard<std::mutex> lock(mMutex);
-        if(mPoseHistory.size() <= 1)
+        if(mPoseHistory.size() == 0)
         {
             return predictedTracks;
         }
+
+        previousPose = mPose;
+
+        mPose = mPoseHistory.front().pose;
+        mPoseHistory.pop_front();
+
+        if(!mPose)
+        {
+            return predictedTracks;
+        }
+
+        historySize = mPoseHistory.size();
+
     }
+    // won't get viewport if pose hasn't changed
+    if( previousPose && mPose && !IsPoseChanged( previousPose, mPose ) && historySize > 1)
+    {
+        LOG(INFO)<<"pose hasn't changed!"<<endl;
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+        //trace
+        tracepoint(mthq_tp_provider, T2_detect_pose_change, 0);
+#endif
+#endif
+        SAFE_DELETE(previousPose);
+        return predictedTracks;
+    }
+    // if viewport changed, then predict viewport using pose history.
     if (mPredictPluginMap.size() == 0)
     {
         LOG(ERROR)<<"predict plugin map is empty!"<<endl;
         return predictedTracks;
     }
-
     ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);
     uint32_t pose_interval = POSE_INTERVAL;
     uint32_t pre_pose_count = PREDICTION_POSE_COUNT;
@@ -405,61 +442,42 @@ std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
             pose_history.push_front(angle);
         }
     }
-    ViewportAngle* predict_angle = plugin->Predict(pose_history);
-    if (predict_angle == NULL)
+    std::vector<ViewportAngle*> predict_angles = plugin->Predict(pose_history);
+    if (predict_angles.empty())
     {
         LOG(ERROR)<<"predictPose_func return an invalid value!"<<endl;
         return predictedTracks;
     }
-
-    HeadPose* previousPose = mPose;
-    {
-        std::lock_guard<std::mutex> lock(mMutex);
-        mPose = mPoseHistory.front().pose;
-        mPoseHistory.pop_front();
-        if(!mPose)
-        {
-            return predictedTracks;
-        }
-    }
-    // won't get viewport if pose hasn't changed
-    if( previousPose && mPose && !IsPoseChanged( previousPose, mPose ) && pose_history.size() > 1)
-    {
-        LOG(INFO)<<"pose hasn't changed!"<<endl;
-#ifndef _ANDROID_NDK_OPTION_
-#ifdef _USE_TRACE_
-        //trace
-        tracepoint(mthq_tp_provider, T2_detect_pose_change, 0);
-#endif
-#endif
-        SAFE_DELETE(previousPose);
-        SAFE_DELETE(predict_angle);
-        return predictedTracks;
-    }
-
     // to select tile tracks;
-    HeadPose *predictPose = new HeadPose;
+    uint32_t poseCandicateNum = predict_angles.size();
+    HeadPose *predictPose = new HeadPose[poseCandicateNum];
     if (!predictPose)
         return predictedTracks;
-
-    predictPose->yaw = predict_angle->yaw;
-    predictPose->pitch = predict_angle->pitch;
-    TracksMap selectedTracks = SelectTileTracks(pStream, predictPose);
-    if (selectedTracks.size() && previousPose)
+    for (uint32_t i = 0; i < poseCandicateNum; i++)
     {
-        predictedTracks.insert(make_pair(1, selectedTracks));
-        LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") !"<<endl;
+        predictPose[i].yaw = predict_angles[i]->yaw;//predict_angle is also a list NEED TO ADD
+        predictPose[i].pitch = predict_angles[i]->pitch;
+        TracksMap selectedTracks = SelectTileTracks(pStream, &predictPose[i]);
+        if (selectedTracks.size() && previousPose)
+        {
+            predictedTracks.insert(make_pair(i, selectedTracks));
+            LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") !"<<endl;
 
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
-        //trace
-        tracepoint(mthq_tp_provider, T2_detect_pose_change, 1);
+            //trace
+            tracepoint(mthq_tp_provider, T2_detect_pose_change, 1);
 #endif
 #endif
+        }
     }
     SAFE_DELETE(previousPose);
     SAFE_DELETE(predictPose);
-    SAFE_DELETE(predict_angle);
+    for (uint32_t i = 0; i < poseCandicateNum; i++)
+    {
+        SAFE_DELETE(predict_angles[i]);
+    }
+    predict_angles.clear();
     return predictedTracks;
 }
 
