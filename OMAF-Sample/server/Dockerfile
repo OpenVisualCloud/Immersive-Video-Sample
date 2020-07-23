@@ -193,6 +193,17 @@ RUN wget -O - ${NGINX_REPO} | tar xz && \
 EXPOSE 443
 EXPOSE 8080
 
+# Build safe string lib
+RUN git clone https://github.com/intel/safestringlib.git && \
+    cd safestringlib && \
+    source /opt/rh/devtoolset-7/enable && \
+    cmake . && \
+    make -j `nproc` -f Makefile && \
+    cp libsafestring_shared.so /usr/local/lib/ && \
+    mkdir -p /usr/local/include/safestringlib/ && \
+    cp ./include/* /usr/local/include/safestringlib/ && \
+    cd ${WORKDIR} && rm -rf ./safestringlib
+
 # Configure And Run Nginx
 COPY nginx_conf /usr/local/nginx/conf
 
