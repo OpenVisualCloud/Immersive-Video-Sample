@@ -639,7 +639,7 @@ std::unique_ptr<RegionWisePacking> OmafTilesStitch::CalculateMergedRwpkForERP(Qu
   rwpk->projPicHeight = m_fullHeight;
   rwpk->packedPicWidth = width;
   rwpk->packedPicHeight = height;
-
+  DELETE_ARRAY(rwpk->rectRegionPacking);
   rwpk->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
   if (!(rwpk->rectRegionPacking)) {
     // SAFE_DELETE(rwpk);
@@ -786,6 +786,7 @@ std::unique_ptr<RegionWisePacking> OmafTilesStitch::CalculateMergedRwpkForCubeMa
   rwpk->packedPicWidth = width;
   rwpk->packedPicHeight = height;
 
+  DELETE_ARRAY(rwpk->rectRegionPacking);
   rwpk->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
   if (!(rwpk->rectRegionPacking)) {
     // SAFE_DELETE(rwpk);
@@ -1068,6 +1069,7 @@ int32_t OmafTilesStitch::GenerateOutputMergedPackets() {
           if (itPacket == packets.end())
           {
               LOG(ERROR) << "Packets map is empty!" << std::endl;
+              SAFE_DELETE(mergedPacket);
               return OMAF_ERROR_INVALID_DATA;
           }
           MediaPacket *onePacket = itPacket->second;
@@ -1088,11 +1090,16 @@ int32_t OmafTilesStitch::GenerateOutputMergedPackets() {
         }
       }
       std::map<uint32_t, uint8_t *>::iterator itHdr = oneVideoHeader.begin();
+      if (itHdr == oneVideoHeader.end())
+      {
+          LOG(ERROR) << "Video header map is empty!" << std::endl;
+          SAFE_DELETE(mergedPacket);
+          return OMAF_ERROR_INVALID_DATA;
+      }
       uint8_t *headers = itHdr->second;
       uint32_t headersLen = itHdr->first;
       if (!headers) {
-        delete mergedPacket;
-        mergedPacket = nullptr;
+        SAFE_DELETE(mergedPacket);
         return OMAF_ERROR_NULL_PTR;
       }
       memcpy_s(mergedData, headersLen, headers, headersLen);
@@ -1116,6 +1123,12 @@ int32_t OmafTilesStitch::GenerateOutputMergedPackets() {
     // LOG(INFO)<<"mostTopPos  " << mostTopPos << " and mostLeftPos  "<<mostLeftPos<<endl;
 
     itPacket = packets.begin();
+    if (itPacket == packets.end())
+    {
+      LOG(ERROR) << "Packet map is empty!" << std::endl;
+      SAFE_DELETE(mergedPacket);
+      return OMAF_ERROR_INVALID_DATA;
+    }
     MediaPacket *firstPacket = itPacket->second;
     mergedPacket->SetVideoID(static_cast<uint32_t>(qualityRanking) - 1);
     mergedPacket->SetCodecType(firstPacket->GetCodecType());

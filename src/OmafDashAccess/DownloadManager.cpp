@@ -57,7 +57,6 @@ DownloadManager::DownloadManager() {
   mDownloadedFiles = 0;
   mCacheDir = "";
   mMaxCacheSize = 200000000;
-  pthread_mutex_init(&mMutex, NULL);
   mStartTime = 0;
   mFilePrefix = "";
   // start count from 1 because 0 and 1 would generate
@@ -66,7 +65,7 @@ DownloadManager::DownloadManager() {
   mUseCache = false;
 }
 
-DownloadManager::~DownloadManager() { pthread_mutex_destroy(&mMutex); }
+DownloadManager::~DownloadManager() { }
 
 int DownloadManager::DeleteCacheFile(std::string url) {
   if (remove(url.c_str())) {
@@ -90,10 +89,8 @@ int DownloadManager::SetCacheFolder(std::string cache_dir) {
 }
 
 std::string DownloadManager::AssignCacheFileName() {
-  pthread_mutex_lock(&mMutex);
+  std::lock_guard<std::mutex> lock(mMutex);
   std::string file_name = GetRandomString(32);
-  pthread_mutex_unlock(&mMutex);
-
   return file_name;
 }
 

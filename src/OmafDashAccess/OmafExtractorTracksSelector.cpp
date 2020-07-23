@@ -99,26 +99,25 @@ bool OmafExtractorTracksSelector::IsDifferentPose(HeadPose* pose1, HeadPose* pos
 }
 
 OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* pStream) {
-  pthread_mutex_lock(&mMutex);
-  if (mPoseHistory.size() == 0) {
-    pthread_mutex_unlock(&mMutex);
-    return NULL;
-  }
-
-  HeadPose* previousPose = mPose;
+  HeadPose* previousPose = NULL;
   int64_t historySize = 0;
+  {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (mPoseHistory.size() == 0) {
+      return NULL;
+    }
 
-  mPose = mPoseHistory.front().pose;
-  mPoseHistory.pop_front();
+    previousPose = mPose;
 
-  if (!mPose) {
-    pthread_mutex_unlock(&mMutex);
-    return nullptr;
+    mPose = mPoseHistory.front().pose;
+    mPoseHistory.pop_front();
+
+    if (!mPose) {
+      return nullptr;
+    }
+
+    historySize = mPoseHistory.size();
   }
-
-  historySize = mPoseHistory.size();
-
-  pthread_mutex_unlock(&mMutex);
 
   // won't get viewport if pose hasn't changed
   if (previousPose && mPose && !IsDifferentPose(previousPose, mPose) && historySize > 1) {
@@ -201,12 +200,12 @@ OmafExtractor* OmafExtractorTracksSelector::GetNearestExtractor(OmafMediaStream*
 
 ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMediaStream* pStream) {
   ListExtractor extractors;
-  pthread_mutex_lock(&mMutex);
-  if (mPoseHistory.size() <= 1) {
-    pthread_mutex_unlock(&mMutex);
-    return extractors;
+  {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (mPoseHistory.size() <= 1) {
+      return extractors;
+    }
   }
-  pthread_mutex_unlock(&mMutex);
   if (mPredictPluginMap.size() == 0) {
     LOG(ERROR) << "predict plugin map is empty!" << endl;
     return extractors;
@@ -217,29 +216,30 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   uint32_t predict_interval = PREDICTION_INTERVAL;
   plugin->Intialize(pose_interval, pre_pose_count, predict_interval);
   std::list<ViewportAngle> pose_history;
-  pthread_mutex_lock(&mMutex);
-  for (auto it = mPoseHistory.begin(); it != mPoseHistory.end(); it++) {
-    ViewportAngle angle;
-    angle.yaw = it->pose->yaw;
-    angle.pitch = it->pose->pitch;
-    angle.roll = 0;
-    pose_history.push_front(angle);
+  {
+    std::lock_guard<std::mutex> lock(mMutex);
+    for (auto it = mPoseHistory.begin(); it != mPoseHistory.end(); it++) {
+      ViewportAngle angle;
+      angle.yaw = it->pose->yaw;
+      angle.pitch = it->pose->pitch;
+      angle.roll = 0;
+      pose_history.push_front(angle);
+    }
   }
-  pthread_mutex_unlock(&mMutex);
   ViewportAngle* predict_angle = plugin->Predict(pose_history);
   if (predict_angle == NULL) {
     LOG(ERROR) << "predictPose_func return an invalid value!" << endl;
     return extractors;
   }
   HeadPose* previousPose = mPose;
-  pthread_mutex_lock(&mMutex);
-  mPose = mPoseHistory.front().pose;
-  mPoseHistory.pop_front();
-  if (!mPose) {
-    pthread_mutex_unlock(&mMutex);
-    return extractors;
+  {
+    std::lock_guard<std::mutex> lock(mMutex);
+    mPose = mPoseHistory.front().pose;
+    mPoseHistory.pop_front();
+    if (!mPose) {
+      return extractors;
+    }
   }
-  pthread_mutex_unlock(&mMutex);
   // won't get viewport if pose hasn't changed
   if (previousPose && mPose && !IsDifferentPose(previousPose, mPose) && pose_history.size() > 1) {
     LOG(INFO) << "pose hasn't changed!" << endl;

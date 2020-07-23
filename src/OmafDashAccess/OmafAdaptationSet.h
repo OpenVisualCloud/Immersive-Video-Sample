@@ -48,6 +48,7 @@
 
 #include <string>
 #include <memory>
+#include <mutex>
 
 using namespace VCD::VRVideo;
 
@@ -237,7 +238,7 @@ class OmafAdaptationSet {
 
   std::vector<BaseUrlElement*> mBaseURL;  //<! the base url
   int mTrackNumber;                       //<! the track number in mp4 for this AdaptationSet
-  pthread_mutex_t mMutex;
+  std::mutex mMutex;
   std::list<SampleData*> mSampleList;  //<! a queue to storce all readed Sample
 
   VideoInfo mVideoInfo;             //<! Video relative information

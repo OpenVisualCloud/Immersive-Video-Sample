@@ -44,6 +44,7 @@
 #include "OmafExtractor.h"
 #include "OmafReader.h"
 #include "OmafTilesStitch.h"
+#include <mutex>
 
 VCD_OMAF_BEGIN
 
@@ -160,31 +161,20 @@ class OmafMediaStream {
   //! \brief  get current selected extractors
   //!
   std::list<OmafExtractor*> GetEnabledExtractor() {
-    pthread_mutex_lock(&mCurrentMutex);
+    std::lock_guard<std::mutex> lock(mCurrentMutex);
     std::list<OmafExtractor*> enabledExtractor(mCurrentExtractors.begin(), mCurrentExtractors.end());
-    pthread_mutex_unlock(&mCurrentMutex);
     return enabledExtractor;
   };
 
   std::map<int, OmafAdaptationSet*> GetSelectedTileTracks() {
-    pthread_mutex_lock(&mCurrentMutex);
+    std::lock_guard<std::mutex> lock(mCurrentMutex);
     std::map<int, OmafAdaptationSet*> selectedTileTracks = m_selectedTileTracks;
-    pthread_mutex_unlock(&mCurrentMutex);
     return selectedTileTracks;
   }
 
   int32_t GetExtractorSize() {
-    int32_t ret = pthread_mutex_lock(&mCurrentMutex);
-    if (ret) {
-      LOG(ERROR) << "Failed to lock mutex in getting Extractor size !" << std::endl;
-      return 0;
-    }
+    std::lock_guard<std::mutex> lock(mCurrentMutex);
     int32_t size = mCurrentExtractors.size();
-    ret = pthread_mutex_unlock(&mCurrentMutex);
-    if (ret) {
-      LOG(ERROR) << "Failed to unlock mutex in getting Extractor size !" << std::endl;
-      return 0;
-    }
     return size;
   };
 
@@ -269,9 +259,9 @@ class OmafMediaStream {
   DashStreamInfo* m_pStreamInfo;
   //<! the information of the stream
   //<! for synchronization
-  pthread_mutex_t mMutex;
+  std::mutex mMutex;
   //<! for synchronization of mCurrentExtractors and m_selectedTileTracks
-  pthread_mutex_t mCurrentMutex;
+  std::mutex mCurrentMutex;
   //<! flag for end of stream
   bool m_bEOS;
   OmafDashSourceSyncHelper syncer_helper_;
@@ -287,7 +277,7 @@ class OmafMediaStream {
   //<! tiles stitching thread ID
   pthread_t m_stitchThread;
   //<! mutex for output tiles merged media packet list
-  pthread_mutex_t m_packetsMutex;
+  std::mutex m_packetsMutex;
   //<! list of output tiles merged media packets
   std::list<std::list<MediaPacket*>> m_mergedPackets;
 
