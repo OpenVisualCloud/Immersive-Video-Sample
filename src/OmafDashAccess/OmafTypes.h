@@ -134,6 +134,7 @@ using OmafDashPredictorParams = struct _omafDashPredictorParams;
 class OmafDashParams {
  public:
  public:
+  // for download
   OmafDashHttpProxy http_proxy_;
   OmafDashHttpParams http_params_;
   OmafDashStatisticsParams stats_params_;
@@ -141,6 +142,10 @@ class OmafDashParams {
   OmafDashPredictorParams prediector_params_;
   long max_parallel_transfers_ = DEFAULT_MAX_PARALLEL_TRANSFERS;
   int32_t segment_open_timeout_ms_ = DEFAULT_SEGMENT_OPEN_TIMEOUT;
+  // for stitch
+  uint32_t max_decode_width_;
+  uint32_t max_decode_height_;
+
   std::string to_string() {
     std::stringstream ss;
     ss << http_proxy_.to_string();

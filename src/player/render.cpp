@@ -180,6 +180,29 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       return RENDER_ERROR;
     }
 
+    renderConfig.maxVideoDecodeWidth =
+        atoi(info->FirstChildElement("maxVideoDecodeWidth")
+                 ->GetText());  // limited video decoder width of device.
+    if (renderConfig.maxVideoDecodeWidth <= 0 || renderConfig.maxVideoDecodeWidth >= UINT32_MAX) {
+      LOG(ERROR) << "---INVALID maxVideoDecodeWidth input---" << std::endl;
+      return RENDER_ERROR;
+    }
+    renderConfig.maxVideoDecodeHeight =
+        atoi(info->FirstChildElement("maxVideoDecodeHeight")
+                 ->GetText());  // limited video decoder height of device.
+    if (renderConfig.maxVideoDecodeHeight <= 0 || renderConfig.maxVideoDecodeHeight >= UINT32_MAX) {
+      LOG(ERROR) << "---INVALID maxVideoDecodeHeight input---" << std::endl;
+      return RENDER_ERROR;
+    }
+
+    renderConfig.viewportHFOV = atoi(info->FirstChildElement("viewportHFOV")->GetText());
+    renderConfig.viewportVFOV = atoi(info->FirstChildElement("viewportVFOV")->GetText());
+    if (renderConfig.viewportHFOV < MINFOV || renderConfig.viewportHFOV > MAXFOV ||
+        renderConfig.viewportVFOV < MINFOV || renderConfig.viewportVFOV > MAXFOV) {
+      LOG(ERROR) << "---INVALID viewportHFOV or viewportVFOV input!---" << std::endl;
+      return RENDER_ERROR;
+    }
+
     XMLElement* logLevelElem = info->FirstChildElement("minLogLevel");
     if (logLevelElem != NULL)
     {

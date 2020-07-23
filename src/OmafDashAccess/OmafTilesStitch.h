@@ -130,6 +130,8 @@ class OmafTilesStitch {
   //!
   bool IsInitialized() { return m_isInitialized; };
 
+  void SetMaxStitchResolution(uint32_t width, uint32_t height) { m_maxStitchWidth = width; m_maxStitchHeight = height; };
+
  private:
   //!
   //! \brief  Parse the VPS/SPS/PPS information
@@ -150,7 +152,7 @@ class OmafTilesStitch {
   //!         the map of tiles merge layout information for different
   //!         tiles sets of different quality ranking
   //!
-  std::map<QualityRank, TilesMergeArrangement *> CalculateTilesMergeArrangement();
+  std::map<QualityRank, vector<TilesMergeArrangement *>> CalculateTilesMergeArrangement();
 
   //!
   //! \brief  Calculate region wise packing information for
@@ -171,7 +173,7 @@ class OmafTilesStitch {
   //!         the pointer to the calculated region wise packing
   //!         information
   //!
-  std::unique_ptr<RegionWisePacking> CalculateMergedRwpkForERP(QualityRank qualityRanking, bool hasPacketLost,
+  vector<std::unique_ptr<RegionWisePacking>> CalculateMergedRwpkForERP(QualityRank qualityRanking, bool hasPacketLost,
                                                                bool hasLayoutChanged);
 
   //!
@@ -193,7 +195,7 @@ class OmafTilesStitch {
   //!         the pointer to the calculated region wise packing
   //!         information
   //!
-  std::unique_ptr<RegionWisePacking> CalculateMergedRwpkForCubeMap(QualityRank qualityRanking, bool hasPacketLost,
+  vector<std::unique_ptr<RegionWisePacking>> CalculateMergedRwpkForCubeMap(QualityRank qualityRanking, bool hasPacketLost,
                                                    bool hasLayoutChanged);
   //! \brief  Generate tiles merge layout information
   //!
@@ -211,8 +213,26 @@ class OmafTilesStitch {
   int32_t GenerateOutputMergedPackets();
 
 private:
-    OmafTilesStitch& operator=(const OmafTilesStitch& other) { return *this; };
-    OmafTilesStitch(const OmafTilesStitch& other) { /* do not create copies */ };
+
+  OmafTilesStitch& operator=(const OmafTilesStitch& other) { return *this; };
+  OmafTilesStitch(const OmafTilesStitch& other) { /* do not create copies */ };
+
+  int32_t IsArrChanged(QualityRank qualityRanking, vector<TilesMergeArrangement *> layOut, vector<TilesMergeArrangement *> initLayOut, bool *isArrChanged, bool *packetLost, bool *arrangeChanged);
+
+  int32_t GenerateMergedVideoHeaders(bool arrangeChanged, QualityRank qualityRanking, vector<TilesMergeArrangement *> layOut, vector<TilesMergeArrangement *> initLayOut);
+
+  vector<std::unique_ptr<RegionWisePacking>> GenerateMergedRWPK(QualityRank qualityRanking, bool packetLost, bool arrangeChanged);
+
+  int32_t UpdateMergedVideoHeadersForLowQualityRank(bool isEmptyHeaders, std::map<uint32_t, MediaPacket *> packets, QualityRank qualityRanking);
+
+  int32_t InitMergedDataAndRealSize(QualityRank qualityRanking, std::map<uint32_t, MediaPacket *> packets, char* mergedData, uint64_t* realSize, uint32_t index);
+
+  int32_t UpdateMergedDataAndRealSize(QualityRank qualityRanking, std::map<uint32_t, MediaPacket *> packets,
+         uint8_t tileColsNum, bool arrangeChanged, uint32_t width, uint32_t height, uint32_t initWidth, uint32_t initHeight, char *mergedData, uint64_t *realSize, uint32_t index, vector<uint32_t> needPacketSize);
+
+  int32_t UpdateInitTilesMergeArr();
+
+  vector<pair<uint32_t, uint32_t>> GenerateMostSquareArr(uint32_t packetsSize, uint32_t splitNum);
 
  private:
   bool m_isInitialized;  //<! whether the stitch class has been initialized
@@ -235,12 +255,13 @@ private:
 
   uint32_t m_fullResPPSSize;  //<! PPS size of original video stream of highest quality
 
-  std::map<QualityRank, TilesMergeArrangement *>
+  std::map<QualityRank, vector<TilesMergeArrangement *>>
       m_initTilesMergeArr;  //<! initial tiles merge arrangement at the beginning
 
-  std::map<QualityRank, TilesMergeArrangement *> m_updatedTilesMergeArr;  //<! updated tiles merge arrangement per frame
+  std::map<QualityRank, vector<TilesMergeArrangement *>>
+      m_updatedTilesMergeArr;  //<! updated tiles merge arrangement per frame
 
-  std::map<QualityRank, std::map<uint32_t, uint8_t *>>
+  std::map<QualityRank, vector<std::map<uint32_t, uint8_t *>>>
       m_mergedVideoHeaders;  //<! map of <qualityRanking, <mergedVideoHeadersSize, mergedVideoHeadersData*>>
 
   uint32_t m_fullWidth;  //<! the width of original video
@@ -261,6 +282,9 @@ private:
       m_outMergedStream;  //<! the list of output tiles merged video stream, one stream one MediaPacket
 
   RectangularRegionWisePacking* m_tmpRegionrwpk;
+  uint32_t m_maxStitchWidth; //<! max merged width for stitching
+
+  uint32_t m_maxStitchHeight; //<! max merged height for stitching
 };
 
 VCD_OMAF_END;

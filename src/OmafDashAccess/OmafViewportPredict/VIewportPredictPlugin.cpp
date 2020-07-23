@@ -97,20 +97,23 @@ int ViewportPredictPlugin::Intialize(uint32_t pose_interval, uint32_t pre_pose_c
     return ERROR_NONE;
 }
 
-ViewportAngle* ViewportPredictPlugin::Predict(std::list<ViewportAngle> pose_history)
+std::vector<ViewportAngle*> ViewportPredictPlugin::Predict(std::list<ViewportAngle> pose_history)
 {
+    // need to predict multiple viewpoints in next segment.
+    std::vector<ViewportAngle*> predict_angles;
     if (pose_history.size() == 0)
     {
         LOG(ERROR)<<"pose history is empty now!"<<endl;
-        return NULL;
+        return predict_angles;
     }
     ViewportAngle* predict_angle = m_predictFunc(m_predictHandler, pose_history);
     if (predict_angle == NULL)
     {
         LOG(ERROR)<<"predictPose_func return an invalid value!"<<endl;
-        return NULL;
+        return predict_angles;
     }
-    return predict_angle;
+    predict_angles.push_back(predict_angle);
+    return predict_angles;
 }
 
 VCD_OMAF_END

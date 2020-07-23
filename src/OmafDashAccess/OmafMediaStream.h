@@ -222,6 +222,8 @@ class OmafMediaStream {
 
   void SetNeedVideoParams(bool needParams) { m_needParams = needParams; };
 
+  void SetMaxStitchResolution(uint32_t width, uint32_t height) { m_stitch->SetMaxStitchResolution(width, height); };
+
   std::list<MediaPacket*> GetOutTilesMergedPackets();
 
   void Close();

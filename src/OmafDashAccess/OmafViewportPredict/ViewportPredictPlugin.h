@@ -39,6 +39,7 @@
 
 #include "../general.h"
 #include <stdlib.h>
+#include <vector>
 
 VCD_OMAF_BEGIN
 
@@ -89,7 +90,7 @@ public:
     //! \return ViewportAngle*
     //!              return predicted viewport pose
     //!
-    ViewportAngle* Predict(std::list<ViewportAngle> pose_history);
+    std::vector<ViewportAngle*> Predict(std::list<ViewportAngle> pose_history);
 private:
     Handler          m_libHandler;
     Handler          m_predictHandler;

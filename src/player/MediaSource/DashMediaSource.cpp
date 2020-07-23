@@ -104,6 +104,8 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
 
   pCtxDashStreaming->omaf_params.synchronizer_params.enable = 0;               //  enable dash segment number syncer
   pCtxDashStreaming->omaf_params.synchronizer_params.segment_range_size = 20;  // 20
+  pCtxDashStreaming->omaf_params.max_decode_width = renderConfig.maxVideoDecodeWidth;
+  pCtxDashStreaming->omaf_params.max_decode_height = renderConfig.maxVideoDecodeHeight;
 
   m_handler = OmafAccess_Init(pCtxDashStreaming);
   if (NULL == m_handler) {

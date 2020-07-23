@@ -880,6 +880,11 @@ std::list<MediaPacket*> OmafMediaStream::GetOutTilesMergedPackets() {
     outPackets = m_mergedPackets.front();
     m_mergedPackets.pop_front();
   }
+  // correct the video id
+  uint32_t video_id = 0;
+  for (auto packet : outPackets) {
+    packet->SetVideoID(video_id++);
+  }
   return outPackets;
 }
 

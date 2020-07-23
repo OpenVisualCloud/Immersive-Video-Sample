@@ -246,6 +246,8 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enable
     stream->SetStreamID(id);
     // stream->SetEnabledExtractor(enableExtractor);
     stream->SetOmafReaderMgr(omaf_reader_mgr_);
+    if (!enableExtractor)
+      stream->SetMaxStitchResolution(omaf_dash_params_.max_decode_width_, omaf_dash_params_.max_decode_height_);
     id++;
   }
 
@@ -357,7 +359,7 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
     }
   } else {
     std::map<int, OmafAdaptationSet*> mapAS = pStream->GetMediaAdaptationSet();
-    std::map<int, OmafAdaptationSet*> mapSelectedAS = pStream->GetSelectedTileTracks();
+    // std::map<int, OmafAdaptationSet*> mapSelectedAS = pStream->GetSelectedTileTracks();
     if (mapAS.size() == 1) {
       LOG(INFO) << "There is only one tile for the video stream !" << endl;
       for (auto as_it = mapAS.begin(); as_it != mapAS.end(); as_it++) {
@@ -370,7 +372,7 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
       std::list<MediaPacket*> mergedPackets;
       pStream->SetNeedVideoParams(needParams);
       mergedPackets = pStream->GetOutTilesMergedPackets();
-
+      // LOG(INFO) << " merged packets has the size of " << mergedPackets.size() << std::endl;
       std::list<MediaPacket*>::iterator itPacket;
       for (itPacket = mergedPackets.begin(); itPacket != mergedPackets.end(); itPacket++) {
         MediaPacket* onePacket = *itPacket;
