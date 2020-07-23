@@ -38,7 +38,6 @@
 VCD_OMAF_BEGIN
 
 OmafTracksSelector::OmafTracksSelector(int size) {
-  pthread_mutex_init(&mMutex, NULL);
   mSize = size;
   m360ViewPortHandle = nullptr;
   mParamViewport = nullptr;
@@ -50,8 +49,6 @@ OmafTracksSelector::OmafTracksSelector(int size) {
 }
 
 OmafTracksSelector::~OmafTracksSelector() {
-  pthread_mutex_destroy(&mMutex);
-
   if (m360ViewPortHandle) {
     I360SCVP_unInit(m360ViewPortHandle);
     m360ViewPortHandle = nullptr;
@@ -156,7 +153,7 @@ int OmafTracksSelector::SetInitialViewport(std::vector<Viewport *> &pView, HeadS
 int OmafTracksSelector::UpdateViewport(HeadPose *pose) {
   if (!pose) return ERROR_NULL_PTR;
 
-  pthread_mutex_lock(&mMutex);
+  std::lock_guard<std::mutex> lock(mMutex);
 
   PoseInfo pi;
   pi.pose = new HeadPose;
@@ -170,8 +167,6 @@ int OmafTracksSelector::UpdateViewport(HeadPose *pose) {
     SAFE_DELETE(pit.pose);
     mPoseHistory.pop_back();
   }
-
-  pthread_mutex_unlock(&mMutex);
   return ERROR_NONE;
 }
 

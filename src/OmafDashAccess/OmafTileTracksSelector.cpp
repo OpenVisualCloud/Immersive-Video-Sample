@@ -184,29 +184,28 @@ bool IsPoseChanged(HeadPose* pose1, HeadPose* pose2)
 TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
 {
     TracksMap selectedTracks;
-
-    pthread_mutex_lock(&mMutex);
-    if(mPoseHistory.size() == 0)
-    {
-        pthread_mutex_unlock(&mMutex);
-        return selectedTracks;
-    }
-
-    HeadPose* previousPose = mPose;
     int64_t historySize = 0;
-
-    mPose = mPoseHistory.front().pose;
-    mPoseHistory.pop_front();
-
-    if(!mPose)
+    HeadPose* previousPose = NULL;
     {
-        pthread_mutex_unlock(&mMutex);
-        return selectedTracks;
+        std::lock_guard<std::mutex> lock(mMutex);
+        if(mPoseHistory.size() == 0)
+        {
+            return selectedTracks;
+        }
+
+        previousPose = mPose;
+
+        mPose = mPoseHistory.front().pose;
+        mPoseHistory.pop_front();
+
+        if(!mPose)
+        {
+            return selectedTracks;
+        }
+
+        historySize = mPoseHistory.size();
+
     }
-
-    historySize = mPoseHistory.size();
-
-    pthread_mutex_unlock(&mMutex);
 
     // won't get viewport if pose hasn't changed
     if( previousPose && mPose && !IsPoseChanged( previousPose, mPose ) && historySize > 1)
@@ -264,7 +263,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     if (selectedTilesNum <= 0 || selectedTilesNum > 1024)
     {
         LOG(ERROR) << "Failed to get tiles information in viewport !" << endl;
-        SAFE_DELETE(tilesInViewport);
+        DELETE_ARRAY(tilesInViewport);
         return selectedTracks;
     }
 
@@ -326,6 +325,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
                     if (!tileInfo)
                     {
                         LOG(ERROR) << "NULL tile information for Cubemap !" << std::endl;
+                        DELETE_ARRAY(tilesInViewport);
                         return selectedTracks;
                     }
                     int32_t tileLeft = tileInfo->x;
@@ -368,8 +368,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
         }
     }
 
-    delete [] tilesInViewport;
-    tilesInViewport = NULL;
+    DELETE_ARRAY(tilesInViewport);
 
     return selectedTracks;
 }
@@ -378,14 +377,13 @@ std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
     OmafMediaStream *pStream)
 {
     std::map<int, TracksMap> predictedTracks;
-    pthread_mutex_lock(&mMutex);
-    if(mPoseHistory.size() <= 1)
     {
-        pthread_mutex_unlock(&mMutex);
-        return predictedTracks;
+        std::lock_guard<std::mutex> lock(mMutex);
+        if(mPoseHistory.size() <= 1)
+        {
+            return predictedTracks;
+        }
     }
-
-    pthread_mutex_unlock(&mMutex);
     if (mPredictPluginMap.size() == 0)
     {
         LOG(ERROR)<<"predict plugin map is empty!"<<endl;
@@ -398,16 +396,17 @@ std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
     uint32_t predict_interval = PREDICTION_INTERVAL;
     plugin->Intialize(pose_interval, pre_pose_count, predict_interval);
     std::list<ViewportAngle> pose_history;
-    pthread_mutex_lock(&mMutex);
-    for (auto it=mPoseHistory.begin(); it!=mPoseHistory.end(); it++)
     {
-        ViewportAngle angle;
-        angle.yaw = it->pose->yaw;
-        angle.pitch = it->pose->pitch;
-        angle.roll = 0;
-        pose_history.push_front(angle);
+        std::lock_guard<std::mutex> lock(mMutex);
+        for (auto it=mPoseHistory.begin(); it!=mPoseHistory.end(); it++)
+        {
+            ViewportAngle angle;
+            angle.yaw = it->pose->yaw;
+            angle.pitch = it->pose->pitch;
+            angle.roll = 0;
+            pose_history.push_front(angle);
+        }
     }
-    pthread_mutex_unlock(&mMutex);
     ViewportAngle* predict_angle = plugin->Predict(pose_history);
     if (predict_angle == NULL)
     {
@@ -416,15 +415,15 @@ std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
     }
 
     HeadPose* previousPose = mPose;
-    pthread_mutex_lock(&mMutex);
-    mPose = mPoseHistory.front().pose;
-    mPoseHistory.pop_front();
-    if(!mPose)
     {
-        pthread_mutex_unlock(&mMutex);
-        return predictedTracks;
+        std::lock_guard<std::mutex> lock(mMutex);
+        mPose = mPoseHistory.front().pose;
+        mPoseHistory.pop_front();
+        if(!mPose)
+        {
+            return predictedTracks;
+        }
     }
-    pthread_mutex_unlock(&mMutex);
     // won't get viewport if pose hasn't changed
     if( previousPose && mPose && !IsPoseChanged( previousPose, mPose ) && pose_history.size() > 1)
     {

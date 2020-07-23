@@ -44,6 +44,7 @@
 #include "DownloadManager.h"
 #include "OmafTracksSelector.h"
 #include "OmafTilesStitch.h"
+#include <mutex>
 
 using namespace VCD::OMAF;
 
@@ -143,9 +144,8 @@ class OmafDashSource : public OmafMediaSource, Threadable {
   //!
   DASH_STATUS GetStatus() { return mStatus; };
   void SetStatus(DASH_STATUS status) {
-    pthread_mutex_lock(&mMutex);
+    std::lock_guard<std::mutex> lock(mMutex);
     mStatus = status;
-    pthread_mutex_unlock(&mMutex);
   };
 
   //!
@@ -165,7 +165,7 @@ class OmafDashSource : public OmafMediaSource, Threadable {
   OmafMPDParser* mMPDParser;       //<! the MPD parser
   DASH_STATUS mStatus;             //<! the status of the source
   OmafTracksSelector* m_selector;  //<! tracks selector basing on viewport
-  pthread_mutex_t mMutex;          //<! for synchronization
+  std::mutex mMutex;               //<! for synchronization
   MPDInfo* mMPDinfo;               //<! MPD information
   int dcount;
   int mPreExtractorID;

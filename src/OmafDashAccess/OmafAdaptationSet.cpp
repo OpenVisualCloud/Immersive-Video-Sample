@@ -68,12 +68,10 @@ OmafAdaptationSet::OmafAdaptationSet() {
   mTileInfo          = NULL;
   memset(&mVideoInfo, 0, sizeof(VideoInfo));
   memset(&mAudioInfo, 0, sizeof(AudioInfo));
-  pthread_mutex_init(&mMutex, nullptr);
 }
 
 OmafAdaptationSet::~OmafAdaptationSet() {
   this->ClearSegList();
-  pthread_mutex_destroy(&mMutex);
 
   // SAFE_DELETE(mInitSegment);
 
@@ -505,10 +503,9 @@ int OmafAdaptationSet::UpdateStartNumberByTime(uint64_t nAvailableStartTime) {
 OmafSegment::Ptr OmafAdaptationSet::GetNextSegment() {
   OmafSegment::Ptr seg;
 
-  pthread_mutex_lock(&mMutex);
+  std::lock_guard<std::mutex> lock(mMutex);
   seg = std::move(mSegments.front());
   mSegments.pop_front();
-  pthread_mutex_unlock(&mMutex);
 
   return seg;
 }
@@ -524,13 +521,12 @@ OmafSegment::Ptr OmafAdaptationSet::GetLocalNextSegment() {
 
 void OmafAdaptationSet::ClearSegList() {
   std::list<OmafSegment*>::iterator it;
-  pthread_mutex_lock(&mMutex);
+  std::lock_guard<std::mutex> lock(mMutex);
   for (auto it = mSegments.begin(); it != mSegments.end(); it++) {
     // delete *it;
     *it = nullptr;
   }
   mSegments.clear();
-  pthread_mutex_unlock(&mMutex);
 }
 
 int OmafAdaptationSet::SeekTo(int seg_num) {

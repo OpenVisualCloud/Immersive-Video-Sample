@@ -1322,6 +1322,7 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
       ret = reader->getPropertyRegionWisePacking(reader_track_id, sample, pRwpk.get());
       if (ret != ERROR_NONE) {
         LOG(ERROR) << "Failed to read region wise packing data from reader, code= " << ret << std::endl;
+        SAFE_DELETE(packet);
         return ret;
       }
       packet->SetRwpk(std::move(pRwpk));

@@ -39,6 +39,7 @@
 #include "OmafMediaStream.h"
 #include "OmafViewportPredict/ViewportPredictPlugin.h"
 #include "general.h"
+#include <mutex>
 
 using namespace VCD::OMAF;
 
@@ -103,7 +104,7 @@ class OmafTracksSelector {
  protected:
   std::list<PoseInfo> mPoseHistory;
   int mSize;
-  pthread_mutex_t mMutex;
+  std::mutex mMutex;
   HeadPose *mPose;
   void *m360ViewPortHandle;
   param_360SCVP *mParamViewport;

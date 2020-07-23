@@ -45,9 +45,6 @@ OmafMediaStream::OmafMediaStream() {
   m_needParams = false;
   m_currFrameIdx = 0;
   m_status = STATUS_UNKNOWN;
-  pthread_mutex_init(&mMutex, NULL);
-  pthread_mutex_init(&mCurrentMutex, NULL);
-  pthread_mutex_init(&m_packetsMutex, NULL);
 }
 
 OmafMediaStream::~OmafMediaStream() {
@@ -95,16 +92,13 @@ OmafMediaStream::~OmafMediaStream() {
   }
 
   SAFE_DELETE(m_stitch);
-  pthread_mutex_destroy(&mMutex);
-  pthread_mutex_destroy(&mCurrentMutex);
-  pthread_mutex_destroy(&m_packetsMutex);
   m_sources.clear();
 }
 
 void OmafMediaStream::SetOmafReaderMgr(std::shared_ptr<OmafReaderManager> mgr) noexcept {
   omaf_reader_mgr_ = std::move(mgr);
 
-  pthread_mutex_lock(&mMutex);
+  std::lock_guard<std::mutex> lock(mMutex);
   for (auto it = mMediaAdaptationSet.begin(); it != mMediaAdaptationSet.end(); it++) {
     OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
     pAS->SetOmafReaderMgr(omaf_reader_mgr_);
@@ -116,8 +110,6 @@ void OmafMediaStream::SetOmafReaderMgr(std::shared_ptr<OmafReaderManager> mgr) n
       extractor->SetOmafReaderMgr(omaf_reader_mgr_);
     }
   }
-
-  pthread_mutex_unlock(&mMutex);
 }
 
 void OmafMediaStream::Close() {
@@ -395,7 +387,7 @@ int OmafMediaStream::SetupSegmentSyncer(const OmafDashParams& params) {
   if (as != mMediaAdaptationSet.end()) {
     LOG(INFO) << "Create one dash window syncer!" << std::endl;
     syncer = make_omaf_syncer(*as->second, [this](SegmentSyncNode node) {
-      pthread_mutex_lock(&this->mMutex);
+      std::lock_guard<std::mutex> lock(this->mMutex);
       VLOG(VLOG_TRACE) << "Syncer segment number to value=" << node.segment_value.number_ << std::endl;
       for (auto it = this->mMediaAdaptationSet.begin(); it != this->mMediaAdaptationSet.end(); it++) {
         OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
@@ -406,7 +398,6 @@ int OmafMediaStream::SetupSegmentSyncer(const OmafDashParams& params) {
         OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
         extractor->UpdateSegmentNumber(node.segment_value.number_);
       }
-      pthread_mutex_unlock(&this->mMutex);
     });
   }
 
@@ -424,7 +415,8 @@ int OmafMediaStream::SetupSegmentSyncer(const OmafDashParams& params) {
 
 int OmafMediaStream::UpdateStartNumber(uint64_t nAvailableStartTime) {
   int ret = ERROR_NONE;
-  pthread_mutex_lock(&mMutex);
+
+  std::lock_guard<std::mutex> lock(mMutex);
   for (auto it = mMediaAdaptationSet.begin(); it != mMediaAdaptationSet.end(); it++) {
     OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
     pAS->UpdateStartNumberByTime(nAvailableStartTime);
@@ -434,12 +426,11 @@ int OmafMediaStream::UpdateStartNumber(uint64_t nAvailableStartTime) {
     OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
     extractor->UpdateStartNumberByTime(nAvailableStartTime);
   }
-  pthread_mutex_unlock(&mMutex);
   return ret;
 }
 
 int OmafMediaStream::DownloadInitSegment() {
-  pthread_mutex_lock(&mMutex);
+  std::lock_guard<std::mutex> lock(mMutex);
   for (auto it = mMediaAdaptationSet.begin(); it != mMediaAdaptationSet.end(); it++) {
     OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
     pAS->DownloadInitializeSegment();
@@ -452,13 +443,12 @@ int OmafMediaStream::DownloadInitSegment() {
     }
   }
 
-  pthread_mutex_unlock(&mMutex);
   return ERROR_NONE;
 }
 
 int OmafMediaStream::DownloadSegments() {
   int ret = ERROR_NONE;
-  pthread_mutex_lock(&mMutex);
+  std::lock_guard<std::mutex> lock(mMutex);
   for (auto it = mMediaAdaptationSet.begin(); it != mMediaAdaptationSet.end(); it++) {
     OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
     pAS->DownloadSegment();
@@ -472,13 +462,12 @@ int OmafMediaStream::DownloadSegments() {
     extractor->DownloadSegment();
   }
   // pthread_mutex_unlock(&mCurrentMutex);
-  pthread_mutex_unlock(&mMutex);
   return ret;
 }
 
 int OmafMediaStream::SeekTo(int seg_num) {
   int ret = ERROR_NONE;
-  pthread_mutex_lock(&mMutex);
+  std::lock_guard<std::mutex> lock(mMutex);
   for (auto it = mMediaAdaptationSet.begin(); it != mMediaAdaptationSet.end(); it++) {
     OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
     pAS->SeekTo(seg_num);
@@ -488,7 +477,6 @@ int OmafMediaStream::SeekTo(int seg_num) {
     OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
     extractor->SeekTo(seg_num);
   }
-  pthread_mutex_unlock(&mMutex);
   return ret;
 }
 
@@ -497,31 +485,32 @@ int OmafMediaStream::UpdateEnabledExtractors(std::list<OmafExtractor*> extractor
 
   int ret = ERROR_NONE;
 
-  pthread_mutex_lock(&mMutex);
-  for (auto as_it1 = mMediaAdaptationSet.begin(); as_it1 != mMediaAdaptationSet.end(); as_it1++) {
-    OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it1->second);
-    pAS->Enable(false);
-  }
-  for (auto extrator_it = mExtractors.begin(); extrator_it != mExtractors.end(); extrator_it++) {
-    OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
-    extractor->Enable(false);
-  }
+  {
+    std::lock_guard<std::mutex> lock(mMutex);
+    for (auto as_it1 = mMediaAdaptationSet.begin(); as_it1 != mMediaAdaptationSet.end(); as_it1++) {
+      OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it1->second);
+      pAS->Enable(false);
+    }
+    for (auto extrator_it = mExtractors.begin(); extrator_it != mExtractors.end(); extrator_it++) {
+      OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
+      extractor->Enable(false);
+    }
 
-  pthread_mutex_lock(&mCurrentMutex);
-  mCurrentExtractors.clear();
-  for (auto it = extractors.begin(); it != extractors.end(); it++) {
-    OmafExtractor* tmp = (OmafExtractor*)(*it);
-    tmp->Enable(true);
-    mCurrentExtractors.push_back(tmp);
-    std::map<int, OmafAdaptationSet*> AS = tmp->GetDependAdaptationSets();
-    for (auto as_it = AS.begin(); as_it != AS.end(); as_it++) {
-      OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
-      pAS->Enable(true);
+    {
+      std::lock_guard<std::mutex> lock(mCurrentMutex);
+      mCurrentExtractors.clear();
+      for (auto it = extractors.begin(); it != extractors.end(); it++) {
+        OmafExtractor* tmp = (OmafExtractor*)(*it);
+        tmp->Enable(true);
+        mCurrentExtractors.push_back(tmp);
+        std::map<int, OmafAdaptationSet*> AS = tmp->GetDependAdaptationSets();
+        for (auto as_it = AS.begin(); as_it != AS.end(); as_it++) {
+          OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
+          pAS->Enable(true);
+        }
+      }
     }
   }
-
-  pthread_mutex_unlock(&mCurrentMutex);
-  pthread_mutex_unlock(&mMutex);
 
   return ret;
 }
@@ -531,28 +520,29 @@ int OmafMediaStream::UpdateEnabledTileTracks(std::map<int, OmafAdaptationSet*> s
 
   int ret = ERROR_NONE;
 
-  pthread_mutex_lock(&mMutex);
-  for (auto as_it1 = mMediaAdaptationSet.begin(); as_it1 != mMediaAdaptationSet.end(); as_it1++) {
-    OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it1->second);
-    pAS->Enable(false);
-  }
-  for (auto extrator_it = mExtractors.begin(); extrator_it != mExtractors.end(); extrator_it++) {
-    OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
-    extractor->Enable(false);
-  }
+  {
+    std::lock_guard<std::mutex> lock(mMutex);
+    for (auto as_it1 = mMediaAdaptationSet.begin(); as_it1 != mMediaAdaptationSet.end(); as_it1++) {
+      OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it1->second);
+      pAS->Enable(false);
+    }
+    for (auto extrator_it = mExtractors.begin(); extrator_it != mExtractors.end(); extrator_it++) {
+      OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
+      extractor->Enable(false);
+    }
 
-  pthread_mutex_lock(&mCurrentMutex);
-  m_selectedTileTracks.clear();
-  for (auto itAS = selectedTiles.begin(); itAS != selectedTiles.end(); itAS++) {
-    OmafAdaptationSet* adaptationSet = itAS->second;
-    adaptationSet->Enable(true);
-    m_selectedTileTracks.insert(make_pair(itAS->first, itAS->second));
+    {
+      std::lock_guard<std::mutex> lock(mCurrentMutex);
+      m_selectedTileTracks.clear();
+      for (auto itAS = selectedTiles.begin(); itAS != selectedTiles.end(); itAS++) {
+        OmafAdaptationSet* adaptationSet = itAS->second;
+        adaptationSet->Enable(true);
+        m_selectedTileTracks.insert(make_pair(itAS->first, itAS->second));
+      }
+
+      m_hasTileTracksSelected = true;
+    }
   }
-
-  m_hasTileTracksSelected = true;
-
-  pthread_mutex_unlock(&mCurrentMutex);
-  pthread_mutex_unlock(&mMutex);
 
   return ret;
 }
@@ -619,14 +609,15 @@ int32_t OmafMediaStream::TilesStitching() {
     return OMAF_ERROR_NULL_PTR;
   }
   int ret = ERROR_NONE;
-
-  pthread_mutex_lock(&mCurrentMutex);
-  while (!m_hasTileTracksSelected) {
-    pthread_mutex_unlock(&mCurrentMutex);
+  bool selectedFlag = false;
+  do
+  {
+    {
+      std::lock_guard<std::mutex> lock(mCurrentMutex);
+      selectedFlag = m_hasTileTracksSelected;
+    }
     usleep(100);
-    pthread_mutex_lock(&mCurrentMutex);
-  }
-  pthread_mutex_unlock(&mCurrentMutex);
+  }while (!selectedFlag);
 
   uint64_t currFramePTS = 0;
   std::map<int, OmafAdaptationSet*> mapSelectedAS;
@@ -638,9 +629,10 @@ int32_t OmafMediaStream::TilesStitching() {
     // begin to generate tiles merged media packets for each frame
     uint32_t currWaitTimes = 0;
 
-    pthread_mutex_lock(&mCurrentMutex);
-    mapSelectedAS = m_selectedTileTracks;
-    pthread_mutex_unlock(&mCurrentMutex);
+    {
+      std::lock_guard<std::mutex> lock(mCurrentMutex);
+      mapSelectedAS = m_selectedTileTracks;
+    }
 
     prevPoseChanged = prevSelectedAS.empty() ? false : IsSelectionChanged(mapSelectedAS, prevSelectedAS);
 
@@ -670,9 +662,10 @@ int32_t OmafMediaStream::TilesStitching() {
       ret = omaf_reader_mgr_->GetNextPacket(trackID, onePacket, m_needParams);
       currWaitTimes = 0;
       std::map<int, OmafAdaptationSet*> mapSelectedAS1;
-      pthread_mutex_lock(&mCurrentMutex);
-      mapSelectedAS1 = m_selectedTileTracks;
-      pthread_mutex_unlock(&mCurrentMutex);
+      {
+        std::lock_guard<std::mutex> lock(mCurrentMutex);
+        mapSelectedAS1 = m_selectedTileTracks;
+      }
       bool isPoseChanged = false;
       isPoseChanged = IsSelectionChanged(mapSelectedAS, mapSelectedAS1);
       LOG(INFO) << "In tiles stitching thread, pose changed: " << isPoseChanged << endl;
@@ -683,9 +676,10 @@ int32_t OmafMediaStream::TilesStitching() {
 
       while ((ret == ERROR_NULL_PACKET) && (currWaitTimes < waitTimes) && m_status != STATUS_STOPPED) {
         std::map<int, OmafAdaptationSet*> mapSelectedAS2;
-        pthread_mutex_lock(&mCurrentMutex);
-        mapSelectedAS2 = m_selectedTileTracks;
-        pthread_mutex_unlock(&mCurrentMutex);
+        {
+          std::lock_guard<std::mutex> lock(mCurrentMutex);
+          mapSelectedAS2 = m_selectedTileTracks;
+        }
         bool isPoseChanged1 = false;
         isPoseChanged1 = IsSelectionChanged(mapSelectedAS, mapSelectedAS2);
         if (isPoseChanged1) {
@@ -774,9 +768,10 @@ int32_t OmafMediaStream::TilesStitching() {
       mergedPackets = m_stitch->GetTilesMergedPackets();
     }
 
-    pthread_mutex_lock(&m_packetsMutex);
-    m_mergedPackets.push_back(mergedPackets);
-    pthread_mutex_unlock(&m_packetsMutex);
+    {
+      std::lock_guard<std::mutex> lock(m_packetsMutex);
+      m_mergedPackets.push_back(mergedPackets);
+    }
 
     selectedPackets.clear();
     prevPoseChanged = false;
@@ -788,12 +783,11 @@ int32_t OmafMediaStream::TilesStitching() {
 
 std::list<MediaPacket*> OmafMediaStream::GetOutTilesMergedPackets() {
   std::list<MediaPacket*> outPackets;
-  pthread_mutex_lock(&m_packetsMutex);
+  std::lock_guard<std::mutex> lock(m_packetsMutex);
   if (m_mergedPackets.size()) {
     outPackets = m_mergedPackets.front();
     m_mergedPackets.pop_front();
   }
-  pthread_mutex_unlock(&m_packetsMutex);
   return outPackets;
 }
 

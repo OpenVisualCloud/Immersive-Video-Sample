@@ -49,7 +49,6 @@ OmafDashSource::OmafDashSource() {
   mMPDParser = nullptr;
   mStatus = STATUS_CREATED;
   mViewPortChanged = false;
-  pthread_mutex_init(&mMutex, nullptr);
   memset(&mHeadSetInfo, 0, sizeof(mHeadSetInfo));
   memset(&mPose, 0, sizeof(mPose));
   mLoop = false;
@@ -63,7 +62,6 @@ OmafDashSource::OmafDashSource() {
 }
 
 OmafDashSource::~OmafDashSource() {
-  pthread_mutex_destroy(&mMutex);
   SAFE_DELETE(mMPDParser);
   // SAFE_DELETE(mSelector);
   SAFE_DELETE(m_selector);

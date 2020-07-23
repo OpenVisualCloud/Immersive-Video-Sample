@@ -147,7 +147,7 @@ private:
     int                            mDownloadedFiles;    //<! the total downloaded files
     std::string                    mCacheDir;           //<! the directory of the cache file
     std::string                    mFilePrefix;         //<! the prefix for each cached file
-    pthread_mutex_t                mMutex;              //<! for synchronization
+    std::mutex                     mMutex;              //<! for synchronization
     uint64_t                       mStartTime;          //<! the start time to caching in this process
     uint64_t                       mMaxCacheSize;       //<! the threshold of total cache file size
     bool                           mUseCache;           //<! the flag to indicate whether using file caching
