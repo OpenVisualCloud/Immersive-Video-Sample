@@ -122,7 +122,7 @@ build_test(){
           -D_GLIBCXX_USE_CXX11_ABI=0 && \
         g++ -L/usr/local/lib testI360SCVP.o \
           ../googletest/googletest/build/libgtest.a -o \
-          testI360SCVP -I/usr/local/include/ -l360SCVP \
+          testI360SCVP -I/usr/local/include/ -l360SCVP -lglog \
           -lstdc++ -lpthread -lsafestring_shared -lm -L/usr/local/lib
 
     # Compile OmafDashAccess test
