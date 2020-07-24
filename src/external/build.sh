@@ -123,7 +123,7 @@ build_test(){
         g++ -L/usr/local/lib testI360SCVP.o \
           ../googletest/googletest/build/libgtest.a -o \
           testI360SCVP -I/usr/local/include/ -l360SCVP \
-          -lstdc++ -lpthread -lm -L/usr/local/lib
+          -lstdc++ -lpthread -lsafestring_shared -lm -L/usr/local/lib
 
     # Compile OmafDashAccess test
     cd ../OmafDashAccess && \
