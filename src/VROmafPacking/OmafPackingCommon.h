@@ -42,6 +42,11 @@
 #include <string.h>
 #include <stdio.h>
 
+extern "C"
+{
+#include "safestringlib/safe_mem_lib.h"
+}
+
 #define DELETE_MEMORY(x) \
     if (x)               \
     {                    \

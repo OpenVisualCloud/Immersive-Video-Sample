@@ -127,6 +127,70 @@ public:
         m_origPPSNalu     = NULL;
     };
 
+    ExtractorTrackGenerator(const ExtractorTrackGenerator& src)
+    {
+        m_initInfo = src.m_initInfo;
+        m_streams  = src.m_streams;
+        m_viewportNum = src.m_viewportNum;
+        m_rwpkGen     = std::move(src.m_rwpkGen);
+        m_newSPSNalu  = std::move(src.m_newSPSNalu);
+        m_newPPSNalu  = std::move(src.m_newPPSNalu);
+        m_videoIdxInMedia = std::move(src.m_videoIdxInMedia);
+        m_360scvpParam    = std::move(src.m_360scvpParam);
+        m_360scvpHandle   = std::move(src.m_360scvpHandle);
+        m_tilesInViewport = std::move(src.m_tilesInViewport);
+        m_viewInfo        = std::move(src.m_viewInfo);
+        m_tilesNumInViewport  = src.m_tilesNumInViewport;
+        m_finalViewportWidth  = src.m_finalViewportWidth;
+        m_finalViewportHeight = src.m_finalViewportHeight;
+        m_origResWidth    = src.m_origResWidth;
+        m_origResHeight   = src.m_origResHeight;
+        m_origTileInRow     = src.m_origTileInRow;
+        m_origTileInCol     = src.m_origTileInCol;
+        m_origTileWidth     = src.m_origTileWidth;
+        m_origTileHeight    = src.m_origTileHeight;
+        m_tilesInfo       = std::move(src.m_tilesInfo);
+        m_projType        = src.m_projType;
+        m_packedPicWidth  = src.m_packedPicWidth;
+        m_packedPicHeight = src.m_packedPicHeight;
+        m_origVPSNalu     = std::move(src.m_origVPSNalu);
+        m_origSPSNalu     = std::move(src.m_origSPSNalu);
+        m_origPPSNalu     = std::move(src.m_origPPSNalu);
+    };
+
+    ExtractorTrackGenerator& operator=(ExtractorTrackGenerator&& other)
+    {
+        m_initInfo = other.m_initInfo;
+        m_streams  = other.m_streams;
+        m_viewportNum = other.m_viewportNum;
+        m_rwpkGen     = NULL;
+        m_newSPSNalu  = NULL;
+        m_newPPSNalu  = NULL;
+        m_videoIdxInMedia = NULL;
+        m_360scvpParam    = NULL;
+        m_360scvpHandle   = NULL;
+        m_tilesInViewport = NULL;
+        m_viewInfo        = NULL;
+        m_tilesNumInViewport  = other.m_tilesNumInViewport;
+        m_finalViewportWidth  = other.m_finalViewportWidth;
+        m_finalViewportHeight = other.m_finalViewportHeight;
+        m_origResWidth    = other.m_origResWidth;
+        m_origResHeight   = other.m_origResHeight;
+        m_origTileInRow     = other.m_origTileInRow;
+        m_origTileInCol     = other.m_origTileInCol;
+        m_origTileWidth     = other.m_origTileWidth;
+        m_origTileHeight    = other.m_origTileHeight;
+        m_tilesInfo       = NULL;
+        m_projType        = other.m_projType;
+        m_packedPicWidth  = other.m_packedPicWidth;
+        m_packedPicHeight = other.m_packedPicHeight;
+        m_origVPSNalu     = NULL;
+        m_origSPSNalu     = NULL;
+        m_origPPSNalu     = NULL;
+
+        return *this;
+    };
+
     //!
     //! \brief  Destructor
     //!

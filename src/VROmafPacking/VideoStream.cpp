@@ -49,7 +49,7 @@ VideoStream::VideoStream()
     m_tileColsInFace = 0;
     m_tilesInfo = NULL;
     m_projType = VCD::OMAF::ProjectionFormat::PF_ERP;
-    memset(m_cubeMapInfo, 0, CUBEMAP_FACES_NUM * sizeof(CubeMapFaceInfo));
+    memset_s(m_cubeMapInfo, CUBEMAP_FACES_NUM * sizeof(CubeMapFaceInfo), 0);
     m_frameRate.num = 0;
     m_frameRate.den = 0;
     m_bitRate = 0;
@@ -64,7 +64,6 @@ VideoStream::VideoStream()
     m_360scvpHandle = NULL;
     m_naluParser = NULL;
     m_isEOS = false;
-    pthread_mutex_init(&m_mutex, NULL);
 }
 
 VideoStream::~VideoStream()
@@ -139,13 +138,6 @@ VideoStream::~VideoStream()
     }
 
     DELETE_MEMORY(m_naluParser);
-
-    int32_t ret = pthread_mutex_destroy(&m_mutex);
-    if (ret)
-    {
-        LOG(ERROR) << "Failed to destroy mutex of video stream !" << std::endl;
-        return;
-    }
 }
 
 int32_t VideoStream::ParseHeader()
@@ -162,7 +154,7 @@ int32_t VideoStream::ParseHeader()
     if (!m_tilesInfo)
         return OMAF_ERROR_NULL_PTR;
 
-    memset(m_tilesInfo, 0, tilesNum * sizeof(TileInfo));
+    memset_s(m_tilesInfo, tilesNum * sizeof(TileInfo), 0);
     for (uint16_t tileIdx = 0; tileIdx < tilesNum; tileIdx++)
     {
         m_naluParser->GetTileInfo(tileIdx, &(m_tilesInfo[tileIdx]));
@@ -199,7 +191,7 @@ int32_t VideoStream::FillRegionWisePackingForERP()
         TileInfo *tileInfo                     = &(m_tilesInfo[regionIdx]);
         tileInfo->projFormat                   = VCD::OMAF::ProjectionFormat::PF_ERP;
 
-        memset(rectRwpk, 0, sizeof(RectangularRegionWisePacking));
+        memset_s(rectRwpk, sizeof(RectangularRegionWisePacking), 0);
         rectRwpk->transformType = 0;
         rectRwpk->guardBandFlag = 0;
         rectRwpk->projRegWidth  = tileInfo->tileWidth;
@@ -251,7 +243,7 @@ int32_t VideoStream::FillRegionWisePackingForCubeMap()
         TileInfo *tileInfo                     = &(m_tilesInfo[regionIdx]);
         tileInfo->projFormat                   = VCD::OMAF::ProjectionFormat::PF_CUBEMAP;
 
-        memset(rectRwpk, 0, sizeof(RectangularRegionWisePacking));
+        memset_s(rectRwpk, sizeof(RectangularRegionWisePacking), 0);
 
         uint8_t regColId = regionIdx % m_tileInRow;
         uint8_t regRowId = regionIdx / m_tileInRow;
@@ -322,7 +314,7 @@ int32_t VideoStream::FillContentCoverageForERP()
         SphereRegion *sphereRegion             = &(m_srcCovi->sphereRegions[regionIdx]);
         RectangularRegionWisePacking *rectRwpk = &(m_srcRwpk->rectRegionPacking[regionIdx]);
 
-        memset(sphereRegion, 0, sizeof(SphereRegion));
+        memset_s(sphereRegion, sizeof(SphereRegion), 0);
         sphereRegion->viewIdc         = 0; //doesn't take effect when viewIdcPresenceFlag is 0
         sphereRegion->centreAzimuth   = (int32_t)((((m_width / 2) - (float)(rectRwpk->projRegLeft + rectRwpk->projRegWidth / 2)) * 360 * 65536) / m_width);
         sphereRegion->centreElevation = (int32_t)((((m_height / 2) - (float)(rectRwpk->projRegTop + rectRwpk->projRegHeight / 2)) * 180 * 65536) / m_height);
@@ -361,7 +353,7 @@ int32_t VideoStream::Initialize(
     if (!m_360scvpParam)
         return OMAF_ERROR_NULL_PTR;
 
-    memset(m_360scvpParam, 0, sizeof(param_360SCVP));
+    memset_s(m_360scvpParam, sizeof(param_360SCVP), 0);
 
     m_360scvpParam->usedType                         = E_PARSER_ONENAL;
     m_360scvpParam->pInputBitstream                  = bs->data;
@@ -474,7 +466,7 @@ int32_t VideoStream::AddFrameInfo(FrameBSInfo *frameInfo)
     if (!newFrameInfo)
         return OMAF_ERROR_NULL_PTR;
 
-    memset(newFrameInfo, 0, sizeof(FrameBSInfo));
+    memset_s(newFrameInfo, sizeof(FrameBSInfo), 0);
 
     uint8_t *localData = new uint8_t[frameInfo->dataSize];
     if (!localData)
@@ -483,29 +475,27 @@ int32_t VideoStream::AddFrameInfo(FrameBSInfo *frameInfo)
         newFrameInfo = NULL;
         return OMAF_ERROR_NULL_PTR;
     }
-    memcpy(localData, frameInfo->data, frameInfo->dataSize);
+    memcpy_s(localData, frameInfo->dataSize, frameInfo->data, frameInfo->dataSize);
 
     newFrameInfo->data = localData;
     newFrameInfo->dataSize = frameInfo->dataSize;
     newFrameInfo->pts = frameInfo->pts;
     newFrameInfo->isKeyFrame = frameInfo->isKeyFrame;
 
-    pthread_mutex_lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_frameInfoList.push_back(newFrameInfo);
-    pthread_mutex_unlock(&m_mutex);
 
     return ERROR_NONE;
 }
 
 void VideoStream::SetCurrFrameInfo()
 {
-    pthread_mutex_lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (m_frameInfoList.size() > 0)
     {
         m_currFrameInfo = m_frameInfoList.front();
         m_frameInfoList.pop_front();
     }
-    pthread_mutex_unlock(&m_mutex);
 }
 
 int32_t VideoStream::UpdateTilesNalu()

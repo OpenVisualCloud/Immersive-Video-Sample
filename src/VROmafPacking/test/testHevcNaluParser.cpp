@@ -103,7 +103,7 @@ public:
             return;
         }
 
-        memset(m_360scvpParam, 0, sizeof(param_360SCVP));
+        memset_s(m_360scvpParam, sizeof(param_360SCVP), 0);
         m_360scvpParam->usedType = E_PARSER_ONENAL;
         m_360scvpParam->pInputBitstream = m_headerData;
         m_360scvpParam->inputBitstreamLen = m_headerSize;
@@ -237,9 +237,12 @@ TEST_F(HevcNaluParserTest, ParseHevcHeader)
     }
     fread(vpsData, 1, vpsLen, fp);
 
-    int32_t compRet = memcmp(vpsNalu->data, vpsData, vpsLen);
+    int32_t diff = 0;
+    errno_t compRet = EOK;
+    compRet = memcmp_s(vpsNalu->data, vpsLen, vpsData, vpsLen, &diff);
+    EXPECT_TRUE(compRet == EOK);
     EXPECT_TRUE(vpsNalu->dataSize == vpsLen);
-    EXPECT_TRUE(compRet == 0);
+    EXPECT_TRUE(diff == 0);
     EXPECT_TRUE(vpsNalu->startCodesSize == 4);
     EXPECT_TRUE(vpsNalu->naluType == 32);
 
@@ -271,9 +274,10 @@ TEST_F(HevcNaluParserTest, ParseHevcHeader)
     }
     fread(spsData, 1, spsLen, fp);
 
-    compRet = memcmp(spsNalu->data, spsData, spsLen);
+    compRet = memcmp_s(spsNalu->data, spsLen, spsData, spsLen, &diff);
+    EXPECT_TRUE(compRet == EOK);
     EXPECT_TRUE(spsNalu->dataSize == spsLen); //includes start codes
-    EXPECT_TRUE(compRet == 0);
+    EXPECT_TRUE(diff == 0);
     EXPECT_TRUE(spsNalu->startCodesSize == 4);
     EXPECT_TRUE(spsNalu->naluType == 33);
 
@@ -305,9 +309,10 @@ TEST_F(HevcNaluParserTest, ParseHevcHeader)
     }
     fread(ppsData, 1, ppsLen, fp);
 
-    compRet = memcmp(ppsNalu->data, ppsData, ppsLen);
+    compRet = memcmp_s(ppsNalu->data, ppsLen, ppsData, ppsLen, &diff);
+    EXPECT_TRUE(compRet == EOK);
     EXPECT_TRUE(ppsNalu->dataSize == ppsLen); //includes start codes
-    EXPECT_TRUE(compRet == 0);
+    EXPECT_TRUE(diff == 0);
     EXPECT_TRUE(ppsNalu->startCodesSize == 4);
     EXPECT_TRUE(ppsNalu->naluType == 34);
 

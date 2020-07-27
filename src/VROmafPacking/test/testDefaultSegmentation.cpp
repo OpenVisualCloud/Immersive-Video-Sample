@@ -128,7 +128,7 @@ public:
             return;
         }
 
-        memset(m_initInfo, 0, sizeof(InitialInfo));
+        memset_s(m_initInfo, sizeof(InitialInfo), 0);
         m_initInfo->bsNumVideo = 2;
         m_initInfo->bsNumAudio = 0;
         m_initInfo->pluginPath = "/usr/local/lib";
@@ -172,7 +172,7 @@ public:
             return;
         }
 
-        memset(m_initInfo->segmentationInfo, 0, sizeof(SegmentationInfo));
+        memset_s(m_initInfo->segmentationInfo, sizeof(SegmentationInfo), 0);
         m_initInfo->segmentationInfo->needBufedFrames = 0;
         m_initInfo->segmentationInfo->segDuration = 2;
         m_initInfo->segmentationInfo->dirName = "./test/";
@@ -194,7 +194,7 @@ public:
             return;
         }
 
-        memset(m_initInfo->viewportInfo, 0, sizeof(ViewportInformation));
+        memset_s(m_initInfo->viewportInfo, sizeof(ViewportInformation), 0);
         m_initInfo->viewportInfo->viewportWidth      = 1024;
         m_initInfo->viewportInfo->viewportHeight     = 1024;
         m_initInfo->viewportInfo->viewportPitch      = 0;

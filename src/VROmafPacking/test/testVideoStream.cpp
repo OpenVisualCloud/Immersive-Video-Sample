@@ -231,7 +231,7 @@ public:
             return;
         }
 
-        memset(m_initInfo, 0, sizeof(InitialInfo));
+        memset_s(m_initInfo, sizeof(InitialInfo), 0);
         m_initInfo->bsNumVideo = 2;
         m_initInfo->bsNumAudio = 0;
         m_initInfo->pluginPath = "/usr/local/lib";
@@ -447,7 +447,7 @@ TEST_F(VideoStreamTest, AllProcess)
     uint16_t tileHeight = lowResHeight / lowTileInCol;
     for (uint16_t idx = 0; idx < rwpk.numRegions; idx++)
     {
-        memset(&(rwpk.rectRegionPacking[idx]), 0, sizeof(RectangularRegionWisePacking));
+        memset_s(&(rwpk.rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking), 0);
         rwpk.rectRegionPacking[idx].transformType = 0;
         rwpk.rectRegionPacking[idx].guardBandFlag = 0;
         rwpk.rectRegionPacking[idx].projRegWidth  = tileWidth;
@@ -478,7 +478,7 @@ TEST_F(VideoStreamTest, AllProcess)
     }
     for (uint16_t idx = 0; idx < covi.numRegions; idx++)
     {
-        memset(&(covi.sphereRegions[idx]), 0, sizeof(SphereRegion));
+        memset_s(&(covi.sphereRegions[idx]), sizeof(SphereRegion), 0);
         covi.sphereRegions[idx].viewIdc = 0;
         covi.sphereRegions[idx].centreAzimuth   = (int32_t)((((lowResWidth / 2) - (float)((idx % lowTileInRow) * tileWidth + tileWidth / 2)) * 360 * 65536) / lowResWidth);
         covi.sphereRegions[idx].centreElevation = (int32_t)((((lowResHeight / 2) - (float)((idx / lowTileInRow) * tileHeight + tileHeight / 2)) * 180 * 65536) / lowResHeight);
@@ -505,7 +505,8 @@ TEST_F(VideoStreamTest, AllProcess)
     int32_t compRet = 0;
     for (uint16_t idx = 0; idx < rwpk.numRegions; idx++)
     {
-        compRet = memcmp(&(origRwpk->rectRegionPacking[idx]), &(rwpk.rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking));
+        errno_t result = memcmp_s(&(origRwpk->rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking), &(rwpk.rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking), &compRet);
+        EXPECT_TRUE(result == EOK);
         EXPECT_TRUE(compRet == 0);
     }
 
@@ -517,7 +518,8 @@ TEST_F(VideoStreamTest, AllProcess)
     EXPECT_TRUE(origCovi->defaultViewIdc == covi.defaultViewIdc);
     for (uint16_t idx = 0; idx < origCovi->numRegions; idx++)
     {
-        compRet = memcmp(&(origCovi->sphereRegions[idx]), &(covi.sphereRegions[idx]), sizeof(SphereRegion));
+        errno_t result = memcmp_s(&(origCovi->sphereRegions[idx]), sizeof(SphereRegion), &(covi.sphereRegions[idx]), sizeof(SphereRegion), &compRet);
+        EXPECT_TRUE(result == EOK);
         EXPECT_TRUE(compRet == 0);
     }
 
@@ -550,7 +552,8 @@ TEST_F(VideoStreamTest, AllProcess)
     }
     fread(vpsData, 1, vpsLen, fp);
 
-    compRet = memcmp(vpsNalu->data, vpsData, vpsLen);
+    errno_t result = memcmp_s(vpsNalu->data, vpsLen, vpsData, vpsLen, &compRet);
+    EXPECT_TRUE(result == EOK);
     EXPECT_TRUE(vpsNalu->dataSize == vpsLen);
     EXPECT_TRUE(compRet == 0);
     EXPECT_TRUE(vpsNalu->startCodesSize == 4);
@@ -584,7 +587,8 @@ TEST_F(VideoStreamTest, AllProcess)
     }
     fread(spsData, 1, spsLen, fp);
 
-    compRet = memcmp(spsNalu->data, spsData, spsLen);
+    result = memcmp_s(spsNalu->data, spsLen, spsData, spsLen, &compRet);
+    EXPECT_TRUE(result == EOK);
     EXPECT_TRUE(spsNalu->dataSize == spsLen); //includes start codes
     EXPECT_TRUE(compRet == 0);
     EXPECT_TRUE(spsNalu->startCodesSize == 4);
@@ -618,7 +622,8 @@ TEST_F(VideoStreamTest, AllProcess)
     }
     fread(ppsData, 1, ppsLen, fp);
 
-    compRet = memcmp(ppsNalu->data, ppsData, ppsLen);
+    result = memcmp_s(ppsNalu->data, ppsLen, ppsData, ppsLen, &compRet);
+    EXPECT_TRUE(result == EOK);
     EXPECT_TRUE(ppsNalu->dataSize == ppsLen); //includes start codes
     EXPECT_TRUE(compRet == 0);
     EXPECT_TRUE(ppsNalu->startCodesSize == 4);
@@ -651,7 +656,7 @@ TEST_F(VideoStreamTest, AllProcess)
     tileHeight = highResHeight / highTileInCol;
     for (uint16_t idx = 0; idx < rwpk.numRegions; idx++)
     {
-        memset(&(rwpk.rectRegionPacking[idx]), 0, sizeof(RectangularRegionWisePacking));
+        memset_s(&(rwpk.rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking), 0);
         rwpk.rectRegionPacking[idx].transformType = 0;
         rwpk.rectRegionPacking[idx].guardBandFlag = 0;
         rwpk.rectRegionPacking[idx].projRegWidth  = tileWidth;
@@ -683,7 +688,7 @@ TEST_F(VideoStreamTest, AllProcess)
     }
     for (uint16_t idx = 0; idx < covi.numRegions; idx++)
     {
-        memset(&(covi.sphereRegions[idx]), 0, sizeof(SphereRegion));
+        memset_s(&(covi.sphereRegions[idx]), sizeof(SphereRegion), 0);
         covi.sphereRegions[idx].viewIdc = 0;
         covi.sphereRegions[idx].centreAzimuth   = (int32_t)((((highResWidth / 2) - (float)((idx % highTileInRow) * tileWidth + tileWidth / 2)) * 360 * 65536) / highResWidth);
         covi.sphereRegions[idx].centreElevation = (int32_t)((((highResHeight / 2) - (float)((idx / highTileInRow) * tileHeight + tileHeight / 2)) * 180 * 65536) / highResHeight);
@@ -710,7 +715,8 @@ TEST_F(VideoStreamTest, AllProcess)
     compRet = 0;
     for (uint16_t idx = 0; idx < rwpk.numRegions; idx++)
     {
-        compRet = memcmp(&(origRwpk->rectRegionPacking[idx]), &(rwpk.rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking));
+        result = memcmp_s(&(origRwpk->rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking), &(rwpk.rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking), &compRet);
+        EXPECT_TRUE(result == EOK);
         EXPECT_TRUE(compRet == 0);
     }
 
@@ -722,7 +728,8 @@ TEST_F(VideoStreamTest, AllProcess)
     EXPECT_TRUE(origCovi->defaultViewIdc == covi.defaultViewIdc);
     for (uint16_t idx = 0; idx < origCovi->numRegions; idx++)
     {
-        compRet = memcmp(&(origCovi->sphereRegions[idx]), &(covi.sphereRegions[idx]), sizeof(SphereRegion));
+        result = memcmp_s(&(origCovi->sphereRegions[idx]), sizeof(SphereRegion), &(covi.sphereRegions[idx]), sizeof(SphereRegion), &compRet);
+        EXPECT_TRUE(result == EOK);
         EXPECT_TRUE(compRet == 0);
     }
 
@@ -753,7 +760,8 @@ TEST_F(VideoStreamTest, AllProcess)
     }
     fread(vpsData, 1, vpsLen, fp);
 
-    compRet = memcmp(vpsNalu->data, vpsData, vpsLen);
+    result = memcmp_s(vpsNalu->data, vpsLen, vpsData, vpsLen, &compRet);
+    EXPECT_TRUE(result == EOK);
     EXPECT_TRUE(vpsNalu->dataSize == vpsLen);
     EXPECT_TRUE(compRet == 0);
     EXPECT_TRUE(vpsNalu->startCodesSize == 4);
@@ -782,8 +790,8 @@ TEST_F(VideoStreamTest, AllProcess)
     }
     fread(spsData, 1, spsLen, fp);
 
-    compRet = memcmp(spsNalu->data, spsData, spsLen);
-
+    result = memcmp_s(spsNalu->data, spsLen, spsData, spsLen, &compRet);
+    EXPECT_TRUE(result == EOK);
     EXPECT_TRUE(spsNalu->dataSize == spsLen); //includes start codes
     EXPECT_TRUE(compRet == 0);
     EXPECT_TRUE(spsNalu->startCodesSize == 4);
@@ -812,7 +820,8 @@ TEST_F(VideoStreamTest, AllProcess)
     }
     fread(ppsData, 1, ppsLen, fp);
 
-    compRet = memcmp(ppsNalu->data, ppsData, ppsLen);
+    result = memcmp_s(ppsNalu->data, ppsLen, ppsData, ppsLen, &compRet);
+    EXPECT_TRUE(result == EOK);
     EXPECT_TRUE(ppsNalu->dataSize == ppsLen); //includes start codes
     EXPECT_TRUE(compRet == 0);
     EXPECT_TRUE(ppsNalu->startCodesSize == 4);
@@ -848,8 +857,8 @@ TEST_F(VideoStreamTest, AllProcess)
             fp = NULL;
             return;
         }
-        memset(frameData, 0, frameSize[idx]);
-        memcpy(frameData, m_totalDataLow+offset, frameSize[idx]);
+        memset_s(frameData, frameSize[idx], 0);
+        memcpy_s(frameData, frameSize[idx], m_totalDataLow+offset, frameSize[idx]);
         offset += frameSize[idx];
 
         FrameBSInfo *frameInfo = new FrameBSInfo;
@@ -924,8 +933,8 @@ TEST_F(VideoStreamTest, AllProcess)
             return;
         }
 
-        memset(frameData, 0, frameSize1[idx]);
-        memcpy(frameData, m_totalDataHigh+offset, frameSize1[idx]);
+        memset_s(frameData, frameSize1[idx], 0);
+        memcpy_s(frameData, frameSize1[idx], m_totalDataHigh+offset, frameSize1[idx]);
         offset += frameSize1[idx];
 
         FrameBSInfo *frameInfo = new FrameBSInfo;

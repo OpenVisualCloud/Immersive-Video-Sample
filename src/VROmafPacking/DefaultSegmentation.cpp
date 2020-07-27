@@ -106,13 +106,6 @@ DefaultSegmentation::~DefaultSegmentation()
     }
 
     DELETE_ARRAY(m_videosBitrate);
-
-    int32_t ret = pthread_mutex_destroy(&m_mutex);
-    if (ret)
-    {
-        LOG(ERROR) << "Failed to destroy mutex of default segmentation !" << std::endl;
-        return;
-    }
 }
 
 int32_t ConvertRwpk(RegionWisePacking *rwpk, CodedMeta *codedMeta)
@@ -224,7 +217,7 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
     if (!m_videosBitrate)
         return OMAF_ERROR_NULL_PTR;
 
-    memset(m_videosBitrate, 0, m_videosNum * sizeof(uint64_t));
+    memset_s(m_videosBitrate, m_videosNum * sizeof(uint64_t), 0);
     std::set<uint64_t>::reverse_iterator rateIter = bitRateRanking.rbegin();
     uint32_t index = 0;
     for ( ; rateIter != bitRateRanking.rend(); rateIter++)
@@ -394,7 +387,8 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                     return OMAF_ERROR_NULL_PTR;
                 }
 
-                memcpy(&(regionPacking.rectRegionPacking[0]), &(rwpk->rectRegionPacking[i]), sizeof(RectangularRegionWisePacking));
+                memcpy_s(&(regionPacking.rectRegionPacking[0]), sizeof(RectangularRegionWisePacking),
+                        &(rwpk->rectRegionPacking[i]), sizeof(RectangularRegionWisePacking));
                 ConvertRwpk(&(regionPacking), &(trackSegCtxs[i].codedMeta));
                 DELETE_ARRAY(regionPacking.rectRegionPacking);
 
@@ -472,7 +466,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             trackSegCtx->isExtractorTrack = true;
             trackSegCtx->extractorTrackIdx = it1->first;
             trackSegCtx->extractors = extractorTrack->GetAllExtractors();
-            memset(&(trackSegCtx->extractorTrackNalu), 0, sizeof(Nalu));
+            memset_s(&(trackSegCtx->extractorTrackNalu), sizeof(Nalu), 0);
             trackSegCtx->extractorTrackNalu.dataSize = projSEI->dataSize + rwpkSEI->dataSize;
             trackSegCtx->extractorTrackNalu.data = new uint8_t[trackSegCtx->extractorTrackNalu.dataSize];
             if (!(trackSegCtx->extractorTrackNalu.data))
@@ -481,8 +475,8 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
                 return OMAF_ERROR_NULL_PTR;
             }
 
-            memcpy(trackSegCtx->extractorTrackNalu.data, projSEI->data, projSEI->dataSize);
-            memcpy(trackSegCtx->extractorTrackNalu.data + projSEI->dataSize, rwpkSEI->data, rwpkSEI->dataSize);
+            memcpy_s(trackSegCtx->extractorTrackNalu.data, projSEI->dataSize, projSEI->data, projSEI->dataSize);
+            memcpy_s(trackSegCtx->extractorTrackNalu.data + projSEI->dataSize, rwpkSEI->dataSize, rwpkSEI->data, rwpkSEI->dataSize);
 
             TilesMergeDirectionInCol *tilesMergeDir = extractorTrack->GetTilesMergeDir();
             std::list<TilesInCol*>::iterator itCol;

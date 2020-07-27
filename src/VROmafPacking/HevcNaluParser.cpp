@@ -74,7 +74,7 @@ int32_t HevcNaluParser::ParseHeaderData()
     if (!m_vpsNalu->data)
         return OMAF_ERROR_NULL_PTR;
 
-    memcpy(m_vpsNalu->data, temp, m_vpsNalu->dataSize);
+    memcpy_s(m_vpsNalu->data, m_vpsNalu->dataSize, temp, m_vpsNalu->dataSize);
 
     m_spsNalu = new Nalu;
     if (!m_spsNalu)
@@ -94,7 +94,7 @@ int32_t HevcNaluParser::ParseHeaderData()
     if (!m_spsNalu->data)
         return OMAF_ERROR_NULL_PTR;
 
-    memcpy(m_spsNalu->data, temp, m_spsNalu->dataSize);
+    memcpy_s(m_spsNalu->data, m_spsNalu->dataSize, temp, m_spsNalu->dataSize);
 
     m_ppsNalu = new Nalu;
     if (!m_ppsNalu)
@@ -114,7 +114,7 @@ int32_t HevcNaluParser::ParseHeaderData()
     if (!m_ppsNalu->data)
         return OMAF_ERROR_NULL_PTR;
 
-    memcpy(m_ppsNalu->data, temp, m_ppsNalu->dataSize);
+    memcpy_s(m_ppsNalu->data, m_ppsNalu->dataSize, temp, m_ppsNalu->dataSize);
 
     m_projNalu = new Nalu;
     if (!m_projNalu)
@@ -134,7 +134,7 @@ int32_t HevcNaluParser::ParseHeaderData()
     if (!m_projNalu->data)
         return OMAF_ERROR_NULL_PTR;
 
-    memcpy(m_projNalu->data, temp, m_projNalu->dataSize);
+    memcpy_s(m_projNalu->data, m_projNalu->dataSize, temp, m_projNalu->dataSize);
 
     m_picInfo = new Param_PicInfo;
     if (!m_picInfo)
