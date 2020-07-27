@@ -46,7 +46,7 @@ MpdGenerator::MpdGenerator()
     m_segInfo = NULL;
     m_projType = VCD::OMAF::ProjectionFormat::PF_ERP;
     m_miniUpdatePeriod = 0;
-    memset(m_availableStartTime, 0, 1024);
+    memset_s(m_availableStartTime, 1024, 0);
     m_publishTime = NULL;
     m_presentationDur = NULL;
     m_timeScale = 0;
@@ -67,7 +67,7 @@ MpdGenerator::MpdGenerator(
     m_segInfo = segInfo;
     m_projType = projType;
     m_miniUpdatePeriod = 0;
-    memset(m_availableStartTime, 0, 1024);
+    memset_s(m_availableStartTime, 1024, 0);
     m_publishTime = NULL;
     m_presentationDur = NULL;
     m_frameRate = frameRate;
@@ -145,7 +145,7 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
     TrackSegmentCtx trackSegCtx = *pTrackSegCtx;
 
     char string[1024];
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
 
     XMLElement *asEle = m_xmlDoc->NewElement(ADAPTATIONSET);
     asEle->SetAttribute(INDEX, trackSegCtx.trackIdx.GetIndex());
@@ -166,7 +166,7 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
 
     XMLElement *supplementalEle = m_xmlDoc->NewElement(SUPPLEMENTALPROPERTY);
     supplementalEle->SetAttribute(SCHEMEIDURI, SCHEMEIDURI_SRD);
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
     if (m_projType == VCD::OMAF::ProjectionFormat::PF_ERP)
     {
         snprintf(string, 1024, "1,%d,%d,%d,%d", trackSegCtx.tileInfo->horizontalPos, trackSegCtx.tileInfo->verticalPos, trackSegCtx.tileInfo->tileWidth, trackSegCtx.tileInfo->tileHeight);
@@ -185,7 +185,7 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
     asEle->InsertEndChild(essentialEle1);
 
     XMLElement *representationEle = m_xmlDoc->NewElement(REPRESENTATION);
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
     snprintf(string, 1024, "%s_track%d", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     representationEle->SetAttribute(INDEX, string);//trackSegCtx.trackIdx.GetIndex());
     representationEle->SetAttribute(QUALITYRANKING, trackSegCtx.qualityRanking);
@@ -198,11 +198,11 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
     representationEle->SetAttribute(STARTWITHSAP, 1);
     asEle->InsertEndChild(representationEle);
 
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
     snprintf(string, 1024, "%s_track%d.$Number$.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     XMLElement *sgtTpeEle = m_xmlDoc->NewElement(SEGMENTTEMPLATE);
     sgtTpeEle->SetAttribute(MEDIA, string);
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
     snprintf(string, 1024, "%s_track%d.init.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     sgtTpeEle->SetAttribute(INITIALIZATION, string);
     sgtTpeEle->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
@@ -218,7 +218,7 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
     TrackSegmentCtx trackSegCtx = *pTrackSegCtx;
 
     char string[1024];
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
 
     XMLElement *asEle = m_xmlDoc->NewElement(ADAPTATIONSET);
     asEle->SetAttribute(INDEX, trackSegCtx.trackIdx.GetIndex());
@@ -273,7 +273,7 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
         shpQualityEle->InsertEndChild(qualityEle);
     }
 
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
     snprintf(string, 1024, "ext%d,%d ", trackSegCtx.trackIdx.GetIndex(), trackSegCtx.trackIdx.GetIndex());
     std::list<VCD::MP4::TrackId>::iterator itRefTrack;
     for (itRefTrack = trackSegCtx.refTrackIdxs.begin();
@@ -281,7 +281,7 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
         itRefTrack++)
     {
         char string1[16];
-        memset(string1, 0, 16);
+        memset_s(string1, 16, 0);
         snprintf(string1, 16, "%d ", (*itRefTrack).GetIndex());
 
         strncat(string, string1, 16);
@@ -293,22 +293,22 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
     asEle->InsertEndChild(supplementalEle1);
 
     XMLElement *representationEle = m_xmlDoc->NewElement(REPRESENTATION);
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
     snprintf(string, 1024, "%s_track%d", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     representationEle->SetAttribute(INDEX, string);//trackSegCtx.trackIdx.GetIndex());
     //representationEle->SetAttribute(BANDWIDTH, 19502);
     representationEle->SetAttribute(WIDTH, trackSegCtx.codedMeta.width);
     representationEle->SetAttribute(HEIGHT, trackSegCtx.codedMeta.height);
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
     snprintf(string, 1024, "%ld/%ld", m_frameRate.num, m_frameRate.den);
     representationEle->SetAttribute(FRAMERATE, string);
     asEle->InsertEndChild(representationEle);
 
     XMLElement *sgtTpeEle = m_xmlDoc->NewElement(SEGMENTTEMPLATE);
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
     snprintf(string, 1024, "%s_track%d.$Number$.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     sgtTpeEle->SetAttribute(MEDIA, string);
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
     snprintf(string, 1024, "%s_track%d.init.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     sgtTpeEle->SetAttribute(INITIALIZATION, string);
     sgtTpeEle->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
@@ -335,11 +335,11 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
     mpdEle->SetAttribute(XSI_SCHEMALOCATION, XSI_SCHEMALOCATION_VALUE);
 
     char string[1024];
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
     snprintf(string, 1024, "PT%fS", (double)m_segInfo->segDuration);
     mpdEle->SetAttribute(MINBUFFERTIME, string);
 
-    memset(string, 0, 1024);
+    memset_s(string, 1024, 0);
     snprintf(string, 1024, "PT%fS", (double)m_segInfo->segDuration);
     mpdEle->SetAttribute(MAXSEGMENTDURATION, string);
 
@@ -373,8 +373,9 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
             return OMAF_ERROR_INVALID_TIME;
 
         char forCmp[1024];
-        memset(forCmp, 0, 1024);
-        int32_t cmpRet = memcmp(m_availableStartTime, forCmp, 1024);
+        memset_s(forCmp, 1024, 0);
+        int32_t cmpRet = 0;
+        memcmp_s(m_availableStartTime, 1024, forCmp, 1024, &cmpRet);
         if (0 == cmpRet)
         {
             snprintf(m_availableStartTime, 1024, "%d-%d-%dT%d:%d:%dZ", 1900 + t->tm_year,
@@ -387,13 +388,13 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
             if (!m_publishTime)
                 return OMAF_ERROR_NULL_PTR;
         }
-        memset(m_publishTime, 0, 1024);
+        memset_s(m_publishTime, 1024, 0);
         snprintf(m_publishTime, 1024, "%d-%02d-%02dT%02d:%02d:%02dZ", 1900+t->tm_year, t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 
         mpdEle->SetAttribute(AVAILABILITYSTARTTIME, m_availableStartTime);
         mpdEle->SetAttribute(TIMESHIFTBUFFERDEPTH, "PT5M");
 
-        memset(string, 0, 1024);
+        memset_s(string, 1024, 0);
         snprintf(string, 1024, "PT%dS", m_miniUpdatePeriod);
         mpdEle->SetAttribute(MINIMUMUPDATEPERIOD, string);
         mpdEle->SetAttribute(PUBLISHTIME, m_publishTime);
@@ -414,7 +415,7 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
             if (!m_presentationDur)
                 return OMAF_ERROR_NULL_PTR;
         }
-        memset(m_presentationDur, 0, 1024);
+        memset_s(m_presentationDur, 1024, 0);
         snprintf(m_presentationDur, 1024, "PT%02dH%02dM%02d.%03dS",
             hour, minute, second, msecond);
 
@@ -504,7 +505,7 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
         repEle->SetAttribute(CODECS, CODECS_VALUE);
         repEle->SetAttribute(WIDTH, mainWidth);
         repEle->SetAttribute(HEIGHT, mainHeight);
-        memset(string, 0, 1024);
+        memset_s(string, 1024, 0);
         snprintf(string, 1024, "%ld/%ld", m_frameRate.num, m_frameRate.den);
         repEle->SetAttribute(FRAMERATE, string);
         repEle->SetAttribute(SAR, "1:1");

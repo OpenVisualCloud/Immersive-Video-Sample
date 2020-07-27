@@ -172,20 +172,24 @@ build_test(){
           -D_GLIBCXX_USE_CXX11_ABI=0 && \
         g++ -L/usr/local/lib testHevcNaluParser.o \
           ../googletest/googletest/build/libgtest.a -o \
-          testHevcNaluParser -I/usr/local/lib -lVROmafPacking \
-          -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib && \
+          testHevcNaluParser -I/usr/local/include -lVROmafPacking \
+          -l360SCVP -lsafestring_shared -lstdc++ -lpthread -lm \
+          -L/usr/local/lib && \
         g++ -L/usr/local/lib testVideoStream.o \
           ../googletest/googletest/build/libgtest.a -o \
-          testVideoStream -I/usr/local/lib -lVROmafPacking \
-          -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib && \
+          testVideoStream -I/usr/local/include -lVROmafPacking \
+          -l360SCVP -lsafestring_shared -lstdc++ -lpthread -lm \
+          -L/usr/local/lib && \
         g++ -L/usr/local/lib testExtractorTrack.o \
           ../googletest/googletest/build/libgtest.a -o \
-          testExtractorTrack -I/usr/local/lib -lVROmafPacking \
-          -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib && \
+          testExtractorTrack -I/usr/local/include -lVROmafPacking \
+          -l360SCVP -lsafestring_shared -lstdc++ -lpthread -lm \
+          -L/usr/local/lib && \
         g++ -L/usr/local/lib testDefaultSegmentation.o \
           ../googletest/googletest/build/libgtest.a -o \
-          testDefaultSegmentation -I/usr/local/lib -lVROmafPacking \
-          -l360SCVP -lstdc++ -lpthread -lm -L/usr/local/lib
+          testDefaultSegmentation -I/usr/local/include -lVROmafPacking \
+          -l360SCVP -lsafestring_shared -lstdc++ -lpthread -lm \
+          -L/usr/local/lib
 
     if [ "$1" == "oss" ] ; then
         # Compile distributed_encoder test

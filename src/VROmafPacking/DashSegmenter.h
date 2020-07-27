@@ -212,7 +212,7 @@ struct TrackInfo
 
     bool isFirstFrame = true;
 
-    int64_t lastPresIndex;
+    int64_t lastPresIndex = 0;
 
     VCD::MP4::FrameTime nextCodingTime;
 

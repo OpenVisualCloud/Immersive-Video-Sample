@@ -43,6 +43,7 @@
 #include "../utils/OmafStructure.h"
 
 #include <list>
+#include <mutex>
 
 VCD_NS_BEGIN
 
@@ -325,9 +326,8 @@ public:
     uint32_t GetBufferedFrameNum()
     {
         uint32_t bufferedFrmNum = 0;
-        pthread_mutex_lock(&m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
         bufferedFrmNum = m_frameInfoList.size();
-        pthread_mutex_unlock(&m_mutex);
         return bufferedFrmNum;
     }
 
@@ -394,7 +394,7 @@ private:
     Rational                  m_frameRate;        //!< the frame rate of the video stream
     uint64_t                  m_bitRate;          //!< the bit rate of the video stream
     bool                      m_isEOS;            //!< the EOS status of the video stream
-    pthread_mutex_t           m_mutex;            //!< thread mutex for frame information list
+    std::mutex                m_mutex;            //!< thread mutex for frame information list
 };
 
 VCD_NS_END;

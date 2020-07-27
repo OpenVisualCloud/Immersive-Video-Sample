@@ -35,6 +35,7 @@
 #ifndef _DEFAULTSEGMENTATION_H_
 #define _DEFAULTSEGMENTATION_H_
 
+#include <mutex>
 #include "Segmentation.h"
 #include "DashSegmenter.h"
 
@@ -60,7 +61,6 @@ public:
         m_isEOS = false;
         m_nowKeyFrame = false;
         m_prevSegNum = 0;
-        pthread_mutex_init(&m_mutex, NULL);
         m_isFramesReady = false;
         m_aveETPerSegThread = 0;
         m_lastETPerSegThread = 0;
@@ -93,7 +93,6 @@ public:
         m_isEOS = false;
         m_nowKeyFrame = false;
         m_prevSegNum = 0;
-        pthread_mutex_init(&m_mutex, NULL);
         m_isFramesReady = false;
         m_aveETPerSegThread = 0;
         m_lastETPerSegThread = 0;
@@ -103,6 +102,47 @@ public:
         m_prevSegedFrmNum = 0;
         m_currSegedFrmNum = 0;
         m_currProcessedFrmNum = 0;
+    };
+
+    DefaultSegmentation(const DefaultSegmentation& src)
+    {
+        m_segNum = src.m_segNum;
+        m_framesNum = src.m_framesNum;
+        m_videoSegInfo = std::move(src.m_videoSegInfo);
+        m_projType  = src.m_projType;
+        m_isEOS = src.m_isEOS;
+        m_nowKeyFrame = src.m_nowKeyFrame;
+        m_prevSegNum = src.m_prevSegNum;
+        m_isFramesReady = src.m_isFramesReady;
+        m_aveETPerSegThread = src.m_aveETPerSegThread;
+        m_lastETPerSegThread = src.m_lastETPerSegThread;
+        m_threadNumForET = src.m_threadNumForET;
+        m_videosNum = src.m_videosNum;
+        m_videosBitrate = std::move(src.m_videosBitrate);
+        m_prevSegedFrmNum = src.m_prevSegedFrmNum;
+        m_currSegedFrmNum = src.m_currSegedFrmNum;
+        m_currProcessedFrmNum = src.m_currProcessedFrmNum;
+    };
+
+    DefaultSegmentation& operator=(DefaultSegmentation&& other)
+    {
+        m_segNum = other.m_segNum;
+        m_framesNum = other.m_framesNum;
+        m_videoSegInfo = NULL;
+        m_projType  = other.m_projType;
+        m_isEOS = other.m_isEOS;
+        m_nowKeyFrame = other.m_nowKeyFrame;
+        m_prevSegNum = other.m_prevSegNum;
+        m_isFramesReady = other.m_isFramesReady;
+        m_aveETPerSegThread = other.m_aveETPerSegThread;
+        m_lastETPerSegThread = other.m_lastETPerSegThread;
+        m_threadNumForET = other.m_threadNumForET;
+        m_videosNum = other.m_videosNum;
+        m_videosBitrate = NULL;
+        m_prevSegedFrmNum = other.m_prevSegedFrmNum;
+        m_currSegedFrmNum = other.m_currSegedFrmNum;
+        m_currProcessedFrmNum = other.m_currProcessedFrmNum;
+        return *this;
     };
 
     //!
@@ -267,9 +307,8 @@ private:
     //!
     void SetFramesReadyStatus(bool isFramesReady)
     {
-        pthread_mutex_lock(&m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
         m_isFramesReady = isFramesReady;
-        pthread_mutex_unlock(&m_mutex);
     };
 
 private:
@@ -288,7 +327,7 @@ private:
     bool                                           m_isEOS;              //!< whether EOS has been gotten for all media streams
     bool                                           m_nowKeyFrame;        //!< whether current frames are key frames for each corresponding media stream
     uint64_t                                       m_prevSegNum;         //!< previously written segments number
-    pthread_mutex_t                                m_mutex;              //!< thread mutex for main segmentation thread
+    std::mutex                                     m_mutex;              //!< thread mutex for main segmentation thread
     bool                                           m_isFramesReady;      //!< whether frames are ready for extractor track
     uint16_t                                       m_aveETPerSegThread;  //!< average extractor tracks number in segmentation thread
     uint16_t                                       m_lastETPerSegThread; //!< extractor tracks number in last segmentation thread

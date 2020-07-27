@@ -43,6 +43,7 @@
 
 #include <list>
 #include <map>
+#include <mutex>
 
 VCD_NS_BEGIN
 
@@ -352,7 +353,7 @@ private:
     param_360SCVP                   *m_360scvpParam;     //!< 360SCVP library parameter
     std::map<MediaStream*, void*>   m_360scvpHandles;    //!< map of 360SCVP library handle and corresponding media stream
     uint64_t                        m_processedFrmNum;   //!< processed frames number in extractor track
-    pthread_mutex_t                 m_mutex;             //!< thread mutex for extractor track segmentation thread
+    std::mutex                      m_mutex;             //!< thread mutex for extractor track segmentation thread
     int32_t                         m_dstWidth;
     int32_t                         m_dstHeight;
 };

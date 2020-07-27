@@ -50,7 +50,8 @@ RegionWisePackingGenerator::~RegionWisePackingGenerator()
     {
         if (m_rwpkGen)
         {
-            DestroyRWPKGenerator* destroyRWPKGen = (DestroyRWPKGenerator*)dlsym(m_pluginHdl, "Destroy");
+            DestroyRWPKGenerator* destroyRWPKGen = NULL;
+            destroyRWPKGen = (DestroyRWPKGenerator*)dlsym(m_pluginHdl, "Destroy");
             const char *dlsym_error = dlerror();
             if (dlsym_error)
             {
@@ -58,6 +59,11 @@ RegionWisePackingGenerator::~RegionWisePackingGenerator()
                 return;
             }
 
+            if (!destroyRWPKGen)
+            {
+                LOG(ERROR) << "NULL RWPK destructor !" << std::endl;
+                return;
+            }
             destroyRWPKGen(m_rwpkGen);
         }
 
@@ -93,7 +99,7 @@ int32_t RegionWisePackingGenerator::Initialize(
     uint32_t pathLen = strlen(rwpkGenPluginPath);
 
     char pluginLibName[1024];
-    memset(pluginLibName, 0, 1024);
+    memset_s(pluginLibName, 1024, 0);
     if (rwpkGenPluginPath[pathLen - 1] == '/')
     {
         snprintf(pluginLibName, 1024, "%slib%s.so", rwpkGenPluginPath, rwpkGenPluginName);
@@ -110,11 +116,15 @@ int32_t RegionWisePackingGenerator::Initialize(
     if (!m_pluginHdl)
     {
         LOG(ERROR) << "Failed to open plugin lib  " << pluginLibName << " !" << std::endl;
-        LOG(ERROR) << "Get error msg  " << dlsymErr1 << " !" << std::endl;
+        if (dlsymErr1)
+        {
+            LOG(ERROR) << "Get error msg  " << dlsymErr1 << " !" << std::endl;
+        }
         return OMAF_ERROR_DLOPEN;
     }
 
-    CreateRWPKGenerator* createRWPKGen = (CreateRWPKGenerator*)dlsym(m_pluginHdl, "Create");
+    CreateRWPKGenerator* createRWPKGen = NULL;
+    createRWPKGen = (CreateRWPKGenerator*)dlsym(m_pluginHdl, "Create");
     const char* dlsymErr2 = dlerror();
     if (dlsymErr2)
     {
@@ -122,6 +132,11 @@ int32_t RegionWisePackingGenerator::Initialize(
         return OMAF_ERROR_DLSYM;
     }
 
+    if (!createRWPKGen)
+    {
+        LOG(ERROR) << "NULL RWPK generator !" << std::endl;
+        return OMAF_ERROR_NULL_PTR;
+    }
     m_rwpkGen = createRWPKGen();
     if (!m_rwpkGen)
     {

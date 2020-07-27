@@ -182,7 +182,7 @@ int32_t ExtractorTrackGenerator::FillDstContentCoverage(
         return OMAF_ERROR_NULL_PTR;
 
     SphereRegion *sphereRegion    = &(dstCovi->sphereRegions[0]);
-    memset(sphereRegion, 0, sizeof(SphereRegion));
+    memset_s(sphereRegion, sizeof(SphereRegion), 0);
     sphereRegion->viewIdc         = 0;
     sphereRegion->centreAzimuth   = (int32_t)((((m_origResWidth / 2) - (float)(projRegLeft + projRegWidth / 2)) * 360 * 65536) / m_origResWidth);
     sphereRegion->centreElevation = (int32_t)((((m_origResHeight / 2) - (float)(projRegTop + projRegHeight / 2)) * 180 * 65536) / m_origResHeight);
@@ -204,6 +204,8 @@ int32_t ExtractorTrackGenerator::CheckAndFillInitInfo()
     m_videoIdxInMedia = new uint8_t[totalStreamNum];
     if (!m_videoIdxInMedia)
         return OMAF_ERROR_NULL_PTR;
+
+    memset_s(m_videoIdxInMedia, totalStreamNum * sizeof(uint8_t), 0);
 
     for (uint8_t streamIdx = 0; streamIdx < totalStreamNum; streamIdx++)
     {
@@ -247,7 +249,6 @@ int32_t ExtractorTrackGenerator::CheckAndFillInitInfo()
                 if (videoBitRate == bitRate)
                 {
                     m_videoIdxInMedia[vsIdx] = it->first; //rank video index from largest bitrate to smallest bitrate
-                    //printf("m_videoIdxInMedia[%d] is %d \n", vsIdx, m_videoIdxInMedia[vsIdx]);
                     break;
                 }
             }

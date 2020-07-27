@@ -75,39 +75,32 @@ int32_t ExtractorTrack::Initialize()
     m_vps = new Nalu;
     if (!m_vps)
         return OMAF_ERROR_NULL_PTR;
-    memset(m_vps, 0, sizeof(Nalu));
+    memset_s(m_vps, sizeof(Nalu), 0);
 
     m_sps = new Nalu;
     if (!m_sps)
         return OMAF_ERROR_NULL_PTR;
-    memset(m_sps, 0, sizeof(Nalu));
+    memset_s(m_sps, sizeof(Nalu), 0);
 
     m_pps = new Nalu;
     if (!m_pps)
         return OMAF_ERROR_NULL_PTR;
-    memset(m_pps, 0, sizeof(Nalu));
+    memset_s(m_pps, sizeof(Nalu), 0);
 
     m_projSEI = new Nalu;
     if (!m_projSEI)
         return OMAF_ERROR_NULL_PTR;
-    memset(m_projSEI, 0, sizeof(Nalu));
+    memset_s(m_projSEI, sizeof(Nalu), 0);
 
     m_rwpkSEI = new Nalu;
     if (!m_rwpkSEI)
         return OMAF_ERROR_NULL_PTR;
-    memset(m_rwpkSEI, 0, sizeof(Nalu));
+    memset_s(m_rwpkSEI, sizeof(Nalu), 0);
 
     m_360scvpParam = new param_360SCVP;
     if (!m_360scvpParam)
         return OMAF_ERROR_NULL_PTR;
-    memset(m_360scvpParam, 0, sizeof(param_360SCVP));
-
-    int32_t ret = pthread_mutex_init(&m_mutex, NULL);
-    if (ret)
-    {
-        LOG(ERROR) << "Failed to initialize mutex for extractor track and get error  " << ret << " !" << std::endl;
-        return ret;
-    }
+    memset_s(m_360scvpParam, sizeof(param_360SCVP), 0);
 
     return ERROR_NONE;
 }
@@ -246,12 +239,6 @@ ExtractorTrack::~ExtractorTrack()
     m_360scvpHandles.clear();
 
     DestroyCurrSegNalus();
-    int32_t ret = pthread_mutex_destroy(&m_mutex);
-    if (ret)
-    {
-        LOG(ERROR) << "Failed to destroy mutex of extractor track !" << std::endl;
-        return;
-    }
 }
 
 int32_t ExtractorTrack::ConstructExtractors()
@@ -314,7 +301,7 @@ int32_t ExtractorTrack::GenerateExtractors()
                 return OMAF_ERROR_NULL_PTR;
             }
 
-            memset(inlineCtor, 0, sizeof(InlineConstructor));
+            memset_s(inlineCtor, sizeof(InlineConstructor), 0);
 
             inlineCtor->inlineData = new uint8_t[256];
             if (!inlineCtor->inlineData)
@@ -323,7 +310,7 @@ int32_t ExtractorTrack::GenerateExtractors()
                 DELETE_MEMORY(inlineCtor);
                 return OMAF_ERROR_NULL_PTR;
             }
-            memset(inlineCtor->inlineData, 0, 256);
+            memset_s(inlineCtor->inlineData, 256, 0);
 
             std::map<MediaStream*, void*>::iterator itHdl;
             itHdl = m_360scvpHandles.find((MediaStream*)video);
@@ -333,7 +320,7 @@ int32_t ExtractorTrack::GenerateExtractors()
                 m_360scvpHandles.insert(std::make_pair((MediaStream*)video, handle));
             }
             void *m_360scvpHandle = m_360scvpHandles[(MediaStream*)video];
-            memcpy(m_360scvpParam, video->Get360SCVPParam(), sizeof(param_360SCVP));
+            memcpy_s(m_360scvpParam, sizeof(param_360SCVP), video->Get360SCVPParam(), sizeof(param_360SCVP));
 
             if (tileIdx == 0)
             {
@@ -359,7 +346,7 @@ int32_t ExtractorTrack::GenerateExtractors()
                 DELETE_MEMORY(inlineCtor);
                 return OMAF_ERROR_NULL_PTR;
             }
-            memcpy(tempData, tileInfo->tileNalu->data, tileInfo->tileNalu->dataSize);
+            memcpy_s(tempData, tileInfo->tileNalu->dataSize, tileInfo->tileNalu->data, tileInfo->tileNalu->dataSize);
 
             tempData[0] = 0;
             tempData[1] = 0;
@@ -382,7 +369,7 @@ int32_t ExtractorTrack::GenerateExtractors()
 
             inlineCtor->length = DASH_SAMPLELENFIELD_SIZE + m_360scvpParam->outputBitstreamLen - HEVC_STARTCODES_LEN;
 
-            memset(inlineCtor->inlineData, 0xff, DASH_SAMPLELENFIELD_SIZE);
+            memset_s(inlineCtor->inlineData, DASH_SAMPLELENFIELD_SIZE, 0xff);
 
             extractor->inlineConstructor.push_back(inlineCtor);
 
@@ -518,10 +505,10 @@ int32_t ExtractorTrack::UpdateExtractors()
 
             if (!(inlineCtor->inlineData))
                 return OMAF_ERROR_NULL_PTR;
-            memset(inlineCtor->inlineData, 0, 256);
+            memset_s(inlineCtor->inlineData, 256, 0);
 
             void *m_360scvpHandle = m_360scvpHandles[(MediaStream*)video];
-            memcpy(m_360scvpParam, video->Get360SCVPParam(), sizeof(param_360SCVP));
+            memcpy_s(m_360scvpParam, sizeof(param_360SCVP), video->Get360SCVPParam(), sizeof(param_360SCVP));
 
             m_360scvpParam->destWidth = m_dstWidth;
             m_360scvpParam->destHeight = m_dstHeight;
@@ -530,7 +517,7 @@ int32_t ExtractorTrack::UpdateExtractors()
             if (!tempData)
                 return OMAF_ERROR_NULL_PTR;
 
-            memcpy(tempData, tileInfo->tileNalu->data, tileInfo->tileNalu->dataSize);
+            memcpy_s(tempData, tileInfo->tileNalu->dataSize, tileInfo->tileNalu->data, tileInfo->tileNalu->dataSize);
 
             tempData[0] = 0;
             tempData[1] = 0;
@@ -550,7 +537,7 @@ int32_t ExtractorTrack::UpdateExtractors()
 
             inlineCtor->length = DASH_SAMPLELENFIELD_SIZE + m_360scvpParam->outputBitstreamLen - HEVC_STARTCODES_LEN;
 
-            memset(inlineCtor->inlineData, 0xff, DASH_SAMPLELENFIELD_SIZE);
+            memset_s(inlineCtor->inlineData, DASH_SAMPLELENFIELD_SIZE, 0xff);
 
             SampleConstructor *sampleCtor = extractor->sampleConstructor.front();
             if (!sampleCtor)
@@ -740,7 +727,7 @@ int32_t ExtractorTrack::SetNalu(Nalu *srcNalu, Nalu *dstNalu)
     if (!(dstNalu->data))
         return OMAF_ERROR_NULL_PTR;
 
-    memcpy(dstNalu->data, srcNalu->data, srcNalu->dataSize);
+    memcpy_s(dstNalu->data, srcNalu->dataSize, srcNalu->data, srcNalu->dataSize);
 
     dstNalu->startCodesSize = srcNalu->startCodesSize;
     dstNalu->naluType       = srcNalu->naluType;

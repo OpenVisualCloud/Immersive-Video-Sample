@@ -66,7 +66,7 @@ VideoSegmentInfoGenerator::VideoSegmentInfoGenerator(
     m_videoSegInfo->tileInCol = tileInCol;
     m_videoSegInfo->tilesNum = tileInRow * tileInCol;
 
-    memset(m_videoSegInfo->tracksSegInfo, 0, 1024 * sizeof(TrackSegmentInfo*));
+    memset_s(m_videoSegInfo->tracksSegInfo, 1024 * sizeof(TrackSegmentInfo*), 0);
     for (uint16_t trackIdx = 0; trackIdx <= m_videoSegInfo->tilesNum; trackIdx++)
     {
         m_videoSegInfo->tracksSegInfo[trackIdx] = new TrackSegmentInfo;

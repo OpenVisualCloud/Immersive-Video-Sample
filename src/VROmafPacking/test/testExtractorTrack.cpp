@@ -131,7 +131,7 @@ public:
             return;
         }
 
-        memset(m_initInfo, 0, sizeof(InitialInfo));
+        memset_s(m_initInfo, sizeof(InitialInfo), 0);
         m_initInfo->bsNumVideo = 2;
         m_initInfo->bsNumAudio = 0;
         m_initInfo->pluginPath = "/usr/local/lib";
@@ -359,7 +359,7 @@ TEST_F(ExtractorTrackTest, AllProcess)
         return;
 
     uint32_t sliceHrdLen[8];
-    memset(sliceHrdLen, 0, 8 * sizeof(uint32_t));
+    memset_s(sliceHrdLen, 8 * sizeof(uint32_t), 0);
     int32_t ret = 0;
     for (uint8_t frameIdx = 0; frameIdx < 5; frameIdx++)
     {
@@ -470,7 +470,9 @@ TEST_F(ExtractorTrackTest, AllProcess)
             }
             fread(vpsData, 1, vpsLen, fp);
 
-            int32_t compRet = memcmp(vpsNalu->data, vpsData, vpsLen);
+            int32_t compRet = 0;
+            errno_t result = memcmp_s(vpsNalu->data, vpsLen, vpsData, vpsLen, &compRet);
+            EXPECT_TRUE(result == EOK);
             EXPECT_TRUE(vpsNalu->dataSize == vpsLen);
             EXPECT_TRUE(compRet == 0);
             EXPECT_TRUE(vpsNalu->startCodesSize == 4);
@@ -506,7 +508,8 @@ TEST_F(ExtractorTrackTest, AllProcess)
             }
             fread(spsData, 1, spsLen, fp);
 
-            compRet = memcmp(spsNalu->data, spsData, spsLen);
+            result = memcmp_s(spsNalu->data, spsLen, spsData, spsLen, &compRet);
+            EXPECT_TRUE(result == EOK);
             EXPECT_TRUE(spsNalu->dataSize == spsLen); //includes start codes
             EXPECT_TRUE(compRet == 0);
             EXPECT_TRUE(spsNalu->startCodesSize == 4);
@@ -542,7 +545,8 @@ TEST_F(ExtractorTrackTest, AllProcess)
             }
             fread(ppsData, 1, ppsLen, fp);
 
-            compRet = memcmp(ppsNalu->data, ppsData, ppsLen);
+            result = memcmp_s(ppsNalu->data, ppsLen, ppsData, ppsLen, &compRet);
+            EXPECT_TRUE(result == EOK);
             EXPECT_TRUE(ppsNalu->dataSize == ppsLen); //includes start codes
             EXPECT_TRUE(compRet == 0);
             EXPECT_TRUE(ppsNalu->startCodesSize == 4);
@@ -573,7 +577,7 @@ TEST_F(ExtractorTrackTest, AllProcess)
 
             for (int32_t i = 0; i < 4; i++)
             {
-                memset(&(rwpk.rectRegionPacking[i]), 0, sizeof(RectangularRegionWisePacking));
+                memset_s(&(rwpk.rectRegionPacking[i]), sizeof(RectangularRegionWisePacking), 0);
                 rwpk.rectRegionPacking[i].transformType = 0;
                 rwpk.rectRegionPacking[i].guardBandFlag = false;
                 rwpk.rectRegionPacking[i].projRegWidth = 960;
@@ -642,7 +646,7 @@ TEST_F(ExtractorTrackTest, AllProcess)
                 }
                 rwpk.rectRegionPacking[i].gbNotUsedForPredFlag = true;
             }
-            memset(&(rwpk.rectRegionPacking[4]), 0, sizeof(RectangularRegionWisePacking));
+            memset_s(&(rwpk.rectRegionPacking[4]), sizeof(RectangularRegionWisePacking), 0);
             rwpk.rectRegionPacking[4].transformType = 0;
             rwpk.rectRegionPacking[4].guardBandFlag = false;
             rwpk.rectRegionPacking[4].projRegWidth = 1920;
@@ -655,7 +659,7 @@ TEST_F(ExtractorTrackTest, AllProcess)
             rwpk.rectRegionPacking[4].packedRegLeft = 1920;
             rwpk.rectRegionPacking[4].gbNotUsedForPredFlag = true;
 
-            memset(&(rwpk.rectRegionPacking[5]), 0, sizeof(RectangularRegionWisePacking));
+            memset_s(&(rwpk.rectRegionPacking[5]), sizeof(RectangularRegionWisePacking), 0);
             rwpk.rectRegionPacking[5].transformType = 0;
             rwpk.rectRegionPacking[5].guardBandFlag = false;
             rwpk.rectRegionPacking[5].projRegWidth = 1920;
@@ -678,7 +682,8 @@ TEST_F(ExtractorTrackTest, AllProcess)
             compRet = 0;
             for (uint16_t idx = 0; idx < rwpk.numRegions; idx++)
             {
-                compRet = memcmp(&(dstRwpk->rectRegionPacking[idx]), &(rwpk.rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking));
+                result = memcmp_s(&(dstRwpk->rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking), &(rwpk.rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking), &compRet);
+                EXPECT_TRUE(result == EOK);
                 EXPECT_TRUE(compRet == 0);
             }
 
@@ -701,7 +706,7 @@ TEST_F(ExtractorTrackTest, AllProcess)
 
             for (uint16_t idx = 0; idx < covi.numRegions; idx++)
             {
-                memset(&(covi.sphereRegions[idx]), 0, sizeof(SphereRegion));
+                memset_s(&(covi.sphereRegions[idx]), sizeof(SphereRegion), 0);
                 covi.sphereRegions[idx].viewIdc = 0;
                 covi.sphereRegions[idx].centreAzimuth   = (int32_t)((((3840 / 2) - (float)(((it->first) % 4) * 960 + 1920 / 2)) * 360 * 65536) / 3840);
                 covi.sphereRegions[idx].centreElevation = (int32_t)((((1920 / 2) - (float)(((it->first) / 4) * 960 + 1920 / 2)) * 180 * 65536) / 1920);
@@ -718,7 +723,8 @@ TEST_F(ExtractorTrackTest, AllProcess)
             compRet = 0;
             for (uint16_t idx = 0; idx < dstCovi->numRegions; idx++)
             {
-                compRet = memcmp(&(dstCovi->sphereRegions[idx]), &(covi.sphereRegions[idx]), sizeof(SphereRegion));
+                result = memcmp_s(&(dstCovi->sphereRegions[idx]), sizeof(SphereRegion), &(covi.sphereRegions[idx]), sizeof(SphereRegion), &compRet);
+                EXPECT_TRUE(result == EOK);
                 EXPECT_TRUE(compRet == 0);
             }
 
@@ -760,7 +766,8 @@ TEST_F(ExtractorTrackTest, AllProcess)
             }
             fread(projSEIData, 1, projSEILen, fp);
 
-            compRet = memcmp(projSEI->data, projSEIData, projSEILen);
+            result = memcmp_s(projSEI->data, projSEILen, projSEIData, projSEILen, &compRet);
+            EXPECT_TRUE(result == EOK);
             EXPECT_TRUE(projSEI->dataSize == projSEILen);
             EXPECT_TRUE(compRet == 0);
 
