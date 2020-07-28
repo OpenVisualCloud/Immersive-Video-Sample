@@ -243,6 +243,10 @@ class OmafMediaStream {
 
   int32_t TilesStitching();
 
+private:
+    OmafMediaStream& operator=(const OmafMediaStream& other) { return *this; };
+    OmafMediaStream(const OmafMediaStream& other) { /* do not create copies */ };
+
  private:
   //<! Adaptation Set list for tiles
   std::map<int, OmafAdaptationSet*> mMediaAdaptationSet;

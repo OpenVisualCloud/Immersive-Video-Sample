@@ -112,6 +112,10 @@ public:
     RwpkType GetRwpkType(){return m_rwpkType;}
 
 private:
+    EssentialPropertyElement& operator=(const EssentialPropertyElement& other) { return *this; };
+    EssentialPropertyElement(const EssentialPropertyElement& other) { /* do not create copies */ };
+
+private:
 
     ProjectionFormat    m_pf;              //!< the ProjectionFormat attribute
     OmafSrd             *m_srd;            //!< the OmafSrd attribute

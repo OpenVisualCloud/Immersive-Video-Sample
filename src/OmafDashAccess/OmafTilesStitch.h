@@ -210,6 +210,10 @@ class OmafTilesStitch {
   //!
   int32_t GenerateOutputMergedPackets();
 
+private:
+    OmafTilesStitch& operator=(const OmafTilesStitch& other) { return *this; };
+    OmafTilesStitch(const OmafTilesStitch& other) { /* do not create copies */ };
+
  private:
   bool m_isInitialized;  //<! whether the stitch class has been initialized
 

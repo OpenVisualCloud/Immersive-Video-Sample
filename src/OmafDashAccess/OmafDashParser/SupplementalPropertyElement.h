@@ -104,6 +104,10 @@ public:
     ContentCoverage* GetContentCoverage() {return m_sphRegionQuality ? m_sphRegionQuality->GetContentCoverage() : nullptr;}
 
 private:
+    SupplementalPropertyElement& operator=(const SupplementalPropertyElement& other) { return *this; };
+    SupplementalPropertyElement(const SupplementalPropertyElement& other) { /* do not create copies */ };
+
+private:
 
     SphRegionQualityElement      *m_sphRegionQuality; //!< pointer of the omaf:sphRegionQuality child elements
     OmafSrd                      *m_srd;              //!< pointer of the OmafSrd child elements

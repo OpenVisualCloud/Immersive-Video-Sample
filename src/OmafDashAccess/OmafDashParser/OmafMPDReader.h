@@ -204,6 +204,10 @@ public:
     virtual MPDElement* GetMPD() {return m_mpd;}
 
 private:
+    OmafMPDReader& operator=(const OmafMPDReader& other) { return *this; };
+    OmafMPDReader(const OmafMPDReader& other) { /* do not create copies */ };
+
+private:
 
     OmafXMLElement      *m_rootXMLElement; //!< root XML element
     MPDElement          *m_mpd;            //!< root MPD element

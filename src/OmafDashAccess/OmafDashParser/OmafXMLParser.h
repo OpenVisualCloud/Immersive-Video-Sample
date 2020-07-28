@@ -118,6 +118,10 @@ class OmafXMLParser {
     m_curl_params.http_params_ = http_params;
   }
 
+private:
+    OmafXMLParser& operator=(const OmafXMLParser& other) { return *this; };
+    OmafXMLParser(const OmafXMLParser& other) { /* do not create copies */ };
+
  private:
   //!
   //! \brief    Read attributes from tinyxml element

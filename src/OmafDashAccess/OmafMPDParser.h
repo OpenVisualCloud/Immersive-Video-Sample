@@ -133,6 +133,10 @@ class OmafMPDParser {
   //!
   bool ExtractorJudgement(AdaptationSetElement* pAS);
 
+private:
+    OmafMPDParser& operator=(const OmafMPDParser& other) { return *this; };
+    OmafMPDParser(const OmafMPDParser& other) { /* do not create copies */ };
+
  private:
   OmafXMLParser* mParser = nullptr;
   MPDElement* mMpd = nullptr;  //!< the PTR for libdash MPD

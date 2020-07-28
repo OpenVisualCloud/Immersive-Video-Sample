@@ -245,13 +245,8 @@ int OmafAdaptationSet::LoadLocalSegment() {
   params.timeline_point_ = static_cast<int64_t>(mSegNum);
   OmafSegment::Ptr pSegment = std::make_shared<OmafSegment>(params, mSegNum, false);
 #endif
-  if (NULL == pSegment) {
-    LOG(ERROR) << "Create OmafSegment for AdaptationSet: " << this->mID << " Number: " << mActiveSegNum << " failed"
-               << endl;
 
-    return ERROR_NULL_PTR;
-  }
-
+  if (pSegment != NULL) {
   pSegment->SetInitSegID(this->mInitSegment->GetInitSegID());
   pSegment->SetSegID(mSegNum);
   pSegment->SetTrackId(this->mInitSegment->GetTrackId());
@@ -273,6 +268,13 @@ int OmafAdaptationSet::LoadLocalSegment() {
   mActiveSegNum++;
   mSegNum++;
   return ret;
+  }
+  else {
+    LOG(ERROR) << "Create OmafSegment for AdaptationSet: " << this->mID << " Number: " << mActiveSegNum << " failed"
+               << endl;
+
+    return ERROR_NULL_PTR;
+  }
 }
 
 int OmafAdaptationSet::LoadAssignedInitSegment(std::string assignedSegment) {
@@ -419,13 +421,7 @@ int OmafAdaptationSet::DownloadSegment() {
   // reset the re-enable flag, since it will be updated with different viewport
   if (mReEnable) mReEnable = false;
 
-  if (NULL == pSegment) {
-    LOG(ERROR) << "Create OmafSegment for AdaptationSet: " << this->mID << " Number: " << mActiveSegNum << " failed"
-               << endl;
-
-    return ERROR_NULL_PTR;
-  }
-
+  if (pSegment != NULL) {
   pSegment->SetInitSegID(this->mInitSegment->GetInitSegID());
   if (typeid(*this) != typeid(OmafExtractor)) {
     auto qualityRanking = GetRepresentationQualityRanking();
@@ -456,6 +452,13 @@ int OmafAdaptationSet::DownloadSegment() {
   mSegNum++;
 
   return ret;
+  }
+  else {
+    LOG(ERROR) << "Create OmafSegment for AdaptationSet: " << this->mID << " Number: " << mActiveSegNum << " failed"
+               << endl;
+
+    return ERROR_NULL_PTR;
+  }
 }
 
 std::string OmafAdaptationSet::GetUrl(const SegmentSyncNode& node) const {

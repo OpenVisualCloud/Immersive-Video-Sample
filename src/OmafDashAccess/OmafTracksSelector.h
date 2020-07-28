@@ -95,6 +95,10 @@ class OmafTracksSelector {
 
   void SetProjectionFmt(ProjectionFormat projFmt) { mProjFmt = projFmt; };
 
+private:
+    OmafTracksSelector& operator=(const OmafTracksSelector& other) { return *this; };
+    OmafTracksSelector(const OmafTracksSelector& other) { /* do not create copies */ };
+
  private:
   //!
   //! \brief  Initialize viewport prediction plugin

@@ -221,6 +221,10 @@ class RepresentationElement : public OmafElementBase {
   //!
   vector<string> GetDependencyIDs() { return m_dependencyId; }
 
+private:
+    RepresentationElement& operator=(const RepresentationElement& other) { return *this; };
+    RepresentationElement(const RepresentationElement& other) { /* do not create copies */ };
+
  private:
   string m_id;                    //!< the id attribute
   string m_codecs;                //!< the codecs attribute
