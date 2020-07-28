@@ -41,8 +41,9 @@ VideoDecoder::VideoDecoder()
     mHandler    = NULL;
     m_status    = STATUS_UNKNOWN;
     mVideoId    = -1;
-    // mbFmtChange = false;
-    // mCurrentPts = 0;
+    mPkt        = NULL;
+    mPktInfo    = NULL;
+    mRwpk       = NULL;
 }
 
 VideoDecoder::~VideoDecoder()
@@ -50,6 +51,13 @@ VideoDecoder::~VideoDecoder()
     m_status = STATUS_STOPPED;
     CloseDecoder();
     SAFE_DELETE(mDecCtx);
+    if (mPkt)
+    {
+        av_packet_free(&mPkt);
+        mPkt = NULL;
+    }
+    mPktInfo = NULL;
+    mRwpk = NULL;
 }
 
 RenderStatus VideoDecoder::Initialize(int32_t id, Codec_Type codec, FrameHandler* handler)
@@ -151,19 +159,18 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
     }
     RenderStatus ret = RENDER_STATUS_OK;
 
-    PacketInfo* newPkt = new PacketInfo;
-    RegionWisePacking* rwpk = new RegionWisePacking;
-    AVPacket *pkt = (AVPacket *)av_malloc(sizeof(AVPacket));
-    if (newPkt == NULL || rwpk == NULL || pkt == NULL)
+    mPktInfo = new PacketInfo;
+    mRwpk = new RegionWisePacking;
+    mPkt = av_packet_alloc();
+    if (mPktInfo == NULL || mRwpk == NULL || mPkt == NULL)
     {
         LOG(ERROR)<<" alloc memory failed in send packet! " << endl;
-        SAFE_DELETE(newPkt);
-        SAFE_DELETE(rwpk);
-        if (pkt)
-            av_packet_unref(pkt);
+        SAFE_DELETE(mPktInfo);
+        SAFE_DELETE(mRwpk);
+        av_packet_free(&mPkt);
         return RENDER_ERROR;
     }
-    newPkt->bCodecChange = MediaInfoChange(packet);
+    mPktInfo->bCodecChange = MediaInfoChange(packet);
 
     mDecCtx->width = packet->width;
     mDecCtx->height = packet->height;
@@ -173,32 +180,32 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
     if (NULL != packet->buf && packet->size)
     {
         int size = packet->size;
-        if (av_new_packet(pkt, size) < 0)
+        if (av_new_packet(mPkt, size) < 0)
         {
-            SAFE_DELETE(newPkt);
-            av_packet_unref(pkt);
-            SAFE_DELETE(rwpk);
+            SAFE_DELETE(mPktInfo);
+            av_packet_free(&mPkt);
+            SAFE_DELETE(mRwpk);
             return RENDER_ERROR;
         }
-        memcpy_s(pkt->data, size, packet->buf, size);
-        pkt->size = size;
-        *rwpk = *(packet->rwpk);
+        memcpy_s(mPkt->data, size, packet->buf, size);
+        mPkt->size = size;
+        *mRwpk = *(packet->rwpk);
 
         SAFE_FREE(packet->buf);
         SAFE_DELETE(packet->rwpk);
 
         FrameData* data = new FrameData;
-        newPkt->pkt = pkt;
-        newPkt->bEOS = packet->bEOS;
-        newPkt->pts = packet->pts;
-        newPkt->video_id = packet->videoID;
-        mDecCtx->push_packet(newPkt);
-        data->rwpk = rwpk;
-        // data->pts = pkt->pts;
-        data->pts = newPkt->pts;
+        mPktInfo->pkt = mPkt;
+        mPktInfo->bEOS = packet->bEOS;
+        mPktInfo->pts = packet->pts;
+        mPktInfo->video_id = packet->videoID;
+        mDecCtx->push_packet(mPktInfo);
+        data->rwpk = mRwpk;
+        // data->pts = mPkt->pts;
+        data->pts = mPktInfo->pts;
         data->numQuality = packet->numQuality;
         data->qtyResolution = new SourceResolution[packet->numQuality];
-        data->bCodecChange = newPkt->bCodecChange;
+        data->bCodecChange = mPktInfo->bCodecChange;
         for(int i =0; i<data->numQuality; i++){
             data->qtyResolution[i].height = packet->qtyResolution[i].height;
             data->qtyResolution[i].width = packet->qtyResolution[i].width;

@@ -68,6 +68,10 @@ public:
     SourceResolution* GetSourceInfo() { return m_sourceInfo; }
 
 private:
+    RegionData& operator=(const RegionData& other) { return *this; };
+    RegionData(const RegionData& other) { /* do not create copies */ };
+
+private:
 
     uint32_t m_sourceInRegion;
     RegionWisePacking *m_regionWisePacking;

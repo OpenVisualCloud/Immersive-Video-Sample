@@ -132,14 +132,28 @@ RenderStatus GLFWRenderContext::GetMotionOptionParams()
         return RENDER_ERROR;
     }
     m_motionConfig.mode = new char[128]();
-    memcpy_s(m_motionConfig.mode, strlen(attOfMotion->Value()), attOfMotion->Value(), strlen(attOfMotion->Value()));
-    if (!motionElem->FirstChildElement("freq") || !motionElem->FirstChildElement("timeInterval"))
+    if (m_motionConfig.mode != NULL)
+    {
+        memcpy_s(m_motionConfig.mode, strlen(attOfMotion->Value()), attOfMotion->Value(), strlen(attOfMotion->Value()));
+    }
+    else
+    {
+        LOG(ERROR) << " Mode is invalid! " << std::endl;
+        return RENDER_ERROR;
+    }
+
+    if (motionElem->FirstChildElement("freq") != NULL && motionElem->FirstChildElement("freq")->GetText() != NULL
+        && motionElem->FirstChildElement("timeInterval") != NULL && motionElem->FirstChildElement("timeInterval")->GetText() != NULL)
+    {
+        m_motionConfig.freq = atoi(motionElem->FirstChildElement("freq")->GetText());
+        m_motionConfig.timeInterval = atoi(motionElem->FirstChildElement("timeInterval")->GetText());
+    }
+    else
     {
         LOG(ERROR) << " freq OR timeInterval is invalid! " << std::endl;
         return RENDER_ERROR;
     }
-    m_motionConfig.freq = atoi(motionElem->FirstChildElement("freq")->GetText());
-    m_motionConfig.timeInterval = atoi(motionElem->FirstChildElement("timeInterval")->GetText());
+
     return RENDER_STATUS_OK;
 }
 

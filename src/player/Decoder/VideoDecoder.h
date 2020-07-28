@@ -322,11 +322,17 @@ private:
      RenderStatus SetRegionInfo(struct RegionInfo *regionInfo, int32_t nQuality, SourceResolution *qtyRes);
 
 private:
+    VideoDecoder& operator=(const VideoDecoder& other) { return *this; };
+    VideoDecoder(const VideoDecoder& other) { /* do not create copies */ };
+
+private:
      DecoderContext              *mDecCtx;
      ThreadStatus                 m_status;
      int32_t                      mVideoId;
      FrameHandler*                mHandler;
-
+     AVPacket                    *mPkt;
+     PacketInfo                  *mPktInfo;
+     RegionWisePacking           *mRwpk;
 };
 
 VCD_NS_END
