@@ -94,6 +94,10 @@ class StreamBlock : public VCD::NonCopyable {
     }
   }
 
+private:
+    StreamBlock& operator=(const StreamBlock& other) { return *this; };
+    StreamBlock(const StreamBlock& other) { /* do not create copies */ };
+
  private:
   // stream data
   char *data_ = nullptr;

@@ -141,12 +141,12 @@ RenderStatus GLFWRenderContext::GetMotionOptionParams()
         LOG(ERROR) << " Mode is invalid! " << std::endl;
         return RENDER_ERROR;
     }
-
-    if (motionElem->FirstChildElement("freq") != NULL && motionElem->FirstChildElement("freq")->GetText() != NULL
-        && motionElem->FirstChildElement("timeInterval") != NULL && motionElem->FirstChildElement("timeInterval")->GetText() != NULL)
+    XMLElement* freqElem = motionElem->FirstChildElement("freq");
+    XMLElement* interElem = motionElem->FirstChildElement("timeInterval");
+    if (freqElem != NULL && interElem != NULL)
     {
-        m_motionConfig.freq = atoi(motionElem->FirstChildElement("freq")->GetText());
-        m_motionConfig.timeInterval = atoi(motionElem->FirstChildElement("timeInterval")->GetText());
+        m_motionConfig.freq = atoi(freqElem->GetText());
+        m_motionConfig.timeInterval = atoi(interElem->GetText());
     }
     else
     {

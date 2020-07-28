@@ -322,6 +322,10 @@ class MediaPacket : public VCD::NonCopyable {
 
   uint32_t GetPPSLen() { return m_PPSLen; };
 
+private:
+    MediaPacket& operator=(const MediaPacket& other) { return *this; };
+    MediaPacket(const MediaPacket& other) { /* do not create copies */ };
+
  private:
   char* m_pPayload = nullptr;  //!< the payload buffer of the packet
   size_t m_nAllocSize = 0;     //!< the allocated size of packet

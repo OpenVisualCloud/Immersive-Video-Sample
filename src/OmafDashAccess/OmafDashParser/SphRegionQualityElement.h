@@ -162,6 +162,10 @@ public:
     ContentCoverage* GetContentCoverage();
 
 private:
+    SphRegionQualityElement& operator=(const SphRegionQualityElement& other) { return *this; };
+    SphRegionQualityElement(const SphRegionQualityElement& other) { /* do not create copies */ };
+
+private:
 
     int32_t                          m_shape_type;                 //!< the shape_type attribute
     int32_t                          m_remaining_area_flag;        //!< the remaining_area_flag attribute

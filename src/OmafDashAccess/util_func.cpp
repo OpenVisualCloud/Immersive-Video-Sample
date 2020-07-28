@@ -110,7 +110,7 @@ uint64_t net_parse_date(const char *val)
         LOG(ERROR) << "[Core] Cannot parse date string" <<  val;
         return 0;
     }
-
+    if (curr_month <= 12 && curr_month >= 0) {
     if (curr_month) {
         curr_month -= 1;
     } else {
@@ -127,7 +127,8 @@ uint64_t net_parse_date(const char *val)
         else if (!strcmp(szMonth, "Nov")) curr_month = 10;
         else if (!strcmp(szMonth, "Dec")) curr_month = 11;
     }
-
+    }
+    if (curr_year > 10000000000 || curr_year < 0) return 0;
     t.tm_year = curr_year>1000 ? curr_year-1900 : curr_year;
     t.tm_mday = curr_day;
     t.tm_hour = curr_hour;
@@ -162,8 +163,26 @@ uint64_t net_parse_date(const char *val)
         current_time = current_time + diff;
     }
     current_time *= 1000;
-    ms = (uint32_t) ( (seconds - (uint32_t) seconds) * 1000);
-    return current_time + ms;
+    if (current_time > 10000000000) return 0;
+    if (seconds > 10000000000) return 0;
+    uint32_t currs = seconds - (uint32_t) seconds;
+    if (currs >= 1000) return 0;
+    uint32_t currms = currs * 1000;
+    if (currms <= 1000000)
+    {
+        ms = currms;
+    }
+    else
+    {
+        LOG(ERROR) << " invalid ms input! " << std::endl;
+        return 0;
+    }
+    uint64_t ret_time = current_time + ms;
+    if (ret_time < 10000000000)
+        return ret_time;
+    else
+        return 0;
+
 }
 
 uint64_t net_get_utc()
@@ -196,7 +215,7 @@ uint64_t net_get_ntp_ts()
     net_get_ntp(&sec, &frac);
     res = sec;
     res<<= 32;
-    res |= frac;
+    res |= (uint64_t)frac;
     return res;
 }
 
@@ -335,15 +354,24 @@ uint64_t parse_duration(const char * const duration)
         s = atof(sep2);
         *sep1 = 'S';
     }
-    if (h*3600+m*60+s < ULLONG_MAX)
+    if (h < 1000 && m < 1000)
     {
-        return (uint64_t)((h*3600+m*60+s)*(uint64_t)1000);
+        uint64_t tmp_h = h * 3600;
+        uint64_t tmp_m = m * 60;
+        if (tmp_h > 10000000000 || tmp_m > 10000000000) return 0;
+        uint64_t tmp_time = tmp_h + tmp_m + s;
+        if (tmp_time < 10000000000) {
+            uint64_t ret_time = tmp_time * 1000;
+            if (ret_time < 10000000000000)
+                return ret_time;
+        }
     }
     else
     {
         LOG(ERROR) << "[MPD] Error parsing duration: time overflow\n";
         return ERROR_PARSE;
     }
+    return 0;
 }
 
 uint32_t mpd_parse_duration_u32(const char* const duration)

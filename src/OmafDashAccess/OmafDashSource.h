@@ -161,6 +161,10 @@ class OmafDashSource : public OmafMediaSource, Threadable {
 
   int StartReadThread();
 
+private:
+    OmafDashSource& operator=(const OmafDashSource& other) { return *this; };
+    OmafDashSource(const OmafDashSource& other) { /* do not create copies */ };
+
  private:
   OmafMPDParser* mMPDParser;       //<! the MPD parser
   DASH_STATUS mStatus;             //<! the status of the source
