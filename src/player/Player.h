@@ -68,6 +68,10 @@ public:
     uint32_t GetStatus();
 
 private:
+    Player& operator=(const Player& other) { return *this; };
+    Player(const Player& other) { /* do not create copies */ };
+
+private:
     uint32_t                  m_status;
     RenderManager            *m_renderManager;
     MediaSource              *m_mediaSource;

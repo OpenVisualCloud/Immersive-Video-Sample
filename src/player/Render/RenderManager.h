@@ -154,6 +154,10 @@ private:
     RenderStatus CreateRenderTarget(int32_t projFormat);
 
 private:
+    RenderManager& operator=(const RenderManager& other) { return *this; };
+    RenderManager(const RenderManager& other) { /* do not create copies */ };
+
+private:
     ViewPortManager        *m_viewPortManager;
     MediaSource            *m_mediaSource;
     RenderSourceFactory    *m_rsFactory;

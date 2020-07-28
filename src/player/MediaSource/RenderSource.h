@@ -162,6 +162,10 @@ public:
     void SetCurrentRegionInfo(RegionData* regionInfo);
     void SafeDeleteRegionInfo() { SAFE_DELETE(mCurRegionInfo); };
 
+private:
+    RenderSource& operator=(const RenderSource& other) { return *this; };
+    RenderSource(const RenderSource& other) { /* do not create copies */ };
+
 protected:
     uint32_t        *m_sourceTextureHandle; //! list of textureID for input video buffer
     uint32_t         m_sourceTextureNumber; //! yuv : 3 or rgb : 1

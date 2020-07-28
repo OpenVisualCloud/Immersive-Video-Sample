@@ -150,6 +150,10 @@ private:
     RenderStatus GetStreamDumpedOptionParams();
 
 private:
+    DashMediaSource& operator=(const DashMediaSource& other) { return *this; };
+    DashMediaSource(const DashMediaSource& other) { /* do not create copies */ };
+
+private:
 
     void                               *m_handler;//Dash Source handle
     int32_t                             m_status;

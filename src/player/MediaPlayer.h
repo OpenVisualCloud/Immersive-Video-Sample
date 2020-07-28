@@ -130,6 +130,10 @@ private:
     bool HasVideo();
 
 private:
+    MediaPlayer& operator=(const MediaPlayer& other) { return *this; };
+    MediaPlayer(const MediaPlayer& other) { /* do not create copies */ };
+
+private:
     ThreadStatus              m_status;
     RenderManager            *m_renderManager;
     MediaSource              *m_mediaSource;
