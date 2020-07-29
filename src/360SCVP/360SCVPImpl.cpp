@@ -94,7 +94,6 @@ TstitchStream::TstitchStream()
     m_xTopLeftNet = 0;
     m_yTopLeftNet = 0;
     m_dstRwpk = RegionWisePacking();
-    m_glogWrapper = new GlogWrapper((char*)"glog360SCVP");
 }
 
 TstitchStream::TstitchStream(TstitchStream& other)
@@ -169,7 +168,6 @@ TstitchStream::TstitchStream(TstitchStream& other)
     m_yTopLeftNet = other.m_yTopLeftNet;
     m_dstRwpk = RegionWisePacking();
     m_dstRwpk = other.m_dstRwpk;
-    m_glogWrapper = new GlogWrapper((char*)"glog360SCVP");
 }
 
 TstitchStream::~TstitchStream()
@@ -205,10 +203,6 @@ TstitchStream::~TstitchStream()
     if (m_specialInfo[1]) {
         delete []m_specialInfo[1];
         m_specialInfo[1] = nullptr;
-    }
-    if(m_glogWrapper) {
-        delete (m_glogWrapper);
-        m_glogWrapper = NULL;
     }
 }
 
