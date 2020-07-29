@@ -203,7 +203,7 @@ int32_t  parse_hevc_specialinfo(hevc_specialInfo* pSpecialInfo, HEVCState* hevc,
 
     if (byteCnt > 0)
     {
-        memcpy_s(pSpecialInfo->ptr, ptr_size, pSpecialInfo->ptr + byteCnt, ptr_size);
+        memmove_s(pSpecialInfo->ptr, ptr_size, pSpecialInfo->ptr + byteCnt, ptr_size);
         pSpecialInfo->ptr_size = ptr_size;
     }
     int32_t nalCnt = hevc_import_ffextradata(pSpecialInfo, hevc, nalsize, spsCnt, bParse);
