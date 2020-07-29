@@ -240,6 +240,10 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
         m_pViewportParam.m_paramVideoFP.rows = pViewPortInfo->paramVideoFP.rows;
     }
 
+    /* Check the paramVideoFP rows / cols exceeds the maximum array size */
+    if (m_pViewportParam.m_paramVideoFP.cols > 6 || m_pViewportParam.m_paramVideoFP.rows > 6)
+        return -1;
+
     for (int i = 0; i < pViewPortInfo->paramVideoFP.rows; i++)
     {
         for (int j = 0; j < pViewPortInfo->paramVideoFP.cols; j++)
@@ -312,6 +316,8 @@ int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t slic
     {
         m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer = (uint8_t *)malloc(100);
     }
+    if (!m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer || !m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer)
+        return -1;
 
     if (!m_mergeStreamParam.highRes.pHeader || !m_mergeStreamParam.lowRes.pHeader
         || !m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer

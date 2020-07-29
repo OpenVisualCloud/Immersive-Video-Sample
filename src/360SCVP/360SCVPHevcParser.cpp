@@ -1925,6 +1925,9 @@ int32_t hevc_read_RwpkSEI(int8_t *pRWPKBits, uint32_t RWPKBitsSize, RegionWisePa
         pRWPK->rectRegionPacking =
             (RectangularRegionWisePacking*)malloc(numRegions * sizeof(RectangularRegionWisePacking));
     }
+    if (!pRWPK->rectRegionPacking)
+        goto exit;
+
     pRWPK->projPicWidth = gts_bs_read_int(bs, 32);
     pRWPK->projPicHeight = gts_bs_read_int(bs, 32);
     pRWPK->packedPicWidth = gts_bs_read_int(bs, 16); //bitstr.read16Bits();
