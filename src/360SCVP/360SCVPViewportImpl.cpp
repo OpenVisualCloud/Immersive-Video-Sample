@@ -68,6 +68,14 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
     cTAppConvCfg->m_usageType = pParamGenViewport->m_usageType;
     cTAppConvCfg->m_paramVideoFP.cols = pParamGenViewport->m_paramVideoFP.cols;
     cTAppConvCfg->m_paramVideoFP.rows = pParamGenViewport->m_paramVideoFP.rows;
+
+    /* Check the paramVideoFP rows / cols exceeds the maximum array size */
+    if (pParamGenViewport->m_paramVideoFP.rows > 6 || pParamGenViewport->m_paramVideoFP.cols > 6) {
+        delete cTAppConvCfg;
+        cTAppConvCfg = NULL;
+        return NULL;
+    }
+
     for (int i = 0; i < pParamGenViewport->m_paramVideoFP.rows; i++)
     {
         for (int j = 0; j < pParamGenViewport->m_paramVideoFP.cols; j++)
@@ -99,8 +107,12 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
 
     //calculate the max tile num if the source project is cube map
     cTAppConvCfg->m_maxTileNum = 0;
-    if (pParamGenViewport->m_tileNumCol == 0 || pParamGenViewport->m_tileNumRow == 0)
+    if (pParamGenViewport->m_tileNumCol == 0 || pParamGenViewport->m_tileNumRow == 0) {
+        delete cTAppConvCfg;
+        cTAppConvCfg = NULL;
         return NULL;
+    }
+
     if (cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP)
     {
         SPos *pUpLeft = cTAppConvCfg->m_pUpLeft;
@@ -677,7 +689,7 @@ int32_t   genViewport_unInit(void* pGenHandle)
     if(pGenHandle)
     {
         free(pGenHandle);
-        pGenHandle = NULL;
+       pGenHandle = NULL;
     }
 
     return 0;
@@ -704,6 +716,8 @@ TgenViewport::TgenViewport()
     m_usageType = E_STREAM_STITCH_ONLY;
     m_numFaces = 0;
     m_srd = NULL;
+    m_paramVideoFP.cols = 0;
+    m_paramVideoFP.rows = 0;
 }
 
 TgenViewport::~TgenViewport()
