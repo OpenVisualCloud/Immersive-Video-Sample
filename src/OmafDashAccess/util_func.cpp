@@ -128,7 +128,7 @@ uint64_t net_parse_date(const char *val)
         else if (!strcmp(szMonth, "Dec")) curr_month = 11;
     }
     }
-    if (curr_year > 10000000000 || curr_year < 0) return 0;
+    if (curr_year > INT32_MAX - 1 || curr_year < 0) return 0;
     t.tm_year = curr_year>1000 ? curr_year-1900 : curr_year;
     t.tm_mday = curr_day;
     t.tm_hour = curr_hour;
@@ -163,12 +163,12 @@ uint64_t net_parse_date(const char *val)
         current_time = current_time + diff;
     }
     current_time *= 1000;
-    if (current_time > 10000000000) return 0;
+    if (current_time > UINT64_MAX - 1) return 0;
     if (seconds > 10000000000) return 0;
     uint32_t currs = seconds - (uint32_t) seconds;
-    if (currs >= 1000) return 0;
+    if (currs >= UINT32_MAX - 1) return 0;
     uint32_t currms = currs * 1000;
-    if (currms <= 1000000)
+    if (currms < UINT32_MAX - 1)
     {
         ms = currms;
     }
@@ -178,7 +178,7 @@ uint64_t net_parse_date(const char *val)
         return 0;
     }
     uint64_t ret_time = current_time + ms;
-    if (ret_time < 10000000000)
+    if (ret_time < UINT64_MAX - 1)
         return ret_time;
     else
         return 0;
@@ -358,11 +358,11 @@ uint64_t parse_duration(const char * const duration)
     {
         uint64_t tmp_h = h * 3600;
         uint64_t tmp_m = m * 60;
-        if (tmp_h > 10000000000 || tmp_m > 10000000000) return 0;
+        if (tmp_h > UINT64_MAX - 1 || tmp_m > UINT64_MAX - 1) return 0;
         uint64_t tmp_time = tmp_h + tmp_m + s;
-        if (tmp_time < 10000000000) {
+        if (tmp_time < UINT64_MAX - 1) {
             uint64_t ret_time = tmp_time * 1000;
-            if (ret_time < 10000000000000)
+            if (ret_time < UINT64_MAX - 1)
                 return ret_time;
         }
     }

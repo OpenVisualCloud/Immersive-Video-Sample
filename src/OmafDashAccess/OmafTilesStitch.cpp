@@ -639,12 +639,13 @@ std::unique_ptr<RegionWisePacking> OmafTilesStitch::CalculateMergedRwpkForERP(Qu
   rwpk->projPicHeight = m_fullHeight;
   rwpk->packedPicWidth = width;
   rwpk->packedPicHeight = height;
-  DELETE_ARRAY(rwpk->rectRegionPacking);
+
   rwpk->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
   if (!(rwpk->rectRegionPacking)) {
     // SAFE_DELETE(rwpk);
     return nullptr;
   }
+  memset_s(rwpk->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking), 0);
 
   uint8_t regIdx = 0;
   for (itPacket = packets.begin(); itPacket != packets.end(); itPacket++) {
@@ -786,12 +787,12 @@ std::unique_ptr<RegionWisePacking> OmafTilesStitch::CalculateMergedRwpkForCubeMa
   rwpk->packedPicWidth = width;
   rwpk->packedPicHeight = height;
 
-  DELETE_ARRAY(rwpk->rectRegionPacking);
   rwpk->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
   if (!(rwpk->rectRegionPacking)) {
     // SAFE_DELETE(rwpk);
     return NULL;
   }
+  memset_s(rwpk->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking), 0);
 
   uint8_t regIdx = 0;
   for (itPacket = packets.begin(); itPacket != packets.end(); itPacket++) {

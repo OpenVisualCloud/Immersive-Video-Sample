@@ -289,7 +289,7 @@ void DashMediaSource::ProcessVideoPacket() {
   int ret =
       OmafAccess_GetPacket(m_handler, vi.streamID, &(dashPkt[0]), &dashPktNum, (uint64_t *)&pts, needHeaders, false);
   if (ERROR_NONE != ret) {
-    LOG(INFO) << "Get packet failed: stream_id:" << vi.streamID << ", ret:" << ret << std::endl;
+    // LOG(INFO) << "Get packet failed: stream_id:" << vi.streamID << ", ret:" << ret << std::endl;
     return;
   }
   if (dashPkt[0].bEOS) {
