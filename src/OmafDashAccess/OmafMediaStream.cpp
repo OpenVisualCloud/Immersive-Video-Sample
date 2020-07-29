@@ -668,7 +668,7 @@ int32_t OmafMediaStream::TilesStitching() {
       }
       bool isPoseChanged = false;
       isPoseChanged = IsSelectionChanged(mapSelectedAS, mapSelectedAS1);
-      LOG(INFO) << "In tiles stitching thread, pose changed: " << isPoseChanged << endl;
+      // LOG(INFO) << "In tiles stitching thread, pose changed: " << isPoseChanged << endl;
       if ((ret == ERROR_NULL_PACKET) && isPoseChanged) {
         hasPoseChanged = true;
         break;
