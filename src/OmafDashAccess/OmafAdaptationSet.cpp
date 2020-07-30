@@ -246,7 +246,8 @@ int OmafAdaptationSet::LoadLocalSegment() {
   OmafSegment::Ptr pSegment = std::make_shared<OmafSegment>(params, mSegNum, false);
 #endif
 
-  if (pSegment != NULL) {
+  if (pSegment.get() != nullptr) {
+  if (this->mInitSegment == nullptr) return ERROR_NULL_PTR;
   pSegment->SetInitSegID(this->mInitSegment->GetInitSegID());
   pSegment->SetSegID(mSegNum);
   pSegment->SetTrackId(this->mInitSegment->GetTrackId());
@@ -421,7 +422,8 @@ int OmafAdaptationSet::DownloadSegment() {
   // reset the re-enable flag, since it will be updated with different viewport
   if (mReEnable) mReEnable = false;
 
-  if (pSegment != NULL) {
+  if (pSegment.get() != nullptr) {
+  if (this->mInitSegment.get() == nullptr) return ERROR_NULL_PTR;
   pSegment->SetInitSegID(this->mInitSegment->GetInitSegID());
   if (typeid(*this) != typeid(OmafExtractor)) {
     auto qualityRanking = GetRepresentationQualityRanking();

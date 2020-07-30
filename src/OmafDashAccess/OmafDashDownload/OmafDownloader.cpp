@@ -45,7 +45,7 @@
 namespace VCD {
 namespace OMAF {
 
-constexpr int PRIORITYTASKSIZE = static_cast<int>(TaskPriority::END);
+#define PRIORITYTASKSIZE static_cast<int>(TaskPriority::END)
 
 struct _taskList {
   using Ptr = std::shared_ptr<struct _taskList>;
@@ -267,7 +267,7 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::open(const SourceParams &ds_params, O
     // this is a download request with new timeline
     if (new_timeline) {
       TaskList::Ptr tl = std::make_shared<TaskList>();
-      if (tl == NULL) {
+      if (tl.get() == nullptr) {
         LOG(ERROR) << "Task list create failed!" << std::endl;
         return ERROR_NULL_PTR;
       }
