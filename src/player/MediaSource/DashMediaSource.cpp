@@ -45,6 +45,7 @@
 #define MIN_LIST_REMAIN 2
 #define DECODE_THREAD_COUNT 16
 #define MAX_PACKETS 16
+#define WAIT_PACKET_TIME_OUT 5000 // 5s
 
 using namespace tinyxml2;
 
@@ -101,7 +102,7 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   pCtxDashStreaming->omaf_params.statistic_params.enable = 0;              // enable statistic
   pCtxDashStreaming->omaf_params.statistic_params.window_size_ms = 10000;  // ms
 
-  pCtxDashStreaming->omaf_params.synchronizer_params.enable = 1;               //  enable dash segment number syncer
+  pCtxDashStreaming->omaf_params.synchronizer_params.enable = 0;               //  enable dash segment number syncer
   pCtxDashStreaming->omaf_params.synchronizer_params.segment_range_size = 20;  // 20
 
   m_handler = OmafAccess_Init(pCtxDashStreaming);
@@ -261,6 +262,10 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo) {
 }
 
 bool DashMediaSource::IsEOS() {
+  if (STATUS_TIMEOUT == m_status)
+  {
+    return true;
+  }
   if (m_sourceType == 1)  // vod
   {
     // return m_bEOS;
@@ -285,13 +290,21 @@ void DashMediaSource::ProcessVideoPacket() {
   memset(dashPkt, 0, MAX_PACKETS * sizeof(DashPacket));
   int dashPktNum = 0;
   static bool needHeaders = true;
+  static uint64_t currentWaitTime = 0;
   uint64_t pts = 0;
   int ret =
       OmafAccess_GetPacket(m_handler, vi.streamID, &(dashPkt[0]), &dashPktNum, (uint64_t *)&pts, needHeaders, false);
   if (ERROR_NONE != ret) {
     // LOG(INFO) << "Get packet failed: stream_id:" << vi.streamID << ", ret:" << ret << std::endl;
+    currentWaitTime++;
+    if (currentWaitTime > WAIT_PACKET_TIME_OUT) // wait 5s but get packet failed
+    {
+      m_status = STATUS_TIMEOUT;
+      LOG(ERROR) << " Wait too long to get packet from Omaf Dash Access library! Force to quit! " << std::endl;
+    }
     return;
   }
+  currentWaitTime = 0;
   if (dashPkt[0].bEOS) {
     m_status = STATUS_STOPPED;
   }
@@ -332,7 +345,7 @@ void DashMediaSource::Run() {
   }
 
   m_status = STATUS_PLAYING;
-  while (m_status != STATUS_STOPPED) {
+  while (m_status != STATUS_STOPPED && m_status != STATUS_TIMEOUT) {
     {
       ScopeLock lock(m_Lock);
       ProcessVideoPacket();
