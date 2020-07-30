@@ -630,8 +630,9 @@ std::unique_ptr<RegionWisePacking> OmafTilesStitch::CalculateMergedRwpkForERP(Qu
   uint8_t tileRowsNum = mergeLayout->tilesLayout.tileRowsNum;
   uint8_t tileColsNum = mergeLayout->tilesLayout.tileColsNum;
   // construct region-wise packing information
-  std::unique_ptr<RegionWisePacking> rwpk = make_unique_vcd<RegionWisePacking>();
-  if (rwpk.get() == nullptr) return nullptr;
+  std::unique_ptr<RegionWisePacking> rwpkWrapper = make_unique_vcd<RegionWisePacking>();
+  if (!rwpkWrapper) return NULL;
+  RegionWisePacking* rwpk = rwpkWrapper.get();
 
   rwpk->constituentPicMatching = 0;
   rwpk->numRegions = (uint8_t)(tileRowsNum) * (uint8_t)(tileColsNum);
@@ -694,7 +695,7 @@ std::unique_ptr<RegionWisePacking> OmafTilesStitch::CalculateMergedRwpkForERP(Qu
     regIdx++;
   }
 
-  return rwpk;
+  return rwpkWrapper;
 }
 
 std::unique_ptr<RegionWisePacking> OmafTilesStitch::CalculateMergedRwpkForCubeMap(QualityRank qualityRanking,
@@ -777,9 +778,9 @@ std::unique_ptr<RegionWisePacking> OmafTilesStitch::CalculateMergedRwpkForCubeMa
   uint8_t tileRowsNum = mergeLayout->tilesLayout.tileRowsNum;
   uint8_t tileColsNum = mergeLayout->tilesLayout.tileColsNum;
   // construct region-wise packing information
-  std::unique_ptr<RegionWisePacking> rwpk = make_unique_vcd<RegionWisePacking>();
-  if (!rwpk) return NULL;
-
+  std::unique_ptr<RegionWisePacking> rwpkWrapper = make_unique_vcd<RegionWisePacking>();
+  if (!rwpkWrapper) return NULL;
+  RegionWisePacking* rwpk = rwpkWrapper.get();
   rwpk->constituentPicMatching = 0;
   rwpk->numRegions = (uint8_t)(tileRowsNum) * (uint8_t)(tileColsNum);
   rwpk->projPicWidth = m_fullWidth;
@@ -846,7 +847,7 @@ std::unique_ptr<RegionWisePacking> OmafTilesStitch::CalculateMergedRwpkForCubeMa
     regIdx++;
   }
 
-  return rwpk;
+  return rwpkWrapper;
 }
 int32_t OmafTilesStitch::GenerateTilesMergeArrangement() {
   if (0 == m_selectedTiles.size()) return OMAF_ERROR_INVALID_DATA;
