@@ -806,16 +806,36 @@ void *DefaultSegmentation::LastExtractorTrackSegThread(void *pThis)
 int32_t DefaultSegmentation::ExtractorTrackSegmentation()
 {
     bool isFrameReady = false;
+    ExtractorTrack *extractorTrack = NULL;
+    pthread_t threadId = pthread_self();
+    if (threadId == 0)
+    {
+        LOG(ERROR) << "NULL thread id for extractor track segmentation !" << std::endl;
+        return OMAF_ERROR_INVALID_THREAD;
+    }
+
+    while(1)
+    {
+        std::map<pthread_t, ExtractorTrack*>::iterator itETThread;
+        itETThread = m_extractorThreadIds.find(threadId);
+        if (itETThread != m_extractorThreadIds.end())
+        {
+            extractorTrack = itETThread->second;
+            break;
+        }
+        usleep(50);
+    }
+
     while(1)
     {
 
         std::map<uint8_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
         std::map<uint8_t, ExtractorTrack*>::iterator itExtractorTrack;
 
-        pthread_t threadId = pthread_self();
-        ExtractorTrack *extractorTrack = m_extractorThreadIds[threadId];
-        if (!extractorTrack)
-            return OMAF_ERROR_NULL_PTR;
+        //pthread_t threadId = pthread_self();
+        //ExtractorTrack *extractorTrack = m_extractorThreadIds[threadId];
+        //if (!extractorTrack)
+        //    return OMAF_ERROR_NULL_PTR;
 
         for (itExtractorTrack = extractorTracks->begin();
             itExtractorTrack != extractorTracks->end(); itExtractorTrack++)
@@ -884,15 +904,35 @@ int32_t DefaultSegmentation::ExtractorTrackSegmentation()
 int32_t DefaultSegmentation::LastExtractorTrackSegmentation()
 {
     bool isFrameReady = false;
+    ExtractorTrack *extractorTrack = NULL;
+    pthread_t threadId = pthread_self();
+    if (threadId == 0)
+    {
+        LOG(ERROR) << "NULL thread id for extractor track segmentation !" << std::endl;
+        return OMAF_ERROR_INVALID_THREAD;
+    }
+
+    while(1)
+    {
+        std::map<pthread_t, ExtractorTrack*>::iterator itETThread;
+        itETThread = m_extractorThreadIds.find(threadId);
+        if (itETThread != m_extractorThreadIds.end())
+        {
+            extractorTrack = itETThread->second;
+            break;
+        }
+        usleep(50);
+    }
+
     while(1)
     {
         std::map<uint8_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
         std::map<uint8_t, ExtractorTrack*>::iterator itExtractorTrack;
 
-        pthread_t threadId = pthread_self();
-        ExtractorTrack *extractorTrack = m_extractorThreadIds[threadId];
-        if (!extractorTrack)
-            return OMAF_ERROR_NULL_PTR;
+        //pthread_t threadId = pthread_self();
+        //ExtractorTrack *extractorTrack = m_extractorThreadIds[threadId];
+        //if (!extractorTrack)
+            //return OMAF_ERROR_NULL_PTR;
 
         for (itExtractorTrack = extractorTracks->begin();
             itExtractorTrack != extractorTracks->end(); itExtractorTrack++)

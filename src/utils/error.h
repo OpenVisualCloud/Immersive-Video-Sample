@@ -110,4 +110,5 @@ typedef int OMAF_STATUS;
 #define OMAF_ERROR_GENERATE_RWPK                 -103
 #define OMAF_INVALID_EXTRACTOR_ENABLEMENT        -104
 #define OMAF_ERROR_FILE_WRITE                    -105
+#define OMAF_ERROR_INVALID_THREAD                -106
 #endif /* ERROR_H */
