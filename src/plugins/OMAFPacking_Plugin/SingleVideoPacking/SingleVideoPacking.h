@@ -50,6 +50,10 @@ public:
     //!
     SingleVideoRegionWisePackingGenerator();
 
+    SingleVideoRegionWisePackingGenerator(const SingleVideoRegionWisePackingGenerator& src);
+
+    SingleVideoRegionWisePackingGenerator& operator=(const SingleVideoRegionWisePackingGenerator&) = default;
+
     //!
     //! \brief  Destructor
     //!

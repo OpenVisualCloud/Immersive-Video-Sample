@@ -58,6 +58,10 @@ public:
     //!
     OmafPackage();
 
+    OmafPackage(const OmafPackage& src);
+
+    OmafPackage& operator=(OmafPackage&& other);
+
     //!
     //! \brief  Destructor
     //!

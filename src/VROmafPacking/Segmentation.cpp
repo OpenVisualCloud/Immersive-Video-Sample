@@ -61,6 +61,32 @@ Segmentation::Segmentation(
     m_frameRate.den = 0;
 }
 
+Segmentation::Segmentation(const Segmentation& src)
+{
+    m_streamMap = std::move(src.m_streamMap);
+    m_extractorTrackMan = std::move(src.m_extractorTrackMan);
+    m_segInfo = std::move(src.m_segInfo);
+
+    m_mpdGen = std::move(src.m_mpdGen);
+    m_trackIdStarter = src.m_trackIdStarter;
+    m_frameRate.num = src.m_frameRate.num;
+    m_frameRate.den = src.m_frameRate.den;
+}
+
+Segmentation& Segmentation::operator=(Segmentation&& other)
+{
+    m_streamMap = std::move(other.m_streamMap);
+    m_extractorTrackMan = std::move(other.m_extractorTrackMan);
+    m_segInfo = std::move(other.m_segInfo);
+
+    m_mpdGen = std::move(other.m_mpdGen);
+    m_trackIdStarter = other.m_trackIdStarter;
+    m_frameRate.num = other.m_frameRate.num;
+    m_frameRate.den = other.m_frameRate.den;
+
+    return *this;
+}
+
 Segmentation::~Segmentation()
 {
     DELETE_MEMORY(m_mpdGen);

@@ -47,6 +47,26 @@ OmafPackage::OmafPackage()
     m_threadId = 0;
 }
 
+OmafPackage::OmafPackage(const OmafPackage& src)
+{
+    m_initInfo = std::move(src.m_initInfo);
+    m_segmentation = std::move(src.m_segmentation);
+    m_extractorTrackMan = std::move(src.m_extractorTrackMan);
+    m_isSegmentationStarted = src.m_isSegmentationStarted;
+    m_threadId = src.m_threadId;
+}
+
+OmafPackage& OmafPackage::operator=(OmafPackage&& other)
+{
+    m_initInfo = std::move(other.m_initInfo);
+    m_segmentation = std::move(other.m_segmentation);
+    m_extractorTrackMan = std::move(other.m_extractorTrackMan);
+    m_isSegmentationStarted = other.m_isSegmentationStarted;
+    m_threadId = other.m_threadId;
+
+    return *this;
+}
+
 OmafPackage::~OmafPackage()
 {
     if(m_threadId != 0)

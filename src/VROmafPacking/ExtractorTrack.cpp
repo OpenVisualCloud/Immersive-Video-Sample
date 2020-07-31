@@ -126,6 +126,50 @@ ExtractorTrack::ExtractorTrack(uint8_t viewportIdx, std::map<uint8_t, MediaStrea
     m_dstHeight = 0;
 }
 
+ExtractorTrack::ExtractorTrack(const ExtractorTrack& src)
+{
+    m_streams = std::move(src.m_streams);
+    m_viewportIdx = src.m_viewportIdx;
+    m_projType = src.m_projType;
+
+    m_dstRwpk = std::move(src.m_dstRwpk);
+    m_dstCovi = std::move(src.m_dstCovi);
+    m_tilesMergeDir = std::move(src.m_tilesMergeDir);
+    m_vps = std::move(src.m_vps);
+    m_sps = std::move(src.m_sps);
+    m_pps = std::move(src.m_pps);
+    m_projSEI = std::move(src.m_projSEI);
+    m_rwpkSEI = std::move(src.m_rwpkSEI);
+
+    m_processedFrmNum = src.m_processedFrmNum;
+    m_360scvpParam = std::move(src.m_360scvpParam);
+    m_dstWidth = src.m_dstWidth;
+    m_dstHeight = src.m_dstHeight;
+}
+
+ExtractorTrack& ExtractorTrack::operator=(ExtractorTrack&& other)
+{
+    m_streams = std::move(other.m_streams);
+    m_viewportIdx = other.m_viewportIdx;
+    m_projType = other.m_projType;
+
+    m_dstRwpk = std::move(other.m_dstRwpk);
+    m_dstCovi = std::move(other.m_dstCovi);
+    m_tilesMergeDir = std::move(other.m_tilesMergeDir);
+    m_vps = std::move(other.m_vps);
+    m_sps = std::move(other.m_sps);
+    m_pps = std::move(other.m_pps);
+    m_projSEI = std::move(other.m_projSEI);
+    m_rwpkSEI = std::move(other.m_rwpkSEI);
+
+    m_processedFrmNum = other.m_processedFrmNum;
+    m_360scvpParam = std::move(other.m_360scvpParam);
+    m_dstWidth = other.m_dstWidth;
+    m_dstHeight = other.m_dstHeight;
+
+    return *this;
+}
+
 ExtractorTrack::~ExtractorTrack()
 {
     if (m_dstRwpk)

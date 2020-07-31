@@ -62,6 +62,10 @@ public:
     //!
     VideoStream();
 
+    VideoStream(const VideoStream& src);
+
+    VideoStream& operator=(VideoStream&& other);
+
     //!
     //! \brief  Destructor
     //!

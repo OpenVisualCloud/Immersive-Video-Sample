@@ -84,6 +84,10 @@ public:
         VCD::OMAF::ProjectionFormat projType,
         Rational frameRate);
 
+    MpdGenerator(const MpdGenerator& src);
+
+    MpdGenerator& operator=(MpdGenerator&& other);
+
 
     //!
     //! \brief  Destructor

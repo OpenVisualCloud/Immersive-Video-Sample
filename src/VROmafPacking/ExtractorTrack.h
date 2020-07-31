@@ -119,6 +119,10 @@ public:
     //!
     ExtractorTrack(uint8_t viewportIdx, std::map<uint8_t, MediaStream*> *streams, uint16_t projType);
 
+    ExtractorTrack(const ExtractorTrack& src);
+
+    ExtractorTrack& operator=(ExtractorTrack&& other);
+
     //!
     //! \brief  Destructor
     //!
