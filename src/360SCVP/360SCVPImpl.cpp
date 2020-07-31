@@ -241,8 +241,10 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
     }
 
     /* Check the paramVideoFP rows / cols exceeds the maximum array size */
-    if (m_pViewportParam.m_paramVideoFP.cols > 6 || m_pViewportParam.m_paramVideoFP.rows > 6)
+    if (pViewPortInfo->paramVideoFP.rows > 6 || pViewPortInfo->paramVideoFP.cols > 6) {
+        LOG(ERROR) << "Viewport rows / cols too big: rows is " << pViewPortInfo->paramVideoFP.rows << " cols is " << pViewPortInfo->paramVideoFP.cols << "!!";
         return -1;
+    }
 
     for (int i = 0; i < pViewPortInfo->paramVideoFP.rows; i++)
     {
@@ -308,22 +310,36 @@ int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t slic
     m_mergeStreamParam.highRes.pHeader = (param_oneStream_info *)malloc(sizeof(param_oneStream_info));
     m_mergeStreamParam.lowRes.pHeader = (param_oneStream_info *)malloc(sizeof(param_oneStream_info));
     m_mergeStreamParam.highRes.pTiledBitstreams = (param_oneStream_info **)malloc(HR_ntile * sizeof(param_oneStream_info *));
-    if (m_mergeStreamParam.highRes.pHeader)
-    {
-        m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer = (uint8_t *)malloc(sliceSize);
-    }
-    if (m_mergeStreamParam.lowRes.pHeader)
-    {
-        m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer = (uint8_t *)malloc(100);
-    }
-    if (!m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer || !m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer)
-        return -1;
 
-    if (!m_mergeStreamParam.highRes.pHeader || !m_mergeStreamParam.lowRes.pHeader
-        || !m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer
-        || !m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer
-        || !m_mergeStreamParam.highRes.pTiledBitstreams)
+    if (!m_mergeStreamParam.highRes.pHeader || !m_mergeStreamParam.lowRes.pHeader) {
+        LOG(ERROR) << "Init Merge Failed: pHeader of highRes or lowRes is NULL!!!";
+        SAFE_DELETE(m_mergeStreamParam.highRes.pHeader);
+        SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader);
         return -1;
+    }
+
+    m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer = (uint8_t *)malloc(sliceSize);
+    m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer = (uint8_t *)malloc(100);
+
+    if (!m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer || !m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer) {
+        LOG(ERROR) << "Init Merge Failed: Tiled Bitstream Buffer of highRes or lowRes is not allocated!!!";
+        SAFE_DELETE(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
+        SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer);
+        SAFE_DELETE(m_mergeStreamParam.highRes.pHeader);
+        SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader);
+        return -1;
+    }
+
+    m_mergeStreamParam.highRes.pTiledBitstreams = (param_oneStream_info **)malloc(HR_ntile * sizeof(param_oneStream_info *));
+    if (!m_mergeStreamParam.highRes.pTiledBitstreams) {
+        LOG(ERROR) << "Init Merge Failed: Tiled Bitstreams of highRes is not allocated!!!";
+        SAFE_DELETE(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
+        SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer);
+        SAFE_DELETE(m_mergeStreamParam.highRes.pHeader);
+        SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader);
+        return -1;
+    }
+
     for (int32_t i = 0; i < HR_ntile; i++)
     {
         m_mergeStreamParam.highRes.pTiledBitstreams[i] = (param_oneStream_info *)malloc(sizeof(param_oneStream_info));
