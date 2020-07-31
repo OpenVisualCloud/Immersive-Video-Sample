@@ -75,6 +75,24 @@ VideoSegmentInfoGenerator::VideoSegmentInfoGenerator(
     }
 }
 
+VideoSegmentInfoGenerator::VideoSegmentInfoGenerator(const VideoSegmentInfoGenerator& src)
+{
+    m_bsBuffer = std::move(src.m_bsBuffer);
+    m_segmentationInfo = std::move(src.m_segmentationInfo);
+    m_streamIdx = src.m_streamIdx;
+    m_videoSegInfo = std::move(src.m_videoSegInfo);
+}
+
+VideoSegmentInfoGenerator& VideoSegmentInfoGenerator::operator=(VideoSegmentInfoGenerator&& other)
+{
+    m_bsBuffer = std::move(other.m_bsBuffer);
+    m_segmentationInfo = std::move(other.m_segmentationInfo);
+    m_streamIdx = other.m_streamIdx;
+    m_videoSegInfo = std::move(other.m_videoSegInfo);
+
+    return *this;
+}
+
 VideoSegmentInfoGenerator::~VideoSegmentInfoGenerator()
 {
     if (m_videoSegInfo)

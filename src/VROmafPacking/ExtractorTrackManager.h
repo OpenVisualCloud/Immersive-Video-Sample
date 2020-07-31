@@ -65,6 +65,10 @@ public:
     //!
     ExtractorTrackManager(InitialInfo *initInfo);
 
+    ExtractorTrackManager(const ExtractorTrackManager& src);
+
+    ExtractorTrackManager& operator=(ExtractorTrackManager&& other);
+
     //!
     //! \brief  Destructor
     //!

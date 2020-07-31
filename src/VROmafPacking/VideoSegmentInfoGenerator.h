@@ -86,6 +86,11 @@ public:
         uint8_t tileInRow,
         uint8_t tileInCol);
 
+
+    VideoSegmentInfoGenerator(const VideoSegmentInfoGenerator& src);
+
+    VideoSegmentInfoGenerator& operator=(VideoSegmentInfoGenerator&& other);
+
     //!
     //! \brief  Destructor
     //!

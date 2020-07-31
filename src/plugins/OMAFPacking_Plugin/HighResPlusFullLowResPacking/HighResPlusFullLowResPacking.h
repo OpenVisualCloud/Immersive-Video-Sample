@@ -53,6 +53,10 @@ public:
     //!
     HighPlusFullLowRegionWisePackingGenerator();
 
+    HighPlusFullLowRegionWisePackingGenerator(const HighPlusFullLowRegionWisePackingGenerator& src);
+
+    HighPlusFullLowRegionWisePackingGenerator& operator=(const HighPlusFullLowRegionWisePackingGenerator&) = default;
+
     //!
     //! \brief  Destructor
     //!

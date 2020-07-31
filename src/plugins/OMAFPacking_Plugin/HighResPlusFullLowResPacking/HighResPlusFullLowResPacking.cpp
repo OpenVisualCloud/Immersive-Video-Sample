@@ -74,6 +74,39 @@ HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGener
         return;
 }
 
+HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGenerator(
+    const HighPlusFullLowRegionWisePackingGenerator& src)
+{
+    m_highResWidth    = src.m_highResWidth;
+    m_highResHeight   = src.m_highResHeight;
+    m_lowResWidth     = src.m_lowResWidth;
+    m_lowResHeight    = src.m_lowResHeight;
+    m_packedPicWidth  = src.m_packedPicWidth;
+    m_packedPicHeight = src.m_packedPicHeight;
+    m_streamIdxInMedia[0] = src.m_streamIdxInMedia[0];
+    m_streamIdxInMedia[1] = src.m_streamIdxInMedia[1];
+    m_tilesNumInViewRow   = src.m_tilesNumInViewRow;
+    m_tileRowNumInView    = src.m_tileRowNumInView;
+
+    m_origHRTilesInRow    = src.m_origHRTilesInRow;
+    m_origHRTilesInCol    = src.m_origHRTilesInCol;
+    m_highTileWidth       = src.m_highTileWidth;
+    m_highTileHeight      = src.m_highTileHeight;
+    m_origLRTilesInRow    = src.m_origLRTilesInRow;
+    m_origLRTilesInCol    = src.m_origLRTilesInCol;
+    m_lowTileWidth        = src.m_lowTileWidth;
+    m_lowTileHeight       = src.m_lowTileHeight;
+
+    m_hrTilesInRow        = src.m_hrTilesInRow;
+    m_hrTilesInCol        = src.m_hrTilesInCol;
+    m_lrTilesInRow        = src.m_lrTilesInRow;
+    m_lrTilesInCol        = src.m_lrTilesInCol;
+
+    m_highResTilesInView  = std::move(src.m_highResTilesInView);
+
+    m_mergedTilesArrange  = std::move(src.m_mergedTilesArrange);
+}
+
 HighPlusFullLowRegionWisePackingGenerator::~HighPlusFullLowRegionWisePackingGenerator()
 {
     if (m_highResTilesInView)

@@ -49,6 +49,22 @@ ExtractorTrackManager::ExtractorTrackManager(InitialInfo *initInfo)
     m_streams  = NULL;
 }
 
+ExtractorTrackManager::ExtractorTrackManager(const ExtractorTrackManager& src)
+{
+    m_extractorTrackGen = std::move(src.m_extractorTrackGen);
+    m_initInfo = std::move(src.m_initInfo);
+    m_streams  = std::move(src.m_streams);
+}
+
+ExtractorTrackManager& ExtractorTrackManager::operator=(ExtractorTrackManager&& other)
+{
+    m_extractorTrackGen = std::move(other.m_extractorTrackGen);
+    m_initInfo = std::move(other.m_initInfo);
+    m_streams  = std::move(other.m_streams);
+
+    return *this;
+}
+
 ExtractorTrackManager::~ExtractorTrackManager()
 {
     DELETE_MEMORY(m_extractorTrackGen);

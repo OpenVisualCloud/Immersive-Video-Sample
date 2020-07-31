@@ -63,6 +63,29 @@ SingleVideoRegionWisePackingGenerator::SingleVideoRegionWisePackingGenerator()
         return;
 }
 
+SingleVideoRegionWisePackingGenerator::SingleVideoRegionWisePackingGenerator(
+    const SingleVideoRegionWisePackingGenerator& src)
+{
+
+    m_packedPicWidth  = src.m_packedPicWidth;
+    m_packedPicHeight = src.m_packedPicHeight;
+    m_streamIdxInMedia[0] = src.m_streamIdxInMedia[0];
+    m_tilesNumInViewRow   = src.m_tilesNumInViewRow;
+    m_tileRowNumInView    = src.m_tileRowNumInView;
+
+    m_origHRTilesInRow    = src.m_origHRTilesInRow;
+    m_origHRTilesInCol    = src.m_origHRTilesInCol;
+    m_highTileWidth       = src.m_highTileWidth;
+    m_highTileHeight      = src.m_highTileHeight;
+
+    m_hrTilesInRow        = src.m_hrTilesInRow;
+    m_hrTilesInCol        = src.m_hrTilesInCol;
+
+    m_origTilesInView     = std::move(src.m_origTilesInView);
+
+    m_mergedTilesArrange  = std::move(src.m_mergedTilesArrange);
+}
+
 SingleVideoRegionWisePackingGenerator::~SingleVideoRegionWisePackingGenerator()
 {
     if (m_origTilesInView)

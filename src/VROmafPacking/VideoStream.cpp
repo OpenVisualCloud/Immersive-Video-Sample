@@ -66,6 +66,66 @@ VideoStream::VideoStream()
     m_isEOS = false;
 }
 
+VideoStream::VideoStream(const VideoStream& src)
+{
+    m_streamIdx = src.m_streamIdx;
+    m_codecId = src.m_codecId;
+    m_width = src.m_width;
+    m_height = src.m_height;
+    m_tileInRow = src.m_tileInRow;
+    m_tileInCol = src.m_tileInCol;
+    m_tileRowsInFace = src.m_tileRowsInFace;
+    m_tileColsInFace = src.m_tileColsInFace;
+    m_tilesInfo = std::move(src.m_tilesInfo);
+    m_projType = src.m_projType;
+    memcpy_s(m_cubeMapInfo, CUBEMAP_FACES_NUM * sizeof(CubeMapFaceInfo), src.m_cubeMapInfo, CUBEMAP_FACES_NUM * sizeof(CubeMapFaceInfo));
+    m_frameRate.num = src.m_frameRate.num;
+    m_frameRate.den = src.m_frameRate.den;
+    m_bitRate = src.m_bitRate;
+
+    m_srcRwpk = std::move(src.m_srcRwpk);
+    m_srcCovi = std::move(src.m_srcCovi);
+
+    m_videoSegInfoGen = std::move(src.m_videoSegInfoGen);
+    m_currFrameInfo = std::move(src.m_currFrameInfo);
+
+    m_360scvpParam = std::move(src.m_360scvpParam);
+    m_360scvpHandle = std::move(src.m_360scvpHandle);
+    m_naluParser = std::move(src.m_naluParser);
+    m_isEOS = src.m_isEOS;
+}
+
+VideoStream& VideoStream::operator=(VideoStream&& other)
+{
+    m_streamIdx = other.m_streamIdx;
+    m_codecId = other.m_codecId;
+    m_width = other.m_width;
+    m_height = other.m_height;
+    m_tileInRow = other.m_tileInRow;
+    m_tileInCol = other.m_tileInCol;
+    m_tileRowsInFace = other.m_tileRowsInFace;
+    m_tileColsInFace = other.m_tileColsInFace;
+    m_tilesInfo = std::move(other.m_tilesInfo);
+    m_projType = other.m_projType;
+    memcpy_s(m_cubeMapInfo, CUBEMAP_FACES_NUM * sizeof(CubeMapFaceInfo), other.m_cubeMapInfo, CUBEMAP_FACES_NUM * sizeof(CubeMapFaceInfo));
+    m_frameRate.num = other.m_frameRate.num;
+    m_frameRate.den = other.m_frameRate.den;
+    m_bitRate = other.m_bitRate;
+
+    m_srcRwpk = std::move(other.m_srcRwpk);
+    m_srcCovi = std::move(other.m_srcCovi);
+
+    m_videoSegInfoGen = std::move(other.m_videoSegInfoGen);
+    m_currFrameInfo = std::move(other.m_currFrameInfo);
+
+    m_360scvpParam = std::move(other.m_360scvpParam);
+    m_360scvpHandle = std::move(other.m_360scvpHandle);
+    m_naluParser = std::move(other.m_naluParser);
+    m_isEOS = other.m_isEOS;
+
+    return *this;
+}
+
 VideoStream::~VideoStream()
 {
     if (m_srcRwpk)

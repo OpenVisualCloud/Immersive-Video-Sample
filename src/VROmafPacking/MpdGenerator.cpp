@@ -75,6 +75,40 @@ MpdGenerator::MpdGenerator(
     m_xmlDoc = NULL;
 }
 
+MpdGenerator::MpdGenerator(const MpdGenerator& src)
+{
+    m_streamSegCtx = std::move(src.m_streamSegCtx);
+    m_extractorSegCtx = std::move(src.m_extractorSegCtx);
+    m_segInfo = std::move(src.m_segInfo);
+    m_projType = src.m_projType;
+    m_miniUpdatePeriod = src.m_miniUpdatePeriod;
+    memset_s(m_availableStartTime, 1024, 0);
+    m_publishTime = std::move(src.m_publishTime);
+    m_presentationDur = std::move(src.m_presentationDur);
+    m_timeScale = src.m_timeScale;
+    m_xmlDoc = std::move(src.m_xmlDoc);
+    m_frameRate.num = src.m_frameRate.num;
+    m_frameRate.den = src.m_frameRate.den;
+}
+
+MpdGenerator& MpdGenerator::operator=(MpdGenerator&& other)
+{
+    m_streamSegCtx = std::move(other.m_streamSegCtx);
+    m_extractorSegCtx = std::move(other.m_extractorSegCtx);
+    m_segInfo = std::move(other.m_segInfo);
+    m_projType = other.m_projType;
+    m_miniUpdatePeriod = other.m_miniUpdatePeriod;
+    memset_s(m_availableStartTime, 1024, 0);
+    m_publishTime = std::move(other.m_publishTime);
+    m_presentationDur = std::move(other.m_presentationDur);
+    m_timeScale = other.m_timeScale;
+    m_xmlDoc = std::move(other.m_xmlDoc);
+    m_frameRate.num = other.m_frameRate.num;
+    m_frameRate.den = other.m_frameRate.den;
+
+    return *this;
+}
+
 MpdGenerator::~MpdGenerator()
 {
     DELETE_ARRAY(m_publishTime);

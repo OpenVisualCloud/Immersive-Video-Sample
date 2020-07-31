@@ -70,6 +70,10 @@ public:
     //!
     Segmentation(std::map<uint8_t, MediaStream*> *streams, ExtractorTrackManager *extractorTrackMan, InitialInfo *initInfo);
 
+    Segmentation(const Segmentation& src);
+
+    Segmentation& operator=(Segmentation&& other);
+
     //!
     //! \brief  Destructor
     //!
