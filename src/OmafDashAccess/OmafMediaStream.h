@@ -222,8 +222,6 @@ class OmafMediaStream {
 
   void SetNeedVideoParams(bool needParams) { m_needParams = needParams; };
 
-  void SetMutex() { mMutex.unlock(); };
-
   std::list<MediaPacket*> GetOutTilesMergedPackets();
 
   void Close();

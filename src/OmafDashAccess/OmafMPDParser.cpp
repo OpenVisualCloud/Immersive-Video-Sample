@@ -187,11 +187,12 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
   int ret = ERROR_NONE;
   uint32_t allExtractorCnt = 0;
   std::map<std::string, OmafMediaStream*> streamsMap;
+  OmafMediaStream* pStream = NULL;
   for (auto it = mapAdaptationSets.begin(); it != mapAdaptationSets.end(); it++) {
     OMAFADAPTATIONSETS ASs = it->second;
     std::string type = it->first;
 
-    OmafMediaStream* pStream = new OmafMediaStream();
+    pStream = new OmafMediaStream();
     auto mainASit = ASs.begin();
 
     for (auto as_it = ASs.begin(); as_it != ASs.end(); as_it++) {
@@ -202,7 +203,6 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
           OmafExtractor* tmpOmafAs = (OmafExtractor*)pOmafAs;
           pStream->AddExtractor(tmpOmafAs);
           pStream->SetExtratorAdaptationSet(tmpOmafAs);
-          pStream->SetMutex();
         }
       } else {
         pStream->AddAdaptationSet(pOmafAs);
@@ -211,7 +211,6 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
           pStream->SetMainAdaptationSet(pOmafAs);
           mainASit = as_it;
         }
-        pStream->SetMutex();
       }
     }
 
@@ -222,7 +221,7 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
 
     // remove main AS from AdaptationSets for it has no real data
     ASs.erase(mainASit);
-    pStream->SetMutex();
+
     streamsMap.insert(std::make_pair(type, pStream));
   }
   LOG(INFO) << "allExtractorCnt" << allExtractorCnt << endl;
