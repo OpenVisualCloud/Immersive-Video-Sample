@@ -202,6 +202,7 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
           OmafExtractor* tmpOmafAs = (OmafExtractor*)pOmafAs;
           pStream->AddExtractor(tmpOmafAs);
           pStream->SetExtratorAdaptationSet(tmpOmafAs);
+          pStream->SetMutex();
         }
       } else {
         pStream->AddAdaptationSet(pOmafAs);
@@ -210,6 +211,7 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
           pStream->SetMainAdaptationSet(pOmafAs);
           mainASit = as_it;
         }
+        pStream->SetMutex();
       }
     }
 
@@ -220,7 +222,7 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
 
     // remove main AS from AdaptationSets for it has no real data
     ASs.erase(mainASit);
-
+    pStream->SetMutex();
     streamsMap.insert(std::make_pair(type, pStream));
   }
   LOG(INFO) << "allExtractorCnt" << allExtractorCnt << endl;
