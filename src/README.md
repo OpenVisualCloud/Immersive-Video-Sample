@@ -23,7 +23,7 @@ The Immersive Video Delivery Reference solution contains below components:
 -  [OMAF Dash Access Library](doc/Immersive_Video_Delivery_DashAccess.md)
 -  [360 Video Processing Library](doc/Immersive_Video_Delivery_360SCVP.md)
 -  [Reference OMAF Player](doc/Immersive_Video_Delivery_RefPlayer.md)
--  FFMPEG Plugins
+-  [FFMPEG Plugins](doc/Immersive_Video_Delivery_FFmpeg_usage.md)
 -  Documents
 
 # System requirements

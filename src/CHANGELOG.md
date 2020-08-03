@@ -1,5 +1,37 @@
 # **Changelog**
 ---
+## [1.2.0] - 2020-8-14
+**Features & bug fix:**
+- OMAF Packing Library
+   + Support late-binding mode, option for extractor track generation
+   + Support packing for cube-map projection in late-binding mode
+   + Optimize tile partition for extractor generation
+   + Plugin mode to support customized packing method
+   + bug fix: memory leak, hang / crash in some condition
+
+- OMAF Dash Access Library
+   + Support late-binding mode: tile-selection and bit-stream rewriting in client side
+   + Support cube-map projection in late-binding mode
+   + Enable NDK cross-compiling, Add JNI support for Dash Access API
+   + Optimization of downloading and segmentation parsing for fault-tolerance and stability
+   + Plugin mode to support customized FOV sequence operation
+
+- 360SCVP (Stream Concatenation and Viewport Processing) Library
+   + Support Cube-map projection: tile processing and viewport processing
+   + optimization for tile selection to improve performance and accuracy
+
+- Reference OMAF Player
+   + Support Cube-map projection
+   + Support multiple video streams decoding and tile rendering
+   + Code refactor
+
+- FFmpeg Plugins & Encoder Library
+   + Encoder Library: Enable local session support to improve performance
+   + Encoder Library: Bug fix for memory leak, resource release, share memory usage, call mechanism, etc.
+   + FFmpeg Plugins: add option for Cube-map projection support
+   + FFmpeg Plugins: add option for late-binding support
+
+---
 ## [1.0.0] - 2020-01-13   
 **Features:** 
 - OMAF Packing Library
@@ -16,7 +48,7 @@
    + Support OMAF-compliant metadata parsing;
    + Support HTTPS/HTTP;
 
--  360 Video Processing Library
+-  360SCVP (Stream Concatenation and Viewport Processing) Library
    + Provide a unify interface to process tile-based HEVC bitstream processing and viewport-based Content Processing;
    + Support HEVC bitstream processing: VPS/SPS/PPS parsing and generating, 360Video-relative SEI Generating and parsing, HEVC tile-based bitstream aggregation;
    + Support Viewport generation, viewport-based tile selection and extractor selection based on content coverage;
@@ -31,8 +63,8 @@
 -  FFMPEG Plugins
    + Demux plugin with OMAF Dash accessing support;
    + Multiplexing plugin with OMAF Packing library support;
+   + SVT encoder support
 
 **Know Issues:**
--  Cube-map projection format hasn't been support yet;
 -  Audio segmentation hasn't been support yet;
 ---
