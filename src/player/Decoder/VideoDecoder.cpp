@@ -458,8 +458,8 @@ DecodedFrame* VideoDecoder::GetFrame(uint64_t pts)
         }
         // drop over time frame.
         frame = mDecCtx->pop_frame();
-        LOG(ERROR)<<"Now will drop one frame since pts is over time!"<<endl;
-        av_free(frame->av_frame);
+        LOG(INFO)<<"Now will drop one frame since pts is over time! input pts is:" << pts <<" frame pts is:" << frame->pts<<"video id is:" << mVideoId<<endl;
+        av_frame_free(&frame->av_frame);
         if (frame->rwpk)
             SAFE_DELETE_ARRAY(frame->rwpk->rectRegionPacking);
         SAFE_DELETE(frame->rwpk);
