@@ -498,7 +498,7 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
 
         FillDstContentCoverage(i, extractorTrack->GetCovi());
 
-        extractorTrackMap.insert(std::make_pair(i, extractorTrack));
+        extractorTrackMap.insert(std::make_pair(i, std::move(extractorTrack)));
     }
 
     int32_t ret = GenerateNewSPS();

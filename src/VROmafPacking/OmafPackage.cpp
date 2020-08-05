@@ -105,7 +105,7 @@ int32_t OmafPackage::AddMediaStream(uint8_t streamIdx, BSBuffer *bs)
 
         vs->Initialize(streamIdx, bs, m_initInfo);
 
-        m_streams.insert(std::make_pair(streamIdx, (MediaStream*)vs));
+        m_streams.insert(std::make_pair(streamIdx, std::move((MediaStream*)vs)));
     } else if (bs->mediaType == AUDIOTYPE) {
         AudioStream *as = new AudioStream();
         if (!as)
