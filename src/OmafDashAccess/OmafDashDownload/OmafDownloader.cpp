@@ -65,7 +65,10 @@ class OmafDashSegmentHttpClientPerf;
 class OmafDashSegmentHttpClientImpl : public OmafDashSegmentHttpClient {
  public:
   OmafDashSegmentHttpClientImpl(long max_parallel_transfers = DEFAULT_MAX_PARALLEL_TRANSFERS)
-      : max_parallel_transfers_(max_parallel_transfers){};
+      : max_parallel_transfers_(max_parallel_transfers)
+       {
+         tmpMultiDownloader_ = nullptr;
+       };
 
   virtual ~OmafDashSegmentHttpClientImpl() { stop(); };
 
@@ -114,6 +117,7 @@ class OmafDashSegmentHttpClientImpl : public OmafDashSegmentHttpClient {
   bool bworking_ = false;
 
   std::unique_ptr<OmafDashSegmentHttpClientPerf> perf_stats_;
+  OmafCurlMultiDownloader *tmpMultiDownloader_;
 };
 
 class OmafDashSegmentHttpClientPerf : public VCD::NonCopyable {
@@ -168,7 +172,9 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::start() noexcept {
     curl_global_init(CURL_GLOBAL_ALL);
 
     // 1. create the multi downloader
-    segment_downloader_.reset(new OmafCurlMultiDownloader);
+    tmpMultiDownloader_ = new OmafCurlMultiDownloader;
+    if (tmpMultiDownloader_ == NULL) return ERROR_INVALID;
+    segment_downloader_.reset(tmpMultiDownloader_);
     if (segment_downloader_.get() == nullptr) {
       LOG(ERROR) << "Failed to create the curl multi downloader!" << std::endl;
       return ERROR_INVALID;
@@ -231,6 +237,7 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::stop() noexcept {
     }
 
     curl_global_cleanup();
+    tmpMultiDownloader_ = nullptr;
     LOG(INFO) << "Success to stop the dash client!" << std::endl;
     return ERROR_NONE;
   } catch (const std::exception &ex) {

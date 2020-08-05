@@ -198,7 +198,7 @@ class OmafCurlEasyDownloaderPool : public VCD::NonCopyable {
   void params(const CurlParams &params) noexcept { curl_params_ = params; }
 
  private:
-  const int32_t max_downloader_;
+  int32_t max_downloader_;
   int32_t downloader_count_ = 0;
   CurlParams curl_params_;
   std::mutex easy_downloader_pool_mutex_;

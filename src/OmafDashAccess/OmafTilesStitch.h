@@ -259,6 +259,8 @@ private:
 
   std::list<MediaPacket *>
       m_outMergedStream;  //<! the list of output tiles merged video stream, one stream one MediaPacket
+
+  RectangularRegionWisePacking* m_tmpRegionrwpk;
 };
 
 VCD_OMAF_END;
