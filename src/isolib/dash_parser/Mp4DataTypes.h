@@ -276,6 +276,8 @@ struct MediaCodecSpecInfo
 {
     MediaCodecInfoType codecSpecInfoType;
     VarLenArray<uint8_t> codecSpecInfoBits;
+
+    MediaCodecSpecInfo() : codecSpecInfoType(HEVC_VPS) {};
 };
 
 struct TStampID
@@ -373,6 +375,10 @@ struct TrackInformation
     RatValue frameRate;
     bool hasTypeInformation;
     TrackTypeInformation type;
+
+    TrackInformation() :
+        initSegmentId(0), trackId(0), alternateGroupId(0), features(0),
+        vrFeatures(0), timeScale(1), hasTypeInformation(false) {};
 };
 
 struct SegInfo

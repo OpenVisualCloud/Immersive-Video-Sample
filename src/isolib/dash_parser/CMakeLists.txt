@@ -5,7 +5,10 @@ PROJECT(dashparser)
 AUX_SOURCE_DIRECTORY(../atoms DIR_DASHPARSER_SRCS)
 AUX_SOURCE_DIRECTORY(. DIR_DASHPARSER_SRCS)
 
-ADD_DEFINITIONS("-g -c -fPIC -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0")
+ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0
+                 -z noexecstack -z relro -z now -fstack-protector-strong
+                 -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat
+                 -Wformat-security -Wl,-S -Wall -Werror")
 
 INCLUDE_DIRECTORIES(/usr/local/include ../include ../atoms)
 

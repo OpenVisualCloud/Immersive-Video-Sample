@@ -185,11 +185,13 @@ UniquePtr<T> CloneAtom(const T& srcAtom)
     dstAtom->FromStream(bs);
     return dstAtom;
 }
-
-unique_ptr<MediaHeaderBoxWrapper> GenMediaHeaderAtom(FileInfo inFileInfo,
-                                                   FractU64 timeScale)
+/*
+void GenMediaHeaderAtom(
+    UniquePtr<MediaHeaderAtom> box,
+    FileInfo inFileInfo,
+    FractU64 timeScale)
 {
-    UniquePtr<MediaHeaderAtom> box = MakeUnique<MediaHeaderAtom, MediaHeaderAtom>();
+    //UniquePtr<MediaHeaderAtom> box = MakeUnique<MediaHeaderAtom, MediaHeaderAtom>();
 
     uint64_t creationTime     = inFileInfo.creationTime;
     uint64_t modificationTime = inFileInfo.modificationTime;
@@ -199,9 +201,10 @@ unique_ptr<MediaHeaderBoxWrapper> GenMediaHeaderAtom(FileInfo inFileInfo,
     box->SetModificationTime(modificationTime);
     box->SetDuration(uint32_t((duration / timeScale).asDouble()));
 
-    return MakeUnique<MediaHeaderBoxWrapper>(move(box));
+    return;
+    //return MakeUnique<MediaHeaderBoxWrapper>(move(box));
 }
-
+*/
 void FillTrackHeaderAtom(TrackHeaderAtom& theaAtom, const FileInfo& fileInfo)
 {
     uint64_t creationTime     = fileInfo.creationTime;
@@ -697,9 +700,26 @@ TrackDescription::TrackDescription(TrackMeta inTrackMeta,
     : trackMeta(inTrackMeta)
 {
     sampleEntryBoxes.push_back(inSmpEty.GenSampleEntryBox());
-    mediaHeaderBox = GenMediaHeaderAtom(inFileInfo, inTrackMeta.timescale);
-    handlerBox     = inSmpEty.GenHandlerBox();
-    trackHeaderBox = MakeUnique<TrackHeaderBoxWrapper>(MakeUnique<TrackHeaderAtom, TrackHeaderAtom>());
+    UniquePtr<MediaHeaderAtom> box = MakeUnique<MediaHeaderAtom, MediaHeaderAtom>();
+    //GenMediaHeaderAtom(box, inFileInfo, inTrackMeta.timescale);
+    FractU64 timeScale = inTrackMeta.timescale;
+    uint64_t creationTime     = inFileInfo.creationTime;
+    uint64_t modificationTime = inFileInfo.modificationTime;
+    FractU64 duration           = inFileInfo.duration;
+    box->SetTimeScale(uint32_t(timeScale.per1().asDouble()));
+    box->SetCreationTime(creationTime);
+    box->SetModificationTime(modificationTime);
+    box->SetDuration(uint32_t((duration / timeScale).asDouble()));
+    mediaHeaderBox = MakeUnique<MediaHeaderBoxWrapper>(move(box));//GenMediaHeaderAtom(inFileInfo, inTrackMeta.timescale);
+
+    //handlerBox     = inSmpEty.GenHandlerBox();
+    UniquePtr<HandlerAtom> handlerAtom = MakeUnique<HandlerAtom, HandlerAtom>();
+    handlerAtom->SetHandlerType("vide");
+    handlerAtom->SetName("VideoHandler");
+    handlerBox = MakeUnique<HandlerBoxWrapper>(move(handlerAtom));
+
+    UniquePtr<TrackHeaderAtom> thead = MakeUnique<TrackHeaderAtom, TrackHeaderAtom>();
+    trackHeaderBox = MakeUnique<TrackHeaderBoxWrapper>(move(thead));
     trackHeaderBox->trackHeaderBox->SetTrackID(inTrackMeta.trackId.GetIndex());
     trackHeaderBox->trackHeaderBox->SetWidth(inSmpEty.GetWidthFP());
     trackHeaderBox->trackHeaderBox->SetHeight(inSmpEty.GetHeightFP());

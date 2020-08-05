@@ -48,11 +48,12 @@ SampleEntryAtom::SampleEntryAtom(FourCCInt codingname)
 SampleEntryAtom::SampleEntryAtom(const SampleEntryAtom& atom)
     : Atom(atom.GetType())
     , m_dataReferenceIndex(atom.m_dataReferenceIndex)
+    , m_restrictedSchemeInfoAtom(nullptr)
 {
     if (atom.m_restrictedSchemeInfoAtom)
     {
-        m_restrictedSchemeInfoAtom =
-            MakeUnique<RestrictedSchemeInfoAtom, RestrictedSchemeInfoAtom>(*atom.m_restrictedSchemeInfoAtom);
+        UniquePtr<RestrictedSchemeInfoAtom> box = MakeUnique<RestrictedSchemeInfoAtom, RestrictedSchemeInfoAtom>(*atom.m_restrictedSchemeInfoAtom);
+        m_restrictedSchemeInfoAtom = move(box);
     }
 }
 
