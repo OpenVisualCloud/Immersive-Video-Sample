@@ -409,8 +409,8 @@ RegionWisePackingAtom::Region::Region(const Region& region)
 {
     if (packingType == PackingType::RECTANGULAR)
     {
-        rectangularPacking =
-            MakeUnique<RectangularRegionWisePacking, RectangularRegionWisePacking>(*region.rectangularPacking);
+        UniquePtr<RectangularRegionWisePacking> box = MakeUnique<RectangularRegionWisePacking, RectangularRegionWisePacking>(*region.rectangularPacking);
+        rectangularPacking = move(box);
     }
 }
 

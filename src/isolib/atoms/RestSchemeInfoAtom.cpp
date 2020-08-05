@@ -312,7 +312,7 @@ void RestrictedSchemeInfoAtom::ToStream(Stream& str)
         str.WriteStream(subStream);
     }
 
-    if (m_schemeTypeAtom->GetSchemeType() == "podv")
+    if (m_schemeTypeAtom && (m_schemeTypeAtom->GetSchemeType() == "podv"))
     {
         Stream povdStream;
         m_projectedOmniVideoAtom->ToStream(povdStream);
@@ -427,7 +427,7 @@ void RestrictedSchemeInfoAtom::SetOriginalFormat(FourCCInt origFormat)
 {
     if (!m_originalFormatAtom)
     {
-        m_originalFormatAtom = MakeUnique<OriginalFormatAtom, OriginalFormatAtom>();
+        m_originalFormatAtom = move(MakeUnique<OriginalFormatAtom, OriginalFormatAtom>());
     }
 
     m_originalFormatAtom->SetOriginalFormat(origFormat);
