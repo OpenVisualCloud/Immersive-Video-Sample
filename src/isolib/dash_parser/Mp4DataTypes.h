@@ -378,7 +378,7 @@ struct TrackInformation
 
     TrackInformation() :
         initSegmentId(0), trackId(0), alternateGroupId(0), features(0),
-        vrFeatures(0), timeScale(1), hasTypeInformation(false) {};
+        vrFeatures(0), maxSampleSize(0), timeScale(1), hasTypeInformation(false) {};
 };
 
 struct SegInfo
