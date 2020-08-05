@@ -710,16 +710,15 @@ TrackDescription::TrackDescription(TrackMeta inTrackMeta,
     box->SetCreationTime(creationTime);
     box->SetModificationTime(modificationTime);
     box->SetDuration(uint32_t((duration / timeScale).asDouble()));
-    mediaHeaderBox = MakeUnique<MediaHeaderBoxWrapper>(move(box));//GenMediaHeaderAtom(inFileInfo, inTrackMeta.timescale);
+    mediaHeaderBox = move(MakeUnique<MediaHeaderBoxWrapper>(move(box)));//GenMediaHeaderAtom(inFileInfo, inTrackMeta.timescale);
 
     //handlerBox     = inSmpEty.GenHandlerBox();
-    UniquePtr<HandlerAtom> handlerAtom = MakeUnique<HandlerAtom, HandlerAtom>();
-    handlerAtom->SetHandlerType("vide");
-    handlerAtom->SetName("VideoHandler");
-    handlerBox = MakeUnique<HandlerBoxWrapper>(move(handlerAtom));
+    handlerBox = move(MakeUnique<HandlerBoxWrapper>(MakeUnique<HandlerAtom, HandlerAtom>()));
+    handlerBox->handlerBox->SetHandlerType("vide");
+    handlerBox->handlerBox->SetName("VideoHandler");
 
     UniquePtr<TrackHeaderAtom> thead = MakeUnique<TrackHeaderAtom, TrackHeaderAtom>();
-    trackHeaderBox = MakeUnique<TrackHeaderBoxWrapper>(move(thead));
+    trackHeaderBox = move(MakeUnique<TrackHeaderBoxWrapper>(move(thead)));
     trackHeaderBox->trackHeaderBox->SetTrackID(inTrackMeta.trackId.GetIndex());
     trackHeaderBox->trackHeaderBox->SetWidth(inSmpEty.GetWidthFP());
     trackHeaderBox->trackHeaderBox->SetHeight(inSmpEty.GetHeightFP());
