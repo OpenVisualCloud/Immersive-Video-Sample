@@ -196,6 +196,7 @@ void OmafMP4VRReader::SelectedTrackInfos(std::vector<VCD::OMAF::TrackInformation
       }
     }
   } else {
+    std::vector<TrackInformation*> clearTrackInfoArr;
     for (auto itTrack = middleTrackInfos.begin(); itTrack != middleTrackInfos.end(); itTrack++) {
       TrackInformation* track = *itTrack;
       if (!track) continue;
@@ -217,13 +218,18 @@ void OmafMP4VRReader::SelectedTrackInfos(std::vector<VCD::OMAF::TrackInformation
         }
 
         if (itTrack2 != middleTrackInfos.end()) {
-          SAFE_DELETE(track);
+          clearTrackInfoArr.push_back(track);
           continue;
         } else {
           trackInfos.push_back(track);
         }
       }
     }
+    for (uint32_t i = 0; i < clearTrackInfoArr.size(); i++)
+    {
+      SAFE_DELETE(clearTrackInfoArr[i]);
+    }
+    clearTrackInfoArr.clear();
   }
 }
 

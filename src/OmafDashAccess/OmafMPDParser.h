@@ -149,6 +149,8 @@ private:
   std::string mCacheDir;           //!< cache directory
   bool mExtractorEnabled = false;  //!< if extractor track is enabled
   OmafDashParams omaf_dash_params_;
+  OmafAdaptationSet *mTmpAS;
+  OmafMediaStream* mTmpStream;
 };
 
 VCD_OMAF_END;

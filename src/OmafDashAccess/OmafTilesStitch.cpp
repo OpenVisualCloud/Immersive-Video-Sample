@@ -48,6 +48,7 @@ OmafTilesStitch::OmafTilesStitch() {
   m_needHeaders = false;
   m_isInitialized = false;
   m_projFmt = PF_UNKNOWN;
+  m_tmpRegionrwpk = nullptr;
 }
 
 OmafTilesStitch::~OmafTilesStitch() {
@@ -150,6 +151,7 @@ OmafTilesStitch::~OmafTilesStitch() {
     }
     m_mergedVideoHeaders.clear();
   }
+  m_tmpRegionrwpk = nullptr;
 }
 
 int32_t OmafTilesStitch::Initialize(std::map<uint32_t, MediaPacket *> &firstFramePackets, bool needParams,
@@ -641,11 +643,12 @@ std::unique_ptr<RegionWisePacking> OmafTilesStitch::CalculateMergedRwpkForERP(Qu
   rwpk->packedPicWidth = width;
   rwpk->packedPicHeight = height;
 
-  rwpk->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
-  if (!(rwpk->rectRegionPacking)) {
-    // SAFE_DELETE(rwpk);
+  m_tmpRegionrwpk = new RectangularRegionWisePacking[rwpk->numRegions];
+  if (!m_tmpRegionrwpk) {
     return nullptr;
   }
+  rwpk->rectRegionPacking = m_tmpRegionrwpk;
+  //rwpk->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
   memset_s(rwpk->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking), 0);
 
   uint8_t regIdx = 0;
@@ -788,11 +791,12 @@ std::unique_ptr<RegionWisePacking> OmafTilesStitch::CalculateMergedRwpkForCubeMa
   rwpk->packedPicWidth = width;
   rwpk->packedPicHeight = height;
 
-  rwpk->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
-  if (!(rwpk->rectRegionPacking)) {
-    // SAFE_DELETE(rwpk);
-    return NULL;
+  m_tmpRegionrwpk = new RectangularRegionWisePacking[rwpk->numRegions];
+  if (!m_tmpRegionrwpk) {
+    return nullptr;
   }
+  rwpk->rectRegionPacking = m_tmpRegionrwpk;
+  //rwpk->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
   memset_s(rwpk->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking), 0);
 
   uint8_t regIdx = 0;
