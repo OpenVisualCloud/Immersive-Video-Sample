@@ -45,6 +45,7 @@ OmafPackage::OmafPackage()
     m_extractorTrackMan = NULL;
     m_isSegmentationStarted = false;
     m_threadId = 0;
+    m_videoStream = NULL;
 }
 
 OmafPackage::OmafPackage(const OmafPackage& src)
@@ -54,6 +55,7 @@ OmafPackage::OmafPackage(const OmafPackage& src)
     m_extractorTrackMan = std::move(src.m_extractorTrackMan);
     m_isSegmentationStarted = src.m_isSegmentationStarted;
     m_threadId = src.m_threadId;
+    m_videoStream = NULL;
 }
 
 OmafPackage& OmafPackage::operator=(OmafPackage&& other)
@@ -63,6 +65,7 @@ OmafPackage& OmafPackage::operator=(OmafPackage&& other)
     m_extractorTrackMan = std::move(other.m_extractorTrackMan);
     m_isSegmentationStarted = other.m_isSegmentationStarted;
     m_threadId = other.m_threadId;
+    m_videoStream = NULL;
 
     return *this;
 }
@@ -85,6 +88,7 @@ OmafPackage::~OmafPackage()
         m_streams.erase(it++);
     }
     m_streams.clear();
+    m_videoStream = NULL;
 }
 
 int32_t OmafPackage::AddMediaStream(uint8_t streamIdx, BSBuffer *bs)
@@ -97,15 +101,16 @@ int32_t OmafPackage::AddMediaStream(uint8_t streamIdx, BSBuffer *bs)
 
     if (bs->mediaType == VIDEOTYPE)
     {
-        VideoStream *vs = new VideoStream();
-        if (!vs)
+        m_videoStream = new VideoStream();
+        if (!m_videoStream)
             return OMAF_ERROR_NULL_PTR;
 
-        ((MediaStream*)vs)->SetMediaType(VIDEOTYPE);
+        ((MediaStream*)m_videoStream)->SetMediaType(VIDEOTYPE);
 
-        vs->Initialize(streamIdx, bs, m_initInfo);
+        m_videoStream->Initialize(streamIdx, bs, m_initInfo);
 
-        m_streams.insert(std::make_pair(streamIdx, std::move((MediaStream*)vs)));
+        m_streams.insert(std::make_pair(streamIdx, (MediaStream*)m_videoStream));
+        m_videoStream = NULL;
     } else if (bs->mediaType == AUDIOTYPE) {
         AudioStream *as = new AudioStream();
         if (!as)

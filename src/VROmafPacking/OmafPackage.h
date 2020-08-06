@@ -168,6 +168,7 @@ private:
     std::map<uint8_t, MediaStream*> m_streams;                 //!< the media streams map
     bool                            m_isSegmentationStarted;   //!< whether the segmentation thread is started
     pthread_t                       m_threadId;                //!< thread index of segmentation thread
+    VideoStream                     *m_videoStream;
 };
 
 VCD_NS_END;
