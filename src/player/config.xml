@@ -4,7 +4,7 @@
     <windowWidth>960</windowWidth>
     <windowHeight>960</windowHeight>
     <!-- Resource URL, can be remote or local -->
-    <url>http://10.67.119.41:8080/OMAF_Live/Test.mpd</url>
+    <url>http://xxx.xxx.xxx.xxx:xxx/OMAFLive_8k/Test.mpd</url>
     <!-- sourceType 0 is for DashSource 1 is for LocalSource -->
     <sourceType>0</sourceType>
     <!-- decoderType 0 is for software decode 1 is for hardware decode -->
@@ -32,5 +32,5 @@
      <!-- <plugin>libViewportPredict_LR.so</plugin>
      <path>../plugins/ViewportPredict_Plugin/predict_LR/</path> -->
     </predict>
-    <!-- attention! in R1 version, supported case of sourceType/decoderType/contextType/useDMABuffer is 0/0/0/0 -->
+    <!-- attention! in R1/R2 version, supported case of sourceType/decoderType/contextType/useDMABuffer is 0/0/0/0 -->
 </info>
