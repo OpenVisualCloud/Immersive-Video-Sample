@@ -9,6 +9,22 @@ cd android-ndk-r18b
 #NDK path
 NDK_r18b_PATH=${PWD}
 cd ../
+#safestring
+if [ ! -d "./safestringlib" ] ; then
+    git clone https://github.com/intel/safestringlib.git
+fi
+
+cd safestringlib
+if [ ! -d "./build" ];then
+    mkdir build
+fi
+cd build
+cmake .. -DBUILD_SHARED_LIBS=ON -DDEBUG=NO -DCMAKE_TOOLCHAIN_FILE=$NDK_r18b_PATH/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_TOOLCHAIN=aarch64-linux-android-4.9 -DANDROID_PLATFORM=android-21 -DANDROID_STD=c++_shared
+make -j $(nproc) -f Makefile
+sudo cp libsafestring_shared.so /usr/local/lib/
+sudo mkdir -p /usr/local/include/safestringlib/
+sudo cp ../include/* /usr/local/include/safestringlib/
+cd ../..
 #glog
 if [ ! -d "./glog" ];then
     git clone https://github.com/google/glog.git
