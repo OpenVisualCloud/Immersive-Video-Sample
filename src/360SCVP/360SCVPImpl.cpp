@@ -346,10 +346,6 @@ int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t slic
             free(m_mergeStreamParam.lowRes.pHeader);
             m_mergeStreamParam.lowRes.pHeader = NULL;
         }
-        //SAFE_DELETE(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
-        //SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer);
-        //SAFE_DELETE(m_mergeStreamParam.highRes.pHeader);
-        //SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader);
         return -1;
     }
 
@@ -387,10 +383,9 @@ int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t slic
                 }
             }
 
-            if (m_mergeStreamParam.highRes.pTiledBitstreams) {
-                free(m_mergeStreamParam.highRes.pTiledBitstreams);
-                m_mergeStreamParam.highRes.pTiledBitstreams = NULL;
-            }
+            free(m_mergeStreamParam.highRes.pTiledBitstreams);
+            m_mergeStreamParam.highRes.pTiledBitstreams = NULL;
+
             if (m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer) {
                 free(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
                 m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer = NULL;
@@ -459,11 +454,8 @@ int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t slic
                 }
             }
 
-            if (m_mergeStreamParam.lowRes.pTiledBitstreams)
-            {
-                free(m_mergeStreamParam.lowRes.pTiledBitstreams);
-                m_mergeStreamParam.lowRes.pTiledBitstreams = NULL;
-            }
+            free(m_mergeStreamParam.lowRes.pTiledBitstreams);
+            m_mergeStreamParam.lowRes.pTiledBitstreams = NULL;
 
             if (m_mergeStreamParam.highRes.pTiledBitstreams)
             {

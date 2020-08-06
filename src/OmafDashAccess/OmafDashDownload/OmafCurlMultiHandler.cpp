@@ -54,7 +54,7 @@ OMAF_STATUS OmafCurlMultiDownloader::init(const CurlParams& p, OmafDownloadTask:
     curl_multi_setopt(curl_multi_, CURLMOPT_MAXCONNECTS, max_parallel_ << 1);
 
     // 3. create the easy downloader pool
-    downloader_pool_ = make_unique_vcd<OmafCurlEasyDownloaderPool>(max_parallel_ << 1);
+    downloader_pool_ = std::move(make_unique_vcd<OmafCurlEasyDownloaderPool>(max_parallel_ << 1));
     if (downloader_pool_ == NULL) {
       LOG(ERROR) << "Failed to create the downloader pool!" << std::endl;
       return ERROR_NULL_PTR;
