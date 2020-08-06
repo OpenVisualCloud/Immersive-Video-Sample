@@ -104,12 +104,12 @@ RenderStatus ERPRenderTarget::CreateRenderTarget()
 
     if (renderBackend->CheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
-        printf("glCheckFramebufferStatus not complete\n");
+        LOG(ERROR) << "glCheckFramebufferStatus not complete" << endl;
         return RENDER_ERROR;
     }
     else
     {
-        printf("glCheckFramebufferStatus complete\n");
+        LOG(INFO) << "glCheckFramebufferStatus complete" << endl;
     }
 
     return RENDER_STATUS_OK;

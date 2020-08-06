@@ -171,7 +171,8 @@ class OmafAdaptationSet {
       switch (rank) {
         case 1:
           return HIGHEST_QUALITY_RANKING;
-
+        case 2:
+          return NORMAL_QUALITY_RANKING;
         default:
           return INVALID_QUALITY_RANKING;
       }

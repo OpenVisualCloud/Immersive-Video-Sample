@@ -271,6 +271,14 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     std::map<int, OmafAdaptationSet*>::iterator itAS;
 
     // insert all tile tracks in viewport into selected tile tracks map
+    uint32_t sqrtedSize = (uint32_t)sqrt(selectedTilesNum);
+    while(sqrtedSize && selectedTilesNum%sqrtedSize) { sqrtedSize--; }
+    bool needAddtionalTile = false;
+    if (sqrtedSize == 1) // selectedTilesNum is prime number
+    {
+        LOG(INFO) <<"need additional tile is true! original selected tile num of high quality is " << selectedTilesNum << endl;
+        needAddtionalTile = true;
+    }
     if (mProjFmt == ProjectionFormat::PF_ERP)
     {
         for (int32_t index = 0; index < selectedTilesNum; index++)
@@ -297,20 +305,11 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     }
     else if (mProjFmt == ProjectionFormat::PF_CUBEMAP)
     {
-        uint32_t sqrtedSize = (uint32_t)sqrt(selectedTilesNum);
-        while(sqrtedSize && selectedTilesNum%sqrtedSize) { sqrtedSize--; }
-        bool needAddtionalTile = false;
-        if (sqrtedSize == 1) // selectedTilesNum is prime number
-        {
-            LOG(INFO) <<"need additional tile is true!"<<endl;
-            needAddtionalTile = true;
-        }
         for (int32_t index = 0; index < selectedTilesNum; index++)
         {
             int32_t left = tilesInViewport[index].x;
             int32_t top  = tilesInViewport[index].y;
             int32_t faceId = tilesInViewport[index].faceId;
-            printf("In OmafDashAccess, selected tile x %d, y %d, faceId %d \n", left, top, faceId);
             for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
             {
                 OmafAdaptationSet *adaptationSet = itAS->second;
@@ -334,25 +333,24 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
                     if ((tileLeft == left) && (tileTop == top) && (tileFaceId == faceId))
                     {
                         int trackID = adaptationSet->GetID();
-                        printf("Selected tile track id is %d \n", trackID);
                         selectedTracks.insert(make_pair(trackID, adaptationSet));
                         break;
                     }
                 }
             }
         }
-        if (needAddtionalTile)
+    }
+    if (needAddtionalTile)
+    {
+        for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
         {
-            for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+            OmafAdaptationSet *adaptationSet = itAS->second;
+            uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
+            int trackID = adaptationSet->GetID();
+            if (selectedTracks.find(trackID) == selectedTracks.end() && qualityRanking == HIGHEST_QUALITY_RANKING)
             {
-                OmafAdaptationSet *adaptationSet = itAS->second;
-                uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
-                int trackID = adaptationSet->GetID();
-                if (selectedTracks.find(trackID) == selectedTracks.end() && qualityRanking == HIGHEST_QUALITY_RANKING)
-                {
-                    selectedTracks.insert(make_pair(trackID, adaptationSet));
-                    break;
-                }
+                selectedTracks.insert(make_pair(trackID, adaptationSet));
+                break;
             }
         }
     }
