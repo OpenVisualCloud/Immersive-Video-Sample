@@ -6,10 +6,13 @@ Dash Access library is a client library for accessing the tiled-based viewport-d
 - Tile-based MP4 segmentation downloading and parsing
 - Viewport-based Tile-set Selection
 - OMAF-Compliant Metadata parsing
+- Tiles stitching to reconstruct multiple video streams based on viewport when there is no extractor track enabled (later binding mode).
+- Support equirectangular projected media content in both extractor track mode and later binding mode.
+- Support cube-map projected media content in later binding mode.
 
 <IMG src="img/OMAF_Compliant-Video-Delivery-DashAccess.png" height="380">
 
-So far, the library is Linux-based version, but it can be ported to Android and relative client platform.
+Linux-based version and Android-based version of the library are both supported.
 
 ## API Call Sequence
 
