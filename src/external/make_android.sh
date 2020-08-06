@@ -13,7 +13,7 @@ sudo make install
 
 # Install isolib
 cd ../isolib && \
-cmake ../../../isolib -DDEBUG=NO -DCMAKE_TOOLCHAIN_FILE=${NDK_r18b_PATH}/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_TOOLCHAIN=aarch64-linux-android-4.9 -DANDROID_PLATFORM=android-21 -DANDROID_STD=c++_static && \
+cmake ../../../isolib -DUSE_ANDROID_NDK=ON -DDEBUG=NO -DCMAKE_TOOLCHAIN_FILE=${NDK_r18b_PATH}/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_TOOLCHAIN=aarch64-linux-android-4.9 -DANDROID_PLATFORM=android-21 -DANDROID_STD=c++_static && \
 make -j && \
 sudo cp dash_parser/libdashparser.a /usr/local/lib/
 

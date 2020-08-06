@@ -21,7 +21,7 @@ IF(NOT USE_ANDROID_NDK)
 ELSE()
   ADD_DEFINITIONS("-g -c -fPIC -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0
                    -fPIE -fPIC -O2 -D_FORTIFY_SOURCE=2 -Wformat
-                   -Wformat-security -Wall -Werror")
+                   -Wformat-security -Wall")
 ENDIF()
 
 IF(USE_ANDROID_NDK)
