@@ -688,7 +688,7 @@ new file mode 100644
 index 0000000..332bf7b
 --- /dev/null
 +++ b/FFmpeg/libavcodec/distributed_encoder.c
-@@ -0,0 +1,580 @@
+@@ -0,0 +1,597 @@
 +/*
 +* Scalable Video Technology for distributed encoder library plugin
 +*
@@ -764,6 +764,8 @@ index 0000000..332bf7b
 +    uint64_t frame_number;
 +
 +    bool in_parallel;
++
++    const char *proj_type;
 +} DEContext;
 +
 +static int set_enc_params(AVCodecContext *avctx, DistributedEncoderParam *DEparams)
@@ -838,7 +840,20 @@ index 0000000..332bf7b
 +    ProjectionInfo          projInfo;
 +    memset(&projInfo, 0, sizeof(ProjectionInfo));
 +    projInfo.enable = true;
-+    projInfo.type = E_EQUIRECT_PROJECTION;
++    if (0 == strncmp(deCxt->proj_type, "ERP", 3))
++    {
++        projInfo.type = E_EQUIRECT_PROJECTION;
++    }
++    else if (0 == strncmp(deCxt->proj_type, "Cube", 4))
++    {
++        projInfo.type = E_CUBEMAP_PROJECTION;
++    }
++    else
++    {
++        av_log(avctx, AV_LOG_ERROR,
++                "Invalid input source projection type %s \n", deCxt->proj_type);
++        return -1;
++    }
 +    memcpy(&(DEparams->suppleEnhanceInfo.projInfo), &projInfo, sizeof(ProjectionInfo));
 +
 +    CodecAppOption codecOption;
@@ -1152,6 +1167,8 @@ index 0000000..332bf7b
 +#define VE AV_OPT_FLAG_VIDEO_PARAM | AV_OPT_FLAG_ENCODING_PARAM
 +static const AVOption options[] = {
 +    { "config_file", "configure file path for workers information", OFFSET(configFile), AV_OPT_TYPE_STRING, { 0 }, 0, 0, VE },
++
++    { "proj_type", "input source projection type, ERP or Cubemap", OFFSET(proj_type), AV_OPT_TYPE_STRING, { .str = "ERP" }, 0, 0, VE },
 +
 +    { "input_type", "input stream type, 0 - encoded, 1 - raw, default is 0", OFFSET(input_type), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, 0xff, VE},
 +
@@ -4078,7 +4095,7 @@ new file mode 100644
 index 0000000..0a66efa
 --- /dev/null
 +++ b/FFmpeg/libavformat/omaf_packing_enc.c
-@@ -0,0 +1,441 @@
+@@ -0,0 +1,565 @@
 +/*
 + * Intel tile Dash muxer
 + *
@@ -4130,6 +4147,8 @@ index 0000000..0a66efa
 +    InitialInfo    *initInfo;
 +    int            inStreamsNum;
 +
++    const char     *proj_type;
++    const char     *face_file;
 +    int            viewport_w;
 +    int            viewport_h;
 +    float          viewport_yaw;
@@ -4157,6 +4176,46 @@ index 0000000..0a66efa
 +    BufferedFrame  bufferedFrames[1024];
 +    int            bufferedFramesNum;
 +} OMAFContext;
++
++static uint8_t convert_face_index(char *face_name)
++{
++    if (0 == strncmp(face_name, "PY", 2))
++        return 0;
++    else if (0 == strncmp(face_name, "PX", 2))
++        return 1;
++    else if (0 == strncmp(face_name, "NY", 2))
++        return 2;
++    else if (0 == strncmp(face_name, "NZ", 2))
++        return 3;
++    else if (0 == strncmp(face_name, "NX", 2))
++        return 4;
++    else if (0 == strncmp(face_name, "PZ", 2))
++        return 5;
++    else
++        return 255;
++}
++
++static E_TransformType convert_transform_type(char *transform_name)
++{
++    if (0 == strncmp(transform_name, "NO_TRANSFORM", 12))
++        return NO_TRANSFORM;
++    else if (0 == strncmp(transform_name, "MIRRORING_HORIZONTALLY", 22))
++        return MIRRORING_HORIZONTALLY;
++    else if (0 == strncmp(transform_name, "ROTATION_180_ANTICLOCKWISE", 26))
++        return ROTATION_180_ANTICLOCKWISE;
++    else if (0 == strncmp(transform_name, "ROTATION_180_ANTICLOCKWISE_AFTER_MIRRORING_HOR", 46))
++        return ROTATION_180_ANTICLOCKWISE_AFTER_MIRRORING_HOR;
++    else if (0 == strncmp(transform_name, "ROTATION_90_ANTICLOCKWISE_BEFORE_MIRRORING_HOR", 46))
++        return ROTATION_90_ANTICLOCKWISE_BEFORE_MIRRORING_HOR;
++    else if (0 == strncmp(transform_name, "ROTATION_90_ANTICLOCKWISE", 25))
++        return ROTATION_90_ANTICLOCKWISE;
++    else if (0 == strncmp(transform_name, "ROTATION_270_ANTICLOCKWISE_BEFORE_MIRRORING_HOR", 47))
++        return ROTATION_270_ANTICLOCKWISE_BEFORE_MIRRORING_HOR;
++    else if (0 == strncmp(transform_name, "ROTATION_270_ANTICLOCKWISE", 26))
++        return ROTATION_270_ANTICLOCKWISE;
++    else
++        return NO_TRANSFORM;
++}
 +
 +static int omaf_init(AVFormatContext *s)
 +{
@@ -4236,7 +4295,14 @@ index 0000000..0a66efa
 +    initInfo->viewportInfo->horizontalFOVAngle = c->viewport_fov_hor;
 +    initInfo->viewportInfo->verticalFOVAngle = c->viewport_fov_ver;
 +    initInfo->viewportInfo->outGeoType = E_SVIDEO_VIEWPORT;
-+    initInfo->viewportInfo->inGeoType = E_SVIDEO_EQUIRECT;
++    if (0 == strncmp(c->proj_type, "ERP", 3))
++    {
++        initInfo->viewportInfo->inGeoType = E_SVIDEO_EQUIRECT;
++    }
++    else if (0 == strncmp(c->proj_type, "Cube", 4))
++    {
++        initInfo->viewportInfo->inGeoType = E_SVIDEO_CUBEMAP;
++    }
 +
 +    initInfo->segmentationInfo = (SegmentationInfo*)malloc(sizeof(SegmentationInfo));
 +    if (!(initInfo->segmentationInfo))
@@ -4263,6 +4329,73 @@ index 0000000..0a66efa
 +    initInfo->segmentationInfo->splitTile = c->split_tile;
 +    initInfo->segmentationInfo->hasMainAS = true;
 +
++    if (0 == strncmp(c->proj_type, "ERP", 3))
++    {
++        initInfo->projType = E_SVIDEO_EQUIRECT;
++        initInfo->cubeMapInfo = NULL;
++    }
++    else if (0 == strncmp(c->proj_type, "Cube", 4))
++    {
++        initInfo->projType = E_SVIDEO_CUBEMAP;
++    }
++
++    if (initInfo->projType == E_SVIDEO_CUBEMAP)
++    {
++        if (!(c->face_file))
++        {
++            av_log(s, AV_LOG_ERROR,
++                    "face_file should not be null when input source is from Cubemap projection! \n");
++            return AVERROR(ENOMEM);
++        }
++
++        initInfo->cubeMapInfo = (InputCubeMapInfo*)malloc(sizeof(InputCubeMapInfo));
++        memset(initInfo->cubeMapInfo, 0, sizeof(InputCubeMapInfo));
++        FILE *fp = fopen(c->face_file, "r");
++        if (!fp)
++        {
++            av_log(s, AV_LOG_ERROR,
++                    "Failed to open cubemap face file !\n");
++            return AVERROR(ENOMEM);
++        }
++        char face_name[128] = { 0 };
++        char transform_name[128] = { 0 };
++        fscanf(fp, "%s %s", face_name, transform_name);
++        initInfo->cubeMapInfo->face0MapInfo.mappedStandardFaceId = convert_face_index(face_name);
++        initInfo->cubeMapInfo->face0MapInfo.transformType = convert_transform_type(transform_name);
++
++        memset(face_name, 0, 128);
++        memset(transform_name, 0, 128);
++        fscanf(fp, "%s %s", face_name, transform_name);
++        initInfo->cubeMapInfo->face1MapInfo.mappedStandardFaceId = convert_face_index(face_name);
++        initInfo->cubeMapInfo->face1MapInfo.transformType = convert_transform_type(transform_name);
++
++        memset(face_name, 0, 128);
++        memset(transform_name, 0, 128);
++        fscanf(fp, "%s %s", face_name, transform_name);
++        initInfo->cubeMapInfo->face2MapInfo.mappedStandardFaceId = convert_face_index(face_name);
++        initInfo->cubeMapInfo->face2MapInfo.transformType = convert_transform_type(transform_name);
++
++        memset(face_name, 0, 128);
++        memset(transform_name, 0, 128);
++        fscanf(fp, "%s %s", face_name, transform_name);
++        initInfo->cubeMapInfo->face3MapInfo.mappedStandardFaceId = convert_face_index(face_name);
++        initInfo->cubeMapInfo->face3MapInfo.transformType = convert_transform_type(transform_name);
++
++        memset(face_name, 0, 128);
++        memset(transform_name, 0, 128);
++        fscanf(fp, "%s %s", face_name, transform_name);
++        initInfo->cubeMapInfo->face4MapInfo.mappedStandardFaceId = convert_face_index(face_name);
++        initInfo->cubeMapInfo->face4MapInfo.transformType = convert_transform_type(transform_name);
++
++        memset(face_name, 0, 128);
++        memset(transform_name, 0, 128);
++        fscanf(fp, "%s %s", face_name, transform_name);
++        initInfo->cubeMapInfo->face5MapInfo.mappedStandardFaceId = convert_face_index(face_name);
++        initInfo->cubeMapInfo->face5MapInfo.transformType = convert_transform_type(transform_name);
++
++        fclose(fp);
++        fp = NULL;
++    }
 +    memset(c->bufferedFrames, 0, 1024 * sizeof(BufferedFrame));
 +    c->bufferedFramesNum = 0;
 +    c->inStreamsNum = 0;
@@ -4307,6 +4440,12 @@ index 0000000..0a66efa
 +
 +        free(c->initInfo->segmentationInfo);
 +        c->initInfo->segmentationInfo = NULL;
++    }
++
++    if (c->initInfo->cubeMapInfo)
++    {
++        free(c->initInfo->cubeMapInfo);
++        c->initInfo->cubeMapInfo = NULL;
 +    }
 +
 +    if(c->initInfo)
@@ -4471,6 +4610,8 @@ index 0000000..0a66efa
 +#define OFFSET(x) offsetof(OMAFContext, x)
 +#define E AV_OPT_FLAG_ENCODING_PARAM
 +static const AVOption options[] = {
++    { "packing_proj_type", "input source projection type, ERP or Cubemap", OFFSET(proj_type), AV_OPT_TYPE_STRING, { .str = "ERP" }, 0, 0, E },
++    { "cubemap_face_file", "configure input cubemap face relation to face layout defined in OMAF for cube-3x2", OFFSET(face_file), AV_OPT_TYPE_STRING, { 0 }, 0, 0, E },
 +    { "viewport_w", "set viewport width", OFFSET(viewport_w), AV_OPT_TYPE_INT, { .i64 = 1024 }, 0, INT_MAX, E },
 +    { "viewport_h", "set viewport height", OFFSET(viewport_h), AV_OPT_TYPE_INT, { .i64 = 1024 }, 0, INT_MAX, E },
 +    { "viewport_yaw", "set viewport yaw angle, which is the angle around y axis", OFFSET(viewport_yaw), AV_OPT_TYPE_FLOAT, { .dbl = 90 }, 0, 180, E },
@@ -4525,7 +4666,7 @@ new file mode 100644
 index 0000000..8e469af
 --- /dev/null
 +++ b/FFmpeg/libavformat/tiled_dash_dec.c
-@@ -0,0 +1,314 @@
+@@ -0,0 +1,344 @@
 +/*
 + * Intel tile Dash Demuxer
 + *
@@ -4643,7 +4784,37 @@ index 0000000..8e469af
 +            free(dashPkt[0].rwpk);
 +            dashPkt[0].rwpk = NULL;
 +        }
++        if (dashPkt[0].qtyResolution)
++        {
++            free(dashPkt[0].qtyResolution);
++            dashPkt[0].qtyResolution = NULL;
++        }
 +        if(c->needHeaders){c->needHeaders = false;}
++    }
++
++    for (int pktIdx = 1; pktIdx < dashPktNum; pktIdx++)
++    {
++        if (dashPkt[pktIdx].buf && dashPkt[pktIdx].size)
++        {
++            free(dashPkt[pktIdx].buf);
++            dashPkt[pktIdx].buf = NULL;
++
++            if (dashPkt[pktIdx].rwpk != NULL)
++            {
++                if (dashPkt[pktIdx].rwpk->rectRegionPacking != NULL)
++                {
++                    free(dashPkt[pktIdx].rwpk->rectRegionPacking);
++                    dashPkt[pktIdx].rwpk->rectRegionPacking = NULL;
++                }
++                free(dashPkt[pktIdx].rwpk);
++                dashPkt[pktIdx].rwpk = NULL;
++            }
++            if (dashPkt[pktIdx].qtyResolution)
++            {
++                free(dashPkt[pktIdx].qtyResolution);
++                dashPkt[pktIdx].qtyResolution = NULL;
++            }
++        }
 +    }
 +
 +    if(c->mClearBuf){c->mClearBuf = false;}
