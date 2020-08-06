@@ -309,12 +309,18 @@ int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t slic
 
     m_mergeStreamParam.highRes.pHeader = (param_oneStream_info *)malloc(sizeof(param_oneStream_info));
     m_mergeStreamParam.lowRes.pHeader = (param_oneStream_info *)malloc(sizeof(param_oneStream_info));
-    m_mergeStreamParam.highRes.pTiledBitstreams = (param_oneStream_info **)malloc(HR_ntile * sizeof(param_oneStream_info *));
 
     if (!m_mergeStreamParam.highRes.pHeader || !m_mergeStreamParam.lowRes.pHeader) {
         LOG(ERROR) << "Init Merge Failed: pHeader of highRes or lowRes is NULL!!!";
-        SAFE_DELETE(m_mergeStreamParam.highRes.pHeader);
-        SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader);
+        if (m_mergeStreamParam.highRes.pHeader) {
+            free(m_mergeStreamParam.highRes.pHeader);
+            m_mergeStreamParam.highRes.pHeader = NULL;
+        }
+        if (m_mergeStreamParam.lowRes.pHeader) {
+            free(m_mergeStreamParam.lowRes.pHeader);
+            m_mergeStreamParam.lowRes.pHeader = NULL;
+        }
+
         return -1;
     }
 
@@ -323,37 +329,174 @@ int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t slic
 
     if (!m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer || !m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer) {
         LOG(ERROR) << "Init Merge Failed: Tiled Bitstream Buffer of highRes or lowRes is not allocated!!!";
-        SAFE_DELETE(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
-        SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer);
-        SAFE_DELETE(m_mergeStreamParam.highRes.pHeader);
-        SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader);
+
+        if (m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer) {
+            free(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
+            m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer = NULL;
+        }
+        if (m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer) {
+            free(m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer);
+            m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer = NULL;
+        }
+        if (m_mergeStreamParam.highRes.pHeader) {
+            free(m_mergeStreamParam.highRes.pHeader);
+            m_mergeStreamParam.highRes.pHeader = NULL;
+        }
+        if (m_mergeStreamParam.lowRes.pHeader) {
+            free(m_mergeStreamParam.lowRes.pHeader);
+            m_mergeStreamParam.lowRes.pHeader = NULL;
+        }
+        //SAFE_DELETE(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
+        //SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer);
+        //SAFE_DELETE(m_mergeStreamParam.highRes.pHeader);
+        //SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader);
         return -1;
     }
 
     m_mergeStreamParam.highRes.pTiledBitstreams = (param_oneStream_info **)malloc(HR_ntile * sizeof(param_oneStream_info *));
     if (!m_mergeStreamParam.highRes.pTiledBitstreams) {
         LOG(ERROR) << "Init Merge Failed: Tiled Bitstreams of highRes is not allocated!!!";
-        SAFE_DELETE(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
-        SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer);
-        SAFE_DELETE(m_mergeStreamParam.highRes.pHeader);
-        SAFE_DELETE(m_mergeStreamParam.lowRes.pHeader);
+
+        if (m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer) {
+            free(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
+            m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer = NULL;
+        }
+        if (m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer) {
+            free(m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer);
+            m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer = NULL;
+        }
+        if (m_mergeStreamParam.highRes.pHeader) {
+            free(m_mergeStreamParam.highRes.pHeader);
+            m_mergeStreamParam.highRes.pHeader = NULL;
+        }
+        if (m_mergeStreamParam.lowRes.pHeader) {
+            free(m_mergeStreamParam.lowRes.pHeader);
+            m_mergeStreamParam.lowRes.pHeader = NULL;
+        }
         return -1;
     }
 
     for (int32_t i = 0; i < HR_ntile; i++)
     {
         m_mergeStreamParam.highRes.pTiledBitstreams[i] = (param_oneStream_info *)malloc(sizeof(param_oneStream_info));
-        if (!m_mergeStreamParam.highRes.pTiledBitstreams[i])
+        if (!m_mergeStreamParam.highRes.pTiledBitstreams[i]) {
+            for (int32_t j = 0; j < i; j++) {
+                if (m_mergeStreamParam.highRes.pTiledBitstreams[j]) {
+                    free(m_mergeStreamParam.highRes.pTiledBitstreams[j]);
+                    m_mergeStreamParam.highRes.pTiledBitstreams[j] = NULL;
+                }
+            }
+
+            if (m_mergeStreamParam.highRes.pTiledBitstreams) {
+                free(m_mergeStreamParam.highRes.pTiledBitstreams);
+                m_mergeStreamParam.highRes.pTiledBitstreams = NULL;
+            }
+            if (m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer) {
+                free(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
+                m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer = NULL;
+            }
+            if (m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer) {
+                free(m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer);
+                m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer = NULL;
+            }
+            if (m_mergeStreamParam.highRes.pHeader) {
+                free(m_mergeStreamParam.highRes.pHeader);
+                m_mergeStreamParam.highRes.pHeader = NULL;
+            }
+            if (m_mergeStreamParam.lowRes.pHeader) {
+                free(m_mergeStreamParam.lowRes.pHeader);
+                m_mergeStreamParam.lowRes.pHeader = NULL;
+            }
             return -1;
+        }
     }
     m_mergeStreamParam.lowRes.pTiledBitstreams = (param_oneStream_info **)malloc(LR_ntile * sizeof(param_oneStream_info *));
     if (!m_mergeStreamParam.lowRes.pTiledBitstreams)
+    {
+        if (m_mergeStreamParam.highRes.pTiledBitstreams)
+        {
+            for (int32_t i = 0; i < HR_ntile; i++)
+            {
+                if (m_mergeStreamParam.highRes.pTiledBitstreams[i])
+                {
+                    free(m_mergeStreamParam.highRes.pTiledBitstreams[i]);
+                    m_mergeStreamParam.highRes.pTiledBitstreams[i] = NULL;
+                }
+            }
+            free(m_mergeStreamParam.highRes.pTiledBitstreams);
+            m_mergeStreamParam.highRes.pTiledBitstreams = NULL;
+        }
+
+        if (m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer) {
+            free(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
+            m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer = NULL;
+        }
+        if (m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer) {
+            free(m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer);
+            m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer = NULL;
+        }
+        if (m_mergeStreamParam.highRes.pHeader) {
+            free(m_mergeStreamParam.highRes.pHeader);
+            m_mergeStreamParam.highRes.pHeader = NULL;
+        }
+        if (m_mergeStreamParam.lowRes.pHeader) {
+            free(m_mergeStreamParam.lowRes.pHeader);
+            m_mergeStreamParam.lowRes.pHeader = NULL;
+        }
         return -1;
+    }
     for (int32_t i = 0; i < LR_ntile; i++)
     {
         m_mergeStreamParam.lowRes.pTiledBitstreams[i] = (param_oneStream_info *)malloc(sizeof(param_oneStream_info));
         if (!m_mergeStreamParam.lowRes.pTiledBitstreams[i])
+        {
+            for (int32_t j = 0; j < i; j++)
+            {
+                if (m_mergeStreamParam.lowRes.pTiledBitstreams[j])
+                {
+                    free(m_mergeStreamParam.lowRes.pTiledBitstreams[j]);
+                    m_mergeStreamParam.lowRes.pTiledBitstreams[j] = NULL;
+                }
+            }
+
+            if (m_mergeStreamParam.lowRes.pTiledBitstreams)
+            {
+                free(m_mergeStreamParam.lowRes.pTiledBitstreams);
+                m_mergeStreamParam.lowRes.pTiledBitstreams = NULL;
+            }
+
+            if (m_mergeStreamParam.highRes.pTiledBitstreams)
+            {
+                for (int32_t i = 0; i < HR_ntile; i++)
+                {
+                    if (m_mergeStreamParam.highRes.pTiledBitstreams[i])
+                    {
+                        free(m_mergeStreamParam.highRes.pTiledBitstreams[i]);
+                        m_mergeStreamParam.highRes.pTiledBitstreams[i] = NULL;
+                    }
+                }
+                free(m_mergeStreamParam.highRes.pTiledBitstreams);
+                m_mergeStreamParam.highRes.pTiledBitstreams = NULL;
+            }
+
+            if (m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer) {
+                free(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
+                m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer = NULL;
+            }
+            if (m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer) {
+                free(m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer);
+                m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer = NULL;
+            }
+            if (m_mergeStreamParam.highRes.pHeader) {
+                free(m_mergeStreamParam.highRes.pHeader);
+                m_mergeStreamParam.highRes.pHeader = NULL;
+            }
+            if (m_mergeStreamParam.lowRes.pHeader) {
+                free(m_mergeStreamParam.lowRes.pHeader);
+                m_mergeStreamParam.lowRes.pHeader = NULL;
+            }
             return -1;
+        }
     }
 
     m_pMergeStream = tile_merge_Init(&m_mergeStreamParam);
@@ -452,22 +595,33 @@ int32_t TstitchStream::uninit()
             m_mergeStreamParam.lowRes.pHeader = NULL;
         }
 
-        for (int32_t i = 0; i < HR_ntile; i++)
+        if (m_mergeStreamParam.highRes.pTiledBitstreams)
         {
-            if (m_mergeStreamParam.highRes.pTiledBitstreams[i])
+            for (int32_t i = 0; i < HR_ntile; i++)
             {
-                free(m_mergeStreamParam.highRes.pTiledBitstreams[i]);
-                m_mergeStreamParam.highRes.pTiledBitstreams[i] = NULL;
+                if (m_mergeStreamParam.highRes.pTiledBitstreams[i])
+                {
+                    free(m_mergeStreamParam.highRes.pTiledBitstreams[i]);
+                    m_mergeStreamParam.highRes.pTiledBitstreams[i] = NULL;
+                }
             }
+            free(m_mergeStreamParam.highRes.pTiledBitstreams);
+            m_mergeStreamParam.highRes.pTiledBitstreams = NULL;
         }
-        for (int32_t i = 0; i < LR_ntile; i++)
+        if (m_mergeStreamParam.lowRes.pTiledBitstreams)
         {
-            if (m_mergeStreamParam.lowRes.pTiledBitstreams[i])
+            for (int32_t i = 0; i < LR_ntile; i++)
             {
-                free(m_mergeStreamParam.lowRes.pTiledBitstreams[i]);
-                m_mergeStreamParam.lowRes.pTiledBitstreams[i] = NULL;
+                if (m_mergeStreamParam.lowRes.pTiledBitstreams[i])
+                {
+                    free(m_mergeStreamParam.lowRes.pTiledBitstreams[i]);
+                    m_mergeStreamParam.lowRes.pTiledBitstreams[i] = NULL;
+                }
             }
+            free(m_mergeStreamParam.lowRes.pTiledBitstreams);
+            m_mergeStreamParam.lowRes.pTiledBitstreams = NULL;
         }
+
         ret = tile_merge_Close(m_pMergeStream);
     }
     if(m_pViewport)
