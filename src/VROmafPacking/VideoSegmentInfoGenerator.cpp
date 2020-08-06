@@ -82,7 +82,7 @@ VideoSegmentInfoGenerator::VideoSegmentInfoGenerator(const VideoSegmentInfoGener
     m_streamIdx = src.m_streamIdx;
     m_videoSegInfo = std::move(src.m_videoSegInfo);
 }
-
+/*
 VideoSegmentInfoGenerator& VideoSegmentInfoGenerator::operator=(VideoSegmentInfoGenerator&& other)
 {
     m_bsBuffer = std::move(other.m_bsBuffer);
@@ -92,7 +92,7 @@ VideoSegmentInfoGenerator& VideoSegmentInfoGenerator::operator=(VideoSegmentInfo
 
     return *this;
 }
-
+*/
 VideoSegmentInfoGenerator::~VideoSegmentInfoGenerator()
 {
     if (m_videoSegInfo)

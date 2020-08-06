@@ -398,7 +398,7 @@ private:
     Rational                  m_frameRate;        //!< the frame rate of the video stream
     uint64_t                  m_bitRate;          //!< the bit rate of the video stream
     bool                      m_isEOS;            //!< the EOS status of the video stream
-    std::mutex                m_mutex;            //!< thread mutex for frame information list
+    //std::mutex                m_mutex;            //!< thread mutex for frame information list
 };
 
 VCD_NS_END;

@@ -40,6 +40,8 @@
 #include "definitions.h"
 #include "VROmafPacking_data.h"
 
+#include <mutex>
+
 VCD_NS_BEGIN
 
 //!
@@ -85,7 +87,8 @@ public:
     MediaType GetMediaType() { return m_mediaType; };
 
 protected:
-    MediaType m_mediaType;    //!< media type of the media stream
+    MediaType   m_mediaType;    //!< media type of the media stream
+    std::mutex  m_mutex;        //!< thread mutex for video/audio frames list
 };
 
 VCD_NS_END;
