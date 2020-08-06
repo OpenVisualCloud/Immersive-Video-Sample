@@ -89,7 +89,7 @@ public:
 
     VideoSegmentInfoGenerator(const VideoSegmentInfoGenerator& src);
 
-    VideoSegmentInfoGenerator& operator=(VideoSegmentInfoGenerator&& other);
+    VideoSegmentInfoGenerator& operator=(const VideoSegmentInfoGenerator&) = default;
 
     //!
     //! \brief  Destructor

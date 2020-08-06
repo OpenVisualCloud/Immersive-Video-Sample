@@ -113,7 +113,7 @@ int32_t OmafPackage::AddMediaStream(uint8_t streamIdx, BSBuffer *bs)
 
         ((MediaStream*)as)->SetMediaType(AUDIOTYPE);
 
-        m_streams.insert(std::make_pair(streamIdx, (MediaStream*)as));
+        m_streams.insert(std::make_pair(streamIdx, std::move((MediaStream*)as)));
     }
 
     return ERROR_NONE;
