@@ -164,8 +164,13 @@ class OmafSegmentNode : public VCD::NonCopyable {
   void clearPacketByPTS(uint64_t pts) {
     while (media_packets_.size()) {
       auto &packet = media_packets_.front();
-      if (packet->GetPTS() >= pts) {
+      if (packet && (packet->GetPTS() >= pts)) {
         break;
+      }
+      if (packet)
+      {
+          delete packet;
+          packet = NULL;
       }
       media_packets_.pop();
     }
@@ -1326,7 +1331,8 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
         return ret;
       }
       packet->SetRwpk(std::move(pRwpk));
-      packet->SetPTS(this->getTimelinePoint());  // FIXME, to compute pts
+      //packet->SetPTS(this->getTimelinePoint());  // FIXME, to compute pts
+      packet->SetPTS(track_info->sampleProperties.size * (segment_->GetSegID() - 1) + sample_begin + sample);
 
       // for later binding
       packet->SetQualityRanking(segment_->GetQualityRanking());

@@ -720,8 +720,20 @@ int32_t OmafMediaStream::TilesStitching() {
       }
       selectedPackets.clear();
 
+      if (currFramePTS > 0)
+      {
+          std::map<int, OmafAdaptationSet*>::iterator itAS;
+          for (itAS = mMediaAdaptationSet.begin(); itAS != mMediaAdaptationSet.end(); itAS++)
+          {
+              OmafAdaptationSet *oneAS = itAS->second;
+              int32_t trkID = oneAS->GetTrackNumber();
+              omaf_reader_mgr_->RemoveOutdatedPacketForTrack(trkID, (currFramePTS+1));
+          }
+      }
+
       continue;
     }
+
     if (!isEOS && (selectedPackets.size() != mapSelectedAS.size()) && (currWaitTimes >= waitTimes)) {
       LOG(INFO) << "Incorrect selected tile tracks packets number for tiles stitching !" << std::endl;
       // return OMAF_ERROR_INVALID_DATA;
