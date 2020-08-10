@@ -73,19 +73,12 @@ Player::~Player()
 RenderStatus Player::Open()
 {
     //initial renderContext
-    switch(m_renderConfig.contextType)
+    m_renderContext = new GLFWRenderContext(m_renderConfig);
+    if (m_renderContext == NULL)
     {
-    case GLFW_CONTEXT:
-        m_renderContext = new GLFWRenderContext(m_renderConfig);
-        break;
-    case EGL_CONTEXT:
-        m_renderContext = new EGLRenderContext(m_renderConfig);
-        break;
-    default:
-        m_renderContext = new GLFWRenderContext(m_renderConfig);
-        break;
+        LOG(ERROR) << " Init render context failed! " << endl;
+        return RENDER_CREATE_ERROR;
     }
-
     //intital window
     void *window = m_renderContext->InitContext();
     if( NULL == window ){
