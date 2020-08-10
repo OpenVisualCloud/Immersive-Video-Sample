@@ -41,6 +41,9 @@ OMAF Packing Plugin is a multiplexer in the pipeline to use OMAF packing library
 
 ## Distribute Encoder Plugin
 Distribute Encoder Plugin is using DistributeEncoder library to do SVT-based HEVC Encoding. Plugin name is "distributed_encoder", The options are available for this plugins are listed as belows.
+
+`config_file` is a must-have parameter containing "ip" and "port" pair, corresponding to IP address and the port of object machine to deploy sub-encoder. Replace IP address like "127.0.0.1" with "local" to start local mode, deploy sub-encoder on host machine directly. And "numa" node is required in 8K input for better FPS performance.
+
 | **Parameters** | **Descriptions** | **Type** | **Default Value** | **Range** | **Must-Have** |
 | --- | --- | --- | --- | --- | --- |
 | config_file | configure file path for workers information | string | N/A | N/A | YES |
@@ -68,6 +71,7 @@ Distribute Encoder Plugin is using DistributeEncoder library to do SVT-based HEV
 
 ## OMAF Dash Access Plugin
 OMAF Dash Access Plugin is an FFmpeg demux used to access OMAF Dash Content by DashAccessLibrary. The demux name is "tiled_dash_demuxer". The plugin is used to playback the content for test purpose. The options are available for this plugins are listed as belows.
+
 | **Parameters** | **Descriptions** | **Type** | **Default Value** | **Range** | **Must-Have** |
 | --- | --- | --- | --- | --- | --- |
 | allowed_extensions | List of file extensions that dash is allowed to access | string | "mpd" | N/A | YES |
