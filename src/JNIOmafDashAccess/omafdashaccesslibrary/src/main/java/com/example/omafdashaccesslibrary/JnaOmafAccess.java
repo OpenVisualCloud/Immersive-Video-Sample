@@ -102,6 +102,25 @@ public interface JnaOmafAccess extends Library {
         public static final int Reserved = 2;
     };
 
+    /** enum values */
+    public static final int MAX_QUALITY_NUM = 2;
+    public static interface QualityRank {
+        /** <i>native declaration : line 7</i> */
+        public static final int HIGHEST_QUALITY_RANKING = 1;
+        /** <i>native declaration : line 8</i> */
+        public static final int NORMAL_QUALITY_RANKING = 2;
+        /** <i>native declaration : line 9</i> */
+        public static final int INVALID_QUALITY_RANKING = 3;
+    };
+
+    /** enum values */
+    public static interface DashStreamType {
+        /** <i>native declaration : line 7</i> */
+        public static final int DASH_STREAM_STATIC = 1;
+        /** <i>native declaration : line 8</i> */
+        public static final int DASH_STREAM_DYNMIC = 2;
+    };
+
     public static class RECTANGUALAR_REGION_WIZE_PACKING extends Structure {
         public byte transformType;
         public byte guardBandFlag;
@@ -205,8 +224,6 @@ public interface JnaOmafAccess extends Library {
     };
 
     public static class HEADSETINFO extends Structure {
-        public int input_geoType;
-        public int output_geoType;
         /** C type : HeadPose* */
         public JnaOmafAccess.HEADPOSE.ByReference pose;
         public float viewPort_hFOV;
@@ -217,13 +234,11 @@ public interface JnaOmafAccess extends Library {
             super();
         }
         protected List getFieldOrder() {
-            return Arrays.asList("input_geoType", "output_geoType", "pose", "viewPort_hFOV", "viewPort_vFOV", "viewPort_Width", "viewPort_Height");
+            return Arrays.asList("pose", "viewPort_hFOV", "viewPort_vFOV", "viewPort_Width", "viewPort_Height");
         }
         /** @param pose C type : HeadPose* */
-        public HEADSETINFO(int input_geoType, int output_geoType, JnaOmafAccess.HEADPOSE.ByReference pose, float viewPort_hFOV, float viewPort_vFOV, int viewPort_Width, int viewPort_Height) {
+        public HEADSETINFO(JnaOmafAccess.HEADPOSE.ByReference pose, float viewPort_hFOV, float viewPort_vFOV, int viewPort_Width, int viewPort_Height) {
             super();
-            this.input_geoType = input_geoType;
-            this.output_geoType = output_geoType;
             this.pose = pose;
             this.viewPort_hFOV = viewPort_hFOV;
             this.viewPort_vFOV = viewPort_vFOV;
@@ -315,6 +330,188 @@ public interface JnaOmafAccess extends Library {
         public static class ByReference extends DASHSTATISTICINFO implements Structure.ByReference { };
         public static class ByValue extends DASHSTATISTICINFO implements Structure.ByValue { };
     };
+
+    public static class _omafHttpProxy extends Structure {
+        public String http_proxy;
+        public String https_proxy;
+        public String no_proxy;
+        public String proxy_user;
+        public String proxy_wd;
+        public _omafHttpProxy() {
+            super();
+            this.http_proxy = "";
+            this.https_proxy = "";
+            this.no_proxy = "";
+            this.proxy_user = "";
+            this.proxy_wd = "";
+        }
+        protected List getFieldOrder() {
+            return Arrays.asList("http_proxy", "https_proxy", "no_proxy", "proxy_user", "proxy_wd");
+        }
+        public _omafHttpProxy(String http_proxy, String https_proxy, String no_proxy, String proxy_user, String proxy_wd) {
+            super();
+            this.http_proxy = http_proxy;
+            this.https_proxy = https_proxy;
+            this.no_proxy = no_proxy;
+            this.proxy_user = proxy_user;
+            this.proxy_wd = proxy_wd;
+        }
+        protected ByReference newByReference() { return new ByReference(); }
+        protected ByValue newByValue() { return new ByValue(); }
+        protected _omafHttpProxy newInstance() { return new _omafHttpProxy(); }
+
+        public static class ByReference extends _omafHttpProxy implements Structure.ByReference {  };
+        public static class ByValue extends _omafHttpProxy implements Structure.ByValue {  };
+    };
+
+    public static class _omafHttpParams extends Structure {
+        public long conn_timeout;
+        public long total_timeout;
+        public int retry_times;
+        public int ssl_verify_peer;
+        public int ssl_verify_host;
+        public _omafHttpParams() {
+            super();
+            this.conn_timeout = 0;
+            this.total_timeout = 0;
+            this.retry_times = 0;
+            this.ssl_verify_peer = 0;
+            this.ssl_verify_host = 0;
+        }
+        protected List getFieldOrder() {
+            return Arrays.asList("conn_timeout", "total_timeout", "retry_times", "ssl_verify_peer", "ssl_verify_host");
+        }
+        public _omafHttpParams(long conn_timeout, long total_timeout, int retry_times, int ssl_verify_peer, int ssl_verify_host) {
+            super();
+            this.conn_timeout = conn_timeout;
+            this.total_timeout = total_timeout;
+            this.retry_times = retry_times;
+            this.ssl_verify_peer = ssl_verify_peer;
+            this.ssl_verify_host = ssl_verify_host;
+        }
+        protected ByReference newByReference() { return new ByReference(); }
+        protected ByValue newByValue() { return new ByValue(); }
+        protected _omafHttpParams newInstance() { return new _omafHttpParams(); }
+
+        public static class ByReference extends _omafHttpParams implements Structure.ByReference {  };
+        public static class ByValue extends _omafHttpParams implements Structure.ByValue {  };
+    };
+
+    public static class _omafStatisticsParams extends Structure {
+        public int window_size_ms;
+        public int enable;
+        public _omafStatisticsParams() {
+            super();
+            this.window_size_ms = 0;
+            this.enable = 0;
+        }
+        protected List getFieldOrder() {
+            return Arrays.asList("window_size_ms", "enable");
+        }
+        public _omafStatisticsParams(int window_size_ms, int enable) {
+            super();
+            this.window_size_ms = window_size_ms;
+            this.enable = enable;
+        }
+        protected ByReference newByReference() { return new ByReference(); }
+        protected ByValue newByValue() { return new ByValue(); }
+        protected _omafStatisticsParams newInstance() { return new _omafStatisticsParams(); }
+
+        public static class ByReference extends _omafStatisticsParams implements Structure.ByReference {  };
+        public static class ByValue extends _omafStatisticsParams implements Structure.ByValue {  };
+    };
+
+    public static class _omafSynchronizerParams extends Structure {
+        public int segment_range_size;
+        public int enable;
+        public _omafSynchronizerParams() {
+            super();
+            this.segment_range_size = 0;
+            this.enable = 0;
+        }
+        protected List getFieldOrder() {
+            return Arrays.asList("segment_range_size", "enable");
+        }
+        public _omafSynchronizerParams(int segment_range_size, int enable) {
+            super();
+            this.segment_range_size = segment_range_size;
+            this.enable = enable;
+        }
+        protected ByReference newByReference() { return new ByReference(); }
+        protected ByValue newByValue() { return new ByValue(); }
+        protected _omafSynchronizerParams newInstance() { return new _omafSynchronizerParams(); }
+
+        public static class ByReference extends _omafSynchronizerParams implements Structure.ByReference {  };
+        public static class ByValue extends _omafSynchronizerParams implements Structure.ByValue {  };
+    };
+
+    public static class _omafPredictorParams extends Structure {
+        public String name;
+        public String libpath;
+        public int enable;
+        public _omafPredictorParams() {
+            super();
+            this.name = "";
+            this.libpath = "";
+            this.enable = 0;
+        }
+        protected List getFieldOrder() {
+            return Arrays.asList("name", "libpath", "enable");
+        }
+        public _omafPredictorParams(String name, String libpath, int enable) {
+            super();
+            this.name = name;
+            this.libpath = libpath;
+            this.enable = enable;
+        }
+        protected ByReference newByReference() { return new ByReference(); }
+        protected ByValue newByValue() { return new ByValue(); }
+        protected _omafPredictorParams newInstance() { return new _omafPredictorParams(); }
+
+        public static class ByReference extends _omafPredictorParams implements Structure.ByReference {  };
+        public static class ByValue extends _omafPredictorParams implements Structure.ByValue {  };
+    };
+
+    public static class _omafDashParams extends Structure {
+        public JnaOmafAccess._omafHttpProxy.ByValue proxy;
+        public JnaOmafAccess._omafHttpParams.ByValue http_params;
+        public JnaOmafAccess._omafStatisticsParams.ByValue statistic_params;
+        public JnaOmafAccess._omafSynchronizerParams.ByValue synchronizer_params;
+        public JnaOmafAccess._omafPredictorParams.ByValue predictor_params;
+        public long max_parallel_transfers;
+        public int segment_open_timeout_ms;
+        public _omafDashParams() {
+            super();
+            this.proxy = null;
+            this.http_params = null;
+            this.statistic_params = null;
+            this.synchronizer_params = null;
+            this.predictor_params = null;
+            this.max_parallel_transfers = 0;
+            this.segment_open_timeout_ms = 0;
+        }
+        protected List getFieldOrder() {
+            return Arrays.asList("proxy", "http_params", "statistic_params", "synchronizer_params", "predictor_params", "max_parallel_transfers", "segment_open_timeout_ms");
+        }
+        public _omafDashParams(JnaOmafAccess._omafHttpProxy.ByValue proxy, JnaOmafAccess._omafHttpParams.ByValue http_params, JnaOmafAccess._omafStatisticsParams.ByValue statistic_params,
+                               JnaOmafAccess._omafSynchronizerParams.ByValue synchronizer_params, JnaOmafAccess._omafPredictorParams.ByValue predictor_params, long max_parallel_transfers, int segment_open_timeout_ms) {
+            super();
+            this.proxy = proxy;
+            this.http_params = http_params;
+            this.statistic_params = statistic_params;
+            this.synchronizer_params = synchronizer_params;
+            this.predictor_params = predictor_params;
+            this.max_parallel_transfers = max_parallel_transfers;
+            this.segment_open_timeout_ms = segment_open_timeout_ms;
+        }
+        protected ByReference newByReference() { return new ByReference(); }
+        protected ByValue newByValue() { return new ByValue(); }
+        protected _omafDashParams newInstance() { return new _omafDashParams(); }
+
+        public static class ByReference extends _omafDashParams implements Structure.ByReference {  };
+        public static class ByValue extends _omafDashParams implements Structure.ByValue {  };
+    };
+
     public static class DASHSTREAMINFO extends Structure {
         /**
          * @see MediaType
@@ -439,13 +636,14 @@ public interface JnaOmafAccess extends Library {
     };
 
     public static class DASHSTREAMINGCLIENT extends Structure {
-        /** C type : const char* */
-        public String media_url;
         /**
          * @see SourceType
          * C type : SourceType
          */
         public int source_type;
+        public JnaOmafAccess._omafDashParams.ByValue omaf_params;
+        /** C type : const char* */
+        public String media_url;
         /** C type : const char* */
         public String cache_path;
         /** C type : bool */
@@ -454,7 +652,7 @@ public interface JnaOmafAccess extends Library {
             super();
         }
         protected List getFieldOrder() {
-            return Arrays.asList("media_url", "source_type", "cache_path", "enable_extractor");
+            return Arrays.asList("source_type", "omaf_params", "media_url", "cache_path", "enable_extractor");
         }
         /**
          * @param media_url C type : const char*<br>
@@ -463,10 +661,11 @@ public interface JnaOmafAccess extends Library {
          * C type : SourceType<br>
          * @param cache_path C type : const char*
          */
-        public DASHSTREAMINGCLIENT(String media_url, int source_type, String cache_path, boolean enable_extractor) {
+        public DASHSTREAMINGCLIENT(int source_type, JnaOmafAccess._omafDashParams.ByValue omaf_params, String media_url, String cache_path, boolean enable_extractor) {
             super();
-            this.media_url = media_url;
             this.source_type = source_type;
+            this.omaf_params = omaf_params;
+            this.media_url = media_url;
             this.cache_path = cache_path;
             this.enable_extractor = enable_extractor;
         }

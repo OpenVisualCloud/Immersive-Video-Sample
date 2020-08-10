@@ -45,17 +45,17 @@ public class OmafAccess {
         mHandle = null;
     }
 
-    public OmafAccess(String url, String cache, int source_type, boolean enable_extractor){
+    public OmafAccess(String url, String cache, int source_type, boolean enable_extractor, JnaOmafAccess._omafDashParams.ByValue omaf_params){
         this();
-        SetClientCtx(url, cache, source_type, enable_extractor);
+        SetClientCtx(url, cache, source_type, enable_extractor, omaf_params);
     }
 
-    private void SetClientCtx(String url, String cache, int source_type, boolean enable_extractor){
+    private void SetClientCtx(String url, String cache, int source_type, boolean enable_extractor, JnaOmafAccess._omafDashParams.ByValue omaf_params){
         mContext.media_url = url;
-
         mContext.cache_path = cache;
         mContext.source_type = source_type;
         mContext.enable_extractor = enable_extractor;
+        mContext.omaf_params = omaf_params;
     }
 
     public int Initialize( ){
