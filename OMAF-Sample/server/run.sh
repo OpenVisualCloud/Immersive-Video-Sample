@@ -115,8 +115,8 @@ export LD_LIBRARY_PATH=/usr/local/lib/:/usr/local/lib64:$LD_LIBRARY_PATH
 if [ "${RES}" = "4K" ] ; then
 
     VIDEO="test1_h265_3840x2048_30fps_30M_200frames.mp4"
-    echo "ip 127.0.0.1 port 9089" > config_low.txt
-    echo "ip 127.0.0.1 port 9090" > config_high.txt
+    echo "ip local port 9090" > config_high.txt
+    echo "ip local port 9089" > config_low.txt
 
     if [ "${TYPE}" = "LIVE" ] ; then
         ffmpeg_4K_LIVE ${VIDEO} ${IP}
@@ -127,8 +127,8 @@ if [ "${RES}" = "4K" ] ; then
 else
 
     VIDEO="test1_h264_8k_25fps_30M_250frames.mp4"
-    echo "ip 127.0.0.1 port 9089 numa 1" > config_high.txt
-    echo "ip 127.0.0.1 port 9090 numa 2" > config_low.txt
+    echo "ip local port 9090 numa 1" > config_high.txt
+    echo "ip local port 9089 numa 2" > config_low.txt
 
     if [ "${TYPE}" = "LIVE" ] ; then
         ffmpeg_8K_LIVE ${VIDEO} ${IP}

@@ -29,18 +29,10 @@ if [ "${TARGET}" == "server" ] ; then
 
 elif [ "${TARGET}" == "client" ] ; then
 
-    cd FFmpeg
-    patch -p1 < ../ffmpeg/patches/0001-Add-avcodec_receive_frame2-for-vaapi-hardware-decodi.patch
-    cd ..
     mkdir -p build/external/ffmpeg_client
     cd build/external/ffmpeg_client
     ../../../FFmpeg/configure --enable-shared
     make -j $(nproc)
     sudo make install
-
-    cd ../../../FFmpeg
-    patch -R -p1 < ../ffmpeg/patches/0001-Add-avcodec_receive_frame2-for-vaapi-hardware-decodi.patch
-    cd libavcodec
-    rm -rf *.orig
 
 fi
