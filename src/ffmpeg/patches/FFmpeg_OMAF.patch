@@ -688,7 +688,7 @@ new file mode 100644
 index 0000000..332bf7b
 --- /dev/null
 +++ b/FFmpeg/libavcodec/distributed_encoder.c
-@@ -0,0 +1,597 @@
+@@ -0,0 +1,622 @@
 +/*
 +* Scalable Video Technology for distributed encoder library plugin
 +*
@@ -831,6 +831,31 @@ index 0000000..332bf7b
 +    sInfo.tileUniformSpacing = true;
 +    sInfo.tileColumn = deCxt->tile_column;
 +    sInfo.tileRow = deCxt->tile_row;
++    if (sInfo.frameWidth % sInfo.tileColumn)
++    {
++        av_log(avctx, AV_LOG_ERROR,
++                "Frame Width can't be divided by tile column number \n");
++        return -1;
++    }
++    if ((sInfo.frameWidth / sInfo.tileColumn) % 64)
++    {
++        av_log(avctx, AV_LOG_ERROR,
++                "Tile width can't be divided by 64 \n");
++        return -1;
++    }
++    if (sInfo.frameHeight % sInfo.tileRow)
++    {
++        av_log(avctx, AV_LOG_ERROR,
++                "Frame Height can't be divided by tile row number \n");
++        return -1;
++    }
++    if ((sInfo.frameHeight / sInfo.tileRow) % 64)
++    {
++        av_log(avctx, AV_LOG_ERROR,
++                "Tile height can't be divided by 64 \n");
++        return -1;
++    }
++
 +    sInfo.tileOverlapped = 0;
 +    sInfo.overlapWidth = 0;
 +    sInfo.overlapHeight = 0;
