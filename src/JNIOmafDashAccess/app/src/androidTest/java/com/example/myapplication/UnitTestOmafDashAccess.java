@@ -62,14 +62,60 @@ public class UnitTestOmafDashAccess {
         //1. new OmafAccess object
         int source_type = MultiResSource;
         boolean enable_extractor = false;
-        OmafAccess omafAccess = new OmafAccess(url_static_https, cache_path, source_type, enable_extractor);
+        //http proxy
+        JnaOmafAccess._omafHttpProxy.ByValue proxy = new JnaOmafAccess._omafHttpProxy.ByValue();
+        proxy.http_proxy = null;
+        proxy.https_proxy = null;
+        proxy.no_proxy = null;
+        proxy.proxy_user = null;
+        proxy.proxy_wd = null;
+        //http params
+        int ssl_verify_host = 0;
+        int ssl_verify_peer = 0;
+        long conn_timeout = -1;
+        int retry_times = 3;
+        long total_timeout = -1;
+        JnaOmafAccess._omafHttpParams.ByValue http_params = new JnaOmafAccess._omafHttpParams.ByValue();
+        http_params.conn_timeout = conn_timeout;
+        http_params.total_timeout = total_timeout;
+        http_params.retry_times = retry_times;
+        http_params.ssl_verify_host = ssl_verify_host;
+        http_params.ssl_verify_peer = ssl_verify_peer;
+        long max_parallel_transfers = 256;
+        int segment_open_timeout_ms = 3000;
+        //statistic params
+        int statistic_enable = 0;
+        int window_size_ms = 10000;
+        JnaOmafAccess._omafStatisticsParams.ByValue statistic_params = new JnaOmafAccess._omafStatisticsParams.ByValue();
+        statistic_params.window_size_ms = window_size_ms;
+        statistic_params.enable = statistic_enable;
+        //synchronizer_params
+        int synchronizer_enable = 0;
+        int segment_range_size = 20;
+        JnaOmafAccess._omafSynchronizerParams.ByValue synchronizer_params = new JnaOmafAccess._omafSynchronizerParams.ByValue();
+        synchronizer_params.segment_range_size = segment_range_size;
+        synchronizer_params.enable = synchronizer_enable;
+        //predictor params
+        JnaOmafAccess._omafPredictorParams.ByValue predictor_params = new JnaOmafAccess._omafPredictorParams.ByValue();
+        predictor_params.libpath = "";
+        predictor_params.name = "";
+        predictor_params.enable = 0;
+        JnaOmafAccess._omafDashParams.ByValue omaf_params = new JnaOmafAccess._omafDashParams.ByValue();
+        omaf_params.proxy = proxy;
+        omaf_params.http_params = http_params;
+        omaf_params.statistic_params = statistic_params;
+        omaf_params.synchronizer_params = synchronizer_params;
+        omaf_params.predictor_params = predictor_params;
+        omaf_params.max_parallel_transfers = max_parallel_transfers;
+        omaf_params.segment_open_timeout_ms = segment_open_timeout_ms;
+        OmafAccess omafAccess = new OmafAccess(url_static, cache_path, source_type, enable_extractor, omaf_params);
         //2. initialize
         int ret = 0;
         ret = omafAccess.Initialize();
         assertEquals(ret, 0);
         //3. set headinfo
         JnaOmafAccess.HEADPOSE.ByReference pose = new JnaOmafAccess.HEADPOSE.ByReference();
-        JnaOmafAccess.HEADSETINFO clientInfo = new JnaOmafAccess.HEADSETINFO(0, 2, pose, 80, 80, 960, 960);
+        JnaOmafAccess.HEADSETINFO clientInfo = new JnaOmafAccess.HEADSETINFO(pose, 80, 80, 960, 960);
         ret = omafAccess.SetupHeadSetInfo(clientInfo);
         assertEquals(ret, 0);
         //4. open media
