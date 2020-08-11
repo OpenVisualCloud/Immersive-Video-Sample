@@ -120,6 +120,8 @@ RenderStatus Player::Play()
     float poseYaw, posePitch;
     std::chrono::high_resolution_clock clock;
     uint64_t lastTime = 0;
+    uint64_t prevLastTime = 0;
+    uint64_t deltaTime = 0;
     uint64_t renderCount = 0; // record render times
     uint64_t start = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     bool quitFlag = false;
@@ -137,7 +139,7 @@ RenderStatus Player::Play()
         if (PLAY == GetStatus())
         {
             uint64_t renderTime = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-            uint64_t interval = renderTime - lastTime;
+            uint64_t interval = renderTime - lastTime + deltaTime;
             uint32_t renderInterval = m_renderManager->GetRenderConfig().renderInterval;
             if(interval < renderInterval)
             {
@@ -155,8 +157,9 @@ RenderStatus Player::Play()
                 }
                 LOG(INFO)<<"=======interval>INTERVAL========"<<interval - renderInterval<<" and needDropFrames is:" << needDropFrames<< std::endl;
             }
-
+            prevLastTime = lastTime;
             lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+            deltaTime = lastTime - prevLastTime < renderInterval ? 0 : lastTime - prevLastTime - renderInterval;
             RenderStatus renderStatus = m_renderManager->Render(renderCount);
             if (renderStatus != RENDER_NO_FRAME){
                 renderCount += needDropFrames + 1;
