@@ -80,7 +80,7 @@ build_ci(){
     fi
 
     # Build client
-    ./install_FFmpeg.sh client
+    cd ${EX_PATH} && ./install_FFmpeg.sh client
     cd ${EX_PATH} && build_client
 
     if [ "$1" == "oss" ] ; then
