@@ -139,6 +139,8 @@ struct RenderConfig {
   // from media source
   int32_t projFormat;
   uint32_t renderInterval;
+  // glog level output setting
+  int32_t minLogLevel;
 };
 
 struct MotionConfig {

@@ -180,6 +180,38 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       return RENDER_ERROR;
     }
 
+    XMLElement* logLevelElem = info->FirstChildElement("minLogLevel");
+    if (logLevelElem != NULL)
+    {
+      std::string logLevel = logLevelElem->GetText();
+      if (logLevel == "INFO")
+      {
+        renderConfig.minLogLevel = google::INFO;
+      }
+      else if (logLevel == "WARNING")
+      {
+        renderConfig.minLogLevel = google::WARNING;
+      }
+      else if (logLevel == "ERROR")
+      {
+        renderConfig.minLogLevel = google::ERROR;
+      }
+      else if (logLevel == "FATAL")
+      {
+        renderConfig.minLogLevel = google::FATAL;
+      }
+      else
+      {
+        LOG(ERROR) << "Invalid min log level setting!" << endl;
+        return RENDER_ERROR;
+      }
+    }
+    else
+    {
+      LOG(ERROR) << " invalid params for minLogLevel! " << std::endl;
+      return RENDER_ERROR;
+    }
+
     // predictor option
     XMLElement *predictor = info->FirstChildElement("predict");
     if (predictor) {
@@ -190,35 +222,36 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       renderConfig.libPath = "";
       XMLElement* pluginElem = predictor->FirstChildElement("plugin");
       XMLElement* pPathElem = predictor->FirstChildElement("path");
-      if (pluginElem != NULL && pPathElem != NULL)
-      {
-        if (renderConfig.enablePredictor) {
+      if (renderConfig.enablePredictor) {
+        if (pluginElem != NULL && pPathElem != NULL)
+        {
           renderConfig.predictPluginName = pluginElem->GetText();
           renderConfig.libPath = pPathElem->GetText();
         }
-      }
-      else
-      {
-        return RENDER_ERROR;
+        else
+        {
+          LOG(ERROR) << "Invalid plugin name or path!" << endl;
+          return RENDER_ERROR;
+        }
       }
     }
 
-    return true;
+    return RENDER_STATUS_OK;
   } catch (const std::exception &ex) {
     LOG(ERROR) << "Exception when parse the file: " << xml_file << std::endl;
     LOG(ERROR) << "Exception: " << ex.what() << std::endl;
-    return false;
+    return RENDER_ERROR;
   }
 }
 
 int main(int32_t argc, char *argv[]) {
-  GlogWrapper m_glogWrapper((char*)"Render");
   // 1. input from xml configuration
   struct RenderConfig renderConfig;
-  if (!parseRenderFromXml("config.xml", renderConfig)) {
+  if (RENDER_STATUS_OK != parseRenderFromXml("config.xml", renderConfig)) {
     LOG(ERROR) << "Failed to parse the render xml config file!" << std::endl;
     return RENDER_ERROR;
   }
+  GlogWrapper m_glogWrapper((char*)"glogRender", renderConfig.minLogLevel);
 
   string cacheDir = renderConfig.cachePath;
   DIR *dir = opendir(cacheDir.c_str());

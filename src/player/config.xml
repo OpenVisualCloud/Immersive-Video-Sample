@@ -16,6 +16,8 @@
     <viewportHeight>960</viewportHeight>
     <!-- cache path -->
     <cachePath>/tmp/cache</cachePath>
+    <!-- log level: INFO < WARNING < ERROR < FATAL -->
+    <minLogLevel>WARNING</minLogLevel>
     <!-- for WebRTC parameters -->
     <resolution>8k</resolution>
     <server_url>http://10.67.112.207:3001</server_url>
