@@ -36,8 +36,8 @@ sudo yum install devtoolset-6-gcc devtoolset-6-gcc-c++
 ## Build Server Components
 ```bash
 # Make sure using gcc >= 6.3.1
-git clone https://github.com/OpenVisualCloud/ImmersiveVideo
-cd ImmersiveVideo/src/external
+git clone https://github.com/OpenVisualCloud/Immersive-Video-Sample.git
+cd Immersive-Video-Sample/src/external
 ./build.sh server y # Install dependency before the first build.
 # ./build.sh server n # Build without dependency installation.
 ```
@@ -45,8 +45,8 @@ cd ImmersiveVideo/src/external
 ## Build Client Components
 ```bash
 # Make sure using gcc >= 6.3.1
-git clone https://github.com/OpenVisualCloud/ImmersiveVideo
-cd ImmersiveVideo/src/external
+git clone https://github.com/OpenVisualCloud/Immersive-Video-Sample.git
+cd Immersive-Video-Sample/src/external
 ./build.sh client y # Install dependency before the first build.
 # ./build.sh client n # Build without dependency installation.
 ```
