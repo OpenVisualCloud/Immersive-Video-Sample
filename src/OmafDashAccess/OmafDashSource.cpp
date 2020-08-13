@@ -619,10 +619,18 @@ void OmafDashSource::thread_dynamic() {
     SetStatus(STATUS_STOPPED);
     return;
   }
-
+  uint32_t wait_time = 3000;
+  uint32_t current_wait_time = 0;
   bool isInitSegParsed = omaf_reader_mgr_->IsInitSegmentsParsed();
   while (!isInitSegParsed) {
     ::usleep(1000);
+    current_wait_time++;
+    if (current_wait_time > wait_time)
+    {
+      SetStatus(STATUS_STOPPED);
+      LOG(ERROR) << " Time out for waiting init segment parse! " << endl;
+      return;
+    }
     isInitSegParsed = omaf_reader_mgr_->IsInitSegmentsParsed();
   }
 
@@ -691,10 +699,18 @@ void OmafDashSource::thread_static() {
     SetStatus(STATUS_STOPPED);
     return;
   }
-
+  uint32_t wait_time = 3000;
+  uint32_t current_wait_time = 0;
   bool isInitSegParsed = omaf_reader_mgr_->IsInitSegmentsParsed();
   while (!isInitSegParsed) {
     ::usleep(1000);
+    current_wait_time++;
+    if (current_wait_time > wait_time)
+    {
+      SetStatus(STATUS_STOPPED);
+      LOG(ERROR) << " Time out for waiting init segment parse! " << endl;
+      return;
+    }
     isInitSegParsed = omaf_reader_mgr_->IsInitSegmentsParsed();
   }
 
