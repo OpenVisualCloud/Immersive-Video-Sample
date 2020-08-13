@@ -40,7 +40,7 @@
 
 #define MAXFOV 140
 #define MINFOV 50
-#define MAXVIEWPORTLEN 1200
+#define MAXVIEWPORTLEN 2000
 #define MINVIEWPORTLEN 800
 #define MAXWINDOWLEN 2000
 #define MINWINDOWLEN 500
@@ -116,53 +116,7 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       LOG(ERROR) << " invalid params for sourceType! " << std::endl;
       return RENDER_ERROR;
     }
-    XMLElement* dtElem = info->FirstChildElement("decoderType");
-    if (dtElem != NULL)
-    {
-      renderConfig.decoderType =
-        atoi(dtElem->GetText());  // VAAPI_DECODER=1 or SW_DECODER=0
-      if (renderConfig.decoderType != 0)
-      {
-        LOG(ERROR) << "---INVALID decoder type input (0:software decoder)---" << std::endl;
-        return RENDER_ERROR;
-      }
-    }
-    else
-    {
-      LOG(ERROR) << " invalid params for decoderType! " << std::endl;
-      return RENDER_ERROR;
-    }
-    XMLElement* ctElem = info->FirstChildElement("contextType");
-    if (ctElem !=NULL)
-    {
-      renderConfig.contextType =
-        atoi(ctElem->GetText());  // EGL_CONTEXT=1 or GLFW_CONTEXT=0
-      if (renderConfig.contextType != 0) {
-        LOG(ERROR) << "---INVALID context type input (0:GLFW context)---" << std::endl;
-        return RENDER_ERROR;
-      }
-    }
-    else
-    {
-      LOG(ERROR) << " invalid params for contextType! " << std::endl;
-      return RENDER_ERROR;
-    }
-    XMLElement* bufferElem = info->FirstChildElement("useDMABuffer");
-    if (bufferElem != NULL)
-    {
-      renderConfig.useDMABuffer =
-        atoi(bufferElem
-                 ->GetText());  // It is only valid for hardware decoding + EGL_CONTEXT if it is set as 1
-      if (renderConfig.useDMABuffer != 0) {
-        LOG(ERROR) << "---INVALID useDMABuffer input (0:not use DMA buffer)---" << std::endl;
-        return RENDER_ERROR;
-      }
-    }
-    else
-    {
-      LOG(ERROR) << " invalid params for useDMABuffer! " << std::endl;
-      return RENDER_ERROR;
-    }
+
     XMLElement* exElem = info->FirstChildElement("enableExtractor");
     if (exElem != NULL)
     {

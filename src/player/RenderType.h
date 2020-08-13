@@ -124,9 +124,6 @@ struct RenderConfig {
   // use string to protect data memory issue
   std::string url;
   uint32_t sourceType;
-  uint32_t decoderType;
-  uint32_t contextType;
-  uint32_t useDMABuffer;
   uint32_t viewportHFOV;
   uint32_t viewportVFOV;
   uint32_t viewportWidth;
