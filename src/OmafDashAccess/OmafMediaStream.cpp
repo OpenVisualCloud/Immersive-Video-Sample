@@ -659,12 +659,13 @@ int32_t OmafMediaStream::TilesStitching() {
 
           if (pts == 0)
           {
-              while(!pts)
+              while((!pts) && (currWaitTimes < waitTimes) && (m_status != STATUS_STOPPED))
               {
                   usleep(50);
+                  currWaitTimes++;
                   pts = omaf_reader_mgr_->GetOldestPacketPTSForTrack(trackID);
               }
-
+              currWaitTimes = 0;
               if (pts > currFramePTS)
               {
                   hasPktOutdated = true;
