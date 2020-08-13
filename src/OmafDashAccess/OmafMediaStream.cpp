@@ -611,6 +611,8 @@ int32_t OmafMediaStream::TilesStitching() {
   }
   int ret = ERROR_NONE;
   bool selectedFlag = false;
+  uint32_t wait_time = 30000;
+  uint32_t current_wait_time = 0;
   do
   {
     {
@@ -618,6 +620,12 @@ int32_t OmafMediaStream::TilesStitching() {
       selectedFlag = m_hasTileTracksSelected;
     }
     usleep(100);
+    current_wait_time++;
+    if (current_wait_time > wait_time)
+    {
+      LOG(ERROR) << "Time out for tile track select!" << endl;
+      return ERROR_INVALID;
+    }
   }while (!selectedFlag);
 
   uint64_t currFramePTS = 0;

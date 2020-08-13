@@ -631,14 +631,14 @@ void OmafReaderManager::initSegmentStateChange(std::shared_ptr<OmafSegment> pIni
                                                OmafSegment::State state) noexcept {
   try {
     if (state != OmafSegment::State::OPEN_SUCCES) {
-      LOG(FATAL) << "Failed to open the init segment, state= " << static_cast<int>(state) << std::endl;
+      LOG(ERROR) << "Failed to open the init segment, state= " << static_cast<int>(state) << std::endl;
       return;
     }
 
     // 1. parse the segment
     OMAF_STATUS ret = reader_->parseInitializationSegment(pInitSeg.get(), pInitSeg->GetInitSegID());
     if (ret != ERROR_NONE) {
-      LOG(FATAL) << "parse initialization segment failed! code= " << ret << std::endl;
+      LOG(ERROR) << "parse initialization segment failed! code= " << ret << std::endl;
       return;
     }
 
