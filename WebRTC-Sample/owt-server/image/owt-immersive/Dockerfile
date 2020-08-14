@@ -215,7 +215,7 @@ RUN git clone -b ${OWT_BRANCH} ${OWTSERVER_REPO} && \
     # Install node modules for owt
     npm config set proxy=${http_proxy} && \
     npm config set https-proxy=${http_proxy} && \
-    npm install -g --loglevel error node-gyp grunt-cli underscore jsdoc && \
+    npm install -g --loglevel error node-gyp@6.1.0 grunt-cli underscore jsdoc && \
     cd ${SERVER_PATH} && npm install nan && \
 
     # Get openh264 for owt
