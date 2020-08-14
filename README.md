@@ -1,6 +1,6 @@
 # Open Visual Cloud Immersive Video Samples
 [![Travis Build Status](https://travis-ci.com/OpenVisualCloud/Immersive-Video-Sample.svg?branch=master)](https://travis-ci.com/OpenVisualCloud/Immersive-Video-Sample)
-[![Stable release](https://img.shields.io/badge/latest_release-v1.0-green.svg)](https://github.com/OpenVisualCloud/Immersive-Video-Sample/releases/latest)
+[![Stable release](https://img.shields.io/badge/latest_release-v1.2.0-green.svg)](https://github.com/OpenVisualCloud/Immersive-Video-Sample/releases/latest)
 [![Contributions](https://img.shields.io/badge/contributions-welcome-blue.svg)](https://github.com/OpenVisualCloud/Immersive-Video-Sample/wiki)
 
 This Immersive Video project includes 2 samples which are based on different streaming frameworks.  
