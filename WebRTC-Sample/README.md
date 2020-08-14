@@ -91,6 +91,9 @@ The OWT-LINIX-PLAYER is an immersive 360 video player on linux, with WebRTC back
 ```bash
 cd WebRTC-Sample/owt-linux-player
 
+# Latest stable player version
+git checkout b9acd1b1b3b6fcd836b9f19848198c21e4c54e1c
+
 # build owt linux sdk and dependencies
 ./build_webrtc_linux_client_sdk.sh
 
