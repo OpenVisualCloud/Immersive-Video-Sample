@@ -28,24 +28,12 @@ cd -
 
 destroy_worker()
 {
-    STATUS=$(lsof -i:9090 | tail -n 1 | awk {'print $NF'})
-
-    while [ "${STATUS}" != "EMPTY" ]
-        do
-            if [ "${STATUS}" == "(LISTEN)" ] ; then
-                echo "LISTEN"
-                PID=$(lsof -i:9090 | tail -n 1 | awk {'print $2'})
-                echo ${PID}
-                if [ ! -z "${PID}" ] ; then
-                    kill -9 ${PID}
-                    STATUS="EMPTY"
-                fi
-                sleep 2s
-            else
-                echo "EMPTY"
-                STATUS="EMPTY"
-                fi
-        done
+    PID=$(pidof WorkerServer_9090) || true
+    echo ${PID}
+    if [ ! -z "${PID}" ] ; then
+        kill -9 ${PID}
+    fi
+    sleep 2s
 }
 
 if [ "${REPO}" = "oss" ] ; then
@@ -75,7 +63,6 @@ if [ "${REPO}" = "oss" ] ; then
 
     # distributed_encoder test
     ################################
-    sudo yum install lsof -y
 
     cd distributed_encoder
     cp ../../../distributed_encoder/test/*265 .
