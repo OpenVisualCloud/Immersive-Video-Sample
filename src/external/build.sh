@@ -67,30 +67,34 @@ build_ci(){
         cd ${EX_PATH} && build_server
     fi
 
-    cd ${EX_PATH}/../build/external && mkdir -p ffmpeg_server_so
-    sudo cp /usr/local/lib/libavcodec.so ffmpeg_server_so/libavcodec.so.58
-    sudo cp /usr/local/lib/libavutil.so ffmpeg_server_so/libavutil.so.56
-    sudo cp /usr/local/lib/libavformat.so ffmpeg_server_so/libavformat.so.58
-    sudo cp /usr/local/lib/libavfilter.so ffmpeg_server_so/libavfilter.so.7
-    sudo cp /usr/local/lib/libswresample.so ffmpeg_server_so/libswresample.so.3
-    sudo cp /usr/local/lib/libpostproc.so ffmpeg_server_so/libpostproc.so.55
-    sudo cp /usr/local/lib/libswscale.so ffmpeg_server_so/libswscale.so.5
-    cd ${EX_PATH} && ./fpm.sh server ${GIT_SHORT_HEAD}
+    if [ "$1" == "oss" ] ; then
+        cd ${EX_PATH}/../build/external && mkdir -p ffmpeg_server_so
+        sudo cp /usr/local/lib/libavcodec.so ffmpeg_server_so/libavcodec.so.58
+        sudo cp /usr/local/lib/libavutil.so ffmpeg_server_so/libavutil.so.56
+        sudo cp /usr/local/lib/libavformat.so ffmpeg_server_so/libavformat.so.58
+        sudo cp /usr/local/lib/libavfilter.so ffmpeg_server_so/libavfilter.so.7
+        sudo cp /usr/local/lib/libswresample.so ffmpeg_server_so/libswresample.so.3
+        sudo cp /usr/local/lib/libpostproc.so ffmpeg_server_so/libpostproc.so.55
+        sudo cp /usr/local/lib/libswscale.so ffmpeg_server_so/libswscale.so.5
+        cd ${EX_PATH} && ./fpm.sh server ${GIT_SHORT_HEAD}
+    fi
 
     # Build client
-    ./install_FFmpeg.sh client
+    cd ${EX_PATH} && ./install_FFmpeg.sh client
     cd ${EX_PATH} && build_client
 
-    cd ${EX_PATH}/../build/external && mkdir -p ffmpeg_client_so
-    sudo cp ffmpeg_client/libavcodec/libavcodec.so.58 ffmpeg_client_so/libavcodec.so.58
-    sudo cp ffmpeg_client/libavutil/libavutil.so.56 ffmpeg_client_so/libavutil.so.56
-    sudo cp ffmpeg_client/libavformat/libavformat.so.58 ffmpeg_client_so/libavformat.so.58
-    sudo cp ffmpeg_client/libavfilter/libavfilter.so.7 ffmpeg_client_so/libavfilter.so.7
-    sudo cp ffmpeg_client/libavdevice/libavdevice.so.58 ffmpeg_client_so/libavdevice.so.58
-    sudo cp ffmpeg_client/libswscale/libswscale.so.5 ffmpeg_client_so/libswscale.so.5
-    sudo cp ffmpeg_client/libswresample/libswresample.so.3 ffmpeg_client_so/libswresample.so.3
-    sudo cp /usr/local/lib/libpostproc.so.55 ffmpeg_client_so/libpostproc.so.55
-    cd ${EX_PATH} && ./fpm.sh client ${GIT_SHORT_HEAD}
+    if [ "$1" == "oss" ] ; then
+        cd ${EX_PATH}/../build/external && mkdir -p ffmpeg_client_so
+        sudo cp ffmpeg_client/libavcodec/libavcodec.so.58 ffmpeg_client_so/libavcodec.so.58
+        sudo cp ffmpeg_client/libavutil/libavutil.so.56 ffmpeg_client_so/libavutil.so.56
+        sudo cp ffmpeg_client/libavformat/libavformat.so.58 ffmpeg_client_so/libavformat.so.58
+        sudo cp ffmpeg_client/libavfilter/libavfilter.so.7 ffmpeg_client_so/libavfilter.so.7
+        sudo cp ffmpeg_client/libavdevice/libavdevice.so.58 ffmpeg_client_so/libavdevice.so.58
+        sudo cp ffmpeg_client/libswscale/libswscale.so.5 ffmpeg_client_so/libswscale.so.5
+        sudo cp ffmpeg_client/libswresample/libswresample.so.3 ffmpeg_client_so/libswresample.so.3
+        sudo cp /usr/local/lib/libpostproc.so.55 ffmpeg_client_so/libpostproc.so.55
+        cd ${EX_PATH} && ./fpm.sh client ${GIT_SHORT_HEAD}
+    fi
 }
 
 build_test(){
