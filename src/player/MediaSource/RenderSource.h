@@ -61,12 +61,12 @@ public:
     virtual RenderStatus Initialize( int32_t pix_fmt, int32_t width, int32_t height ) = 0;
     //! \brief Create a render source
     //!
-    //! \param  [in] RenderBackend*
-    //!         RenderBackend interface
+    //! \param  [in] bool
+    //!         has inited or not
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus CreateRenderSource() = 0;
+    virtual RenderStatus CreateRenderSource(bool hasInited) = 0;
     //! \brief Update the render source
     //!
     //! \param  [in] BufferInfo*
@@ -108,7 +108,7 @@ public:
     //! \return struct SourceWH
     //!         return Source width and height
     //!
-    struct SourceWH GetSourceWH();
+    struct SourceWH* GetSourceWH();
     //! \brief Set Source Texture Handle
     //!
     //! \param  [in] uint32_t*
@@ -153,7 +153,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus SetSourceWH(struct SourceWH sourceWH);
+    RenderStatus SetSourceWH(struct SourceWH *sourceWH);
 
     void SetVideoID(int32_t video_id) {m_VideoID =video_id; };
     int32_t GetVideoID() {return m_VideoID;};
@@ -171,7 +171,7 @@ protected:
     uint32_t         m_sourceTextureNumber; //! yuv : 3 or rgb : 1
     uint32_t         m_fboR2THandle;        //! fbo for Rendering to texture
     uint32_t         m_textureOfR2T;        //! output render to texture
-    struct SourceWH  m_sourceWH;            //! sourceTexture size
+    struct SourceWH *m_sourceWH;            //! sourceTexture size
     VideoShader      m_videoShaderOfR2T;    //! the shader used to blend source to output; such as color space transform
     Mesh            *m_meshOfR2T;           //! the mesh used to blend source to output
     RegionData      *mCurRegionInfo;

@@ -78,33 +78,51 @@ RenderStatus SWRenderSource::Initialize( int32_t pix_fmt, int32_t width, int32_t
     m_videoShaderOfR2T.SetUniform1i("isNV12", 0);
 
     uint32_t number = 0;
-    struct SourceWH packedWH;
     switch (pix_fmt)
     {
     case PixelFormat::PIX_FMT_RGB24:
         number = 1;
-        packedWH.width = new uint32_t[number];
-        packedWH.height = new uint32_t[number];
-        packedWH.width[0] = width;
-        packedWH.height[0] = height;
+        if (m_sourceWH == NULL || m_sourceWH->width == NULL || m_sourceWH->height == NULL)
+        {
+            if (m_sourceWH != NULL)
+            {
+                SAFE_DELETE_ARRAY(m_sourceWH->width);
+                SAFE_DELETE_ARRAY(m_sourceWH->height);
+            }
+            SAFE_DELETE(m_sourceWH);
+            m_sourceWH = new struct SourceWH;
+            m_sourceWH->width = new uint32_t[number];
+            m_sourceWH->height = new uint32_t[number];
+        }
+        m_sourceWH->width[0] = width;
+        m_sourceWH->height[0] = height;
         break;
     case PixelFormat::PIX_FMT_YUV420P:
         number = 3;
-        packedWH.width = new uint32_t[number];
-        packedWH.height = new uint32_t[number];
-        packedWH.width[0] = width;
-        packedWH.width[1] = packedWH.width[0] / 2;
-        packedWH.width[2] = packedWH.width[1];
-        packedWH.height[0] = height;
-        packedWH.height[1] = packedWH.height[0] / 2;
-        packedWH.height[2] = packedWH.height[1];
+        if (m_sourceWH == NULL || m_sourceWH->width == NULL || m_sourceWH->height == NULL)
+        {
+            if (m_sourceWH != NULL)
+            {
+                SAFE_DELETE_ARRAY(m_sourceWH->width);
+                SAFE_DELETE_ARRAY(m_sourceWH->height);
+            }
+            SAFE_DELETE(m_sourceWH);
+            m_sourceWH = new struct SourceWH;
+            m_sourceWH->width = new uint32_t[number];
+            m_sourceWH->height = new uint32_t[number];
+        }
+        m_sourceWH->width[0] = width;
+        m_sourceWH->width[1] = m_sourceWH->width[0] / 2;
+        m_sourceWH->width[2] = m_sourceWH->width[1];
+        m_sourceWH->height[0] = height;
+        m_sourceWH->height[1] = m_sourceWH->height[0] / 2;
+        m_sourceWH->height[2] = m_sourceWH->height[1];
         break;
     default:
         break;
     }
-    SetSourceWH(packedWH);
     SetSourceTextureNumber(number);
-    CreateRenderSource();
+    CreateRenderSource(bInited);
     bInited = true;
     return RENDER_STATUS_OK;
 }
@@ -146,16 +164,16 @@ RenderStatus SWRenderSource::Initialize(struct MediaSourceInfo *mediaSourceInfo)
     default:
         break;
     }
-    SetSourceWH(packedWH);
+    SetSourceWH(&packedWH);
     SetSourceTextureNumber(number);
-    CreateRenderSource();
+    CreateRenderSource(bInited);
     bInited = true;
     return RENDER_STATUS_OK;
 }
 
-RenderStatus SWRenderSource::CreateRenderSource()
+RenderStatus SWRenderSource::CreateRenderSource(bool hasInited)
 {
-    if (CreateSourceTex() != RENDER_STATUS_OK || CreateR2TFBO() != RENDER_STATUS_OK)
+    if (CreateSourceTex() != RENDER_STATUS_OK || CreateR2TFBO(hasInited) != RENDER_STATUS_OK)
     {
         return RENDER_ERROR;
     }
@@ -167,9 +185,11 @@ RenderStatus SWRenderSource::CreateSourceTex()
     RenderBackend *renderBackend = RENDERBACKEND::GetInstance();
     //1. initial r2t three textures.
     uint32_t sourceTextureNumber = GetSourceTextureNumber();
-    uint32_t *sourceTextureHandle = new uint32_t[sourceTextureNumber];
-    renderBackend->GenTextures(sourceTextureNumber, sourceTextureHandle);
-    SetSourceTextureHandle(sourceTextureHandle);
+    if (m_sourceTextureHandle == NULL)
+    {
+        m_sourceTextureHandle = new uint32_t[sourceTextureNumber];
+        renderBackend->GenTextures(sourceTextureNumber, m_sourceTextureHandle);
+    }
     for (uint32_t i = 0; i < sourceTextureNumber; i++)
     {
         if (i == 0)
@@ -181,41 +201,43 @@ RenderStatus SWRenderSource::CreateSourceTex()
         else if (i == 3)
             renderBackend->ActiveTexture(GL_TEXTURE3);
 
-        renderBackend->BindTexture(GL_TEXTURE_2D, sourceTextureHandle[i]);
-        struct SourceWH sourceWH = GetSourceWH();
+        renderBackend->BindTexture(GL_TEXTURE_2D, m_sourceTextureHandle[i]);
+        struct SourceWH *sourceWH = GetSourceWH();
 
         renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-        renderBackend->TexImage2D(GL_TEXTURE_2D, 0, GL_R8, sourceWH.width[i], sourceWH.height[i], 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+        renderBackend->TexImage2D(GL_TEXTURE_2D, 0, GL_R8, sourceWH->width[i], sourceWH->height[i], 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
     }
     return RENDER_STATUS_OK;
 }
 
-RenderStatus SWRenderSource::CreateR2TFBO()
+RenderStatus SWRenderSource::CreateR2TFBO(bool hasInited)
 {
     RenderBackend *renderBackend = RENDERBACKEND::GetInstance();
     //2.initial FBOs
-    uint32_t textureOfR2T;
-    renderBackend->GenTextures(1, &textureOfR2T);
-    renderBackend->BindTexture(GL_TEXTURE_2D, textureOfR2T);
-    SetTextureOfR2T(textureOfR2T);
-    struct SourceWH sourceWH = GetSourceWH();
+    if (!hasInited)
+    {
+        renderBackend->GenTextures(1, &m_textureOfR2T);
+    }
+    renderBackend->BindTexture(GL_TEXTURE_2D, m_textureOfR2T);
+    struct SourceWH *sourceWH = GetSourceWH();
 
     renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-    renderBackend->TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, sourceWH.width[0], sourceWH.height[0], 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    renderBackend->TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, sourceWH->width[0], sourceWH->height[0], 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
-    uint32_t fboR2THandle;
-    renderBackend->GenFramebuffers(1, &fboR2THandle);
-    renderBackend->BindFramebuffer(GL_FRAMEBUFFER, fboR2THandle);
-    SetFboR2THandle(fboR2THandle);
-    renderBackend->FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureOfR2T, 0);
+    if (!hasInited)
+    {
+        renderBackend->GenFramebuffers(1, &m_fboR2THandle);
+    }
+    renderBackend->BindFramebuffer(GL_FRAMEBUFFER, m_fboR2THandle);
+    renderBackend->FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureOfR2T, 0);
 
     if (renderBackend->CheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
@@ -237,7 +259,7 @@ RenderStatus SWRenderSource::UpdateR2T(BufferInfo* bufInfo)
     //1. update source texture
     uint32_t sourceTextureNumber = GetSourceTextureNumber();
     uint32_t *sourceTextureHandle = GetSourceTextureHandle();
-    struct SourceWH sourceWH = GetSourceWH();
+    struct SourceWH *sourceWH = GetSourceWH();
     for (uint32_t i = 0; i < sourceTextureNumber; i++)
     {
         if (i == 0)
@@ -251,9 +273,9 @@ RenderStatus SWRenderSource::UpdateR2T(BufferInfo* bufInfo)
         renderBackend->BindTexture(GL_TEXTURE_2D, sourceTextureHandle[i]);
         renderBackend->PixelStorei(GL_UNPACK_ROW_LENGTH, bufInfo->stride[i]);
         if (GetSourceTextureNumber() == 1)
-            renderBackend->TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sourceWH.width[i], sourceWH.height[i], GL_RGB, GL_UNSIGNED_BYTE, bufInfo->buffer[i]); //use rgb data
+            renderBackend->TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sourceWH->width[i], sourceWH->height[i], GL_RGB, GL_UNSIGNED_BYTE, bufInfo->buffer[i]); //use rgb data
         else
-            renderBackend->TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sourceWH.width[i], sourceWH.height[i], GL_RED, GL_UNSIGNED_BYTE, bufInfo->buffer[i]); //use yuv data
+            renderBackend->TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sourceWH->width[i], sourceWH->height[i], GL_RED, GL_UNSIGNED_BYTE, bufInfo->buffer[i]); //use yuv data
     }
     uint64_t end1 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"update process is:"<<(end1 - start1)<<endl;
@@ -276,7 +298,7 @@ RenderStatus SWRenderSource::UpdateR2T(BufferInfo* bufInfo)
             renderBackend->ActiveTexture(GL_TEXTURE3);
         renderBackend->BindTexture(GL_TEXTURE_2D, sourceTextureHandle[i]);
     }
-    renderBackend->Viewport(0, 0, sourceWH.width[0], sourceWH.height[0]);
+    renderBackend->Viewport(0, 0, sourceWH->width[0], sourceWH->height[0]);
     renderBackend->DrawArrays(GL_TRIANGLES, 0, 6);
     uint64_t end2 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"bind process is:"<<(end2 - start2)<<endl;
