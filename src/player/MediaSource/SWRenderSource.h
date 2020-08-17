@@ -77,7 +77,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus CreateRenderSource();
+    virtual RenderStatus CreateRenderSource(bool hasInited);
 
     virtual RenderStatus process(BufferInfo* bufInfo);
 
@@ -94,7 +94,7 @@ private:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus CreateR2TFBO();
+    RenderStatus CreateR2TFBO(bool hasInited);
 private:
     bool            bInited;
 };

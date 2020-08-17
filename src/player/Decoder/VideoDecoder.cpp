@@ -234,6 +234,7 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
         return RENDER_DECODE_FAIL;
     }
 
+    while (ret >= 0){
     AVFrame* av_frame = av_frame_alloc();
     if (NULL == av_frame)
     {
@@ -273,6 +274,7 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
     SAFE_DELETE(data);
     uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<" decode one frame cost time "<<(end-start)<<" ms reso is " << mDecCtx->codec_ctx->width <<" x " <<mDecCtx->codec_ctx->height<<endl;
+    }
     return RENDER_STATUS_OK;
 }
 

@@ -42,8 +42,8 @@ RenderSource::RenderSource() : m_videoShaderOfR2T(shader_r2t_vs, shader_r2t_fs)
     m_sourceTextureNumber = 0;
     m_fboR2THandle        = 0;
     m_textureOfR2T        = 0;
-    m_sourceWH.width      = NULL;
-    m_sourceWH.height     = NULL;
+    m_sourceWH            = NULL;
+    m_sourceWH            = NULL;
     m_meshOfR2T           = NULL;
     m_VideoID             = -1;
     mCurRegionInfo        = NULL;
@@ -78,7 +78,7 @@ uint32_t RenderSource::GetTextureOfR2T()
     return m_textureOfR2T;
 }
 
-struct SourceWH RenderSource::GetSourceWH()
+struct SourceWH* RenderSource::GetSourceWH()
 {
     return m_sourceWH;
 }
@@ -111,7 +111,7 @@ RenderStatus RenderSource::SetTextureOfR2T(uint32_t texture)
     return RENDER_STATUS_OK;
 }
 
-RenderStatus RenderSource::SetSourceWH(struct SourceWH sourceWH)
+RenderStatus RenderSource::SetSourceWH(struct SourceWH *sourceWH)
 {
     m_sourceWH = sourceWH;
     return RENDER_STATUS_OK;
