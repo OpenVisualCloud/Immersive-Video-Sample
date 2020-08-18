@@ -111,6 +111,9 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
   //!
   OMAF_STATUS GetNextPacket(uint32_t trackID, MediaPacket *&pPacket, bool requireParams) noexcept;
 
+  //! \brief Get Next packet with assigned track index and PTS from packet queue.
+  OMAF_STATUS GetNextPacketWithPTS(uint32_t trackID, uint64_t pts, MediaPacket *&pPacket, bool requireParams) noexcept;
+
   //!  \brief Get mPacketQueue[trackID] size
   //!
   OMAF_STATUS GetPacketQueueSize(uint32_t trackID, size_t &size) noexcept;
