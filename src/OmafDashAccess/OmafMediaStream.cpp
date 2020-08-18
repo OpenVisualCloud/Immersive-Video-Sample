@@ -701,7 +701,13 @@ int32_t OmafMediaStream::TilesStitching() {
           }
         }
       }
-      ret = omaf_reader_mgr_->GetNextPacket(trackID, onePacket, m_needParams);
+      if ((currFramePTS == 0) || (as_it == mapSelectedAS.begin()) )
+      {
+        ret = omaf_reader_mgr_->GetNextPacket(trackID, onePacket, m_needParams);
+      } else {
+        ret = omaf_reader_mgr_->GetNextPacketWithPTS(trackID, currFramePTS, onePacket, m_needParams);
+      }
+
       currWaitTimes = 0;
       std::map<int, OmafAdaptationSet*> mapSelectedAS1;
       {
@@ -730,7 +736,12 @@ int32_t OmafMediaStream::TilesStitching() {
 
         usleep(1000);
         currWaitTimes++;
-        ret = omaf_reader_mgr_->GetNextPacket(trackID, onePacket, m_needParams);
+        if ((currFramePTS == 0) || (as_it == mapSelectedAS.begin()) )
+        {
+          ret = omaf_reader_mgr_->GetNextPacket(trackID, onePacket, m_needParams);
+        } else {
+          ret = omaf_reader_mgr_->GetNextPacketWithPTS(trackID, currFramePTS, onePacket, m_needParams);
+        }
       }
       if (hasPoseChanged) {
         prevPoseChanged = true;
@@ -775,6 +786,26 @@ int32_t OmafMediaStream::TilesStitching() {
 
     if (!isEOS && (selectedPackets.size() != mapSelectedAS.size()) && (currWaitTimes >= waitTimes)) {
       LOG(INFO) << "Incorrect selected tile tracks packets number for tiles stitching !" << std::endl;
+
+      for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end();) {
+        MediaPacket* pkt = it1->second;
+        SAFE_DELETE(pkt);
+        selectedPackets.erase(it1++);
+      }
+      selectedPackets.clear();
+
+      if (currFramePTS > 0)
+      {
+          std::map<int, OmafAdaptationSet*>::iterator itAS;
+          for (itAS = mMediaAdaptationSet.begin(); itAS != mMediaAdaptationSet.end(); itAS++)
+          {
+              OmafAdaptationSet *oneAS = itAS->second;
+              int32_t trkID = oneAS->GetTrackNumber();
+              omaf_reader_mgr_->RemoveOutdatedPacketForTrack(trkID, (currFramePTS));
+          }
+      }
+
+      continue;
     }
 
     if (!isEOS && !(m_stitch->IsInitialized())) {

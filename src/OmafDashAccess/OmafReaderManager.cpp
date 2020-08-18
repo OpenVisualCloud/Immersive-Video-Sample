@@ -497,6 +497,82 @@ OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPa
   }
 }
 
+OMAF_STATUS OmafReaderManager::GetNextPacketWithPTS(uint32_t trackID, uint64_t pts, MediaPacket *&pPacket, bool requireParams) noexcept {
+  try {
+    OMAF_STATUS ret = ERROR_NONE;
+
+    bool bpacket_readed = false;
+
+    // while (!bpacket_readed) {
+    {
+      std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
+
+      // 1. read the required packet
+      for (auto &nodeset : segment_parsed_list_) {//loop on different timeline
+        std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
+        while (it != nodeset.segment_nodes_.end()) { //loop on different node (track)
+          auto &node = *it;
+          VLOG(VLOG_TRACE) << "Require trackid=" << trackID << ", node trackid=" << node->getTrackId() << std::endl;
+          if (node->getTrackId() == trackID) {
+            ret = node->getPacket(pPacket, requireParams);
+            if (ret == ERROR_NONE) {
+              if (pPacket->GetPTS() == pts)
+              {
+                bpacket_readed = true;
+                timeline_point_ = node->getTimelinePoint();
+              }
+            }
+
+            if (0 == node->packetQueueSize()) {
+              VLOG(VLOG_TRACE) << "Node count=" << node.use_count() << "." << node->to_string() << std::endl;
+              nodeset.segment_nodes_.erase(it);
+            }
+
+            break;
+          }
+          it++;
+        }
+        if (bpacket_readed)
+        {
+          break;
+        }
+      }
+    }
+    if (!bpacket_readed) {
+      // FIXME, this may a bug for using the timeline point as segment number
+      if (work_params_.stream_type_ == DASH_STREAM_DYNMIC || !checkEOS(timeline_point_)) {
+        pPacket = nullptr;
+
+        ret = ERROR_NULL_PACKET;
+      } else {
+        ret = ERROR_NONE;
+        pPacket = new MediaPacket();
+        pPacket->SetEOS(true);
+      }
+    }
+    //  if (!bpacket_readed) {
+    //    LOG(INFO) << "Wait dash segment parsed!" << std::endl;
+    //    segment_parsed_cv_.wait(lock);
+    //   }
+    //  }  // end while
+
+    // 2. sync timeline point for outside reading
+    // drop all dashset whose timeline point is less than timeline point
+    if (timeline_point_ != -1) {
+      VLOG(VLOG_TRACE) << "To clear the timeline point <" << timeline_point_ << std::endl;
+      std::lock_guard<std::mutex> lock(segment_parsed_mutex_);
+      std::list<OmafSegmentNodeTimedSet>::iterator it = segment_parsed_list_.begin();
+      while (it != segment_parsed_list_.end() && it->timeline_point_ < timeline_point_) {
+        it = segment_parsed_list_.erase(it);  // 'it' will move to next when calling erase
+      }
+    }
+    return ret;
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Failed to read frame for trackid=" << trackID << ", ex: " << ex.what() << std::endl;
+    return ERROR_INVALID;
+  }
+}
+
 inline bool OmafReaderManager::isEmpty(std::mutex &mutex, const std::list<OmafSegmentNodeTimedSet> &nodes) noexcept {
   try {
     std::lock_guard<std::mutex> lock(mutex);
