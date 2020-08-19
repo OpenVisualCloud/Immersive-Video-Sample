@@ -51,7 +51,7 @@ public:
      //!
      //! \brief initialize a video decoder based on input information
      //!
-     virtual RenderStatus Initialize(int32_t id, Codec_Type codec, FrameHandler* handler) = 0;
+     virtual RenderStatus Initialize(int32_t id, Codec_Type codec, FrameHandler* handler, uint64_t startPts) = 0;
 
      //!
      //! \brief destroy a video decoder
@@ -61,7 +61,7 @@ public:
      //!
      //! \brief  reset the decoder when decoding information changes
      //!
-     virtual RenderStatus Reset() = 0;
+     virtual RenderStatus Reset(int32_t id, Codec_Type codec, uint64_t startPts) = 0;
 
      //!
      //! \brief  udpate frame to destination with the callback class FrameHandler
@@ -81,14 +81,22 @@ public:
      //!
      //! \brief  status of a decoder
      //!
-     virtual ThreadStatus GetDecoderStatus() = 0;
+    ThreadStatus GetDecoderStatus() {return m_status;};
+    void SetDecoderStatus(ThreadStatus status) {m_status = status;};
 
      bool GetEOS() { return mbEOS; };
      void SetEOS(bool eos) { mbEOS = eos; };
 
-     virtual bool IsReady() = 0;
+     uint64_t GetStartPts() { return mStartPts; };
+     void SetStartPts(uint64_t pts) { mStartPts = pts; };
+
+     virtual bool IsReady(uint64_t pts) = 0;
+
+protected:
+    ThreadStatus m_status;
 private:
-    bool mbEOS;
+    bool     mbEOS;
+    uint64_t mStartPts;
 };
 
 VCD_NS_END

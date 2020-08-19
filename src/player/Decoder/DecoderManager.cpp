@@ -68,10 +68,10 @@ RenderStatus DecoderManager::Initialize(FrameHandlerFactory* factory)
 }
 
 ///Video-relative operations
-RenderStatus DecoderManager::CreateVideoDecoder(uint32_t video_id, Codec_Type video_codec)
+RenderStatus DecoderManager::CreateVideoDecoder(uint32_t video_id, Codec_Type video_codec, uint64_t startPts)
 {
     VideoDecoder* pDecoder = new VideoDecoder();
-    RenderStatus ret = pDecoder->Initialize(video_id, video_codec, m_handlerFactory->CreateHandler(video_id));
+    RenderStatus ret = pDecoder->Initialize(video_id, video_codec, m_handlerFactory->CreateHandler(video_id), startPts);
 
     if( RENDER_STATUS_OK != ret ){
         SAFE_DELETE(pDecoder);
@@ -83,10 +83,11 @@ RenderStatus DecoderManager::CreateVideoDecoder(uint32_t video_id, Codec_Type vi
     return RENDER_STATUS_OK;
 }
 
-RenderStatus DecoderManager::CheckVideoDecoders(DashPacket* packets, uint32_t cnt)
+RenderStatus DecoderManager::CheckVideoDecoders(DashPacket* packets, uint32_t cnt, uint64_t startPts)
 {
     RenderStatus ret = RENDER_STATUS_OK;
     // condition 1: pending decoders
+    ScopeLock lock(m_mapDecoderLock);
     uint32_t currentDecoderSize = m_mapVideoDecoder.size();
     if (cnt < currentDecoderSize && currentDecoderSize != 0)
     {
@@ -113,7 +114,7 @@ RenderStatus DecoderManager::CheckVideoDecoders(DashPacket* packets, uint32_t cn
                 if (it->GetDecoderStatus() != STATUS_IDLE && it->GetDecoderStatus() != STATUS_PENDING)
                 {
                     it->Pending();
-                    LOG(INFO)<<" Decoder status is set to pending!" << endl;
+                    LOG(INFO)<<" Decoder "<< id << " status is set to pending!" << endl;
                 }
             }
         }
@@ -122,11 +123,16 @@ RenderStatus DecoderManager::CheckVideoDecoders(DashPacket* packets, uint32_t cn
     for(int i=0; i<cnt; i++){
         /// no video decoder relative to the packet; create one
         if(m_mapVideoDecoder.find(packets[i].videoID)==m_mapVideoDecoder.end()){
-            ret = CreateVideoDecoder(packets[i].videoID, packets[i].video_codec);
+            ret = CreateVideoDecoder(packets[i].videoID, packets[i].video_codec, startPts);
             if(RENDER_STATUS_OK!=ret){
                 LOG(ERROR)<<"Video "<< packets[i].videoID <<" : Failed to create a decoder for it"<<std::endl;
                 break;
             }
+        } // idle status -> running status
+        else if (m_mapVideoDecoder[packets[i].videoID]->GetDecoderStatus() == STATUS_IDLE || m_mapVideoDecoder[packets[i].videoID]->GetDecoderStatus() == STATUS_PENDING)
+        {
+            LOG(INFO) << "Reset " <<m_mapVideoDecoder[packets[i].videoID]->GetDecoderStatus() <<" status to RUNNING!" << endl;
+            m_mapVideoDecoder[packets[i].videoID]->Reset(packets[i].videoID, packets[i].video_codec, startPts);
         }
     }
     // condition 3: check EOS
@@ -145,11 +151,12 @@ RenderStatus DecoderManager::SendVideoPackets( DashPacket* packets, uint32_t cnt
     static uint64_t currentPts = 0;//for case test
     RenderStatus ret = RENDER_STATUS_OK;
 
-    ret = CheckVideoDecoders(packets, cnt);
+    ret = CheckVideoDecoders(packets, cnt, currentPts);
     if(RENDER_STATUS_OK!=ret) return ret;
 
     for(int i=0; i<cnt; i++){
         packets[i].pts = currentPts;
+        ScopeLock lock(m_mapDecoderLock);
         m_mapVideoDecoder[packets[i].videoID]->SendPacket(&(packets[i]));
         LOG(INFO)<<"send packet to video "<<packets[i].videoID<<" and pts is : "<<currentPts<<endl;
     }
@@ -164,7 +171,7 @@ RenderStatus DecoderManager::UpdateVideoFrame( uint32_t video_id, uint64_t pts )
         ret = m_mapVideoDecoder[video_id]->UpdateFrame(pts);
         if((STATUS_IDLE == m_mapVideoDecoder[video_id]->GetDecoderStatus())
            &&(ret==RENDER_NO_FRAME)){// to remove rs handler
-            LOG(INFO)<<" Now will destroy decoder and handler! "<< endl;
+            LOG(INFO)<<" Now will destroy decoder and handler! video id is " << video_id<< endl;
             m_mapVideoDecoder[video_id]->Destroy();
             SAFE_DELETE(m_mapVideoDecoder[video_id]);
             if (NULL != this->m_handlerFactory)
@@ -183,7 +190,8 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts )
 {
     RenderStatus ret = RENDER_STATUS_OK;
     uint32_t errorCnt = 0;
-    if (m_mapVideoDecoder.size() == 0 || !IsReady())
+    ScopeLock lock(m_mapDecoderLock);
+    if (m_mapVideoDecoder.size() == 0 || !IsReady(pts))
     {
         ret = RENDER_NO_FRAME;
         LOG(INFO)<<"There is no valid decoder for now!"<<endl;
@@ -212,6 +220,7 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts )
     // delete IDLE decoder.
     for(auto it=m_mapVideoDecoder.begin(); it!=m_mapVideoDecoder.end(); ){
         if (it->second == NULL){
+            LOG(INFO) << "delete idle decoder!" << endl;
             m_mapVideoDecoder.erase(it++);
         }
         else{
@@ -225,16 +234,6 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts )
 RenderStatus DecoderManager::ResetDecoders()
 {
     RenderStatus ret =  RENDER_STATUS_OK;
-    for(auto it=m_mapVideoDecoder.begin(); it!=m_mapVideoDecoder.end(); ++it){
-        ret = it->second->Reset();
-        if(ret != RENDER_STATUS_OK)
-            LOG(INFO)<<"Video "<< it->first <<" : reset failed "<<std::endl;
-    }
-    for(auto it=m_mapAudioDecoder.begin(); it!=m_mapAudioDecoder.end(); ++it){
-        ret = it->second->Reset();
-        if(ret != RENDER_STATUS_OK)
-            LOG(INFO)<<"Audio "<< it->first <<" : reset failed "<<std::endl;
-    }
     return ret;
 }
 

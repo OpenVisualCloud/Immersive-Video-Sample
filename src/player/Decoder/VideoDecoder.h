@@ -247,7 +247,7 @@ public:
      //!
      //! \brief initialize a video decoder based on input information
      //!
-     virtual RenderStatus Initialize(int32_t id, Codec_Type codec, FrameHandler* handler);
+     virtual RenderStatus Initialize(int32_t id, Codec_Type codec, FrameHandler* handler, uint64_t startPts);
 
      //!
      //! \brief destroy a video decoder
@@ -257,7 +257,7 @@ public:
      //!
      //! \brief  reset the decoder when decoding information changes
      //!
-     virtual RenderStatus Reset();
+     virtual RenderStatus Reset(int32_t id, Codec_Type codec, uint64_t startPts);
 
      //!
      //! \brief  udpate frame to destination with the callback class FrameHandler
@@ -279,12 +279,7 @@ public:
      //!
      virtual void Pending();
 
-     //!
-     //! \brief  get status of a decoder
-     //!
-     virtual ThreadStatus GetDecoderStatus();
-
-     virtual bool IsReady();
+     virtual bool IsReady(uint64_t pts);
 
 private:
      //!
@@ -300,7 +295,7 @@ private:
      //!
      //! \brief  flush frames in the decoder while before Close or reset decoder
      //!
-     RenderStatus FlushDecoder();
+     RenderStatus FlushDecoder(uint32_t video_id);
 
      //!
      //! \brief  update media information with new packet input
@@ -327,12 +322,12 @@ private:
 
 private:
      DecoderContext              *mDecCtx;
-     ThreadStatus                 m_status;
      int32_t                      mVideoId;
      FrameHandler*                mHandler;
      AVPacket                    *mPkt;
      PacketInfo                  *mPktInfo;
      RegionWisePacking           *mRwpk;
+     bool                         mIsFlushed;
 };
 
 VCD_NS_END

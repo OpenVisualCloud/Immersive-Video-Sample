@@ -161,7 +161,7 @@ private:
     DecoderManager                     *m_DecoderManager;
     ThreadLock                          m_Lock;
     bool                                m_needStreamDumped;
-    FILE                               *m_dumpedFile;
+    vector<FILE*>                       m_dumpedFile;
 };
 
 VCD_NS_END
