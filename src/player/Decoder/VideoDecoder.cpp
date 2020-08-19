@@ -44,6 +44,7 @@ VideoDecoder::VideoDecoder()
     mPkt        = NULL;
     mPktInfo    = NULL;
     mRwpk       = NULL;
+    mIsFlushed  = false;
 }
 
 VideoDecoder::~VideoDecoder()
@@ -58,9 +59,10 @@ VideoDecoder::~VideoDecoder()
     }
     mPktInfo = NULL;
     mRwpk = NULL;
+    mIsFlushed = false;
 }
 
-RenderStatus VideoDecoder::Initialize(int32_t id, Codec_Type codec, FrameHandler* handler)
+RenderStatus VideoDecoder::Initialize(int32_t id, Codec_Type codec, FrameHandler* handler, uint64_t startPts)
 {
     this->mVideoId = id;
     switch(codec){
@@ -79,7 +81,8 @@ RenderStatus VideoDecoder::Initialize(int32_t id, Codec_Type codec, FrameHandler
     }
 
     mHandler = handler;
-
+    SetStartPts(startPts);
+    LOG(INFO) << "Start pts is " << startPts << " video id is " << id << endl;
     return Initialize();
 }
 
@@ -111,6 +114,8 @@ RenderStatus VideoDecoder::Initialize()
     }
 
     StartThread();
+    mIsFlushed = false;
+    LOG(INFO) << "A new video decoder is created!" << std::endl;
     return RENDER_STATUS_OK;
 }
 
@@ -122,9 +127,9 @@ RenderStatus VideoDecoder::Destroy()
 
 void VideoDecoder::CloseDecoder()
 {
-    if( (m_status == STATUS_STOPPED) || (m_status == STATUS_IDLE) ){
+    if( (m_status == STATUS_STOPPED) || (m_status == STATUS_IDLE) || m_status == STATUS_PENDING){
         m_status = STATUS_STOPPED;
-        LOG(INFO)<<" decoder is closed!"<<endl;
+        LOG(INFO)<<" decoder is closed! video id is " << mVideoId<<endl;
         this->Join();
     }
 
@@ -135,14 +140,11 @@ void VideoDecoder::CloseDecoder()
     }
 }
 
-RenderStatus VideoDecoder::Reset()
+RenderStatus VideoDecoder::Reset(int32_t id, Codec_Type codec, uint64_t startPts)
 {
-    RenderStatus ret = FlushDecoder();
-    if(RENDER_STATUS_OK!=ret) return ret;
-
     CloseDecoder();
 
-    return Initialize();
+    return Initialize(id, codec, mHandler, startPts);
 }
 
 RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
@@ -214,7 +216,7 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
             data->qtyResolution[i].qualityRanking = packet->qtyResolution[i].qualityRanking;
         }
         mDecCtx->push_framedata(data);
-        LOG(INFO)<<"frame data fifo size is: "<<mDecCtx->get_size_of_framedata()<<endl;
+        LOG(INFO)<<"frame data fifo size is: "<<mDecCtx->get_size_of_framedata() <<"pts is " << data->pts <<" VIDEO ID : " << mPktInfo->video_id <<endl;
         // SAFE_DELETE_ARRAY(packet->qtyResolution);
     }
 
@@ -244,6 +246,7 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
     ret = avcodec_receive_frame(mDecCtx->codec_ctx, av_frame);
     if (ret < 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
     {
+        LOG(WARNING) << "avcodec_receive_frame FAILED video id is " << mVideoId << endl;
         av_frame_free(&av_frame);
         return RENDER_DECODE_FAIL;
     }
@@ -256,6 +259,7 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
     FrameData* data = mDecCtx->pop_framedata();
     if (data == NULL)
     {
+        LOG(ERROR) << "Frame data is empty!" << endl;
         av_frame_free(&av_frame);
         return RENDER_NO_FRAME;
     }
@@ -273,12 +277,12 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
     //SAFE_DELETE(data->rwpk);
     SAFE_DELETE(data);
     uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-    LOG(INFO)<<" decode one frame cost time "<<(end-start)<<" ms reso is " << mDecCtx->codec_ctx->width <<" x " <<mDecCtx->codec_ctx->height<<endl;
+    LOG(INFO)<<" video id is "<< video_id <<" decode one frame cost time "<<(end-start)<<" ms reso is " << mDecCtx->codec_ctx->width <<" x " <<mDecCtx->codec_ctx->height<<endl;
     }
     return RENDER_STATUS_OK;
 }
 
-RenderStatus VideoDecoder::FlushDecoder()
+RenderStatus VideoDecoder::FlushDecoder(uint32_t video_id)
 {
     int32_t ret = 0;
     ret = avcodec_send_packet(mDecCtx->codec_ctx, NULL);
@@ -320,6 +324,7 @@ RenderStatus VideoDecoder::FlushDecoder()
         frame->pts = data->pts;
         frame->bFmtChange = data->bCodecChange;
         frame->numQuality = data->numQuality;
+        frame->video_id = video_id;
         frame->qtyResolution = data->qtyResolution;
         if (NULL == mDecCtx->get_front_of_framedata()) // set last frame eos to true
         {
@@ -328,6 +333,7 @@ RenderStatus VideoDecoder::FlushDecoder()
         {
             frame->bEOS = false;
         }
+        LOG(INFO)<<"Push one frame at:"<<data->pts<<" video id is:"<<video_id<<endl;
         mDecCtx->push_frame(frame);
         //SAFE_DELETE(data->rwpk);
         SAFE_DELETE(data);
@@ -384,16 +390,15 @@ void VideoDecoder::Run()
         if (m_status == STATUS_PENDING)
         {
             //flush decoder until all packets are popped.
-            static bool isFlushed = false;
-            if (mDecCtx->get_size_of_packet() == 0 && !isFlushed)
+            if (mDecCtx->get_size_of_packet() == 0 && !mIsFlushed)
             {
                 LOG(INFO)<<"Now will flush the decoder "<< mVideoId << endl;
-                ret = FlushDecoder();
+                ret = FlushDecoder(mVideoId);
                 if (RENDER_STATUS_OK != ret)
                 {
                     LOG(INFO)<<"Video "<< mVideoId <<": failed to flush decoder when status is pending!"<<std::endl;
                 }
-                isFlushed = true;
+                mIsFlushed = true;
                 continue;
             }
         }
@@ -408,12 +413,12 @@ void VideoDecoder::Run()
             continue;
         }
 
-        LOG(INFO)<<"Now packet pts is "<<pkt_info->pts<<endl;
+        LOG(INFO)<<"Now packet pts is "<<pkt_info->pts<<"video id is " << mVideoId<<endl;
 
 	    // check eos status and do flush operation.
         if(pkt_info->bEOS)
         {
-            ret = FlushDecoder();
+            ret = FlushDecoder(mVideoId);
             if(RENDER_STATUS_OK != ret){
                 LOG(INFO)<<"Video "<< mVideoId <<": failed to flush decoder when EOS"<<std::endl;
             }
@@ -443,6 +448,7 @@ void VideoDecoder::Run()
 DecodedFrame* VideoDecoder::GetFrame(uint64_t pts)
 {
     DecodedFrame* frame = NULL;
+    bool waitFlag = false;
     while(mDecCtx->get_size_of_frame() > 0){
         frame = mDecCtx->get_front_of_frame();
         LOG(INFO)<<"frame size is: " << mDecCtx->get_size_of_frame() << " and frame pts is: "<< frame->pts<<" and input pts is: "<<pts<<" video id is: "<<mVideoId<<endl;
@@ -454,8 +460,9 @@ DecodedFrame* VideoDecoder::GetFrame(uint64_t pts)
         }
         else if (frame->pts > pts) // wait
         {
-            LOG(INFO)<<"Need to wait frame to match current pts!"<<endl;
+            LOG(INFO)<<"Need to wait frame to match current pts! frame->pts " << frame->pts << " pts is " <<pts << " video id is :" <<mVideoId<<endl;
             frame = NULL;
+            waitFlag = true;
             break;
         }
         // drop over time frame.
@@ -469,8 +476,8 @@ DecodedFrame* VideoDecoder::GetFrame(uint64_t pts)
         SAFE_DELETE(frame);
     }
 
-    if( (NULL==frame) && (m_status==STATUS_PENDING) ){
-        LOG(ERROR)<<"frame fifo is empty now!"<<endl;
+    if( !waitFlag && (mDecCtx->get_size_of_frame() == 0) && (m_status==STATUS_PENDING) ){
+        LOG(INFO)<<"frame fifo is empty now! video id is : " << mVideoId<<endl;
         m_status = STATUS_IDLE;
         LOG(INFO)<<"decoder status is set to idle!"<<endl;
     }
@@ -480,12 +487,8 @@ DecodedFrame* VideoDecoder::GetFrame(uint64_t pts)
 void VideoDecoder::Pending()
 {
     mDecCtx->bPacketEOS = true;
+    LOG(INFO) << "Set decoder status to PENDING!" << endl;
     m_status = STATUS_PENDING;
-}
-
-ThreadStatus VideoDecoder::GetDecoderStatus()
-{
-    return this->m_status;
 }
 
 RenderStatus VideoDecoder::UpdateFrame(uint64_t pts)
@@ -572,10 +575,10 @@ RenderStatus VideoDecoder::SetRegionInfo(struct RegionInfo *regionInfo, int32_t 
     return RENDER_STATUS_OK;
 }
 
-bool VideoDecoder::IsReady()
+bool VideoDecoder::IsReady(uint64_t pts)
 {
-    LOG(INFO)<<"At first, frame size is"<<mDecCtx->get_size_of_frame()<<" and packet eos is "<< mDecCtx->bPacketEOS << endl;
-    if (mDecCtx->get_size_of_frame() > MIN_REMAIN_SIZE_IN_FRAME || mDecCtx->bPacketEOS ){
+    LOG(INFO)<<"At first, frame size is"<<mDecCtx->get_size_of_frame()<<" and packet eos is "<< mDecCtx->bPacketEOS << "video id " << mVideoId << " pts : " << pts << endl;
+    if (mDecCtx->get_size_of_frame() > MIN_REMAIN_SIZE_IN_FRAME || mDecCtx->bPacketEOS || pts < GetStartPts()){
         return true;
     }else{
         return false;

@@ -37,6 +37,7 @@
 #include "MediaDecoder.h"
 #include "FrameHandler.h"
 #include "FrameHandlerFactory.h"
+#include "../../utils/Threadable.h"
 #include <map>
 
 VCD_NS_BEGIN
@@ -67,7 +68,7 @@ public:
      //! \return RenderStatus
      //!         RENDER_STATUS_OK if success, else fail reason
      //!
-     RenderStatus CreateVideoDecoder(uint32_t video_id, Codec_Type video_codec);
+     RenderStatus CreateVideoDecoder(uint32_t video_id, Codec_Type video_codec, uint64_t startPts);
 
      //!
      //! \brief  reset the decoder when decoding information changes
@@ -105,22 +106,24 @@ public:
      RenderStatus CreateAudioDecoder(uint32_t audio_id, uint32_t audio_codec){ return RENDER_STATUS_OK; };
      RenderStatus SendAudioPackets( DashPacket* packets ){ return RENDER_STATUS_OK; };
      RenderStatus UpdateAudioFrame( ){ return RENDER_STATUS_OK; };
-     bool GetEOS()
+     bool GetEOS() // when updating frame meeting eos in all video decoders
      {
-          bool ret = false;
+          ScopeLock lock(m_mapDecoderLock);
+          bool ret = true;
+          if (m_mapVideoDecoder.empty())
+               return false;
           for (auto it=m_mapVideoDecoder.begin(); it!=m_mapVideoDecoder.end(); it++)
           {
-               if (it->second->GetEOS())
+               if (!it->second->GetEOS())
                {
-                    ret = true;
-                    LOG(INFO)<<"Get eos in decoder manager!"<<std::endl;
+                    ret = false;
                     break;
                }
           }
           return ret;
      };
 
-     bool IsReady()
+     bool IsReady(uint64_t pts)
      {
           bool isReadyStatus = true;
           if (m_mapVideoDecoder.empty())
@@ -130,7 +133,7 @@ public:
           for (auto it = m_mapVideoDecoder.begin(); it != m_mapVideoDecoder.end(); it++)
           {
                MediaDecoder* decoder = it->second;
-               if (!decoder->IsReady())
+               if (!decoder->IsReady(pts))
                {
                     LOG(INFO)<<"decoder is not ready!"<<std::endl;
                     isReadyStatus = false;
@@ -142,13 +145,14 @@ public:
 
 private:
      ///Video-relative operations
-     RenderStatus CheckVideoDecoders(DashPacket* packets, uint32_t cnt);
+     RenderStatus CheckVideoDecoders(DashPacket* packets, uint32_t cnt, uint64_t startPts);
 
 
 private:
     std::map<uint32_t, MediaDecoder*>   m_mapVideoDecoder; //! the map of video decoders
     std::map<uint32_t, MediaDecoder*>   m_mapAudioDecoder; //! the map of audio decoders
     FrameHandlerFactory*                m_handlerFactory;  //! the frameHandler factory to create frameHandler for each decoder
+    ThreadLock                          m_mapDecoderLock;
 };
 
 VCD_NS_END

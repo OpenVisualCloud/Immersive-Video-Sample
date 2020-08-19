@@ -46,7 +46,8 @@
 #define DECODE_THREAD_COUNT 16
 #define MAX_PACKETS 16
 #define WAIT_PACKET_TIME_OUT 5000 // 5s
-
+#define TEST_GET_PACKET_ONLY 0
+#define MAX_DUMP_FILE_NUM 10
 using namespace tinyxml2;
 
 VCD_NS_BEGIN
@@ -58,18 +59,25 @@ DashMediaSource::DashMediaSource() {
   m_DecoderManager = NULL;
   GetStreamDumpedOptionParams();
   if (m_needStreamDumped) {
-    m_dumpedFile = fopen("highRes.h265", "wb");
-    if (NULL == m_dumpedFile) LOG(ERROR) << "Failed to open stream dumped file!" << endl;
-  } else
-    m_dumpedFile = NULL;
+    for (uint32_t i = 0; i < MAX_DUMP_FILE_NUM; i++)
+    {
+      FILE* tmpFile = fopen(string("video" + to_string(i) + ".h265").c_str(), "wb");
+      if (NULL == tmpFile) LOG(ERROR) << "Failed to open stream dumped file!" << endl;
+      m_dumpedFile.push_back(tmpFile);
+    }
+  }
 }
 
 DashMediaSource::~DashMediaSource() {
   m_status = STATUS_STOPPED;
   SAFE_DELETE(m_DecoderManager);
-  if (m_needStreamDumped && m_dumpedFile) {
-    fclose(m_dumpedFile);
-    m_dumpedFile = NULL;
+  if (m_needStreamDumped && !m_dumpedFile.empty()) {
+    for (FILE* file : m_dumpedFile)
+    {
+      fclose(file);
+      file = NULL;
+    }
+    m_dumpedFile.clear();
   }
   OmafAccess_CloseMedia(m_handler);
   OmafAccess_Close(m_handler);
@@ -266,6 +274,7 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo) {
 bool DashMediaSource::IsEOS() {
   if (STATUS_TIMEOUT == m_status)
   {
+    LOG(INFO) << "The status is time out! EOS occurs!" << endl;
     return true;
   }
   if (m_sourceType == 1)  // vod
@@ -316,9 +325,13 @@ void DashMediaSource::ProcessVideoPacket() {
   tracepoint(mthq_tp_provider, T7_get_packet, dashPkt[0].segID);
 #endif
 
-  if (m_needStreamDumped && m_dumpedFile) {
-    fwrite(dashPkt[0].buf, 1, dashPkt[0].size, m_dumpedFile);
+  if (m_needStreamDumped && !m_dumpedFile.empty()) {
+    for (uint32_t i = 0; i < dashPktNum; i++)
+    {
+      fwrite(dashPkt[i].buf, 1, dashPkt[i].size, m_dumpedFile[i]);
+    }
   }
+#if !TEST_GET_PACKET_ONLY
   if (NULL != m_DecoderManager) {
     RenderStatus ret = m_DecoderManager->SendVideoPackets(&(dashPkt[0]), dashPktNum);
     // needHeaders = false;
@@ -327,7 +340,7 @@ void DashMediaSource::ProcessVideoPacket() {
                 << std::endl;
     }
   }
-
+#endif
   for (int i = 0; i < dashPktNum; i++) {
     SAFE_FREE(dashPkt[i].buf);
     if (dashPkt[i].rwpk) SAFE_DELETE_ARRAY(dashPkt[i].rwpk->rectRegionPacking);
