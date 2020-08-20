@@ -4691,7 +4691,7 @@ new file mode 100644
 index 0000000..8e469af
 --- /dev/null
 +++ b/FFmpeg/libavformat/tiled_dash_dec.c
-@@ -0,0 +1,344 @@
+@@ -0,0 +1,342 @@
 +/*
 + * Intel tile Dash Demuxer
 + *
@@ -4854,8 +4854,6 @@ index 0000000..8e469af
 +        return -1;
 +    }
 +
-+    clientInfo->input_geoType = E_SVIDEO_EQUIRECT;
-+    clientInfo->output_geoType = E_SVIDEO_VIEWPORT;
 +    clientInfo->pose = (HeadPose*)malloc(sizeof(HeadPose));
 +    clientInfo->pose->yaw = -90;
 +    clientInfo->pose->pitch = 0;
