@@ -230,6 +230,13 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
     }
 
     // to select tile tracks;
+    LOG(INFO) << "Start to select tile tracks!" << endl;
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+        // trace
+        tracepoint(mthq_tp_provider, T1_select_tracks, "tiletracks");
+#endif
+#endif
     selectedTracks = SelectTileTracks(pStream, mPose);
     if (selectedTracks.size() && previousPose)
     {
@@ -457,6 +464,13 @@ std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
     {
         predictPose[i].yaw = predict_angles[i]->yaw;//predict_angle is also a list NEED TO ADD
         predictPose[i].pitch = predict_angles[i]->pitch;
+        LOG(INFO) << "Start to select tile tracks!" << endl;
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+        // trace
+        tracepoint(mthq_tp_provider, T1_select_tracks, "tiletracks");
+#endif
+#endif
         TracksMap selectedTracks = SelectTileTracks(pStream, &predictPose[i]);
         if (selectedTracks.size() && previousPose)
         {

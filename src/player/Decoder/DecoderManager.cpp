@@ -35,7 +35,9 @@
 #include "DecoderManager.h"
 #include "VideoDecoder.h"
 #include "AudioDecoder.h"
-
+#ifdef _USE_TRACE_
+#include "../../trace/MtHQ_tp.h"
+#endif
 VCD_NS_BEGIN
 
 DecoderManager::DecoderManager()
@@ -228,6 +230,10 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts )
         }
     }
     LOG(INFO)<<"Update one frame at:"<<pts<<endl;
+#ifdef _USE_TRACE_
+    // trace
+    tracepoint(mthq_tp_provider, T11_update_time, pts);
+#endif
     return ret;
 }
 

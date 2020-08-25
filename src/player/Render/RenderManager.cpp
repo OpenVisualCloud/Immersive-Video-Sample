@@ -76,7 +76,7 @@ RenderStatus RenderManager::Render(int64_t pts) {
   GetViewport(&yaw, &pitch);
   uint64_t start2 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
   RenderStatus renderTargetStatus =
-      m_renderTarget->Update(yaw, pitch, m_renderConfig.viewportHFOV, m_renderConfig.viewportVFOV);
+      m_renderTarget->Update(yaw, pitch, m_renderConfig.viewportHFOV, m_renderConfig.viewportVFOV, pts);
   if (RENDER_ERROR == renderTargetStatus) {
     LOG(INFO) << "Update error!" << endl;
     return RENDER_ERROR;

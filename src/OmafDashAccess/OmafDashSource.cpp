@@ -484,6 +484,7 @@ int OmafDashSource::TimedDownloadSegment(bool bFirst) {
     }
     pStream->DownloadSegments();
   }
+  LOG(INFO) << "Start to download segments and id is "<< dcount++ << endl;
 
 #if 0
   std::unique_ptr<OmafDashSegmentClient::PerfStatistics> perf = dash_client_->statistics();

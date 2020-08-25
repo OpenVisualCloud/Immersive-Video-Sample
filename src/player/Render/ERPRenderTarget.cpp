@@ -115,7 +115,7 @@ RenderStatus ERPRenderTarget::CreateRenderTarget()
     return RENDER_STATUS_OK;
 }
 
-RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float vFOV )
+RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float vFOV, uint64_t pts )
 {
     if(NULL==this->m_rsFactory){
         return  RENDER_NULL_HANDLE;
@@ -158,10 +158,10 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
             if (m_isAllHighQualityInView) // firt time to be blur
             {
                 start = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-                LOG(INFO)<<"low resolution part occurs!"<<std::endl;
+                LOG(INFO)<<"low resolution part occurs! pts is " << pts <<std::endl;
 #ifdef _USE_TRACE_
                 //trace
-                tracepoint(mthq_tp_provider, T1_change_to_lowQ, changedCount+1);
+                tracepoint(mthq_tp_provider, T0_change_to_lowQ, changedCount+1, pts);
 #endif
             }
             break;
@@ -170,10 +170,10 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
     if (isAllHighFlag && !m_isAllHighQualityInView) // first time to be clear
     {
         uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-        LOG(INFO)<<"T9' All high resolution part!"<<std::endl<<"cost time : "<<(end-start)<<"ms"<<std::endl;
+        LOG(INFO)<<"T9' All high resolution part! pts is " << pts <<std::endl<<"cost time : "<<(end-start)<<"ms"<<std::endl;
 #ifdef _USE_TRACE_
         //trace
-        tracepoint(mthq_tp_provider, T9n_change_to_highQ, changedCount+1);
+        tracepoint(mthq_tp_provider, T12_change_to_highQ, changedCount+1, pts);
 #endif
         totalChangedTime += end - start;
         changedCount++;

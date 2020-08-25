@@ -161,6 +161,11 @@ RenderStatus Player::Play()
             lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
             deltaTime = lastTime - prevLastTime < renderInterval ? 0 : lastTime - prevLastTime - renderInterval;
             RenderStatus renderStatus = m_renderManager->Render(renderCount);
+            LOG(INFO)<<"render count is"<<renderCount<<endl;
+#ifdef _USE_TRACE_
+            //trace
+            tracepoint(mthq_tp_provider, T13_render_time, renderCount);
+#endif
             if (renderStatus != RENDER_NO_FRAME){
                 renderCount += needDropFrames + 1;
                 needDropFrames = 0;
@@ -170,11 +175,6 @@ RenderStatus Player::Play()
                     LOG(INFO)<<"===========renderTime==============:"<<lastTime<<std::endl;
                 }
             }
-            LOG(INFO)<<"render count is"<<renderCount<<endl;
-#ifdef _USE_TRACE_
-            //trace
-            tracepoint(mthq_tp_provider, T9_render, renderCount + 1);
-#endif
         }
         LOG(INFO)<<"status:"<<GetStatus()<<std::endl;
         if (m_renderManager->IsEOS())
