@@ -14,6 +14,7 @@ if [ "${REPO}" != "oss" ] ; then
         git checkout c2ac3b8e6a040e33d53fa13548848c8ba981a8e4
         cd ..
         patch -p1 < ffmpeg/patches/FFmpeg_OMAF.patch
+        patch -p1 < ffmpeg/patches/enable_libopenhevc.patch
     fi
 else
     cd ..
@@ -21,6 +22,7 @@ fi
 
 if [ "${TARGET}" == "server" ] ; then
 
+    patch -p1 < ffmpeg/patches/enable_libopenhevc.patch
     mkdir -p build/external/ffmpeg_server
     cd build/external/ffmpeg_server
     ../../../FFmpeg/configure --prefix=/usr --libdir=/usr/local/lib --enable-static --enable-shared --enable-gpl --enable-nonfree --disable-optimizations --disable-vaapi

@@ -41,7 +41,7 @@ IF(${TARGET} STREQUAL "server")
   SET(FFMPEG_FILE "ffmpeg.txt")
   SET(FFMPEG_FLAG --prefix=/usr --libdir=/usr/lib --enable-static
                   --disable-shared --enable-gpl --enable-nonfree
-                  --disable-optimizations --disable-vaapi
+                  --disable-optimizations --disable-vaapi --enable-libopenhevc
                   --enable-libDistributedEncoder --enable-libVROmafPacking)
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/360SCVP)
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking)
