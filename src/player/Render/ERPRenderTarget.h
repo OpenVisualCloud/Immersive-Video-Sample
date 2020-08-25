@@ -79,7 +79,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus Update( float yaw, float pitch, float hFOV, float vFOV );
+    virtual RenderStatus Update( float yaw, float pitch, float hFOV, float vFOV, uint64_t pts );
 
 
 private:

@@ -132,6 +132,13 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
   }
 
   // to select extractor;
+  LOG(INFO) << "Start to select extractor tracks!" << endl;
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+        // trace
+  tracepoint(mthq_tp_provider, T1_select_tracks, "extractortrack");
+#endif
+#endif
   OmafExtractor* selectedExtractor = SelectExtractor(pStream, mPose);
   if (selectedExtractor && previousPose) {
     LOG(INFO) << "pose has changed from (" << previousPose->yaw << "," << previousPose->pitch << ") to (" << mPose->yaw
@@ -260,6 +267,13 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   HeadPose* predictPose = new HeadPose;
   predictPose->yaw = predict_angles[0]->yaw;
   predictPose->pitch = predict_angles[0]->pitch;
+  LOG(INFO) << "Start to select extractor tracks!" << endl;
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+        // trace
+  tracepoint(mthq_tp_provider, T1_select_tracks, "extractortrack");
+#endif
+#endif
   OmafExtractor* selectedExtractor = SelectExtractor(pStream, predictPose);
   if (selectedExtractor && previousPose) {
     extractors.push_back(selectedExtractor);

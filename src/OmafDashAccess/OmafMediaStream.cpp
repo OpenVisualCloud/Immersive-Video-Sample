@@ -29,6 +29,11 @@
 #include "OmafReaderManager.h"
 #include "OmafTileTracksSelector.h"
 #include "OmafMediaStream.h"
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+#include "../trace/MtHQ_tp.h"
+#endif
+#endif
 
 VCD_OMAF_BEGIN
 
@@ -783,7 +788,13 @@ int32_t OmafMediaStream::TilesStitching() {
 
       continue;
     }
-
+    LOG(INFO) << "Start to stitch packets! and pts is " << currFramePTS << endl;
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+        // trace
+        tracepoint(mthq_tp_provider, T6_stitch_start_time, currFramePTS);
+#endif
+#endif
     if (!isEOS && (selectedPackets.size() != mapSelectedAS.size()) && (currWaitTimes >= waitTimes)) {
       LOG(INFO) << "Incorrect selected tile tracks packets number for tiles stitching !" << std::endl;
 
@@ -864,7 +875,15 @@ int32_t OmafMediaStream::TilesStitching() {
       std::lock_guard<std::mutex> lock(m_packetsMutex);
       m_mergedPackets.push_back(mergedPackets);
     }
-
+    std::list<MediaPacket*>::iterator it = mergedPackets.begin();
+    MediaPacket *one = *it;
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+    // trace
+    tracepoint(mthq_tp_provider, T7_stitch_end_time, one->GetSegID(), currFramePTS, mergedPackets.size());
+#endif
+#endif
+    LOG(INFO) << " Finish to stitch packets! and packet segment id is " << one->GetSegID() << " packet pts is : " << one->GetPTS() << " and video number is " << mergedPackets.size() << endl;
     selectedPackets.clear();
     prevPoseChanged = false;
     prevSelectedAS = mapSelectedAS;

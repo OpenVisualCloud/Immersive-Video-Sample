@@ -265,7 +265,7 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo) {
 #ifdef _USE_TRACE_
   int32_t frameNum = round(float(mMediaInfo.mDuration) / 1000 * (vi.framerate_num / vi.framerate_den));
   const char *dash_mode = (dashMediaInfo->streaming_type == 1) ? "static" : "dynamic";
-  tracepoint(mthq_tp_provider, stream_information, (char *)dash_mode, dashMediaInfo->stream_info[0].segmentDuration,
+  tracepoint(mthq_tp_provider, stream_information, (char *)dash_mode, vi.mProjFormat, dashMediaInfo->stream_info[0].segmentDuration,
              dashMediaInfo->duration, vi.framerate_num / vi.framerate_den, frameNum, vi.width, vi.height);
 #endif
   return RENDER_STATUS_OK;
@@ -319,10 +319,10 @@ void DashMediaSource::ProcessVideoPacket() {
   if (dashPkt[0].bEOS) {
     m_status = STATUS_STOPPED;
   }
-  LOG(INFO) << "Get packet has done! and segment id is " << dashPkt[0].segID << std::endl;
+  LOG(INFO) << "Get packet has done! and pts is " << dashPkt[0].pts << std::endl;
 #ifdef _USE_TRACE_
   // trace
-  tracepoint(mthq_tp_provider, T7_get_packet, dashPkt[0].segID);
+  tracepoint(mthq_tp_provider, T8_get_packet, dashPkt[0].pts);
 #endif
 
   if (m_needStreamDumped && !m_dumpedFile.empty()) {

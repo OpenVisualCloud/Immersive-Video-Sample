@@ -42,6 +42,11 @@
 
 #include <math.h>
 #include <functional>
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+#include "../trace/MtHQ_tp.h"
+#endif
+#endif
 
 VCD_OMAF_BEGIN
 
@@ -997,11 +1002,21 @@ void OmafReaderManager::threadRunner() noexcept {
       // 2. parse the ready segment/dash_node
       const int64_t timeline_point = ready_dash_node->getTimelinePoint();
       LOG(INFO) << "Get ready segment! timeline=" << timeline_point << std::endl;
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+      tracepoint(mthq_tp_provider, T4_parse_start_time, timeline_point);
+#endif
+#endif
       OMAF_STATUS ret = ready_dash_node->parse();
 
       // 3. move the parsed segment/dash_node to parsed list
       if (ret == ERROR_NONE) {
         LOG(INFO) << "Success to parsed dash segment! timeline=" << timeline_point << std::endl;
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+      tracepoint(mthq_tp_provider, T5_parse_end_time, timeline_point);
+#endif
+#endif
         std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
         bool new_timeline_point = true;
         for (auto &nodeset : segment_parsed_list_) {
