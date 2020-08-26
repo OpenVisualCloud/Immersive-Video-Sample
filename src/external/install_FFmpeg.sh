@@ -14,7 +14,6 @@ if [ "${REPO}" != "oss" ] ; then
         git checkout c2ac3b8e6a040e33d53fa13548848c8ba981a8e4
         cd ..
         patch -p1 < ffmpeg/patches/FFmpeg_OMAF.patch
-        patch -p1 < ffmpeg/patches/enable_libopenhevc.patch
     fi
 else
     cd ..
