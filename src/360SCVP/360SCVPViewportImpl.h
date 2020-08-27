@@ -116,7 +116,8 @@ public:
     UsageType     m_usageType;
     Param_VideoFPStruct m_paramVideoFP;
     SpherePoint   *m_pViewportHorizontalBoudaryPoints;
-    inline int32_t round(POSType t) { return (int32_t)(t+ (t>=0? 0.5 :-0.5)); };
+    inline int32_t round(POSType t) { return (int32_t)(t+ (t>=0? 0.5 :-0.5)); }
+
 public:
     TgenViewport();
     virtual ~TgenViewport();
