@@ -62,8 +62,8 @@ struct SPos
     POSType x;
     POSType y;
     POSType z;
-    SPos() : faceIdx(0), x(0), y(0), z(0) {};
-    SPos(int32_t f, POSType xIn, POSType yIn, POSType zIn ) : faceIdx(f), x(xIn), y(yIn), z(zIn) {};
+    SPos() : faceIdx(0), x(0), y(0), z(0) {}
+    SPos(int32_t f, POSType xIn, POSType yIn, POSType zIn ) : faceIdx(f), x(xIn), y(yIn), z(zIn) {}
 };
 
 struct GeometryRotation
@@ -76,7 +76,7 @@ struct ViewPortSettings
     float vFOV;
     float fYaw;              //
     float fPitch;
-    ViewPortSettings() : hFOV(0), vFOV(0), fYaw(0), fPitch(0) {};
+    ViewPortSettings() : hFOV(0), vFOV(0), fYaw(0), fPitch(0) {}
 };
 
 struct SVideoInfo
@@ -101,7 +101,7 @@ protected:
     bool m_bPadded;
     bool m_bGeometryMapping;
     bool m_bConvOutputPaddingNeeded;
-    inline int32_t round(POSType t) { return (int32_t)(t+ (t>=0? 0.5 :-0.5)); }; 
+    inline int32_t round(POSType t) { return (int32_t)(t+ (t>=0? 0.5 :-0.5)); }
     void rotate3D(SPos& sPos, int32_t rx, int32_t ry, int32_t rz);
 public:
     int32_t m_numFaces;
@@ -111,7 +111,7 @@ public:
     virtual ~Geometry();
     void geoInit(SVideoInfo& sVideoInfo);
     void geoUnInit(); // just use in the viewport
-    GeometryType getType() { return (GeometryType)m_sVideoInfo.geoType; };
+    GeometryType getType() { return (GeometryType)m_sVideoInfo.geoType; }
     void setPaddingFlag(bool bFlag) { m_bPadded = bFlag; }
     virtual void map2DTo3D(SPos& IPosIn, SPos *pSPosOut) = 0;
     virtual void map3DTo2D(SPos *pSPosIn, SPos *pSPosOut) = 0;

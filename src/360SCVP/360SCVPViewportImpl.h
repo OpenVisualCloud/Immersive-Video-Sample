@@ -99,7 +99,7 @@ public:
     int32_t   m_faceSizeAlignment;
     int32_t       m_maxTileNum;
     UsageType     m_usageType;
-    inline int32_t round(POSType t) { return (int32_t)(t+ (t>=0? 0.5 :-0.5)); };
+    inline int32_t round(POSType t) { return (int32_t)(t+ (t>=0? 0.5 :-0.5)); }
 public:
     TgenViewport();
     virtual ~TgenViewport();
