@@ -353,13 +353,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
     uint64_t offsetLow = 0;
     uint64_t offsetHigh = 0;
 
-    FILE *fpDataOffset = fopen("extractorsDataOffset.bin", "r");
-    EXPECT_TRUE(fpDataOffset != NULL);
-    if (!fpDataOffset)
-        return;
-
-    uint32_t sliceHrdLen[8];
-    memset_s(sliceHrdLen, 8 * sizeof(uint32_t), 0);
     int32_t ret = 0;
     for (uint8_t frameIdx = 0; frameIdx < 5; frameIdx++)
     {
@@ -367,8 +360,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
         EXPECT_TRUE(frameLowRes != NULL);
         if (!frameLowRes)
         {
-            fclose(fpDataOffset);
-            fpDataOffset = NULL;
             return;
         }
         frameLowRes->data = m_totalDataLow + offsetLow;
@@ -388,8 +379,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
         EXPECT_TRUE(frameHighRes != NULL);
         if (!frameHighRes)
         {
-            fclose(fpDataOffset);
-            fpDataOffset = NULL;
             DELETE_MEMORY(frameLowRes);
             return;
         }
@@ -428,10 +417,10 @@ TEST_F(ExtractorTrackTest, AllProcess)
 
         std::map<uint8_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
         EXPECT_TRUE(extractorTracks != NULL);
-
         std::map<uint8_t, ExtractorTrack*>::iterator it;
         for (it = extractorTracks->begin(); it != extractorTracks->end(); it++)
         {
+            uint8_t viewportIdx = it->first;
             ExtractorTrack *extractorTrack = it->second;
             Nalu *vpsNalu = extractorTrack->GetVPS();
             Nalu *spsNalu = extractorTrack->GetSPS();
@@ -447,9 +436,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
             FILE *fp = fopen("extractorTrack_vps.bin", "r");
             if (!fp)
             {
-
-                fclose(fpDataOffset);
-                fpDataOffset = NULL;
                 DELETE_MEMORY(frameLowRes);
                 DELETE_MEMORY(frameHighRes);
                 return;
@@ -460,8 +446,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
             uint8_t *vpsData = new uint8_t[vpsLen];
             if (!vpsData)
             {
-                fclose(fpDataOffset);
-                fpDataOffset = NULL;
                 DELETE_MEMORY(frameLowRes);
                 DELETE_MEMORY(frameHighRes);
                 fclose(fp);
@@ -483,11 +467,11 @@ TEST_F(ExtractorTrackTest, AllProcess)
             fclose(fp);
             fp = NULL;
 
-            fp = fopen("extractorTrack_sps.bin", "r");
+            char spsFile[256] = { 0 };
+            snprintf(spsFile, 256, "extractorTrack%d_sps.bin", viewportIdx);
+            fp = fopen(spsFile, "r");
             if (!fp)
             {
-                fclose(fpDataOffset);
-                fpDataOffset = NULL;
                 DELETE_MEMORY(frameLowRes);
                 DELETE_MEMORY(frameHighRes);
                 return;
@@ -498,8 +482,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
             uint8_t *spsData = new uint8_t[spsLen];
             if (!spsData)
             {
-                fclose(fpDataOffset);
-                fpDataOffset = NULL;
                 DELETE_MEMORY(frameLowRes);
                 DELETE_MEMORY(frameHighRes);
                 fclose(fp);
@@ -520,11 +502,11 @@ TEST_F(ExtractorTrackTest, AllProcess)
             fclose(fp);
             fp = NULL;
 
-            fp = fopen("extractorTrack_pps.bin", "r");
+            char ppsFile[256] = { 0 };
+            snprintf(ppsFile, 256, "extractorTrack%d_pps.bin", viewportIdx);
+            fp = fopen(ppsFile, "r");
             if (!fp)
             {
-                fclose(fpDataOffset);
-                fpDataOffset = NULL;
                 DELETE_MEMORY(frameLowRes);
                 DELETE_MEMORY(frameHighRes);
                 return;
@@ -535,8 +517,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
             uint8_t *ppsData = new uint8_t[ppsLen];
             if (!ppsData)
             {
-                fclose(fpDataOffset);
-                fpDataOffset = NULL;
                 DELETE_MEMORY(frameLowRes);
                 DELETE_MEMORY(frameHighRes);
                 fclose(fp);
@@ -557,175 +537,126 @@ TEST_F(ExtractorTrackTest, AllProcess)
             fclose(fp);
             fp = NULL;
 
-            RegionWisePacking rwpk;
-            rwpk.constituentPicMatching = 0;
-            rwpk.numRegions = 6;
-            rwpk.projPicWidth = 3840;
-            rwpk.projPicHeight = 1920;
-            rwpk.packedPicWidth = 2880;
-            rwpk.packedPicHeight = 1920;
-            rwpk.rectRegionPacking = new RectangularRegionWisePacking[6];
-            EXPECT_TRUE(rwpk.rectRegionPacking != NULL);
-            if (!(rwpk.rectRegionPacking))
+            if (viewportIdx == 0)
             {
-                fclose(fpDataOffset);
-                fpDataOffset = NULL;
-                DELETE_MEMORY(frameLowRes);
-                DELETE_MEMORY(frameHighRes);
-                return;
+                EXPECT_TRUE(dstRwpk->constituentPicMatching == 0);
+                EXPECT_TRUE(dstRwpk->numRegions == 10);
+                EXPECT_TRUE(dstRwpk->projPicWidth == 3840);
+                EXPECT_TRUE(dstRwpk->projPicHeight == 1920);
+                EXPECT_TRUE(dstRwpk->packedPicWidth == 4800);
+                EXPECT_TRUE(dstRwpk->packedPicHeight == 1920);
+            }
+            else if (viewportIdx == 1 || viewportIdx == 4 ||
+                    viewportIdx == 7 || viewportIdx == 10)
+            {
+                EXPECT_TRUE(dstRwpk->constituentPicMatching == 0);
+                EXPECT_TRUE(dstRwpk->numRegions == 6);
+                EXPECT_TRUE(dstRwpk->projPicWidth == 3840);
+                EXPECT_TRUE(dstRwpk->projPicHeight == 1920);
+                EXPECT_TRUE(dstRwpk->packedPicWidth == 2880);
+                EXPECT_TRUE(dstRwpk->packedPicHeight == 1920);
+            }
+            else if (viewportIdx == 2 || viewportIdx == 3 ||
+                    viewportIdx == 5 || viewportIdx == 6 ||
+                    viewportIdx == 8 || viewportIdx == 9 ||
+                    viewportIdx == 11)
+            {
+                EXPECT_TRUE(dstRwpk->constituentPicMatching == 0);
+                EXPECT_TRUE(dstRwpk->numRegions == 8);
+                EXPECT_TRUE(dstRwpk->projPicWidth == 3840);
+                EXPECT_TRUE(dstRwpk->projPicHeight == 1920);
+                EXPECT_TRUE(dstRwpk->packedPicWidth == 3840);
+                EXPECT_TRUE(dstRwpk->packedPicHeight == 1920);
             }
 
-            for (int32_t i = 0; i < 4; i++)
+            EXPECT_TRUE(dstCovi->coverageShapeType == 1);
+            EXPECT_TRUE(dstCovi->numRegions == 1);
+            EXPECT_TRUE(dstCovi->viewIdcPresenceFlag == false);
+            EXPECT_TRUE(dstCovi->defaultViewIdc == 0);
+            uint16_t idx = 0;
+            if (viewportIdx == 0)
             {
-                memset_s(&(rwpk.rectRegionPacking[i]), sizeof(RectangularRegionWisePacking), 0);
-                rwpk.rectRegionPacking[i].transformType = 0;
-                rwpk.rectRegionPacking[i].guardBandFlag = false;
-                rwpk.rectRegionPacking[i].projRegWidth = 960;
-                rwpk.rectRegionPacking[i].projRegHeight = 960;
-                if (it->first < 4)
-                {
-                    if (i % 2 == 0)
-                    {
-                        rwpk.rectRegionPacking[i].projRegTop = 0;
-                    }
-                    else
-                    {
-                        rwpk.rectRegionPacking[i].projRegTop = 960;
-                    }
-                }
-                else
-                {
-                    if (i % 2 == 0)
-                    {
-                        rwpk.rectRegionPacking[i].projRegTop = 960;
-                    }
-                    else
-                    {
-                        rwpk.rectRegionPacking[i].projRegTop = 0;
-                    }
-                }
-                if ((it->first) != 3 && (it->first) != 7)
-                {
-                    if (i == 0 || i == 1)
-                    {
-                        rwpk.rectRegionPacking[i].projRegLeft = ((it->first) % 4) * 960;
-                    }
-                    else
-                    {
-                        rwpk.rectRegionPacking[i].projRegLeft = ((it->first) % 4) * 960 + 960;
-                    }
-                }
-                else
-                {
-                    if (i == 0 || i == 1)
-                    {
-                        rwpk.rectRegionPacking[i].projRegLeft = 2880;
-                    }
-                    else
-                    {
-                        rwpk.rectRegionPacking[i].projRegLeft = 0;
-                    }
-                }
-                rwpk.rectRegionPacking[i].packedRegWidth = 960;
-                rwpk.rectRegionPacking[i].packedRegHeight = 960;
-                if (i == 0 || i == 2)
-                {
-                    rwpk.rectRegionPacking[i].packedRegTop = 0;
-                }
-                else
-                {
-                    rwpk.rectRegionPacking[i].packedRegTop = 960;
-                }
-                if (i == 0 || i == 1)
-                {
-                    rwpk.rectRegionPacking[i].packedRegLeft = 0;
-                }
-                else
-                {
-                    rwpk.rectRegionPacking[i].packedRegLeft = 960;
-                }
-                rwpk.rectRegionPacking[i].gbNotUsedForPredFlag = true;
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == -5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 5898240);
             }
-            memset_s(&(rwpk.rectRegionPacking[4]), sizeof(RectangularRegionWisePacking), 0);
-            rwpk.rectRegionPacking[4].transformType = 0;
-            rwpk.rectRegionPacking[4].guardBandFlag = false;
-            rwpk.rectRegionPacking[4].projRegWidth = 1920;
-            rwpk.rectRegionPacking[4].projRegHeight = 1920;
-            rwpk.rectRegionPacking[4].projRegTop = 0;
-            rwpk.rectRegionPacking[4].projRegLeft = 0;
-            rwpk.rectRegionPacking[4].packedRegWidth = 960;
-            rwpk.rectRegionPacking[4].packedRegHeight = 960;
-            rwpk.rectRegionPacking[4].packedRegTop = 0;
-            rwpk.rectRegionPacking[4].packedRegLeft = 1920;
-            rwpk.rectRegionPacking[4].gbNotUsedForPredFlag = true;
-
-            memset_s(&(rwpk.rectRegionPacking[5]), sizeof(RectangularRegionWisePacking), 0);
-            rwpk.rectRegionPacking[5].transformType = 0;
-            rwpk.rectRegionPacking[5].guardBandFlag = false;
-            rwpk.rectRegionPacking[5].projRegWidth = 1920;
-            rwpk.rectRegionPacking[5].projRegHeight = 1920;
-            rwpk.rectRegionPacking[5].projRegTop = 0;
-            rwpk.rectRegionPacking[5].projRegLeft = 1920;
-            rwpk.rectRegionPacking[5].packedRegWidth = 960;
-            rwpk.rectRegionPacking[5].packedRegHeight = 960;
-            rwpk.rectRegionPacking[5].packedRegTop = 960;
-            rwpk.rectRegionPacking[5].packedRegLeft = 1920;
-            rwpk.rectRegionPacking[5].gbNotUsedForPredFlag = true;
-
-            EXPECT_TRUE(dstRwpk->constituentPicMatching == rwpk.constituentPicMatching);
-            EXPECT_TRUE(dstRwpk->numRegions == rwpk.numRegions);
-            EXPECT_TRUE(dstRwpk->projPicWidth == rwpk.projPicWidth);
-            EXPECT_TRUE(dstRwpk->projPicHeight == rwpk.projPicHeight);
-            EXPECT_TRUE(dstRwpk->packedPicWidth == rwpk.packedPicWidth);
-            EXPECT_TRUE(dstRwpk->packedPicHeight == rwpk.packedPicHeight);
-
-            compRet = 0;
-            for (uint16_t idx = 0; idx < rwpk.numRegions; idx++)
+            else if (viewportIdx == 1)
             {
-                result = memcmp_s(&(dstRwpk->rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking), &(rwpk.rectRegionPacking[idx]), sizeof(RectangularRegionWisePacking), &compRet);
-                EXPECT_TRUE(result == EOK);
-                EXPECT_TRUE(compRet == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == -11796480);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 5898240);
             }
-
-            ContentCoverage covi;
-            covi.coverageShapeType = 1;
-            covi.numRegions        = 1;
-            covi.viewIdcPresenceFlag = false;
-            covi.defaultViewIdc      = 0;
-            covi.sphereRegions       = new SphereRegion[covi.numRegions];
-            EXPECT_TRUE(covi.sphereRegions != NULL);
-            if (!(covi.sphereRegions))
+            else if (viewportIdx == 2)
             {
-                fclose(fpDataOffset);
-                fpDataOffset = NULL;
-                DELETE_MEMORY(frameLowRes);
-                DELETE_MEMORY(frameHighRes);
-                DELETE_ARRAY(rwpk.rectRegionPacking);
-                return;
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == -11796480);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 4423680);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 2949120);
             }
-
-            for (uint16_t idx = 0; idx < covi.numRegions; idx++)
+            else if (viewportIdx == 3)
             {
-                memset_s(&(covi.sphereRegions[idx]), sizeof(SphereRegion), 0);
-                covi.sphereRegions[idx].viewIdc = 0;
-                covi.sphereRegions[idx].centreAzimuth   = (int32_t)((((3840 / 2) - (float)(((it->first) % 4) * 960 + 1920 / 2)) * 360 * 65536) / 3840);
-                covi.sphereRegions[idx].centreElevation = (int32_t)((((1920 / 2) - (float)(((it->first) / 4) * 960 + 1920 / 2)) * 180 * 65536) / 1920);
-                covi.sphereRegions[idx].centreTilt      = 0;
-                covi.sphereRegions[idx].azimuthRange    = (uint32_t)((1920 * 360.f * 65536) / 3840);
-                covi.sphereRegions[idx].elevationRange  = (uint32_t)((1920 * 180.f * 65536) / 1920);
-                covi.sphereRegions[idx].interpolate     = 0;
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == -4423680);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 2949120);
             }
-
-            EXPECT_TRUE(dstCovi->coverageShapeType == covi.coverageShapeType);
-            EXPECT_TRUE(dstCovi->numRegions == covi.numRegions);
-            EXPECT_TRUE(dstCovi->viewIdcPresenceFlag == covi.viewIdcPresenceFlag);
-            EXPECT_TRUE(dstCovi->defaultViewIdc == covi.defaultViewIdc);
-            compRet = 0;
-            for (uint16_t idx = 0; idx < dstCovi->numRegions; idx++)
+            else if (viewportIdx == 4)
             {
-                result = memcmp_s(&(dstCovi->sphereRegions[idx]), sizeof(SphereRegion), &(covi.sphereRegions[idx]), sizeof(SphereRegion), &compRet);
-                EXPECT_TRUE(result == EOK);
-                EXPECT_TRUE(compRet == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 5898240);
+            }
+            else if (viewportIdx == 5)
+            {
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 4423680);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 2949120);
+            }
+            else if (viewportIdx == 6)
+            {
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == -4423680);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 2949120);
+            }
+            else if (viewportIdx == 7)
+            {
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 5898240);
+            }
+            else if (viewportIdx == 8)
+            {
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 4423680);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 2949120);
+            }
+            else if (viewportIdx == 9)
+            {
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == -5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == -4423680);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 2949120);
+            }
+            else if (viewportIdx == 10)
+            {
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == -5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 5898240);
+            }
+            else if (viewportIdx == 11)
+            {
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == -5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 4423680);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 2949120);
             }
 
             EXPECT_TRUE(picResList->size() == 2);
@@ -740,12 +671,8 @@ TEST_F(ExtractorTrackTest, AllProcess)
             fp = fopen("extractorTrack_projSEI.bin", "r");
             if (!fp)
             {
-                fclose(fpDataOffset);
-                fpDataOffset = NULL;
                 DELETE_MEMORY(frameLowRes);
                 DELETE_MEMORY(frameHighRes);
-                DELETE_ARRAY(rwpk.rectRegionPacking);
-                DELETE_ARRAY(covi.sphereRegions);
                 return;
             }
             fseek(fp, 0L, SEEK_END);
@@ -754,12 +681,8 @@ TEST_F(ExtractorTrackTest, AllProcess)
             uint8_t *projSEIData = new uint8_t[projSEILen];
             if (!projSEIData)
             {
-                fclose(fpDataOffset);
-                fpDataOffset = NULL;
                 DELETE_MEMORY(frameLowRes);
                 DELETE_MEMORY(frameHighRes);
-                DELETE_ARRAY(rwpk.rectRegionPacking);
-                DELETE_ARRAY(covi.sphereRegions);
                 fclose(fp);
                 fp = NULL;
                 return;
@@ -781,7 +704,22 @@ TEST_F(ExtractorTrackTest, AllProcess)
             EXPECT_TRUE(rwpkSEI->dataSize != 4);
 
             EXPECT_TRUE(tilesMerDir != NULL);
-            EXPECT_TRUE(tilesMerDir->tilesArrangeInCol.size() == 3);
+            if (viewportIdx == 0)
+            {
+                EXPECT_TRUE(tilesMerDir->tilesArrangeInCol.size() == 5);
+            }
+            else if (viewportIdx == 1 || viewportIdx == 4 ||
+                    viewportIdx == 7 || viewportIdx == 10)
+            {
+                EXPECT_TRUE(tilesMerDir->tilesArrangeInCol.size() == 3);
+            }
+            else if (viewportIdx == 2 || viewportIdx == 3 ||
+                    viewportIdx == 5 || viewportIdx == 6 ||
+                    viewportIdx == 8 || viewportIdx == 9 ||
+                    viewportIdx == 11)
+            {
+                EXPECT_TRUE(tilesMerDir->tilesArrangeInCol.size() == 4);
+            }
             std::list<TilesInCol*>::iterator itCol;
             itCol = tilesMerDir->tilesArrangeInCol.begin();
             TilesInCol *tileCol = *itCol;
@@ -790,70 +728,159 @@ TEST_F(ExtractorTrackTest, AllProcess)
             itTile = tileCol->begin();
             SingleTile *tile = *itTile;
             EXPECT_TRUE(tile->streamIdxInMedia == 1);
-            EXPECT_TRUE(tile->origTileIdx == (it->first));
             EXPECT_TRUE(tile->dstCTUIndex == 0);
             itTile++;
             tile = *itTile;
             EXPECT_TRUE(tile->streamIdxInMedia == 1);
-            EXPECT_TRUE(tile->origTileIdx == ((it->first) < 4 ? (it->first) + 4 : (it->first) - 4));
-            EXPECT_TRUE(tile->dstCTUIndex == 675);
+            if (viewportIdx == 0)
+            {
+                EXPECT_TRUE(tile->dstCTUIndex == 1125);
+            }
+            else if (viewportIdx == 1 || viewportIdx == 4 ||
+                    viewportIdx == 7 || viewportIdx == 10)
+            {
+                EXPECT_TRUE(tile->dstCTUIndex == 675);
+            }
+            else if (viewportIdx == 2 || viewportIdx == 3 ||
+                    viewportIdx == 5 || viewportIdx == 6 ||
+                    viewportIdx == 8 || viewportIdx == 9 ||
+                    viewportIdx == 11)
+            {
+                EXPECT_TRUE(tile->dstCTUIndex == 900);
+            }
             itCol++;
             tileCol = *itCol;
             EXPECT_TRUE(tileCol->size() == 2);
             itTile = tileCol->begin();
             tile = *itTile;
             EXPECT_TRUE(tile->streamIdxInMedia == 1);
-            if (it->first != 3 && it->first != 7)
-            {
-                EXPECT_TRUE(tile->origTileIdx == ((it->first) + 1));
-            }
-            else
-            {
-                EXPECT_TRUE(tile->origTileIdx == ((it->first) - 3));
-            }
             EXPECT_TRUE(tile->dstCTUIndex == 15);
             itTile++;
             tile = *itTile;
             EXPECT_TRUE(tile->streamIdxInMedia == 1);
-            if (it->first != 3 && it->first != 7)
+            if (viewportIdx == 0)
             {
-                if (it->first < 4)
-                {
-                    EXPECT_TRUE(tile->origTileIdx == ((it->first) + 5));
-                }
-                else
-                {
-                    EXPECT_TRUE(tile->origTileIdx == ((it->first) - 3));
-                }
+                EXPECT_TRUE(tile->dstCTUIndex == 1140);
             }
-            else if ((it->first) == 3)
+            else if (viewportIdx == 1 || viewportIdx == 4 ||
+                    viewportIdx == 7 || viewportIdx == 10)
             {
-                EXPECT_TRUE(tile->origTileIdx == 4);
+                EXPECT_TRUE(tile->dstCTUIndex == 690);
             }
-            else
+            else if (viewportIdx == 2 || viewportIdx == 3 ||
+                    viewportIdx == 5 || viewportIdx == 6 ||
+                    viewportIdx == 8 || viewportIdx == 9 ||
+                    viewportIdx == 11)
             {
-                EXPECT_TRUE(tile->origTileIdx == 0);
+                EXPECT_TRUE(tile->dstCTUIndex == 915);
             }
-            EXPECT_TRUE(tile->dstCTUIndex == 690);
             itCol++;
             tileCol = *itCol;
             EXPECT_TRUE(tileCol->size() == 2);
             itTile = tileCol->begin();
             tile = *itTile;
-            EXPECT_TRUE(tile->streamIdxInMedia == 0);
-            EXPECT_TRUE(tile->origTileIdx == 0);
+            if (viewportIdx == 0)
+            {
+                EXPECT_TRUE(tile->streamIdxInMedia == 1);
+            }
+            else if (viewportIdx == 1 || viewportIdx == 4 ||
+                    viewportIdx == 7 || viewportIdx == 10)
+            {
+                EXPECT_TRUE(tile->streamIdxInMedia == 0);
+            }
+            else if (viewportIdx == 2 || viewportIdx == 3 ||
+                    viewportIdx == 5 || viewportIdx == 6 ||
+                    viewportIdx == 8 || viewportIdx == 9 ||
+                    viewportIdx == 11)
+            {
+                EXPECT_TRUE(tile->streamIdxInMedia == 1);
+            }
             EXPECT_TRUE(tile->dstCTUIndex == 30);
             itTile++;
             tile = *itTile;
-            EXPECT_TRUE(tile->streamIdxInMedia == 0);
-            EXPECT_TRUE(tile->origTileIdx == 1);
-            EXPECT_TRUE(tile->dstCTUIndex == 705);
+            if (viewportIdx == 0)
+            {
+                EXPECT_TRUE(tile->streamIdxInMedia == 1);
+                EXPECT_TRUE(tile->dstCTUIndex == 1155);
+            }
+            else if (viewportIdx == 1 || viewportIdx == 4 ||
+                    viewportIdx == 7 || viewportIdx == 10)
+            {
+                EXPECT_TRUE(tile->streamIdxInMedia == 0 );
+                EXPECT_TRUE(tile->dstCTUIndex == 705);
+            }
+            else if (viewportIdx == 2 || viewportIdx == 3 ||
+                    viewportIdx == 5 || viewportIdx == 6 ||
+                    viewportIdx == 8 || viewportIdx == 9 ||
+                    viewportIdx == 11)
+            {
+                EXPECT_TRUE(tile->streamIdxInMedia == 1);
+                EXPECT_TRUE(tile->dstCTUIndex == 930);
+            }
 
-            fscanf(fpDataOffset, "%u,%u,%u,%u,%u,%u", &sliceHrdLen[0], &sliceHrdLen[1], &sliceHrdLen[2], &sliceHrdLen[3], &sliceHrdLen[4], &sliceHrdLen[5]);
+            if (viewportIdx == 0)
+            {
+                itCol++;
+                tileCol = *itCol;
+                EXPECT_TRUE(tileCol->size() == 2);
+                itTile = tileCol->begin();
+                tile = *itTile;
+                EXPECT_TRUE(tile->streamIdxInMedia == 1);
+                EXPECT_TRUE(tile->dstCTUIndex == 45);
+                itTile++;
+                tile = *itTile;
+                EXPECT_TRUE(tile->streamIdxInMedia == 1);
+                EXPECT_TRUE(tile->dstCTUIndex == 1170);
+
+                itCol++;
+                tileCol = *itCol;
+                EXPECT_TRUE(tileCol->size() == 2);
+                itTile = tileCol->begin();
+                tile = *itTile;
+                EXPECT_TRUE(tile->streamIdxInMedia == 0);
+                EXPECT_TRUE(tile->dstCTUIndex == 60);
+                itTile++;
+                tile = *itTile;
+                EXPECT_TRUE(tile->streamIdxInMedia == 0);
+                EXPECT_TRUE(tile->dstCTUIndex == 1185);
+            }
+            else if (viewportIdx == 2 || viewportIdx == 3 ||
+                    viewportIdx == 5 || viewportIdx == 6 ||
+                    viewportIdx == 8 || viewportIdx == 9 ||
+                    viewportIdx == 11)
+            {
+                itCol++;
+                tileCol = *itCol;
+                EXPECT_TRUE(tileCol->size() == 2);
+                itTile = tileCol->begin();
+                tile = *itTile;
+                EXPECT_TRUE(tile->streamIdxInMedia == 0);
+                EXPECT_TRUE(tile->dstCTUIndex == 45);
+                itTile++;
+                tile = *itTile;
+                EXPECT_TRUE(tile->streamIdxInMedia == 0);
+                EXPECT_TRUE(tile->dstCTUIndex == 945);
+            }
 
             extractorTrack->ConstructExtractors();
             std::map<uint8_t, Extractor*> *extractors = extractorTrack->GetAllExtractors();
-            EXPECT_TRUE(extractors->size() == 6);
+            if (viewportIdx == 0)
+            {
+                EXPECT_TRUE(extractors->size() == 10);
+            }
+            else if (viewportIdx == 1 || viewportIdx == 4 ||
+                    viewportIdx == 7 || viewportIdx == 10)
+            {
+                EXPECT_TRUE(extractors->size() == 6);
+            }
+            else if (viewportIdx == 2 || viewportIdx == 3 ||
+                    viewportIdx == 5 || viewportIdx == 6 ||
+                    viewportIdx == 8 || viewportIdx == 9 ||
+                    viewportIdx == 11)
+            {
+                EXPECT_TRUE(extractors->size() == 8);
+            }
+
             std::map<uint8_t, Extractor*>::iterator itExtractor;
             for (itExtractor = extractors->begin();
                 itExtractor != extractors->end();
@@ -867,24 +894,15 @@ TEST_F(ExtractorTrackTest, AllProcess)
                 InlineConstructor *inlineCtor = *itInlineCtor;
                 EXPECT_TRUE(inlineCtor->length != 0);
                 EXPECT_TRUE(inlineCtor->inlineData != NULL);
-                std::list<SampleConstructor*>::iterator itSmpCtor;
-                itSmpCtor = extractor->sampleConstructor.begin();
-                SampleConstructor *sampleCtor = *itSmpCtor;
-                EXPECT_TRUE(sampleCtor->dataOffset == (DASH_SAMPLELENFIELD_SIZE + HEVC_NALUHEADER_LEN + sliceHrdLen[itExtractor->first]));
             }
 
             ret = extractorTrack->DestroyExtractors();
             EXPECT_TRUE(ret == ERROR_NONE);
-
-            DELETE_ARRAY(rwpk.rectRegionPacking);
-            DELETE_ARRAY(covi.sphereRegions);
         }
 
         DELETE_MEMORY(frameLowRes);
         DELETE_MEMORY(frameHighRes);
     }
 
-    fclose(fpDataOffset);
-    fpDataOffset = NULL;
 }
 }

@@ -36,6 +36,7 @@
 #include <string.h>
 
 #include "../../../utils/error.h"
+#include "../../../utils/GlogWrapper.h"
 #include "HighResPlusFullLowResPacking.h"
 
 HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGenerator()
@@ -48,8 +49,6 @@ HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGener
     m_packedPicHeight = 0;
     m_streamIdxInMedia[0] = 0;
     m_streamIdxInMedia[1] = 0;
-    m_tilesNumInViewRow   = 0;
-    m_tileRowNumInView    = 0;
 
     m_origHRTilesInRow    = 0;
     m_origHRTilesInCol    = 0;
@@ -64,14 +63,9 @@ HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGener
     m_hrTilesInCol        = 0;
     m_lrTilesInRow        = 0;
     m_lrTilesInCol        = 0;
-
-    m_highResTilesInView = new TilesMergeDirectionInRow;
-    if (!m_highResTilesInView)
-        return;
-
-    m_mergedTilesArrange = new TileArrangement;
-    if (!m_mergedTilesArrange)
-        return;
+    m_regNum              = 0;
+    m_tilesNumInPackedPic = 0;
+    m_mergedTilesArrange = NULL;
 }
 
 HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGenerator(
@@ -85,8 +79,6 @@ HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGener
     m_packedPicHeight = src.m_packedPicHeight;
     m_streamIdxInMedia[0] = src.m_streamIdxInMedia[0];
     m_streamIdxInMedia[1] = src.m_streamIdxInMedia[1];
-    m_tilesNumInViewRow   = src.m_tilesNumInViewRow;
-    m_tileRowNumInView    = src.m_tileRowNumInView;
 
     m_origHRTilesInRow    = src.m_origHRTilesInRow;
     m_origHRTilesInCol    = src.m_origHRTilesInCol;
@@ -101,38 +93,14 @@ HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGener
     m_hrTilesInCol        = src.m_hrTilesInCol;
     m_lrTilesInRow        = src.m_lrTilesInRow;
     m_lrTilesInCol        = src.m_lrTilesInCol;
-
-    m_highResTilesInView  = std::move(src.m_highResTilesInView);
-
+    m_regNum              = src.m_regNum;
+    m_rectAreas           = src.m_rectAreas;
+    m_tilesNumInPackedPic = src.m_tilesNumInPackedPic;
     m_mergedTilesArrange  = std::move(src.m_mergedTilesArrange);
 }
 
 HighPlusFullLowRegionWisePackingGenerator::~HighPlusFullLowRegionWisePackingGenerator()
 {
-    if (m_highResTilesInView)
-    {
-        std::list<TilesInRow*>::iterator itRow;
-        for (itRow = m_highResTilesInView->tilesArrangeInRow.begin(); itRow != m_highResTilesInView->tilesArrangeInRow.end();)
-        {
-            TilesInRow *tileRow = *itRow;
-            std::list<SingleTile*>::iterator itTile;
-            for (itTile = tileRow->begin(); itTile != tileRow->end();)
-            {
-                SingleTile *tile = *itTile;
-                SAFE_DELETE_MEMORY(tile);
-                itTile = tileRow->erase(itTile);
-            }
-
-            delete tileRow;
-            tileRow = NULL;
-
-            itRow = m_highResTilesInView->tilesArrangeInRow.erase(itRow);
-        }
-
-        delete m_highResTilesInView;
-        m_highResTilesInView = NULL;
-    }
-
     if (m_mergedTilesArrange)
     {
         SAFE_DELETE_ARRAY(m_mergedTilesArrange->tileRowHeight);
@@ -141,123 +109,131 @@ HighPlusFullLowRegionWisePackingGenerator::~HighPlusFullLowRegionWisePackingGene
         delete m_mergedTilesArrange;
         m_mergedTilesArrange = NULL;
     }
+
+    m_rectAreas.clear();
 }
 
-int32_t HighPlusFullLowRegionWisePackingGenerator::GetOrigHighResTilesArrange(
-    uint8_t tilesNumInViewport,
-    TileDef *tilesInViewport,
-    int32_t finalViewportWidth,
-    int32_t finalViewportHeight)
+int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateHighTilesArrange(uint8_t tilesNumInView)
 {
-    if (!tilesInViewport)
-        return OMAF_ERROR_NULL_PTR;
+    uint16_t highResTilesNum = (uint16_t)tilesNumInView;
 
-    if (!tilesNumInViewport)
-        return OMAF_ERROR_SCVP_INCORRECT_RESULT;
+    uint16_t sqrtH = (uint16_t)sqrt(highResTilesNum);
+    while(sqrtH && highResTilesNum%sqrtH) { sqrtH--; }
+    uint16_t dividedVal = highResTilesNum / sqrtH;
 
-    if (!finalViewportWidth || !finalViewportHeight)
-        return OMAF_ERROR_SCVP_INCORRECT_RESULT;
-
-    uint16_t tileRowNum = finalViewportHeight / m_highTileHeight;
-    uint16_t tileColNum = finalViewportWidth / m_highTileWidth;
-
-    if (tileRowNum * tileColNum != tilesNumInViewport)
-        return OMAF_ERROR_SCVP_INCORRECT_RESULT;
-
-    for (uint16_t i = 0; i < tileRowNum; i++)
+    if (sqrtH > dividedVal)
     {
-        TilesInRow *currRow  = new TilesInRow;
-        if (!currRow)
-            return OMAF_ERROR_NULL_PTR;
-
-        for (uint16_t j = 0; j < tileColNum; j++)
-        {
-            SingleTile *tile = new SingleTile;
-            if (!tile)
-            {
-                SAFE_DELETE_MEMORY(currRow);
-                return OMAF_ERROR_NULL_PTR;
-            }
-
-            tile->streamIdxInMedia = m_streamIdxInMedia[0];
-
-            currRow->push_back(tile);
-        }
-        m_highResTilesInView->tilesArrangeInRow.push_back(currRow);
+        m_hrTilesInCol = dividedVal;
+        m_hrTilesInRow = sqrtH;
+    }
+    else
+    {
+        m_hrTilesInCol = sqrtH;
+        m_hrTilesInRow = dividedVal;
     }
 
     return ERROR_NONE;
 }
 
-static uint32_t gcd(uint32_t a, uint32_t b)
+int32_t HighPlusFullLowRegionWisePackingGenerator::ChooseLowResTilesForPacking(
+    TileDef *tilesInViewport,
+    uint32_t supplementaryLRTilesNum)
 {
-    for ( ; ; )
+    RegionWisePacking *lowRwpk = m_rwpkMap[1];
+    if (!lowRwpk)
+        return OMAF_ERROR_NULL_PTR;
+
+    for (uint8_t regIdx = 0; regIdx < lowRwpk->numRegions; regIdx++)
     {
-        if (a == 0) return b;
-        b %= a;
-        if (b == 0) return a;
-        a %= b;
+        tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + regIdx].x = lowRwpk->rectRegionPacking[regIdx].projRegLeft;
+        tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + regIdx].y = lowRwpk->rectRegionPacking[regIdx].projRegTop;
+        tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + regIdx].idx = regIdx;
+        tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + regIdx].faceId = 0; //change later
     }
+
+    if (supplementaryLRTilesNum)
+    {
+        for (uint8_t regIdx = 0; regIdx < supplementaryLRTilesNum; regIdx++)
+        {
+            tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + regIdx].x = lowRwpk->rectRegionPacking[regIdx].projRegLeft;
+            tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + regIdx].y = lowRwpk->rectRegionPacking[regIdx].projRegTop;
+            tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + regIdx].idx = regIdx;
+            tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + regIdx].faceId = 0; //change later
+        }
+    }
+
+    return ERROR_NONE;
 }
 
-static uint32_t lcm(uint32_t a, uint32_t b)
+int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateMergedTilesArrange(TileDef *tilesInViewport)
 {
-    uint32_t temp = gcd(a, b);
+    int32_t ret = ERROR_NONE;
 
-    return temp ? (a / temp * b) : 0;
-}
+    if (!m_hrTilesInCol || !m_hrTilesInRow)
+    {
+        LOG(ERROR) << "High resolution tiles row or column numbers are 0 !" << std::endl;
+        return OMAF_ERROR_INVALID_DATA;
+    }
 
-int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateMergedTilesArrange()
-{
-    uint16_t highResTilesNum = m_tilesNumInViewRow * m_tileRowNumInView;
-    uint16_t lowResTilesNum  = m_origLRTilesInRow * m_origLRTilesInCol;
+    uint16_t lowResTilesNum = m_origLRTilesInRow * m_origLRTilesInCol;
 
-    uint32_t height = 0;
-    uint8_t  tilesNumInHeight = 0;
+    uint32_t packedHeight = 0;
+    packedHeight = m_highTileHeight * m_hrTilesInCol;
+    if (packedHeight % m_lowTileHeight)
+    {
+        LOG(ERROR) << "Packed sub-picture height can't be divided by low resolution tile height !" << std::endl;
+        return OMAF_ERROR_INVALID_DATA;
+    }
 
-    height = lcm(m_highTileHeight, m_lowTileHeight);
-    uint16_t sqrtH = (uint16_t)sqrt(highResTilesNum);
-    while(sqrtH && highResTilesNum%sqrtH) { sqrtH--; }
+    m_lrTilesInCol = packedHeight / m_lowTileHeight;
+    uint32_t supplementaryLRTilesNum = 0;
+    if (lowResTilesNum % m_lrTilesInCol)
+    {
+        LOG(INFO) << "Low resolution tiles number doesn't match high resolution tiles layout in packed sub-picture, so choose parts low resolution tiles for packing !" << std::endl;
+        supplementaryLRTilesNum = m_lrTilesInCol - (lowResTilesNum % m_lrTilesInCol);
+        m_lrTilesInRow = lowResTilesNum / m_lrTilesInCol + 1;
+    }
+    else
+    {
+        m_lrTilesInRow = lowResTilesNum / m_lrTilesInCol;
+    }
 
-    tilesNumInHeight = height / m_highTileHeight;
-    tilesNumInHeight = lcm(tilesNumInHeight, sqrtH);
-    height = tilesNumInHeight * m_highTileHeight;
+    m_tilesNumInPackedPic = m_hrTilesInRow * m_hrTilesInCol + m_lrTilesInRow * m_lrTilesInCol;
 
-    if (height == 0 ||
-        tilesNumInHeight == 0 ||
-        height % m_lowTileHeight ||
-        highResTilesNum % tilesNumInHeight ||
-        lowResTilesNum % (height / m_lowTileHeight))
-        return OMAF_ERROR_UNDEFINED_OPERATION;
+    ret = ChooseLowResTilesForPacking(tilesInViewport, supplementaryLRTilesNum);
+    if (ret)
+        return ret;
 
-    m_hrTilesInCol = tilesNumInHeight;
-    m_hrTilesInRow = highResTilesNum / m_hrTilesInCol;
-    m_lrTilesInCol = height / m_lowTileHeight;
-    m_lrTilesInRow = lowResTilesNum / m_lrTilesInCol;
+    if (!m_mergedTilesArrange)
+    {
+        m_mergedTilesArrange = new TileArrangement;
+        if (!m_mergedTilesArrange)
+            return OMAF_ERROR_NULL_PTR;
 
-    m_mergedTilesArrange->tileRowsNum = 1;
-    m_mergedTilesArrange->tileColsNum = m_hrTilesInRow + m_lrTilesInRow;
-    m_mergedTilesArrange->tileRowHeight = new uint16_t[m_mergedTilesArrange->tileRowsNum];
-    if (!(m_mergedTilesArrange->tileRowHeight))
-        return OMAF_ERROR_NULL_PTR;
+        m_mergedTilesArrange->tileRowsNum = 1;
+        m_mergedTilesArrange->tileColsNum = m_hrTilesInRow + m_lrTilesInRow;
+        m_mergedTilesArrange->tileRowHeight = new uint16_t[m_mergedTilesArrange->tileRowsNum];
+        if (!(m_mergedTilesArrange->tileRowHeight))
+            return OMAF_ERROR_NULL_PTR;
 
-    m_mergedTilesArrange->tileRowHeight[0] = height;
+        m_mergedTilesArrange->tileRowHeight[0] = packedHeight;
 
-    m_mergedTilesArrange->tileColWidth = new uint16_t[m_mergedTilesArrange->tileColsNum];
-    if (!(m_mergedTilesArrange->tileColWidth))
-        return OMAF_ERROR_NULL_PTR;
+        m_mergedTilesArrange->tileColWidth = new uint16_t[m_mergedTilesArrange->tileColsNum];
+        if (!(m_mergedTilesArrange->tileColWidth))
+            return OMAF_ERROR_NULL_PTR;
 
 #define LCU_SIZE 64
 
-    for (uint8_t i = 0; i < m_mergedTilesArrange->tileColsNum; i++)
-    {
-        if (i < m_hrTilesInRow)
+        for (uint8_t i = 0; i < m_mergedTilesArrange->tileColsNum; i++)
         {
-            m_mergedTilesArrange->tileColWidth[i] = m_highTileWidth / LCU_SIZE;
-        }
-        else
-        {
-            m_mergedTilesArrange->tileColWidth[i] = m_lowTileWidth / LCU_SIZE;
+            if (i < m_hrTilesInRow)
+            {
+                m_mergedTilesArrange->tileColWidth[i] = m_highTileWidth / LCU_SIZE;
+            }
+            else
+            {
+                m_mergedTilesArrange->tileColWidth[i] = m_lowTileWidth / LCU_SIZE;
+            }
         }
     }
 
@@ -267,12 +243,9 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateMergedTilesArrange()
 int32_t HighPlusFullLowRegionWisePackingGenerator::Initialize(
     std::map<uint8_t, VideoStreamInfo*> *streams,
     uint8_t *videoIdxInMedia,
-    uint8_t tilesNumInViewport,
-    TileDef *tilesInViewport,
-    int32_t finalViewportWidth,
-    int32_t finalViewportHeight)
+    uint8_t tilesNumInViewport)
 {
-    if (!streams || !videoIdxInMedia || !tilesInViewport)
+    if (!streams || !videoIdxInMedia)
         return OMAF_ERROR_NULL_PTR;
 
     uint8_t videoStreamIdx = 0;
@@ -308,24 +281,7 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::Initialize(
     m_streamIdxInMedia[0] = videoIdxInMedia[0];
     m_streamIdxInMedia[1] = videoIdxInMedia[1];
 
-    int32_t ret = GetOrigHighResTilesArrange(
-                tilesNumInViewport,
-                tilesInViewport,
-                finalViewportWidth,
-                finalViewportHeight);
-    if (ret)
-        return ret;
-
-    m_tileRowNumInView = m_highResTilesInView->tilesArrangeInRow.size();
-    if (!m_tileRowNumInView)
-        return OMAF_ERROR_SCVP_INCORRECT_RESULT;
-
-    TilesInRow *tilesRow = m_highResTilesInView->tilesArrangeInRow.front();
-    m_tilesNumInViewRow = tilesRow->size();
-    if (!m_tilesNumInViewRow)
-        return OMAF_ERROR_SCVP_INCORRECT_RESULT;
-
-    ret = GenerateMergedTilesArrange();
+    int32_t ret = GenerateHighTilesArrange(tilesNumInViewport);
     if (ret)
         return ret;
 
@@ -333,37 +289,14 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::Initialize(
 }
 
 int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateTilesMergeDirection(
-    uint8_t viewportIdx,
+    TileDef *tilesInViewport,
     TilesMergeDirectionInCol *tilesMergeDir)
 {
-    if (!tilesMergeDir)
+    if (!tilesInViewport || !tilesMergeDir)
         return OMAF_ERROR_NULL_PTR;
 
-    uint8_t highTilesNum = m_tilesNumInViewRow * m_tileRowNumInView;
-    uint8_t *highTilesIdx = new uint8_t[highTilesNum];
-    if (!highTilesIdx)
-        return OMAF_ERROR_NULL_PTR;
+    uint8_t highTilesNum = m_hrTilesInRow * m_hrTilesInCol;
 
-    highTilesIdx[0] = viewportIdx;
-    for (uint8_t i = 1; i < highTilesNum; i++)
-    {
-        if (i % m_tilesNumInViewRow)
-        {
-            highTilesIdx[i] = highTilesIdx[i-1] + 1;
-            if (highTilesIdx[i] >= (highTilesIdx[i-1] / m_origHRTilesInRow + 1) * m_origHRTilesInRow)
-            {
-                highTilesIdx[i] = highTilesIdx[i] - m_origHRTilesInRow;
-            }
-        }
-        else
-        {
-            highTilesIdx[i] = (i / m_tilesNumInViewRow) * m_origHRTilesInRow + highTilesIdx[0];
-            if (highTilesIdx[i] >= m_origHRTilesInRow * m_origHRTilesInCol)
-            {
-                highTilesIdx[i] = highTilesIdx[i] - m_origHRTilesInRow * m_origHRTilesInCol;
-            }
-        }
-    }
 #define LCU_SIZE 64
 
     uint8_t tileColsNum = m_hrTilesInRow + m_lrTilesInRow;
@@ -373,7 +306,6 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateTilesMergeDirection(
         TilesInCol *tileCol = new TilesInCol;
         if (!tileCol)
         {
-            SAFE_DELETE_ARRAY(highTilesIdx);
             return OMAF_ERROR_NULL_PTR;
         }
 
@@ -385,12 +317,11 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateTilesMergeDirection(
                 if (!tile)
                 {
                     SAFE_DELETE_MEMORY(tileCol);
-                    SAFE_DELETE_ARRAY(highTilesIdx);
                     return OMAF_ERROR_NULL_PTR;
                 }
 
                 tile->streamIdxInMedia = m_streamIdxInMedia[0];
-                tile->origTileIdx      = highTilesIdx[(tileIdx % m_hrTilesInCol) * m_hrTilesInRow + tileIdx / m_hrTilesInCol];
+                tile->origTileIdx      = tilesInViewport[tileIdx].idx;
                 tile->dstCTUIndex      = (tileIdx % m_hrTilesInCol) *
                                          (m_highTileHeight / LCU_SIZE) *
                                          (m_packedPicWidth / LCU_SIZE) +
@@ -411,12 +342,11 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateTilesMergeDirection(
                 if (!tile)
                 {
                     SAFE_DELETE_MEMORY(tileCol);
-                    SAFE_DELETE_ARRAY(highTilesIdx);
                     return OMAF_ERROR_NULL_PTR;
                 }
 
                 tile->streamIdxInMedia = m_streamIdxInMedia[1];
-                tile->origTileIdx      = tileIdx - highTilesNum;
+                tile->origTileIdx      = tilesInViewport[tileIdx].idx;//tileIdx - highTilesNum;
                 tile->dstCTUIndex      = ((tileIdx - highTilesNum) % m_lrTilesInCol) *
                                          (m_lowTileHeight / LCU_SIZE) *
                                          (m_packedPicWidth / LCU_SIZE) +
@@ -432,20 +362,18 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateTilesMergeDirection(
         }
     }
 
-    SAFE_DELETE_ARRAY(highTilesIdx);
-
     return ERROR_NONE;
 }
 
 int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateDstRwpk(
-    uint8_t viewportIdx,
+    TileDef *tilesInViewport,
     RegionWisePacking *dstRwpk)
 {
-    if (!dstRwpk)
+    if (!tilesInViewport || !dstRwpk)
         return OMAF_ERROR_NULL_PTR;
 
     dstRwpk->constituentPicMatching = 0;
-    dstRwpk->numRegions             = m_tilesNumInViewRow * m_tileRowNumInView + m_origLRTilesInRow * m_origLRTilesInCol;
+    dstRwpk->numRegions             = m_hrTilesInRow * m_hrTilesInCol + m_lrTilesInRow * m_lrTilesInCol;
 
     dstRwpk->packedPicWidth         = m_highTileWidth * m_hrTilesInRow + m_lowTileWidth * m_lrTilesInRow;
     dstRwpk->packedPicHeight        = m_highTileHeight * m_hrTilesInCol;
@@ -458,44 +386,18 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateDstRwpk(
     if (!(dstRwpk->rectRegionPacking))
         return OMAF_ERROR_NULL_PTR;
 
-    uint8_t highTilesNum = m_tilesNumInViewRow * m_tileRowNumInView;
-    uint8_t *highTilesIdx = new uint8_t[highTilesNum];
-    if (!highTilesIdx)
-        return OMAF_ERROR_NULL_PTR;
-
-    highTilesIdx[0] = viewportIdx;
-    for (uint8_t i = 1; i < highTilesNum; i++)
-    {
-        if (i % m_tilesNumInViewRow)
-        {
-            highTilesIdx[i] = highTilesIdx[i-1] + 1;
-            if (highTilesIdx[i] >= (highTilesIdx[i-1] / m_origHRTilesInRow + 1) * m_origHRTilesInRow)
-            {
-                highTilesIdx[i] = highTilesIdx[i] - m_origHRTilesInRow;
-            }
-        }
-        else
-        {
-            highTilesIdx[i] = (i / m_tilesNumInViewRow) * m_origHRTilesInRow + highTilesIdx[0];
-            if (highTilesIdx[i] >= m_origHRTilesInRow * m_origHRTilesInCol)
-            {
-                highTilesIdx[i] = highTilesIdx[i] - m_origHRTilesInRow * m_origHRTilesInCol;
-            }
-        }
-    }
+    uint8_t highTilesNum = m_hrTilesInRow * m_hrTilesInCol;
 
     std::map<uint8_t, RegionWisePacking*>::iterator it;
     it = m_rwpkMap.find(0);
     if (it == m_rwpkMap.end())
     {
-        SAFE_DELETE_ARRAY(highTilesIdx);
         return OMAF_ERROR_STREAM_NOT_FOUND;
     }
     RegionWisePacking *rwpkHighRes = it->second;
     it = m_rwpkMap.find(1);
     if (it == m_rwpkMap.end())
     {
-        SAFE_DELETE_ARRAY(highTilesIdx);
         return OMAF_ERROR_STREAM_NOT_FOUND;
     }
     RegionWisePacking *rwpkLowRes = it->second;
@@ -508,7 +410,7 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateDstRwpk(
         rwpk->guardBandFlag = false;
         if (regionIdx < highTilesNum)
         {
-            RectangularRegionWisePacking *rectRwpkHigh = &(rwpkHighRes->rectRegionPacking[highTilesIdx[(regionIdx % m_hrTilesInCol) * m_hrTilesInRow + regionIdx / m_hrTilesInCol]]);
+            RectangularRegionWisePacking *rectRwpkHigh = &(rwpkHighRes->rectRegionPacking[tilesInViewport[regionIdx].idx]);
             rwpk->projRegWidth  = rectRwpkHigh->projRegWidth;
             rwpk->projRegHeight = rectRwpkHigh->projRegHeight;
             rwpk->projRegTop    = rectRwpkHigh->projRegTop;
@@ -531,7 +433,7 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateDstRwpk(
         }
         else
         {
-            RectangularRegionWisePacking *rectRwpkLow = &(rwpkLowRes->rectRegionPacking[regionIdx-highTilesNum]);
+            RectangularRegionWisePacking *rectRwpkLow = &(rwpkLowRes->rectRegionPacking[tilesInViewport[regionIdx].idx]);
 
             rwpk->packedRegWidth  = rectRwpkLow->projRegWidth;
             rwpk->packedRegHeight = rectRwpkLow->projRegHeight;;
@@ -555,8 +457,6 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateDstRwpk(
             rwpk->gbType3              = 0;
         }
     }
-
-    SAFE_DELETE_ARRAY(highTilesIdx);
 
     return ERROR_NONE;
 }

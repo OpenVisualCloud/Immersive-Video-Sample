@@ -77,12 +77,6 @@ public:
     //!         pointer to the index of each video in media streams
     //! \param  [in] tilesNumInViewport
     //!         the number of tiles in viewport
-    //! \param  [in] tilesInViewport
-    //!         pointer to tile information of all tiles in viewport
-    //! \param  [in] finalViewportWidth
-    //!         the final viewport width calculated by 360SCVP library
-    //! \param  [in] finalViewportHeight
-    //!         the final viewport height calculated by 360SCVP library
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
@@ -92,17 +86,15 @@ public:
         const char *rwpkGenPluginName,
         std::map<uint8_t, MediaStream*> *streams,
         uint8_t *videoIdxInMedia,
-        uint8_t tilesNumInViewport,
-        TileDef *tilesInViewport,
-        int32_t finalViewportWidth,
-        int32_t finalViewportHeight);
+        uint8_t tilesNumInViewport);
 
     //!
     //! \brief  Generate the region wise packing information for
     //!         specified viewport
     //!
-    //! \param  [in]  viewportIdx
-    //!         the index of specified viewport
+    //! \param  [in]  tilesInViewport
+    //!         the pointer to all tiles information in packed
+    //!         sub-picture
     //! \param  [out] dstRwpk
     //!         pointer to the region wise packing information for
     //!         the specified viewport
@@ -111,15 +103,16 @@ public:
     //!         ERROR_NONE if success, else failed reason
     //!
     int32_t GenerateDstRwpk(
-        uint8_t viewportIdx,
+        TileDef *tilesInViewport,
         RegionWisePacking *dstRwpk);
 
     //!
     //! \brief  Generate the tiles merging direction information for
     //!         specified viewport
     //!
-    //! \param  [in]  viewportIdx
-    //!         the index of specified viewport
+    //! \param  [in] tilesInViewport
+    //!         the pointer to all tiles information in packed
+    //!         sub-picture
     //! \param  [out] tilesMergeDir
     //!         pointer to the tiles merging direction information for
     //!         the specified viewport
@@ -128,24 +121,8 @@ public:
     //!         ERROR_NONE if success, else failed reason
     //!
     int32_t GenerateTilesMergeDirection(
-        uint8_t viewportIdx,
+        TileDef *tilesInViewport,
         TilesMergeDirectionInCol *tilesMergeDir);
-
-    //!
-    //! \brief  Get the number of tiles in one row in viewport
-    //!
-    //! \return uint8_t
-    //!         the number of tiles in one row in viewport
-    //!
-    uint8_t GetTilesNumInViewportRow();
-
-    //!
-    //! \brief  Get the number of tile rows in viewport
-    //!
-    //! \return uint8_t
-    //!         the number of tile rows in viewport
-    //!
-    uint8_t GetTileRowNumInViewport();
 
     //!
     //! \brief  Get the width of tiles merged picture
@@ -171,6 +148,10 @@ public:
     //!         the pointer to the tiles arrangement information
     //!
     TileArrangement* GetMergedTilesArrange();
+
+    int32_t GenerateMergedTilesArrange(TileDef *tilesInViewport);
+
+    uint32_t GetTotalTilesNumInPackedPic();
 
 protected:
     void                                    *m_pluginHdl;          //!< pointer to OMAF packing plugin handle

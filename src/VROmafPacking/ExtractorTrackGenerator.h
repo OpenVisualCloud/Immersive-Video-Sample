@@ -45,6 +45,9 @@
 
 VCD_NS_BEGIN
 
+#define YAW_STEP   1
+#define PITCH_STEP 1
+
 //!
 //! \class ExtractorTrackGenerator
 //! \brief Define the operation of extractor track generator
@@ -62,17 +65,11 @@ public:
         m_initInfo = NULL;
         m_streams  = NULL;
         m_viewportNum = 0;
-        m_rwpkGen     = NULL;
         m_newSPSNalu  = NULL;
         m_newPPSNalu  = NULL;
         m_videoIdxInMedia = NULL;
         m_360scvpParam    = NULL;
         m_360scvpHandle   = NULL;
-        m_tilesInViewport = NULL;
-        m_viewInfo        = NULL;
-        m_tilesNumInViewport  = 0;
-        m_finalViewportWidth  = 0;
-        m_finalViewportHeight = 0;
         m_origResWidth    = 0;
         m_origResHeight   = 0;
         m_origTileInRow     = 0;
@@ -101,17 +98,11 @@ public:
         m_initInfo = initInfo;
         m_streams  = streams;
         m_viewportNum = 0;
-        m_rwpkGen     = NULL;
         m_newSPSNalu  = NULL;
         m_newPPSNalu  = NULL;
         m_videoIdxInMedia = NULL;
         m_360scvpParam    = NULL;
         m_360scvpHandle   = NULL;
-        m_tilesInViewport = NULL;
-        m_viewInfo        = NULL;
-        m_tilesNumInViewport  = 0;
-        m_finalViewportWidth  = 0;
-        m_finalViewportHeight = 0;
         m_origResWidth    = 0;
         m_origResHeight   = 0;
         m_origTileInRow     = 0;
@@ -132,17 +123,11 @@ public:
         m_initInfo = src.m_initInfo;
         m_streams  = src.m_streams;
         m_viewportNum = src.m_viewportNum;
-        m_rwpkGen     = std::move(src.m_rwpkGen);
         m_newSPSNalu  = std::move(src.m_newSPSNalu);
         m_newPPSNalu  = std::move(src.m_newPPSNalu);
         m_videoIdxInMedia = std::move(src.m_videoIdxInMedia);
         m_360scvpParam    = std::move(src.m_360scvpParam);
         m_360scvpHandle   = std::move(src.m_360scvpHandle);
-        m_tilesInViewport = std::move(src.m_tilesInViewport);
-        m_viewInfo        = std::move(src.m_viewInfo);
-        m_tilesNumInViewport  = src.m_tilesNumInViewport;
-        m_finalViewportWidth  = src.m_finalViewportWidth;
-        m_finalViewportHeight = src.m_finalViewportHeight;
         m_origResWidth    = src.m_origResWidth;
         m_origResHeight   = src.m_origResHeight;
         m_origTileInRow     = src.m_origTileInRow;
@@ -163,17 +148,11 @@ public:
         m_initInfo = other.m_initInfo;
         m_streams  = other.m_streams;
         m_viewportNum = other.m_viewportNum;
-        m_rwpkGen     = NULL;
         m_newSPSNalu  = NULL;
         m_newPPSNalu  = NULL;
         m_videoIdxInMedia = NULL;
         m_360scvpParam    = NULL;
         m_360scvpHandle   = NULL;
-        m_tilesInViewport = NULL;
-        m_viewInfo        = NULL;
-        m_tilesNumInViewport  = other.m_tilesNumInViewport;
-        m_finalViewportWidth  = other.m_finalViewportWidth;
-        m_finalViewportHeight = other.m_finalViewportHeight;
         m_origResWidth    = other.m_origResWidth;
         m_origResHeight   = other.m_origResHeight;
         m_origTileInRow     = other.m_origTileInRow;
@@ -238,6 +217,11 @@ public:
     Nalu* GetNewPPS() { return m_newPPSNalu; };
 
 private:
+
+    int32_t SelectTilesInView(
+        float yaw, float pitch,
+        uint8_t tileInRow, uint8_t tileInCol);
+
     //!
     //! \brief  Calculate the total viewport number
     //!         according to the initial information
@@ -245,15 +229,18 @@ private:
     //! \return uint16_t
     //!         the total viewport number
     //!
-    uint16_t CalculateViewportNum();
+    int32_t CalculateViewportNum();
 
     //!
     //! \brief  Fill the region wise packing information
     //!         for the specified viewport
     //!
-    //! \param  [in] viewportIdx
-    //!         the index of the specified viewport
-    //! \param  [in] dstRwpk
+    //! \param  [in] rwpkGen
+    //!         the pointer to the region wise packing generator
+    //! \param  [in] tilesInViewport
+    //!         the pointer to all tiles information in packed
+    //!         sub-picture
+    //! \param  [out] dstRwpk
     //!         pointer to the region wise packing information for the
     //!         specified viewport generated according to srcRwpk and
     //!         tiles merging strategy
@@ -261,15 +248,21 @@ private:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t FillDstRegionWisePacking(uint8_t viewportIdx, RegionWisePacking *dstRwpk);
+    int32_t FillDstRegionWisePacking(
+        RegionWisePackingGenerator *rwpkGen,
+        TileDef *tilesInViewport,
+        RegionWisePacking *dstRwpk);
 
     //!
     //! \brief  Fill the tiles merging direction information
     //!         for the specified viewport
     //!
-    //! \param  [in] viewportIdx
-    //!         the index of the specified viewport
-    //! \param  [in] tilesMergeDir
+    //! \param  [in] rwpkGen
+    //!         the pointer to the region wise packing generator
+    //! \param  [in] tilesInViewport
+    //!         the pointer to all tiles information in packed
+    //!         sub-picture
+    //! \param  [out] tilesMergeDir
     //!         pointer to the tiles merging direction information
     //!         for the specified viewport generated according to
     //!         tiles merging strategy
@@ -278,7 +271,8 @@ private:
     //!         ERROR_NONE if success, else failed reason
     //!
     int32_t FillTilesMergeDirection(
-        uint8_t viewportIdx,
+        RegionWisePackingGenerator *rwpkGen,
+        TileDef *tilesInViewport,
         TilesMergeDirectionInCol *tilesMergeDir);
 
     //!
@@ -287,7 +281,7 @@ private:
     //!
     //! \param  [in] viewportIdx
     //!         the index of the specified viewport
-    //! \param  [in] dstCovi
+    //! \param  [out] dstCovi
     //!         pointer to the content coverage information for the
     //!         specified viewport generated according to srcCovi and
     //!         tiles merging strategy
@@ -295,7 +289,7 @@ private:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t FillDstContentCoverage(uint8_t viewportIdx, ContentCoverage *dstCovi);
+    int32_t FillDstContentCoverage(uint16_t viewportIdx, ContentCoverage *dstCovi);
 
     //!
     //! \brief  Check the validation of initial information
@@ -321,24 +315,20 @@ private:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t GenerateNewPPS();
+    int32_t GenerateNewPPS(RegionWisePackingGenerator *rwpkGen);
 
 private:
     InitialInfo                     *m_initInfo;   //!< initial information input by library interface
     std::map<uint8_t, MediaStream*> *m_streams;    //!< media streams map set up in OmafPackage
     uint16_t                        m_viewportNum; //!< viewport number calculated according to initial information
-    RegionWisePackingGenerator      *m_rwpkGen;    //!< pointer to region wise packing generator
+    std::map<uint16_t, std::map<uint16_t, TileDef*>> m_tilesSelection; //!< all tiles selection results for all viewports (yaw from -180 to 180 and pitch from -90 to 90), that is std::map<selected_tiles_num, std::map<viewport_idx, TileDef*>>
+    std::map<uint16_t, CCDef*>      m_viewportCCInfo;
+    std::map<uint16_t, RegionWisePackingGenerator*>  m_rwpkGenMap;     //!< all RWPK generators according to different tiles selection layout, that is std::map<selected_tiles_num, RegionWisePackingGenerator*>
     Nalu                            *m_newSPSNalu; //!< pointer to the new SPS nalu
     Nalu                            *m_newPPSNalu; //!< pointer to the new PPS nalu
     uint8_t                         *m_videoIdxInMedia;   //!< pointer to index of video streams in media streams
     param_360SCVP                   *m_360scvpParam;      //!< 360SCVP library initial parameter
     void                            *m_360scvpHandle;     //!< 360SCVP library handle
-    TileDef                         *m_tilesInViewport;   //!< the list of tiles inside the viewport
-    Param_ViewPortInfo              *m_viewInfo;          //!< pointer to the viewport information for 360SCVP library
-    int32_t                         m_tilesNumInViewport; //!< tiles number in viewport
-    int32_t                         m_finalViewportWidth;  //!< the final viewport width calculated by 360SCVP library
-    int32_t                         m_finalViewportHeight; //!< the final viewport height calculated by 360SCVP library
-
     uint16_t                        m_origResWidth;       //!< frame width of high resolution video stream
     uint16_t                        m_origResHeight;      //!< frame height of high resolution video stream
     uint8_t                         m_origTileInRow;        //!< the number of high resolution tiles in one row in original picture

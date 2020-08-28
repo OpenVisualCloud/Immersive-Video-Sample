@@ -77,12 +77,9 @@ int32_t RegionWisePackingGenerator::Initialize(
     const char *rwpkGenPluginName,
     std::map<uint8_t, MediaStream*> *streams,
     uint8_t *videoIdxInMedia,
-    uint8_t tilesNumInViewport,
-    TileDef *tilesInViewport,
-    int32_t finalViewportWidth,
-    int32_t finalViewportHeight)
+    uint8_t tilesNumInViewport)
 {
-    if (!streams || !videoIdxInMedia || !tilesInViewport)
+    if (!streams || !videoIdxInMedia)
         return OMAF_ERROR_NULL_PTR;
 
     if (!rwpkGenPluginName)
@@ -176,8 +173,7 @@ int32_t RegionWisePackingGenerator::Initialize(
 
     ret = m_rwpkGen->Initialize(
         &videoStreams, videoIdxInMedia,
-        tilesNumInViewport, tilesInViewport,
-        finalViewportWidth, finalViewportHeight);
+        tilesNumInViewport);
     if (ret)
     {
         LOG(ERROR) << "Failed to initialize RWPK generator !" << std::endl;
@@ -196,13 +192,13 @@ int32_t RegionWisePackingGenerator::Initialize(
 }
 
 int32_t RegionWisePackingGenerator::GenerateDstRwpk(
-    uint8_t viewportIdx,
+    TileDef *tilesInViewport,
     RegionWisePacking *dstRwpk)
 {
     int32_t ret = ERROR_NONE;
     if (m_rwpkGen)
     {
-        ret = m_rwpkGen->GenerateDstRwpk(viewportIdx, dstRwpk);
+        ret = m_rwpkGen->GenerateDstRwpk(tilesInViewport, dstRwpk);
         if (ret)
         {
             LOG(ERROR) << "Failed to generate destinate RWPK !" << std::endl;
@@ -217,13 +213,13 @@ int32_t RegionWisePackingGenerator::GenerateDstRwpk(
 }
 
 int32_t RegionWisePackingGenerator::GenerateTilesMergeDirection(
-    uint8_t viewportIdx,
+    TileDef *tilesInViewport,
     TilesMergeDirectionInCol *tilesMergeDir)
 {
     int32_t ret = ERROR_NONE;
     if (m_rwpkGen)
     {
-        ret = m_rwpkGen->GenerateTilesMergeDirection(viewportIdx, tilesMergeDir);
+        ret = m_rwpkGen->GenerateTilesMergeDirection(tilesInViewport, tilesMergeDir);
         if (ret)
         {
             LOG(ERROR) << "Failed to generate tiles merge direction !" << std::endl;
@@ -237,27 +233,12 @@ int32_t RegionWisePackingGenerator::GenerateTilesMergeDirection(
     return ret;
 }
 
-uint8_t RegionWisePackingGenerator::GetTilesNumInViewportRow()
+uint32_t RegionWisePackingGenerator::GetTotalTilesNumInPackedPic()
 {
-    uint8_t num = 0;
+    uint32_t num = 0;
     if (m_rwpkGen)
     {
-        num = m_rwpkGen->GetTilesNumInViewportRow();
-    }
-    else
-    {
-        LOG(ERROR) << "There is no RWPK generator !" << std::endl;
-    }
-
-    return num;
-}
-
-uint8_t RegionWisePackingGenerator::GetTileRowNumInViewport()
-{
-    uint8_t num = 0;
-    if (m_rwpkGen)
-    {
-        num = m_rwpkGen->GetTileRowNumInViewport();
+        num = m_rwpkGen->GetTilesNumInPackedPic();
     }
     else
     {
@@ -310,6 +291,28 @@ TileArrangement* RegionWisePackingGenerator::GetMergedTilesArrange()
     }
 
     return tilesArr;
+}
+
+int32_t RegionWisePackingGenerator::GenerateMergedTilesArrange(TileDef *tilesInViewport)
+{
+    if (!tilesInViewport)
+        return OMAF_ERROR_NULL_PTR;
+
+    int32_t ret = ERROR_NONE;
+    if (m_rwpkGen)
+    {
+        ret = m_rwpkGen->GenerateMergedTilesArrange(tilesInViewport);
+        if (ret)
+        {
+            LOG(ERROR) << "Failed to generate merged tiles arrangement !" << std::endl;
+        }
+    }
+    else
+    {
+        LOG(ERROR) << "There is no RWPK generator !" << std::endl;
+        ret = OMAF_ERROR_NULL_PTR;
+    }
+    return ret;
 }
 
 VCD_NS_END

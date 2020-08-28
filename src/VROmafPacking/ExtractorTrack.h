@@ -178,8 +178,6 @@ public:
     //!
     std::map<uint8_t, Extractor*>* GetAllExtractors() { return &m_extractors; };
 
-    //std::map<uint8_t, uint32_t>* GetAllRefTrackIds() { return &m_refTrackIds; };
-
     //!
     //! \brief  Get projection type of the video frame
     //!
@@ -320,6 +318,11 @@ public:
     }
 
     uint8_t GetViewportId() { return m_viewportIdx; };
+
+    void SetPackedPicWidth(uint32_t packedWidth) { m_dstWidth = packedWidth; };
+
+    void SetPackedPicHeight(uint32_t packedHeight) { m_dstHeight = packedHeight; };
+
 private:
 
     //!
@@ -357,9 +360,8 @@ private:
     param_360SCVP                   *m_360scvpParam;     //!< 360SCVP library parameter
     std::map<MediaStream*, void*>   m_360scvpHandles;    //!< map of 360SCVP library handle and corresponding media stream
     uint64_t                        m_processedFrmNum;   //!< processed frames number in extractor track
-    //std::mutex                      m_mutex;             //!< thread mutex for extractor track segmentation thread
-    int32_t                         m_dstWidth;
-    int32_t                         m_dstHeight;
+    uint32_t                         m_dstWidth;
+    uint32_t                         m_dstHeight;
 };
 
 VCD_NS_END;
