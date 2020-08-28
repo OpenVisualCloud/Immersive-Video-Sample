@@ -32,6 +32,7 @@
 //!
 
 #include <set>
+#include <math.h>
 
 #include "ExtractorTrackGenerator.h"
 #include "VideoStream.h"
@@ -44,9 +45,51 @@ VCD_NS_BEGIN
 
 ExtractorTrackGenerator::~ExtractorTrackGenerator()
 {
+    if (m_tilesSelection.size())
+    {
+        std::map<uint16_t, std::map<uint16_t, TileDef*>>::iterator it;
+        for (it = m_tilesSelection.begin(); it != m_tilesSelection.end(); )
+        {
+            std::map<uint16_t, TileDef*> oneLayout = it->second;
+            std::map<uint16_t, TileDef*>::iterator it1;
+            for (it1 = oneLayout.begin(); it1 != oneLayout.end(); )
+            {
+                TileDef *oneTile = it1->second;
+                DELETE_ARRAY(oneTile);
+                oneLayout.erase(it1++);
+            }
+            oneLayout.clear();
+            m_tilesSelection.erase(it++);
+        }
+
+        m_tilesSelection.clear();
+    }
+
+    if (m_viewportCCInfo.size())
+    {
+        std::map<uint16_t, CCDef*>::iterator it;
+        for (it = m_viewportCCInfo.begin(); it != m_viewportCCInfo.end(); )
+        {
+            CCDef *oneCC = it->second;
+            DELETE_MEMORY(oneCC);
+            m_viewportCCInfo.erase(it++);
+        }
+        m_viewportCCInfo.clear();
+    }
+
+    if (m_rwpkGenMap.size())
+    {
+        std::map<uint16_t, RegionWisePackingGenerator*>::iterator it;
+        for (it = m_rwpkGenMap.begin(); it != m_rwpkGenMap.end(); )
+        {
+            RegionWisePackingGenerator *rwpkGen = it->second;
+            DELETE_MEMORY(rwpkGen);
+            m_rwpkGenMap.erase(it++);
+        }
+        m_rwpkGenMap.clear();
+    }
+
     DELETE_ARRAY(m_videoIdxInMedia);
-    DELETE_ARRAY(m_tilesInViewport);
-    DELETE_MEMORY(m_viewInfo);
     if (m_newSPSNalu)
     {
         DELETE_ARRAY(m_newSPSNalu->data);
@@ -57,51 +100,299 @@ ExtractorTrackGenerator::~ExtractorTrackGenerator()
         DELETE_ARRAY(m_newPPSNalu->data);
     }
     DELETE_MEMORY(m_newPPSNalu);
-    DELETE_MEMORY(m_rwpkGen);
+    m_360scvpParam = NULL;
+    m_360scvpHandle = NULL;
 }
 
-uint16_t ExtractorTrackGenerator::CalculateViewportNum()
+int32_t ExtractorTrackGenerator::SelectTilesInView(
+    float yaw, float pitch,
+    uint8_t tileInRow, uint8_t tileInCol)
+{
+    if (!m_360scvpParam || !m_360scvpHandle)
+    {
+        LOG(ERROR) << "360SCVP should be set up before selecting tiles based on viewport !" << std::endl;
+        return OMAF_ERROR_NULL_PTR;
+    }
+
+    if ((yaw < -180.0) || (yaw > 180.0))
+    {
+        LOG(ERROR) << "Invalid yaw in selecting tiles based on viewport !" << std::endl;
+        return OMAF_ERROR_INVALID_DATA;
+    }
+
+    if ((pitch < -90.0) || (pitch > 90.0))
+    {
+        LOG(ERROR) << "Invalid pitch in selecting tiles based on viewport !" << std::endl;
+        return OMAF_ERROR_INVALID_DATA;
+    }
+
+    int32_t ret = I360SCVP_setViewPort(m_360scvpHandle, yaw, pitch);
+    if (ret)
+    {
+        LOG(ERROR) << "Failed to set viewport !" << std::endl;
+        return OMAF_ERROR_SCVP_SET_FAILED;
+    }
+
+    ret = I360SCVP_process(m_360scvpParam, m_360scvpHandle);
+    if (ret)
+    {
+        LOG(ERROR) << "Failed in 360SCVP process !" << std::endl;
+        return OMAF_ERROR_SCVP_PROCESS_FAILED;
+    }
+
+    uint64_t totalTiles = tileInRow * tileInCol;
+    TileDef *tilesInView = new TileDef[1024];
+    if (!tilesInView)
+    {
+        LOG(ERROR) << "Failed to create tiles def array !" << std::endl;
+        return OMAF_ERROR_NULL_PTR;
+    }
+
+    memset(tilesInView, 0, 1024 * sizeof(TileDef));
+
+    Param_ViewportOutput paramViewport;
+    int32_t selectedTilesNum = 0;
+    selectedTilesNum = I360SCVP_getTilesInViewport(tilesInView, &paramViewport, m_360scvpHandle);
+    if ((selectedTilesNum <= 0) || ((uint64_t)(selectedTilesNum) > totalTiles))
+    {
+        LOG(ERROR) << "Unreasonable selected tiles number based on viewport !" << std::endl;
+        delete [] tilesInView;
+        tilesInView = NULL;
+        return OMAF_ERROR_SCVP_INCORRECT_RESULT;
+    }
+
+    uint32_t sqrtedSize = (uint32_t)sqrt(selectedTilesNum);
+    while(sqrtedSize && (selectedTilesNum % sqrtedSize)) { sqrtedSize--; }
+    if (sqrtedSize == 1)
+    {
+        LOG(INFO) << "Additional tile needs to be selected for tiles stitching !" << std::endl;
+        selectedTilesNum++;
+        tilesInView[selectedTilesNum-1].x = 0;
+        tilesInView[selectedTilesNum-1].y = 0;
+        tilesInView[selectedTilesNum-1].idx = 0;
+        tilesInView[selectedTilesNum-1].faceId = 0;
+    }
+
+    CCDef *outCC = new CCDef;
+    if (!outCC)
+    {
+        delete [] tilesInView;
+        tilesInView = NULL;
+        return OMAF_ERROR_NULL_PTR;
+    }
+    ret = I360SCVP_getContentCoverage(m_360scvpHandle, outCC);
+    if (ret)
+    {
+        LOG(ERROR) << "Failed to calculate Content coverage information !" << std::endl;
+        delete [] tilesInView;
+        tilesInView = NULL;
+        delete outCC;
+        outCC = NULL;
+        return OMAF_ERROR_SCVP_INCORRECT_RESULT;
+    }
+
+    std::map<uint16_t, std::map<uint16_t, TileDef*>>::iterator it;
+    it = m_tilesSelection.find((uint16_t)selectedTilesNum);
+    if (it == m_tilesSelection.end())
+    {
+        std::map<uint16_t, TileDef*> oneLayout;
+        oneLayout.insert(std::make_pair(m_viewportNum, tilesInView));
+        m_tilesSelection.insert(std::make_pair((uint16_t)selectedTilesNum, oneLayout));
+        m_viewportCCInfo.insert(std::make_pair(m_viewportNum, outCC));
+        m_viewportNum++;
+    }
+    else
+    {
+        std::map<uint16_t, TileDef*>* oneLayout = &(it->second);
+        std::map<uint16_t, TileDef*>::iterator it1;
+        uint64_t diffNum = 0;
+        for (it1 = oneLayout->begin(); it1 != oneLayout->end(); it1++)
+        {
+            TileDef *oneTilesSet = it1->second;
+            if (!oneTilesSet)
+            {
+                DELETE_ARRAY(tilesInView);
+                return OMAF_ERROR_NULL_PTR;
+            }
+
+            uint16_t i = 0;
+            for ( ; i < selectedTilesNum; i++)
+            {
+                TileDef *oneTile = &(tilesInView[i]);
+                if (!oneTile)
+                {
+                    DELETE_ARRAY(tilesInView);
+                    return OMAF_ERROR_NULL_PTR;
+                }
+
+                uint16_t j = 0;
+                for ( ; j < selectedTilesNum; j++)
+                {
+                    TileDef *tile = &(oneTilesSet[j]);
+                    if ((oneTile->x == tile->x) && (oneTile->y == tile->y) &&
+                        (oneTile->idx == tile->idx) && (oneTile->faceId == tile->faceId))
+                    {
+                        break;
+                    }
+                }
+                if (j == selectedTilesNum)
+                    break;
+            }
+            if (i < selectedTilesNum )
+            {
+                diffNum++;
+            }
+        }
+        if (diffNum == oneLayout->size())
+        {
+            oneLayout->insert(std::make_pair(m_viewportNum, tilesInView));
+            m_viewportCCInfo.insert(std::make_pair(m_viewportNum, outCC));
+            m_viewportNum++;
+        }
+        else
+        {
+            DELETE_ARRAY(tilesInView);
+            DELETE_MEMORY(outCC);
+        }
+    }
+
+    return ERROR_NONE;
+}
+
+int32_t ExtractorTrackGenerator::CalculateViewportNum()
 {
     if (!m_videoIdxInMedia)
-        return 0;
+        return OMAF_ERROR_NULL_PTR;
 
     std::map<uint8_t, MediaStream*>::iterator it;
     it = m_streams->find(m_videoIdxInMedia[0]);
     if (it == m_streams->end())
-        return 0;
-    VideoStream *vs = (VideoStream*)(it->second);
-    uint8_t tileInRow = vs->GetTileInRow();
-    uint8_t tileInCol = vs->GetTileInCol();
-    uint16_t viewportNum = tileInRow * tileInCol;
+        return OMAF_ERROR_STREAM_NOT_FOUND;
 
-    return viewportNum;
+    VideoStream *vs = (VideoStream*)(it->second);
+    uint16_t origWidth  = vs->GetSrcWidth();
+    uint16_t origHeight = vs->GetSrcHeight();
+    uint8_t  tileInRow  = vs->GetTileInRow();
+    uint8_t  tileInCol  = vs->GetTileInCol();
+
+    m_360scvpParam = new param_360SCVP;
+    if (!m_360scvpParam)
+    {
+        LOG(ERROR) << "Failed to create 360SCVP parameter !" << std::endl;
+        return OMAF_ERROR_NULL_PTR;
+    }
+
+    m_360scvpParam->usedType = E_VIEWPORT_ONLY;
+
+    if (m_initInfo->projType == E_SVIDEO_EQUIRECT) {
+        m_360scvpParam->paramViewPort.viewportWidth = (m_initInfo->viewportInfo)->viewportWidth;
+        m_360scvpParam->paramViewPort.viewportHeight = (m_initInfo->viewportInfo)->viewportHeight;
+        m_360scvpParam->paramViewPort.viewPortPitch = (m_initInfo->viewportInfo)->viewportPitch;
+        m_360scvpParam->paramViewPort.viewPortYaw = (m_initInfo->viewportInfo)->viewportYaw;
+        m_360scvpParam->paramViewPort.viewPortFOVH = (m_initInfo->viewportInfo)->horizontalFOVAngle;
+        m_360scvpParam->paramViewPort.viewPortFOVV = (m_initInfo->viewportInfo)->verticalFOVAngle;
+        m_360scvpParam->paramViewPort.geoTypeInput = (EGeometryType)(m_initInfo->projType);
+        m_360scvpParam->paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;
+        m_360scvpParam->paramViewPort.tileNumRow = tileInCol;
+        m_360scvpParam->paramViewPort.tileNumCol = tileInRow;
+        m_360scvpParam->paramViewPort.usageType = E_VIEWPORT_ONLY;
+        m_360scvpParam->paramViewPort.faceWidth = origWidth;
+        m_360scvpParam->paramViewPort.faceHeight = origHeight;
+        m_360scvpParam->paramViewPort.paramVideoFP.cols = 1;
+        m_360scvpParam->paramViewPort.paramVideoFP.rows = 1;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
+    } else if (m_initInfo->projType == E_SVIDEO_CUBEMAP) {
+        m_360scvpParam->paramViewPort.viewportWidth = (m_initInfo->viewportInfo)->viewportWidth;
+        m_360scvpParam->paramViewPort.viewportHeight = (m_initInfo->viewportInfo)->viewportHeight;
+        m_360scvpParam->paramViewPort.viewPortPitch = (m_initInfo->viewportInfo)->viewportPitch;
+        m_360scvpParam->paramViewPort.viewPortYaw = (m_initInfo->viewportInfo)->viewportYaw;
+        m_360scvpParam->paramViewPort.viewPortFOVH = (m_initInfo->viewportInfo)->horizontalFOVAngle;
+        m_360scvpParam->paramViewPort.viewPortFOVV = (m_initInfo->viewportInfo)->verticalFOVAngle;
+        m_360scvpParam->paramViewPort.geoTypeInput = (EGeometryType)(m_initInfo->projType);
+        m_360scvpParam->paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;
+        m_360scvpParam->paramViewPort.tileNumRow = tileInCol / 2;
+        m_360scvpParam->paramViewPort.tileNumCol = tileInRow / 3;
+        m_360scvpParam->paramViewPort.usageType = E_VIEWPORT_ONLY;
+        m_360scvpParam->paramViewPort.faceWidth = origWidth / 3;
+        m_360scvpParam->paramViewPort.faceHeight = origHeight / 2;
+
+        m_360scvpParam->paramViewPort.paramVideoFP.cols = 3;
+        m_360scvpParam->paramViewPort.paramVideoFP.rows = 2;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[0][0].faceWidth = m_360scvpParam->paramViewPort.faceWidth;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[0][0].faceHeight = m_360scvpParam->paramViewPort.faceHeight;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[0][1].idFace = 1;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[0][1].rotFace = NO_TRANSFORM;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[0][2].idFace = 2;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[0][2].rotFace = NO_TRANSFORM;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[1][0].idFace = 3;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[1][0].rotFace = NO_TRANSFORM;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[1][1].idFace = 4;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[1][1].rotFace = NO_TRANSFORM;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[1][2].idFace = 5;
+        m_360scvpParam->paramViewPort.paramVideoFP.faces[1][2].rotFace = NO_TRANSFORM;
+    }
+
+    m_360scvpHandle = I360SCVP_Init(m_360scvpParam);
+    if (!m_360scvpHandle)
+    {
+        LOG(ERROR) << "Failed to create 360SCVP handle !" << std::endl;
+        return OMAF_ERROR_SCVP_INIT_FAILED;
+    }
+
+    for (float one_yaw = -180.0; one_yaw <= 180.0; )
+    {
+        for (float one_pitch = -90.0; one_pitch <= 90.0; )
+        {
+            int ret = SelectTilesInView(one_yaw, one_pitch, tileInRow, tileInCol);
+            if (ret)
+                return ret;
+
+            one_pitch += PITCH_STEP;
+        }
+
+        one_yaw += YAW_STEP;
+    }
+
+    DELETE_MEMORY(m_360scvpParam);
+    I360SCVP_unInit(m_360scvpHandle);
+    m_360scvpHandle = NULL;
+
+    return ERROR_NONE;
 }
 
 int32_t ExtractorTrackGenerator::FillDstRegionWisePacking(
-    uint8_t viewportIdx,
+    RegionWisePackingGenerator *rwpkGen,
+    TileDef *tilesInViewport,
     RegionWisePacking *dstRwpk)
 {
+    if (!rwpkGen || !tilesInViewport || !dstRwpk)
+        return OMAF_ERROR_NULL_PTR;
+
     dstRwpk->projPicWidth  = m_origResWidth;
     dstRwpk->projPicHeight = m_origResHeight;
 
-    int32_t ret = m_rwpkGen->GenerateDstRwpk(viewportIdx, dstRwpk);
+    int32_t ret = rwpkGen->GenerateDstRwpk(tilesInViewport, dstRwpk);
     if (ret)
         return ret;
 
-    m_packedPicWidth  = m_rwpkGen->GetPackedPicWidth();
-    m_packedPicHeight = m_rwpkGen->GetPackedPicHeight();
+    m_packedPicWidth  = rwpkGen->GetPackedPicWidth();
+    m_packedPicHeight = rwpkGen->GetPackedPicHeight();
 
     return ERROR_NONE;
 }
 
 int32_t ExtractorTrackGenerator::FillTilesMergeDirection(
-    uint8_t viewportIdx,
+    RegionWisePackingGenerator *rwpkGen,
+    TileDef *tilesInViewport,
     TilesMergeDirectionInCol *tilesMergeDir)
 {
-    if (!tilesMergeDir)
+    if (!rwpkGen || !tilesInViewport || !tilesMergeDir)
         return OMAF_ERROR_NULL_PTR;
 
-    int32_t ret = m_rwpkGen->GenerateTilesMergeDirection(viewportIdx, tilesMergeDir);
+    int32_t ret = rwpkGen->GenerateTilesMergeDirection(tilesInViewport, tilesMergeDir);
     if (ret)
         return ret;
 
@@ -109,59 +400,15 @@ int32_t ExtractorTrackGenerator::FillTilesMergeDirection(
 }
 
 int32_t ExtractorTrackGenerator::FillDstContentCoverage(
-    uint8_t viewportIdx,
+    uint16_t viewportIdx,
     ContentCoverage *dstCovi)
 {
-    uint8_t tilesNumInViewRow = m_rwpkGen->GetTilesNumInViewportRow();
-    uint8_t tileRowNumInView  = m_rwpkGen->GetTileRowNumInViewport();
-
-    uint32_t projRegLeft = (viewportIdx % m_origTileInRow) * m_origTileWidth;
-    uint32_t projRegTop  = (viewportIdx / m_origTileInRow) * m_origTileHeight;
-    uint32_t projRegWidth  = 0;
-    uint32_t projRegHeight = 0;
-
-    uint8_t viewIdxInRow = viewportIdx % m_origTileInRow;
-    uint8_t viewIdxInCol = viewportIdx / m_origTileInRow;
-
-    if ((m_origTileInRow - viewIdxInRow) >= tilesNumInViewRow)
+    CCDef *viewportCC = NULL;
+    viewportCC = m_viewportCCInfo[viewportIdx];
+    if (!viewportCC)
     {
-        for (uint8_t i = viewportIdx; i < (viewportIdx + tilesNumInViewRow); i++)
-        {
-            projRegWidth += m_tilesInfo[i].tileWidth;
-        }
-    }
-    else
-    {
-        for (uint8_t i = viewportIdx; i < (viewportIdx + (m_origTileInRow - viewIdxInRow)); i++)
-        {
-            projRegWidth += m_tilesInfo[i].tileWidth;
-        }
-        for (uint8_t i = (viewIdxInCol*m_origTileInRow); i < (viewIdxInCol*m_origTileInRow + (tilesNumInViewRow-(m_origTileInRow-viewIdxInRow))); i++)
-        {
-            projRegWidth += m_tilesInfo[i].tileWidth;
-        }
-    }
-
-    if ((m_origTileInCol - viewIdxInCol) >= tileRowNumInView)
-    {
-        for (uint8_t i = viewportIdx; i < (viewportIdx+m_origTileInRow*tileRowNumInView); )
-        {
-            projRegHeight += m_tilesInfo[i].tileHeight;
-            i += m_origTileInRow;
-        }
-    }
-    else
-    {
-        for (uint8_t i = viewportIdx; i < (viewportIdx+(m_origTileInCol-viewIdxInCol)*m_origTileInRow);)
-        {
-            projRegHeight += m_tilesInfo[i].tileHeight;
-            i += m_origTileInRow;
-        }
-        for (uint8_t i = viewIdxInRow; i < (viewIdxInRow+(tileRowNumInView-(m_origTileInCol-viewIdxInCol))*m_origTileInRow); )
-        {
-            projRegHeight += m_tilesInfo[i].tileHeight;
-            i += m_origTileInRow;
-        }
+        LOG(ERROR) << "There is no calculated CC info for the viewport !" << std::endl;
+        return OMAF_ERROR_NULL_PTR;
     }
 
     if (m_projType == VCD::OMAF::ProjectionFormat::PF_ERP)
@@ -184,11 +431,11 @@ int32_t ExtractorTrackGenerator::FillDstContentCoverage(
     SphereRegion *sphereRegion    = &(dstCovi->sphereRegions[0]);
     memset_s(sphereRegion, sizeof(SphereRegion), 0);
     sphereRegion->viewIdc         = 0;
-    sphereRegion->centreAzimuth   = (int32_t)((((m_origResWidth / 2) - (float)(projRegLeft + projRegWidth / 2)) * 360 * 65536) / m_origResWidth);
-    sphereRegion->centreElevation = (int32_t)((((m_origResHeight / 2) - (float)(projRegTop + projRegHeight / 2)) * 180 * 65536) / m_origResHeight);
+    sphereRegion->centreAzimuth   = viewportCC->centreAzimuth;
+    sphereRegion->centreElevation = viewportCC->centreElevation;
     sphereRegion->centreTilt      = 0;
-    sphereRegion->azimuthRange    = (uint32_t)((projRegWidth * 360.f * 65536) / m_origResWidth);
-    sphereRegion->elevationRange  = (uint32_t)((projRegHeight * 180.f * 65536) / m_origResHeight);
+    sphereRegion->azimuthRange    = viewportCC->azimuthRange;
+    sphereRegion->elevationRange  = viewportCC->elevationRange;
     sphereRegion->interpolate     = 0;
 
     return ERROR_NONE;
@@ -316,19 +563,9 @@ int32_t ExtractorTrackGenerator::Initialize()
         return OMAF_ERROR_STREAM_NOT_FOUND;
 
     VideoStream *vs = (VideoStream*)(it->second);
-    m_360scvpHandle = vs->Get360SCVPHandle();
-    m_360scvpParam  = vs->Get360SCVPParam();
     m_origVPSNalu   = vs->GetVPSNalu();
     m_origSPSNalu   = vs->GetSPSNalu();
     m_origPPSNalu   = vs->GetPPSNalu();
-
-    m_tilesInViewport = new TileDef[1024];
-    if (!m_tilesInViewport)
-        return OMAF_ERROR_NULL_PTR;
-
-    m_viewInfo = new Param_ViewPortInfo;
-    if (!m_viewInfo)
-        return OMAF_ERROR_NULL_PTR;
 
 #ifdef _USE_TRACE_
     //trace
@@ -358,92 +595,33 @@ int32_t ExtractorTrackGenerator::Initialize()
     }
 #endif
 
-    m_viewInfo->viewportWidth  = (m_initInfo->viewportInfo)->viewportWidth;
-    m_viewInfo->viewportHeight = (m_initInfo->viewportInfo)->viewportHeight;
-    m_viewInfo->viewPortPitch  = (m_initInfo->viewportInfo)->viewportPitch;
-    m_viewInfo->viewPortYaw    = (m_initInfo->viewportInfo)->viewportYaw;
-    m_viewInfo->viewPortFOVH   = (m_initInfo->viewportInfo)->horizontalFOVAngle;
-    m_viewInfo->viewPortFOVV   = (m_initInfo->viewportInfo)->verticalFOVAngle;
-    m_viewInfo->geoTypeOutput  = (EGeometryType)((m_initInfo->viewportInfo)->outGeoType);
-    m_viewInfo->geoTypeInput   = (EGeometryType)((m_initInfo->viewportInfo)->inGeoType);
-    m_viewInfo->faceWidth      = (m_initInfo->viewportInfo)->inWidth;
-    m_viewInfo->faceHeight     = (m_initInfo->viewportInfo)->inHeight;
-    m_viewInfo->tileNumRow     = (m_initInfo->viewportInfo)->tileInCol;
-    m_viewInfo->tileNumCol     = (m_initInfo->viewportInfo)->tileInRow;
-    m_viewInfo->usageType      = E_PARSER_ONENAL;
-    if ((EGeometryType)((m_initInfo->viewportInfo)->inGeoType) == E_SVIDEO_EQUIRECT)
-    {
-        m_viewInfo->paramVideoFP.rows = 1;
-        m_viewInfo->paramVideoFP.cols = 1;
-        m_viewInfo->paramVideoFP.faces[0][0].idFace = 0;
-        m_viewInfo->paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
-        m_viewInfo->paramVideoFP.faces[0][0].faceWidth = m_viewInfo->faceWidth;
-        m_viewInfo->paramVideoFP.faces[0][0].faceHeight = m_viewInfo->faceHeight;
-    }
-    else
-    {
-        LOG(ERROR) << "Now extractor track isn't supported for other projection format than ERP !" << std::endl;
-        return OMAF_ERROR_INVALID_PROJECTIONTYPE;
-    }
-
-    ret = I360SCVP_SetParameter(m_360scvpHandle, ID_SCVP_PARAM_VIEWPORT, (void*)m_viewInfo);
-    if (ret)
-        return OMAF_ERROR_SCVP_SET_FAILED;
-
-    m_360scvpParam->paramViewPort.viewportWidth  = (m_initInfo->viewportInfo)->viewportWidth;
-    m_360scvpParam->paramViewPort.viewportHeight = (m_initInfo->viewportInfo)->viewportHeight;
-    m_360scvpParam->paramViewPort.viewPortPitch  = (m_initInfo->viewportInfo)->viewportPitch;
-    m_360scvpParam->paramViewPort.viewPortYaw    = (m_initInfo->viewportInfo)->viewportYaw;
-    m_360scvpParam->paramViewPort.viewPortFOVH   = (m_initInfo->viewportInfo)->horizontalFOVAngle;
-    m_360scvpParam->paramViewPort.viewPortFOVV   = (m_initInfo->viewportInfo)->verticalFOVAngle;
-    m_360scvpParam->paramViewPort.geoTypeOutput  = (EGeometryType)((m_initInfo->viewportInfo)->outGeoType);
-    m_360scvpParam->paramViewPort.geoTypeInput   = (EGeometryType)((m_initInfo->viewportInfo)->inGeoType);
-    m_360scvpParam->paramViewPort.faceWidth      = (m_initInfo->viewportInfo)->inWidth;
-    m_360scvpParam->paramViewPort.faceHeight     = (m_initInfo->viewportInfo)->inHeight;
-    m_360scvpParam->paramViewPort.tileNumRow     = (m_initInfo->viewportInfo)->tileInCol;
-    m_360scvpParam->paramViewPort.tileNumCol     = (m_initInfo->viewportInfo)->tileInRow;
-    m_360scvpParam->paramViewPort.usageType      = E_PARSER_ONENAL;
-    ret = I360SCVP_process(m_360scvpParam, m_360scvpHandle);
-    if (ret)
-        return OMAF_ERROR_SCVP_PROCESS_FAILED;
-
-    Param_ViewportOutput paramViewportOutput;
-    m_tilesNumInViewport = I360SCVP_getFixedNumTiles(
-                    m_tilesInViewport,
-                    &paramViewportOutput,
-                    m_360scvpHandle);
-
-    m_finalViewportWidth = paramViewportOutput.dstWidthAlignTile;
-    m_finalViewportHeight = paramViewportOutput.dstHeightAlignTile;
-
-#ifdef _USE_TRACE_
-    //trace
-    uint16_t highResTileWidth = (vs->GetSrcWidth()) / (vs->GetTileInRow());
-    uint16_t highResTileHeight = (vs->GetSrcHeight()) / (vs->GetTileInCol());
-    int32_t  selectedTileCols = paramViewportOutput.dstWidthAlignTile / (int32_t)(highResTileWidth);
-    int32_t  selectedTileRows = paramViewportOutput.dstHeightAlignTile / (int32_t)(highResTileHeight);
-    tracepoint(bandwidth_tp_provider, tiles_selection_redundancy,
-                paramViewportOutput.dstWidthNet, paramViewportOutput.dstHeightNet,
-                paramViewportOutput.dstWidthAlignTile, paramViewportOutput.dstHeightAlignTile,
-                selectedTileRows, selectedTileCols);
-#endif
-
-    LOG(INFO) << "Calculated Viewport has width " << m_finalViewportWidth << " and height " << m_finalViewportHeight << " ! " << std::endl;
-
-    if (!m_tilesNumInViewport || m_tilesNumInViewport > 1024)
-        return OMAF_ERROR_SCVP_INCORRECT_RESULT;
-
-    m_rwpkGen = new RegionWisePackingGenerator();
-    if (!m_rwpkGen)
-        return OMAF_ERROR_NULL_PTR;
-
-    ret = m_rwpkGen->Initialize(
-         m_initInfo->pluginPath, m_initInfo->pluginName,
-         m_streams, m_videoIdxInMedia,
-         m_tilesNumInViewport, m_tilesInViewport,
-         m_finalViewportWidth, m_finalViewportHeight);
+    ret = CalculateViewportNum();
     if (ret)
         return ret;
+
+    LOG(INFO) << "Total Viewport number is  " << m_viewportNum << std::endl;
+
+    std::map<uint16_t, std::map<uint16_t, TileDef*>>::iterator itSelection;
+    for (itSelection = m_tilesSelection.begin(); itSelection != m_tilesSelection.end(); itSelection++)
+    {
+        uint16_t selectedNum = itSelection->first;
+
+        RegionWisePackingGenerator *rwpkGen = new RegionWisePackingGenerator();
+        if (!rwpkGen)
+            return OMAF_ERROR_NULL_PTR;
+
+        ret = rwpkGen->Initialize(
+             m_initInfo->pluginPath, m_initInfo->pluginName,
+             m_streams, m_videoIdxInMedia,
+             selectedNum);
+        if (ret)
+        {
+            DELETE_MEMORY(rwpkGen);
+            return ret;
+        }
+
+        m_rwpkGenMap.insert(std::make_pair(selectedNum, rwpkGen));
+    }
 
     return ERROR_NONE;
 }
@@ -455,59 +633,7 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
     if (!streams)
         return OMAF_ERROR_NULL_PTR;
 
-    m_viewportNum = CalculateViewportNum();
-    if (!m_viewportNum)
-        return OMAF_ERROR_VIEWPORT_NUM;
-
-    for (uint8_t i = 0; i < m_viewportNum; i++)
-    {
-        ExtractorTrack *extractorTrack = new ExtractorTrack(i, streams, (m_initInfo->viewportInfo)->inGeoType);
-        if (!extractorTrack)
-        {
-            std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
-            for ( ; itET != extractorTrackMap.end(); )
-            {
-                ExtractorTrack *extractorTrack1 = itET->second;
-                DELETE_MEMORY(extractorTrack1);
-                extractorTrackMap.erase(itET++);
-            }
-            extractorTrackMap.clear();
-            return OMAF_ERROR_NULL_PTR;
-        }
-
-        int32_t retInit = extractorTrack->Initialize();
-        if (retInit)
-        {
-            LOG(ERROR) << "Failed to initialize extractor track !" << std::endl;
-
-            std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
-            for ( ; itET != extractorTrackMap.end(); )
-            {
-                ExtractorTrack *extractorTrack1 = itET->second;
-                DELETE_MEMORY(extractorTrack1);
-                extractorTrackMap.erase(itET++);
-            }
-            extractorTrackMap.clear();
-            DELETE_MEMORY(extractorTrack);
-            return retInit;
-        }
-
-        FillDstRegionWisePacking(i, extractorTrack->GetRwpk());
-
-        FillTilesMergeDirection(i, extractorTrack->GetTilesMergeDir());
-
-        FillDstContentCoverage(i, extractorTrack->GetCovi());
-
-        extractorTrackMap.insert(std::make_pair(i, std::move(extractorTrack)));
-    }
-
-    int32_t ret = GenerateNewSPS();
-    if (ret)
-        return ret;
-
-    ret = GenerateNewPPS();
-    if (ret)
-        return ret;
+    int32_t ret = ERROR_NONE;
 
     std::list<PicResolution> picResolution;
     std::map<uint8_t, MediaStream*>::iterator itStr;
@@ -521,25 +647,163 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
         VideoStream *vs = (VideoStream*)(itStr->second);
 
         PicResolution resolution = { vs->GetSrcWidth(), vs->GetSrcHeight() };
-        //printf("one video has res %d x %d \n", resolution.width, resolution.height);
         picResolution.push_back(resolution);
     }
 
-    std::map<uint8_t, ExtractorTrack*>::iterator it;
-    for (it = extractorTrackMap.begin(); it != extractorTrackMap.end(); it++)
+    std::map<uint16_t, std::map<uint16_t, TileDef*>>::iterator it;
+    for (it = m_tilesSelection.begin(); it != m_tilesSelection.end(); it++)
     {
-        ExtractorTrack *extractorTrack = it->second;
+        uint16_t selectedNum = it->first;
+        RegionWisePackingGenerator *rwpkGen = m_rwpkGenMap[selectedNum];
+        if (!rwpkGen)
+            return OMAF_ERROR_NULL_PTR;
 
-        extractorTrack->SetNalu(m_origVPSNalu, extractorTrack->GetVPS());
-        extractorTrack->SetNalu(m_newSPSNalu, extractorTrack->GetSPS());
-        extractorTrack->SetNalu(m_newPPSNalu, extractorTrack->GetPPS());
-
-        std::list<PicResolution>* picResList = extractorTrack->GetPicRes();
-        std::list<PicResolution>::iterator itRes;
-        for (itRes = picResolution.begin(); itRes != picResolution.end(); itRes++)
+        std::map<uint16_t, TileDef*> oneLayout = it->second;
+        std::map<uint16_t, TileDef*>::iterator it1;
+        for (it1 = oneLayout.begin(); it1 != oneLayout.end(); it1++)
         {
-            PicResolution picRes = *itRes;
-            picResList->push_back(picRes);
+            uint16_t viewportIdx = it1->first;
+            TileDef *tilesInView = it1->second;
+            if (!tilesInView)
+                return OMAF_ERROR_NULL_PTR;
+
+            ExtractorTrack *extractorTrack = new ExtractorTrack(viewportIdx, streams, (m_initInfo->viewportInfo)->inGeoType);
+
+            if (!extractorTrack)
+            {
+                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                for ( ; itET != extractorTrackMap.end(); )
+                {
+                    ExtractorTrack *extractorTrack1 = itET->second;
+                    DELETE_MEMORY(extractorTrack1);
+                    extractorTrackMap.erase(itET++);
+                }
+                extractorTrackMap.clear();
+                return OMAF_ERROR_NULL_PTR;
+            }
+
+            int32_t retInit = extractorTrack->Initialize();
+            if (retInit)
+            {
+                LOG(ERROR) << "Failed to initialize extractor track !" << std::endl;
+
+                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                for ( ; itET != extractorTrackMap.end(); )
+                {
+                    ExtractorTrack *extractorTrack1 = itET->second;
+                    DELETE_MEMORY(extractorTrack1);
+                    extractorTrackMap.erase(itET++);
+                }
+                extractorTrackMap.clear();
+                DELETE_MEMORY(extractorTrack);
+                return retInit;
+            }
+
+            ret = rwpkGen->GenerateMergedTilesArrange(tilesInView);
+            if (ret)
+            {
+                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                for ( ; itET != extractorTrackMap.end(); )
+                {
+                    ExtractorTrack *extractorTrack1 = itET->second;
+                    DELETE_MEMORY(extractorTrack1);
+                    extractorTrackMap.erase(itET++);
+                }
+                extractorTrackMap.clear();
+                DELETE_MEMORY(extractorTrack);
+                return ret;
+            }
+
+            ret = FillDstRegionWisePacking(rwpkGen, tilesInView, extractorTrack->GetRwpk());
+            if (ret)
+            {
+                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                for ( ; itET != extractorTrackMap.end(); )
+                {
+                    ExtractorTrack *extractorTrack1 = itET->second;
+                    DELETE_MEMORY(extractorTrack1);
+                    extractorTrackMap.erase(itET++);
+                }
+                extractorTrackMap.clear();
+                DELETE_MEMORY(extractorTrack);
+                return ret;
+            }
+
+            ret = FillTilesMergeDirection(rwpkGen, tilesInView, extractorTrack->GetTilesMergeDir());
+            if (ret)
+            {
+                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                for ( ; itET != extractorTrackMap.end(); )
+                {
+                    ExtractorTrack *extractorTrack1 = itET->second;
+                    DELETE_MEMORY(extractorTrack1);
+                    extractorTrackMap.erase(itET++);
+                }
+                extractorTrackMap.clear();
+                DELETE_MEMORY(extractorTrack);
+                return ret;
+            }
+
+            ret = FillDstContentCoverage(viewportIdx, extractorTrack->GetCovi());
+            if (ret)
+            {
+                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                for ( ; itET != extractorTrackMap.end(); )
+                {
+                    ExtractorTrack *extractorTrack1 = itET->second;
+                    DELETE_MEMORY(extractorTrack1);
+                    extractorTrackMap.erase(itET++);
+                }
+                extractorTrackMap.clear();
+                DELETE_MEMORY(extractorTrack);
+                return ret;
+            }
+
+            ret = GenerateNewSPS();
+            if (ret)
+            {
+                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                for ( ; itET != extractorTrackMap.end(); )
+                {
+                    ExtractorTrack *extractorTrack1 = itET->second;
+                    DELETE_MEMORY(extractorTrack1);
+                    extractorTrackMap.erase(itET++);
+                }
+                extractorTrackMap.clear();
+                DELETE_MEMORY(extractorTrack);
+                return ret;
+            }
+
+            ret = GenerateNewPPS(rwpkGen);
+            if (ret)
+            {
+                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                for ( ; itET != extractorTrackMap.end(); )
+                {
+                    ExtractorTrack *extractorTrack1 = itET->second;
+                    DELETE_MEMORY(extractorTrack1);
+                    extractorTrackMap.erase(itET++);
+                }
+                extractorTrackMap.clear();
+                DELETE_MEMORY(extractorTrack);
+                return ret;
+            }
+
+            extractorTrack->SetPackedPicWidth(m_packedPicWidth);
+            extractorTrack->SetPackedPicHeight(m_packedPicHeight);
+            extractorTrack->SetNalu(m_origVPSNalu, extractorTrack->GetVPS());
+            extractorTrack->SetNalu(m_newSPSNalu, extractorTrack->GetSPS());
+            extractorTrack->SetNalu(m_newPPSNalu, extractorTrack->GetPPS());
+
+            std::list<PicResolution>* picResList = extractorTrack->GetPicRes();
+            std::list<PicResolution>::iterator itRes;
+            for (itRes = picResolution.begin(); itRes != picResolution.end(); itRes++)
+            {
+                PicResolution picRes = *itRes;
+                picResList->push_back(picRes);
+            }
+
+            extractorTrackMap.insert(std::make_pair(viewportIdx, std::move(extractorTrack)));
         }
     }
 
@@ -548,14 +812,32 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
 
 int32_t ExtractorTrackGenerator::GenerateNewSPS()
 {
-    if (!m_packedPicWidth || !m_packedPicHeight)
+    if (!m_packedPicWidth || !m_packedPicHeight || !m_origSPSNalu)
         return OMAF_ERROR_BAD_PARAM;
-
-    if (!m_origSPSNalu || !m_360scvpParam || !m_360scvpHandle)
-        return OMAF_ERROR_NULL_PTR;
 
     if (!(m_origSPSNalu->data) || !(m_origSPSNalu->dataSize))
         return OMAF_ERROR_INVALID_SPS;
+
+    if (!m_360scvpParam || !m_360scvpHandle)
+    {
+        std::map<uint8_t, MediaStream*>::iterator it;
+        it = m_streams->find(m_videoIdxInMedia[0]);
+        if (it == m_streams->end())
+            return OMAF_ERROR_STREAM_NOT_FOUND;
+
+        VideoStream *vs = (VideoStream*)(it->second);
+        m_360scvpHandle = vs->Get360SCVPHandle();
+        m_360scvpParam  = vs->Get360SCVPParam();
+
+        if (!m_360scvpParam || !m_360scvpHandle)
+            return OMAF_ERROR_NULL_PTR;
+    }
+
+    if (m_newSPSNalu)
+    {
+        DELETE_ARRAY(m_newSPSNalu->data);
+        DELETE_MEMORY(m_newSPSNalu);
+    }
 
     m_newSPSNalu = new Nalu;
     if (!m_newSPSNalu)
@@ -582,11 +864,35 @@ int32_t ExtractorTrackGenerator::GenerateNewSPS()
     return ERROR_NONE;
 }
 
-int32_t ExtractorTrackGenerator::GenerateNewPPS()
+int32_t ExtractorTrackGenerator::GenerateNewPPS(RegionWisePackingGenerator *rwpkGen)
 {
-    TileArrangement *tileArray = m_rwpkGen->GetMergedTilesArrange();
+    if (!rwpkGen)
+        return OMAF_ERROR_NULL_PTR;
+
+    TileArrangement *tileArray = rwpkGen->GetMergedTilesArrange();
     if (!tileArray)
         return OMAF_ERROR_NULL_PTR;
+
+    if (!m_360scvpParam || !m_360scvpHandle)
+    {
+        std::map<uint8_t, MediaStream*>::iterator it;
+        it = m_streams->find(m_videoIdxInMedia[0]);
+        if (it == m_streams->end())
+            return OMAF_ERROR_STREAM_NOT_FOUND;
+
+        VideoStream *vs = (VideoStream*)(it->second);
+        m_360scvpHandle = vs->Get360SCVPHandle();
+        m_360scvpParam  = vs->Get360SCVPParam();
+
+        if (!m_360scvpParam || !m_360scvpHandle)
+            return OMAF_ERROR_NULL_PTR;
+    }
+
+    if (m_newPPSNalu)
+    {
+        DELETE_ARRAY(m_newPPSNalu->data);
+        DELETE_MEMORY(m_newPPSNalu);
+    }
 
     m_newPPSNalu = new Nalu;
     if (!m_newPPSNalu)

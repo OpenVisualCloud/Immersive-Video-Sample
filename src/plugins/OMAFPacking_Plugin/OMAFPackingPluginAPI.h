@@ -114,12 +114,6 @@ public:
     //!         pointer to the index of each video in media streams
     //! \param  [in] tilesNumInViewport
     //!         the number of tiles in viewport
-    //! \param  [in] tilesInViewport
-    //!         pointer to tile information of all tiles in viewport
-    //! \param  [in] finalViewportWidth
-    //!         the final viewport width calculated by 360SCVP library
-    //! \param  [in] finalViewportHeight
-    //!         the final viewport height calculated by 360SCVP library
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
@@ -127,17 +121,15 @@ public:
     virtual int32_t Initialize(
         std::map<uint8_t, VideoStreamInfo*> *streams,
         uint8_t *videoIdxInMedia,
-        uint8_t tilesNumInViewport,
-        TileDef *tilesInViewport,
-        int32_t finalViewportWidth,
-        int32_t finalViewportHeight) = 0;
+        uint8_t tilesNumInViewport) = 0;
 
     //!
     //! \brief  Generate the region wise packing information for
     //!         specified viewport
     //!
-    //! \param  [in]  viewportIdx
-    //!         the index of specified viewport
+    //! \param  [in]  tilesInViewport
+    //!         the pointer to all tiles information in packed
+    //!         sub-picture
     //! \param  [out] dstRwpk
     //!         pointer to the region wise packing information for
     //!         the specified viewport
@@ -146,15 +138,16 @@ public:
     //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t GenerateDstRwpk(
-        uint8_t viewportIdx,
+        TileDef *tilesInViewport,
         RegionWisePacking *dstRwpk) = 0;
 
     //!
     //! \brief  Generate the tiles merging direction information for
     //!         specified viewport
     //!
-    //! \param  [in]  viewportIdx
-    //!         the index of specified viewport
+    //! \param  [in]  tilesInViewport
+    //!         the pointer to all tiles information in packed
+    //!         sub-picture
     //! \param  [out] tilesMergeDir
     //!         pointer to the tiles merging direction information for
     //!         the specified viewport
@@ -163,24 +156,8 @@ public:
     //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t GenerateTilesMergeDirection(
-        uint8_t viewportIdx,
+        TileDef *tilesInViewport,
         TilesMergeDirectionInCol *tilesMergeDir) = 0;
-
-    //!
-    //! \brief  Get the number of tiles in one row in viewport
-    //!
-    //! \return uint8_t
-    //!         the number of tiles in one row in viewport
-    //!
-    virtual uint8_t GetTilesNumInViewportRow() = 0;
-
-    //!
-    //! \brief  Get the number of tile rows in viewport
-    //!
-    //! \return uint8_t
-    //!         the number of tile rows in viewport
-    //!
-    virtual uint8_t GetTileRowNumInViewport() = 0;
 
     //!
     //! \brief  Get the width of tiles merged picture
@@ -199,6 +176,18 @@ public:
     virtual uint32_t GetPackedPicHeight() = 0;
 
     //!
+    //! \brief  Generate all tiles information in packed sub-picture
+    //!
+    //! \param  [out] tilesInViewport
+    //!         pointer to all tiles information in packed
+    //!         sub-picture
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t  GenerateMergedTilesArrange(TileDef *tilesInViewport) = 0;
+
+    //!
     //! \brief  Get the tiles arrangement information in tiles
     //!         merged picture
     //!
@@ -206,6 +195,14 @@ public:
     //!         the pointer to the tiles arrangement information
     //!
     virtual TileArrangement* GetMergedTilesArrange() = 0;
+
+    //!
+    //! \brief  Get total tiles number in packed sub-picture
+    //!
+    //! \return uint32_t
+    //!         the total tiles number in packed sub-picture
+    //!
+    virtual uint32_t GetTilesNumInPackedPic() = 0;
 
 protected:
 };

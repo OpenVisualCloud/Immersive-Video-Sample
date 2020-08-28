@@ -366,11 +366,6 @@ int32_t ExtractorTrack::GenerateExtractors()
             void *m_360scvpHandle = m_360scvpHandles[(MediaStream*)video];
             memcpy_s(m_360scvpParam, sizeof(param_360SCVP), video->Get360SCVPParam(), sizeof(param_360SCVP));
 
-            if (tileIdx == 0)
-            {
-                m_dstWidth = m_360scvpParam->destWidth;
-                m_dstHeight = m_360scvpParam->destHeight;
-            }
             if (!m_dstWidth || !m_dstHeight)
             {
                 DELETE_MEMORY(extractor);

@@ -39,6 +39,14 @@
 
 #include "OMAFPackingPluginAPI.h"
 
+typedef struct RectArea
+{
+    uint32_t xTopLeft;
+    uint32_t yTopLeft;
+    uint32_t xBotRight;
+    uint32_t yBotRight;
+}RectArea;
+
 //!
 //! \class HighPlusFullLowRegionWisePackingGenerator
 //! \brief Define the operation of region wise packing generator for packing of
@@ -73,10 +81,6 @@ public:
     //!         the number of tiles in viewport
     //! \param  [in] tilesInViewport
     //!         pointer to tile information of all tiles in viewport
-    //! \param  [in] finalViewportWidth
-    //!         the final viewport width calculated by 360SCVP library
-    //! \param  [in] finalViewportHeight
-    //!         the final viewport height calculated by 360SCVP library
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
@@ -84,17 +88,15 @@ public:
     int32_t Initialize(
         std::map<uint8_t, VideoStreamInfo*> *streams,
         uint8_t *videoIdxInMedia,
-        uint8_t tilesNumInViewport,
-        TileDef *tilesInViewport,
-        int32_t finalViewportWidth,
-        int32_t finalViewportHeight);
+        uint8_t tilesNumInViewport);
 
     //!
     //! \brief  Generate the region wise packing information for
     //!         specified viewport
     //!
-    //! \param  [in]  viewportIdx
-    //!         the index of specified viewport
+    //! \param  [in]  tilesInViewport
+    //!         the pointer to all tiles information in packed
+    //!         sub-picture
     //! \param  [out] dstRwpk
     //!         pointer to the region wise packing information for
     //!         the specified viewport
@@ -102,14 +104,15 @@ public:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t GenerateDstRwpk(uint8_t viewportIdx, RegionWisePacking *dstRwpk);
+    int32_t GenerateDstRwpk(TileDef *tilesInViewport, RegionWisePacking *dstRwpk);
 
     //!
     //! \brief  Generate the tiles merging direction information for
     //!         specified viewport
     //!
-    //! \param  [in]  viewportIdx
-    //!         the index of specified viewport
+    //! \param  [in]  tilesInViewport
+    //!         the pointer to all tiles information in packed
+    //!         sub-picture
     //! \param  [out] tilesMergeDir
     //!         pointer to the tiles merging direction information for
     //!         the specified viewport
@@ -118,24 +121,8 @@ public:
     //!         ERROR_NONE if success, else failed reason
     //!
     int32_t GenerateTilesMergeDirection(
-        uint8_t viewportIdx,
+        TileDef *tilesInViewport,
         TilesMergeDirectionInCol *tilesMergeDir);
-
-    //!
-    //! \brief  Get the number of tiles in one row in viewport
-    //!
-    //! \return uint8_t
-    //!         the number of tiles in one row in viewport
-    //!
-    uint8_t GetTilesNumInViewportRow() { return m_tilesNumInViewRow; };
-
-    //!
-    //! \brief  Get the number of tile rows in viewport
-    //!
-    //! \return uint8_t
-    //!         the number of tile rows in viewport
-    //!
-    uint8_t GetTileRowNumInViewport() { return m_tileRowNumInView; };
 
     //!
     //! \brief  Get the width of tiles merged picture
@@ -162,37 +149,55 @@ public:
     //!
     TileArrangement* GetMergedTilesArrange() { return m_mergedTilesArrange; };
 
-private:
     //!
-    //! \brief  Get the original high resolution tiles arrangement
-    //!         in viewport
+    //! \brief  Get total tiles number in packed sub-picture
     //!
-    //! \param  [in] tilesNumInViewport
-    //!         the number of high resolution tiles in viewport
-    //! \param  [in] tilesInViewport
-    //!         pointer to the tile information of all tiles
-    //!         in viewport
-    //! \param  [in] finalViewportWidth
-    //!         the final viewport width calculated by 360SCVP library
-    //! \param  [in] finalViewportHeight
-    //!         the final viewport height calculated by 360SCVP library
+    //! \return uint32_t
+    //!         the total tiles number in packed sub-picture
     //!
-    //! \return int32_t
-    //!         ERROR_NONE if success, else failed reason
-    //!
-    int32_t GetOrigHighResTilesArrange(
-        uint8_t tilesNumInViewport,
-        TileDef *tilesInViewport,
-        int32_t finalViewportWidth,
-        int32_t finalViewportHeight);
+    uint32_t GetTilesNumInPackedPic() { return m_tilesNumInPackedPic; };
 
     //!
-    //! \brief  Generate tiles arrangement in tiles merged picture
+    //! \brief  Generate all tiles information in packed sub-picture
+    //!
+    //! \param  [out] tilesInViewport
+    //!         pointer to all tiles information in packed
+    //!         sub-picture
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t GenerateMergedTilesArrange();
+    int32_t GenerateMergedTilesArrange(TileDef *tilesInViewport);
+
+private:
+
+    //!
+    //! \brief  Choose low resolution tiles for packed sub-picture
+    //!
+    //! \param  [out]  tilesInViewport
+    //!         the pointer to all tiles information in packed
+    //!         sub-picture
+    //! \param  [in] supplementaryLRTilesNum
+    //!         repetitive low resolution tiles number to make sure
+    //!         all low resolution tiles can be packed in sub-picture
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t ChooseLowResTilesForPacking(TileDef *tilesInViewport, uint32_t supplementaryLRTilesNum);
+
+    //!
+    //! \brief  Generate high resolution tiles layout in packed
+    //!         sub-picture according to high resolution tiles
+    //!         number in viewport
+    //!
+    //! \param  [in] tilesNumInView
+    //!         high resolution tiles number in viewport
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t GenerateHighTilesArrange(uint8_t tilesNumInView);
 
 private:
     std::map<uint8_t, RegionWisePacking*> m_rwpkMap;             //!< map of original region wise packing information of all video streams
@@ -204,9 +209,6 @@ private:
     uint32_t                              m_packedPicHeight;     //!< the height of tiles merged picture
     TileArrangement                       *m_mergedTilesArrange; //!< pointer to the tiles arrangement information
     uint8_t                               m_streamIdxInMedia[2]; //!< array for video index in media streams
-    TilesMergeDirectionInRow              *m_highResTilesInView; //!< pointer to original high resolution tiles arrangement in viewport
-    uint8_t                               m_tilesNumInViewRow;   //!< the number of high resolution tiles in one row in viewport
-    uint8_t                               m_tileRowNumInView;    //!< the number of high resolution tile rows in viewport
     uint8_t                               m_origHRTilesInRow;    //!< the number of tiles in one row in high resolution video stream
     uint8_t                               m_origHRTilesInCol;    //!< the number of tiles in one column in high resolution video stream
     uint16_t                              m_highTileWidth;       //!< the width of high resolution tile
@@ -220,6 +222,11 @@ private:
     uint8_t                               m_hrTilesInCol;        //!< the number of high resolution tiles in one column in tiles merged picture
     uint8_t                               m_lrTilesInRow;        //!< the number of low resolution tiles in one row in tiles merged picture
     uint8_t                               m_lrTilesInCol;        //!< the number of low resolution tiles in one column in tiles merged picture
+    std::map<uint32_t, RectArea>          m_rectAreas;
+
+    uint32_t                              m_regNum;
+
+    uint32_t                              m_tilesNumInPackedPic;
 };
 
 extern "C" RegionWisePackingGeneratorBase* Create();

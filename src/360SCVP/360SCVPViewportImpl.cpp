@@ -489,6 +489,7 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
 
             int32_t leftAddition = additionalTilesNum / 2;
             int32_t rightAddition = additionalTilesNum - leftAddition;
+            uint32_t changedNum = 0;
             for (uint32_t j = pos * cTAppConvCfg->m_tileNumCol; j < (pos+1) * cTAppConvCfg->m_tileNumCol; j++)
             {
                 if (cTAppConvCfg->m_srd[j].isOccupy == 0 && cTAppConvCfg->m_srd[(j+1)%cTAppConvCfg->m_tileNumCol + pos * cTAppConvCfg->m_tileNumCol].isOccupy == 1)
@@ -504,6 +505,7 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
                         {
                             acc_idx -= cTAppConvCfg->m_tileNumCol;
                         }
+                        changedNum++;
                     }
                 }
                 if (cTAppConvCfg->m_srd[j].isOccupy == 1 && cTAppConvCfg->m_srd[(j+1)%cTAppConvCfg->m_tileNumCol + pos * cTAppConvCfg->m_tileNumCol].isOccupy == 0)
@@ -519,9 +521,12 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
                         {
                             acc_idx -= cTAppConvCfg->m_tileNumCol;
                         }
+                        changedNum++;
                     }
                 }
             }
+
+            additionalTilesNum = changedNum;
             // work around : high pitch area need more tiles( 2 rows )
             if (fPitch >= HIGH_PITCH_BOUND_IN_NORTH)
             {
@@ -544,6 +549,7 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
             }
         }
     }
+    printf("additionalTilesNum %d \n", additionalTilesNum);
     //set the occupy tile into the output parameter
     int32_t idx = 0;
     TileDef* pOutTileTmp = pOutTile;
