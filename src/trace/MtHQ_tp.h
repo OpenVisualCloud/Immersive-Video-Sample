@@ -139,6 +139,7 @@ TRACEPOINT_EVENT(
     mthq_tp_provider,
     T10_decode_time_cost,
     TP_ARGS(
+        uint64_t,        pts,
         int,             video_id,
         uint64_t,        timeMS,
         int,             width,
@@ -146,6 +147,7 @@ TRACEPOINT_EVENT(
     ),
 
     TP_FIELDS(
+        ctf_integer(uint64_t, pts_field, pts)
         ctf_integer(int, video_id_field, video_id)
         ctf_integer(uint64_t, timeMS_field, timeMS)
         ctf_integer(int, width_field, width)

@@ -275,20 +275,20 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
     frame->qtyResolution = data->qtyResolution;
     frame->video_id = video_id;
     frame->bEOS = false;
-    LOG(INFO)<<"Push one frame at:"<<data->pts<<" video id is:"<<video_id<<endl;
+    LOG(INFO)<<"Push one frame at:"<<data->pts<<" video id is:"<<video_id << " and frame fifo size is " << mDecCtx->get_size_of_frame()<<endl;
     mDecCtx->push_frame(frame);
 #ifdef _USE_TRACE_
     // trace
     tracepoint(mthq_tp_provider, T9_push_frame_to_fifo, data->pts, video_id);
 #endif
     //SAFE_DELETE(data->rwpk);
-    SAFE_DELETE(data);
     uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<" video id is "<< video_id <<" decode one frame cost time "<<(end-start)<<" ms reso is " << mDecCtx->codec_ctx->width <<" x " <<mDecCtx->codec_ctx->height<<endl;
 #ifdef _USE_TRACE_
     // trace
-    tracepoint(mthq_tp_provider, T10_decode_time_cost, video_id, end-start, mDecCtx->codec_ctx->width, mDecCtx->codec_ctx->height);
+    tracepoint(mthq_tp_provider, T10_decode_time_cost, data->pts, video_id, end-start, mDecCtx->codec_ctx->width, mDecCtx->codec_ctx->height);
 #endif
+    SAFE_DELETE(data);
     }
     return RENDER_STATUS_OK;
 }
