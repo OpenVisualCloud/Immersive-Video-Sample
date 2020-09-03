@@ -148,6 +148,13 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
     omaf_packet_params_[qualityRanking] = std::move(params);
   }
 
+  std::shared_ptr<OmafPacketParams> getPacketParamsForExtractors(uint32_t extractorTrackIdx) noexcept {
+    return packet_params_for_extractors_[extractorTrackIdx];
+  }
+  void setPacketParamsForExtractors(uint32_t extractorTrackIdx, std::shared_ptr<OmafPacketParams> params) {
+    packet_params_for_extractors_[extractorTrackIdx] = std::move(params);
+  }
+
  private:
   std::shared_ptr<OmafDashSegmentClient> dash_client_;
 
@@ -170,6 +177,8 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
 
   OmafMediaSource *media_source_ = nullptr;
   std::map<uint32_t, std::shared_ptr<OmafPacketParams>> omaf_packet_params_;
+
+  std::map<uint32_t, std::shared_ptr<OmafPacketParams>> packet_params_for_extractors_;
 
   std::mutex initSeg_mutex_;
 

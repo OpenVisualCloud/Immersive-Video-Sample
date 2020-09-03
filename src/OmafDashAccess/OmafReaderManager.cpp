@@ -218,6 +218,19 @@ class OmafSegmentNode : public VCD::NonCopyable {
     }
   }
 
+  OmafPacketParams::Ptr getPacketParamsForExtractors() {
+    auto reader_mgr = omaf_reader_mgr_.lock();
+    if (reader_mgr) {
+      return reader_mgr->getPacketParamsForExtractors(segment_->GetTrackId());
+    }
+    return nullptr;
+  }
+  void setPacketParamsForExtractors(OmafPacketParams::Ptr params) {
+    auto reader_mgr = omaf_reader_mgr_.lock();
+    if (reader_mgr) {
+      reader_mgr->setPacketParamsForExtractors(segment_->GetTrackId(), std::move(params));
+    }
+  }
  private:
   std::weak_ptr<OmafReaderManager> omaf_reader_mgr_;
 
@@ -1335,7 +1348,7 @@ int OmafSegmentNode::getPacket(MediaPacket *&pPacket, bool requireParams) noexce
     pPacket = media_packets_.front();
     media_packets_.pop();
     if (requireParams) {
-      auto packet_params = getPacketParams();
+      auto packet_params = (bExtractor_ == true) ? getPacketParamsForExtractors() : getPacketParams();
       if (packet_params.get() == nullptr || !packet_params->binit_) {
         LOG(ERROR) << "Invalid VPS/SPS/PPS in getting packet ! " << std::endl;
         return OMAF_ERROR_INVALID_DATA;
@@ -1375,7 +1388,7 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
       return ERROR_INVALID;
     }
 #endif
-    auto packet_params = getPacketParams();
+    auto packet_params = (bExtractor_ == true) ? getPacketParamsForExtractors() : getPacketParams();
     for (size_t sample = sample_begin; sample < sample_end; sample++) {
       uint32_t reader_track_id = buildReaderTrackId(segment_->GetTrackId(), segment_->GetInitSegID());
 
@@ -1388,7 +1401,14 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
           LOG(ERROR) << "Failed to read the packet params include width/height/vps/sps/pps!" << std::endl;
           return ret;
         }
-        this->setPacketParams(packet_params);
+        if (bExtractor_)
+        {
+          this->setPacketParamsForExtractors(packet_params);
+        }
+        else
+        {
+          this->setPacketParams(packet_params);
+        }
       }
 
       // cache packets
@@ -1422,7 +1442,6 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
         return ret;
       }
       packet->SetRwpk(std::move(pRwpk));
-      //packet->SetPTS(this->getTimelinePoint());  // FIXME, to compute pts
       packet->SetPTS(track_info->sampleProperties.size * (segment_->GetSegID() - 1) + sample_begin + sample);
 
       // for later binding
@@ -1433,9 +1452,12 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
         vector<uint32_t> boundLeft(1);  // num of quality is limited to 2.
         vector<uint32_t> boundTop(1);
         const RegionWisePacking &rwpk = packet->GetRwpk();
+        packet->SetVideoWidth(rwpk.packedPicWidth);
+        packet->SetVideoHeight(rwpk.packedPicHeight);
         for (int j = rwpk.numRegions - 1; j >= 0; j--) {
           if (rwpk.rectRegionPacking[j].projRegLeft == 0 && rwpk.rectRegionPacking[j].projRegTop == 0 &&
-              !(rwpk.rectRegionPacking[j].packedRegLeft == 0 && rwpk.rectRegionPacking[j].packedRegTop == 0)) {
+              (rwpk.rectRegionPacking[j].packedRegLeft != 0) &&
+              (rwpk.rectRegionPacking[j].packedRegTop == 0)) {
             boundLeft.push_back(rwpk.rectRegionPacking[j].packedRegLeft);
             boundTop.push_back(rwpk.rectRegionPacking[j].packedRegTop);
             break;
