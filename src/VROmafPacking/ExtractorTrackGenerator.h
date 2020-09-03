@@ -65,6 +65,7 @@ public:
         m_initInfo = NULL;
         m_streams  = NULL;
         m_viewportNum = 0;
+        m_fixedPackedPicRes = false;
         m_newSPSNalu  = NULL;
         m_newPPSNalu  = NULL;
         m_videoIdxInMedia = NULL;
@@ -97,6 +98,7 @@ public:
     {
         m_initInfo = initInfo;
         m_streams  = streams;
+        m_fixedPackedPicRes = false;
         m_viewportNum = 0;
         m_newSPSNalu  = NULL;
         m_newPPSNalu  = NULL;
@@ -122,6 +124,7 @@ public:
     {
         m_initInfo = src.m_initInfo;
         m_streams  = src.m_streams;
+        m_fixedPackedPicRes = src.m_fixedPackedPicRes;
         m_viewportNum = src.m_viewportNum;
         m_newSPSNalu  = std::move(src.m_newSPSNalu);
         m_newPPSNalu  = std::move(src.m_newPPSNalu);
@@ -147,6 +150,7 @@ public:
     {
         m_initInfo = other.m_initInfo;
         m_streams  = other.m_streams;
+        m_fixedPackedPicRes = other.m_fixedPackedPicRes;
         m_viewportNum = other.m_viewportNum;
         m_newSPSNalu  = NULL;
         m_newPPSNalu  = NULL;
@@ -324,6 +328,7 @@ private:
     std::map<uint16_t, std::map<uint16_t, TileDef*>> m_tilesSelection; //!< all tiles selection results for all viewports (yaw from -180 to 180 and pitch from -90 to 90), that is std::map<selected_tiles_num, std::map<viewport_idx, TileDef*>>
     std::map<uint16_t, CCDef*>      m_viewportCCInfo;
     std::map<uint16_t, RegionWisePackingGenerator*>  m_rwpkGenMap;     //!< all RWPK generators according to different tiles selection layout, that is std::map<selected_tiles_num, RegionWisePackingGenerator*>
+    bool                            m_fixedPackedPicRes;  //!< whether extractor track packed sub-picture needs the fixed resolution
     Nalu                            *m_newSPSNalu; //!< pointer to the new SPS nalu
     Nalu                            *m_newPPSNalu; //!< pointer to the new PPS nalu
     uint8_t                         *m_videoIdxInMedia;   //!< pointer to index of video streams in media streams

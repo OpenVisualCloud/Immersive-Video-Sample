@@ -79,8 +79,8 @@ public:
     //!         pointer to the index of each video in media streams
     //! \param  [in] tilesNumInViewport
     //!         the number of tiles in viewport
-    //! \param  [in] tilesInViewport
-    //!         pointer to tile information of all tiles in viewport
+    //! \param  [in] maxSelectedTilesNum
+    //!         the maxmum selected tiles number in viewport
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
@@ -88,7 +88,8 @@ public:
     int32_t Initialize(
         std::map<uint8_t, VideoStreamInfo*> *streams,
         uint8_t *videoIdxInMedia,
-        uint8_t tilesNumInViewport);
+        uint16_t tilesNumInViewport,
+        uint16_t maxSelectedTilesNum);
 
     //!
     //! \brief  Generate the region wise packing information for
@@ -193,11 +194,13 @@ private:
     //!
     //! \param  [in] tilesNumInView
     //!         high resolution tiles number in viewport
+    //! \param  [in] maxSelectedTilesNum
+    //!         the maxmum selected tiles number in viewport
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t GenerateHighTilesArrange(uint8_t tilesNumInView);
+    int32_t GenerateHighTilesArrange(uint16_t tilesNumInView, uint16_t maxSelectedTilesNum);
 
 private:
     std::map<uint8_t, RegionWisePacking*> m_rwpkMap;             //!< map of original region wise packing information of all video streams
@@ -207,6 +210,8 @@ private:
     uint32_t                              m_lowResHeight;
     uint32_t                              m_packedPicWidth;      //!< the width of tiles merged picture
     uint32_t                              m_packedPicHeight;     //!< the height of tiles merged picture
+    uint16_t                              m_selectedTilesNum;
+    uint16_t                              m_maxSelectedTilesNum;
     TileArrangement                       *m_mergedTilesArrange; //!< pointer to the tiles arrangement information
     uint8_t                               m_streamIdxInMedia[2]; //!< array for video index in media streams
     uint8_t                               m_origHRTilesInRow;    //!< the number of tiles in one row in high resolution video stream

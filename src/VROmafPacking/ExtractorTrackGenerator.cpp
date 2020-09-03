@@ -553,6 +553,8 @@ int32_t ExtractorTrackGenerator::Initialize()
     if (!m_initInfo)
         return OMAF_ERROR_NULL_PTR;
 
+    m_fixedPackedPicRes = m_initInfo->fixedPackedPicRes;
+
     int32_t ret = CheckAndFillInitInfo();
     if (ret)
         return ret;
@@ -601,7 +603,17 @@ int32_t ExtractorTrackGenerator::Initialize()
 
     LOG(INFO) << "Total Viewport number is  " << m_viewportNum << std::endl;
 
+    std::set<uint16_t> allSelectedNums;
     std::map<uint16_t, std::map<uint16_t, TileDef*>>::iterator itSelection;
+    for (itSelection = m_tilesSelection.begin(); itSelection != m_tilesSelection.end(); itSelection++)
+    {
+        uint16_t selectedNum = itSelection->first;
+        allSelectedNums.insert(selectedNum);
+    }
+    std::set<uint16_t>::reverse_iterator numIter = allSelectedNums.rbegin();
+    uint16_t maxSelectedNum = *numIter;
+    LOG(INFO) << "Maxmum selected tiles number in viewport is  " << maxSelectedNum << std::endl;
+
     for (itSelection = m_tilesSelection.begin(); itSelection != m_tilesSelection.end(); itSelection++)
     {
         uint16_t selectedNum = itSelection->first;
@@ -610,10 +622,21 @@ int32_t ExtractorTrackGenerator::Initialize()
         if (!rwpkGen)
             return OMAF_ERROR_NULL_PTR;
 
-        ret = rwpkGen->Initialize(
-             m_initInfo->pluginPath, m_initInfo->pluginName,
-             m_streams, m_videoIdxInMedia,
-             selectedNum);
+        if (m_fixedPackedPicRes)
+        {
+            ret = rwpkGen->Initialize(
+                 m_initInfo->pluginPath, m_initInfo->pluginName,
+                 m_streams, m_videoIdxInMedia,
+                 selectedNum, maxSelectedNum);
+        }
+        else
+        {
+            ret = rwpkGen->Initialize(
+                 m_initInfo->pluginPath, m_initInfo->pluginName,
+                 m_streams, m_videoIdxInMedia,
+                 selectedNum, selectedNum);
+        }
+
         if (ret)
         {
             DELETE_MEMORY(rwpkGen);

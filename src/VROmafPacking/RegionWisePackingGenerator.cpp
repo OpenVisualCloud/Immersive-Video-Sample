@@ -77,7 +77,8 @@ int32_t RegionWisePackingGenerator::Initialize(
     const char *rwpkGenPluginName,
     std::map<uint8_t, MediaStream*> *streams,
     uint8_t *videoIdxInMedia,
-    uint8_t tilesNumInViewport)
+    uint16_t tilesNumInViewport,
+    uint16_t maxSelectedTilesNum)
 {
     if (!streams || !videoIdxInMedia)
         return OMAF_ERROR_NULL_PTR;
@@ -173,7 +174,7 @@ int32_t RegionWisePackingGenerator::Initialize(
 
     ret = m_rwpkGen->Initialize(
         &videoStreams, videoIdxInMedia,
-        tilesNumInViewport);
+        tilesNumInViewport, maxSelectedTilesNum);
     if (ret)
     {
         LOG(ERROR) << "Failed to initialize RWPK generator !" << std::endl;

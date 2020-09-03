@@ -193,6 +193,7 @@ typedef struct InitialInfo
 
     const char              *pluginPath;       //needed if extractor track will be generated
     const char              *pluginName;       //needed if extractor track will be generated
+    bool                    fixedPackedPicRes; //needed if extractor track will be generated
     BSBuffer                *bsBuffers;        //mandatory
 
     ViewportInformation     *viewportInfo;     //mandatory
