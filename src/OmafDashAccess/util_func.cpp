@@ -356,14 +356,12 @@ uint64_t parse_duration(const char * const duration)
     }
     if (h < 1000 && m < 1000)
     {
-        uint64_t tmp_h = h * 3600;
-        uint64_t tmp_m = m * 60;
+        uint64_t tmp_h = h * 3600 * 1000;
+        uint64_t tmp_m = m * 60 * 1000;
         if (tmp_h > UINT64_MAX - 1 || tmp_m > UINT64_MAX - 1) return 0;
-        uint64_t tmp_time = tmp_h + tmp_m + s;
+        uint64_t tmp_time = tmp_h + tmp_m + s * 1000;
         if (tmp_time < UINT64_MAX - 1) {
-            uint64_t ret_time = tmp_time * 1000;
-            if (ret_time < UINT64_MAX - 1)
-                return ret_time;
+            return tmp_time;
         }
     }
     else
