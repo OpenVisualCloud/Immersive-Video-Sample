@@ -77,6 +77,8 @@ public:
     //!         pointer to the index of each video in media streams
     //! \param  [in] tilesNumInViewport
     //!         the number of tiles in viewport
+    //! \param  [in] maxSelectedTilesNum
+    //!         the maxmum selected tiles number in viewport
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
@@ -86,7 +88,8 @@ public:
         const char *rwpkGenPluginName,
         std::map<uint8_t, MediaStream*> *streams,
         uint8_t *videoIdxInMedia,
-        uint8_t tilesNumInViewport);
+        uint16_t tilesNumInViewport,
+        uint16_t maxSelectedTilesNum);
 
     //!
     //! \brief  Generate the region wise packing information for

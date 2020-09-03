@@ -47,6 +47,8 @@ HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGener
     m_lowResHeight    = 0;
     m_packedPicWidth  = 0;
     m_packedPicHeight = 0;
+    m_selectedTilesNum    = 0;
+    m_maxSelectedTilesNum = 0;
     m_streamIdxInMedia[0] = 0;
     m_streamIdxInMedia[1] = 0;
 
@@ -77,6 +79,8 @@ HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGener
     m_lowResHeight    = src.m_lowResHeight;
     m_packedPicWidth  = src.m_packedPicWidth;
     m_packedPicHeight = src.m_packedPicHeight;
+    m_selectedTilesNum    = src.m_selectedTilesNum;
+    m_maxSelectedTilesNum = src.m_maxSelectedTilesNum;
     m_streamIdxInMedia[0] = src.m_streamIdxInMedia[0];
     m_streamIdxInMedia[1] = src.m_streamIdxInMedia[1];
 
@@ -113,9 +117,14 @@ HighPlusFullLowRegionWisePackingGenerator::~HighPlusFullLowRegionWisePackingGene
     m_rectAreas.clear();
 }
 
-int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateHighTilesArrange(uint8_t tilesNumInView)
+int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateHighTilesArrange(
+    uint16_t tilesNumInView,
+    uint16_t maxSelectedTilesNum)
 {
-    uint16_t highResTilesNum = (uint16_t)tilesNumInView;
+    m_selectedTilesNum = tilesNumInView;
+    m_maxSelectedTilesNum = maxSelectedTilesNum;
+
+    uint16_t highResTilesNum = m_maxSelectedTilesNum;
 
     uint16_t sqrtH = (uint16_t)sqrt(highResTilesNum);
     while(sqrtH && highResTilesNum%sqrtH) { sqrtH--; }
@@ -169,6 +178,23 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateMergedTilesArrange(Ti
 {
     int32_t ret = ERROR_NONE;
 
+    if (!m_selectedTilesNum || !m_maxSelectedTilesNum || (m_selectedTilesNum > m_maxSelectedTilesNum))
+    {
+        LOG(ERROR) << "Invalid maxmum selected tiles number and actual selected tiles number in viewport !" << std::endl;
+        return OMAF_ERROR_INVALID_DATA;
+    }
+
+    if (m_selectedTilesNum != m_maxSelectedTilesNum)
+    {
+        for (uint16_t suppleIdx = 0; suppleIdx < (m_maxSelectedTilesNum - m_selectedTilesNum); suppleIdx++)
+        {
+            tilesInViewport[m_selectedTilesNum + suppleIdx].x = tilesInViewport[suppleIdx+1].x;//tilesInViewport[0] maybe have been repetitive before when selected tiles num is prime number
+            tilesInViewport[m_selectedTilesNum + suppleIdx].y = tilesInViewport[suppleIdx+1].y;
+            tilesInViewport[m_selectedTilesNum + suppleIdx].idx = tilesInViewport[suppleIdx+1].idx;
+            tilesInViewport[m_selectedTilesNum + suppleIdx].faceId = tilesInViewport[suppleIdx+1].faceId;
+        }
+    }
+
     if (!m_hrTilesInCol || !m_hrTilesInRow)
     {
         LOG(ERROR) << "High resolution tiles row or column numbers are 0 !" << std::endl;
@@ -189,7 +215,6 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateMergedTilesArrange(Ti
     uint32_t supplementaryLRTilesNum = 0;
     if (lowResTilesNum % m_lrTilesInCol)
     {
-        LOG(INFO) << "Low resolution tiles number doesn't match high resolution tiles layout in packed sub-picture, so choose parts low resolution tiles for packing !" << std::endl;
         supplementaryLRTilesNum = m_lrTilesInCol - (lowResTilesNum % m_lrTilesInCol);
         m_lrTilesInRow = lowResTilesNum / m_lrTilesInCol + 1;
     }
@@ -243,7 +268,8 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateMergedTilesArrange(Ti
 int32_t HighPlusFullLowRegionWisePackingGenerator::Initialize(
     std::map<uint8_t, VideoStreamInfo*> *streams,
     uint8_t *videoIdxInMedia,
-    uint8_t tilesNumInViewport)
+    uint16_t tilesNumInViewport,
+    uint16_t maxSelectedTilesNum)
 {
     if (!streams || !videoIdxInMedia)
         return OMAF_ERROR_NULL_PTR;
@@ -281,7 +307,7 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::Initialize(
     m_streamIdxInMedia[0] = videoIdxInMedia[0];
     m_streamIdxInMedia[1] = videoIdxInMedia[1];
 
-    int32_t ret = GenerateHighTilesArrange(tilesNumInViewport);
+    int32_t ret = GenerateHighTilesArrange(tilesNumInViewport, maxSelectedTilesNum);
     if (ret)
         return ret;
 
