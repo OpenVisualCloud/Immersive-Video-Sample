@@ -4120,7 +4120,7 @@ new file mode 100644
 index 0000000..0a66efa
 --- /dev/null
 +++ b/FFmpeg/libavformat/omaf_packing_enc.c
-@@ -0,0 +1,565 @@
+@@ -0,0 +1,569 @@
 +/*
 + * Intel tile Dash muxer
 + *
@@ -4185,6 +4185,7 @@ index 0000000..0a66efa
 +    int            has_extractor;
 +    const char     *pluginPath;
 +    const char     *pluginName;
++    bool           fixedPackedPicRes;
 +    int            need_buffered_frames;
 +    uint16_t       extractors_per_thread;
 +    int64_t        seg_duration;
@@ -4292,11 +4293,13 @@ index 0000000..0a66efa
 +            av_log(s, AV_LOG_ERROR, "Not correct video streams number for VR OMAF Packing \n");
 +            return AVERROR(EINVAL);
 +        }
++        initInfo->fixedPackedPicRes = c->fixedPackedPicRes;
 +    }
 +    else
 +    {
 +        initInfo->pluginPath = NULL;
 +        initInfo->pluginName = NULL;
++        initInfo->fixedPackedPicRes = NULL;
 +    }
 +
 +    initInfo->bsBuffers = (BSBuffer*)malloc(sizeof(BSBuffer) * initInfo->bsNumVideo);
@@ -4659,6 +4662,7 @@ index 0000000..0a66efa
 +    { "has_extractor", "Enable/Disable OMAF extractor tracks", OFFSET(has_extractor), AV_OPT_TYPE_INT, { .i64 = 1 }, 0, INT_MAX, E },
 +    { "plugin_path", "OMAF Packing plugin path", OFFSET(pluginPath), AV_OPT_TYPE_STRING, {.str = "/usr/local/lib"}, 0, 0, E },
 +    { "plugin_name", "OMAF Packing plugin name", OFFSET(pluginName), AV_OPT_TYPE_STRING, {.str = "HighResPlusFullLowResPacking"}, 0, 0, E },
++    { "fixed_extractors_res", "whether extractor track needs the fixed resolution", OFFSET(fixedPackedPicRes), AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, E },
 +    { NULL },
 +};
 +
