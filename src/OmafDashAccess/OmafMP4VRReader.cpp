@@ -559,7 +559,7 @@ int32_t OmafMP4VRReader::getPropertyRegionWisePacking(uint32_t trackId, uint32_t
 
   for (uint32_t i = 0; i < rwpkProp.regions.size; i++) {
     rwpk->rectRegionPacking[i].guardBandFlag = rwpkProp.regions[i].guardBandFlag;
-    rwpk->rectRegionPacking[i].transformType = (uint8_t)RegionWisePackingType::OMNI_RECTANGULAR;
+    rwpk->rectRegionPacking[i].transformType = rwpkProp.regions[i].region.rectReg.transformType;
     rwpk->rectRegionPacking[i].bottomGbHeight = rwpkProp.regions[i].region.rectReg.bottomGbHeight;
     rwpk->rectRegionPacking[i].gbNotUsedForPredFlag = rwpkProp.regions[i].region.rectReg.gbNotUsedForPredFlag;
     rwpk->rectRegionPacking[i].gbType0 = rwpkProp.regions[i].region.rectReg.gbType0;
