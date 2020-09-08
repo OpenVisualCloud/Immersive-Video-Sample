@@ -549,7 +549,7 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
             }
         }
     }
-    printf("additionalTilesNum %d \n", additionalTilesNum);
+    // printf("additionalTilesNum %d \n", additionalTilesNum);
     //set the occupy tile into the output parameter
     int32_t idx = 0;
     TileDef* pOutTileTmp = pOutTile;

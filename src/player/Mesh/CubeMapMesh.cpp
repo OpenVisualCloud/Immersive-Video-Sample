@@ -124,35 +124,108 @@ RenderStatus CubeMapMesh::Bind(uint32_t vertexAttrib, uint32_t transVertexAttrib
         {
             uint32_t face_id = it->first;
             uint8_t transformType = it->second;
-            if (transformType != 0) // NEED TO FIX! rotate 90/180/270
+            if (transformType != NO_TRANSFORM) // NEED TO FIX! rotate 90/180/270
             {
                 LOG(INFO)<< "transform type changed!" << endl;
                 for (uint32_t i = face_id * VERTEX_NUM; i < (face_id + 1) * VERTEX_NUM; i++)
                 {
                     if (i % 6 == 3) // transformed position x
                     {
-                        if (transformType == 1) // hor-mirror
-                            m_vertices[i] = -m_vertices[i];
+                         // hor-mirror
+                        if (transformType == MIRRORING_HORIZONTALLY)
+                        {
+                            if (face_id == CUBE_MAP_RIGHT || face_id == CUBE_MAP_LEFT)
+                                m_vertices[i + 2] = -m_vertices[i + 2];
+                            else if (face_id == CUBE_MAP_TOP || face_id == CUBE_MAP_BOTTOM)
+                                m_vertices[i] = -m_vertices[i];
+                            else if (face_id == CUBE_MAP_BACK || face_id == CUBE_MAP_FRONT)
+                                m_vertices[i] = -m_vertices[i];
+                        }
                         else
                         {
-                            if (transformType == 3) // first hor-mirror and then anti-clockwise
+                            // first hor-mirror and then anti-clockwise
+                            if (transformType == ROTATION_180_ANTICLOCKWISE_AFTER_MIRRORING_HOR)
                             {
-                                m_vertices[i] = -m_vertices[i];
+                                if (face_id == CUBE_MAP_RIGHT || face_id == CUBE_MAP_LEFT)
+                                    m_vertices[i + 2] = -m_vertices[i + 2];
+                                else if (face_id == CUBE_MAP_TOP || face_id == CUBE_MAP_BOTTOM)
+                                    m_vertices[i] = -m_vertices[i];
+                                else if (face_id == CUBE_MAP_BACK || face_id == CUBE_MAP_FRONT)
+                                    m_vertices[i] = -m_vertices[i];
                             }
-                            float transDegree = 0;
-                            if (transformType == 2 || transformType == 3)
-                                transDegree = M_PI;
-                            else if (transformType == 5 || transformType == 4)
-                                transDegree = M_PI / 2 * 3;
-                            else if (transformType == 7 || transformType == 6)
-                                transDegree = M_PI / 2;
-                            float x = m_vertices[i];
-                            float y = m_vertices[i + 1];
-                            m_vertices[i] = x * cos(transDegree) - y * sin(transDegree);
-                            m_vertices[i + 1] = x * sin(transDegree) + y * cos(transDegree);
-                            if (transformType == 4 || transformType == 6) // first anti-clockwise and then hor-mirror
+                            // anti-clockwise
+                            float transDegree = 0; // anti-clockwise degree
+                            if (face_id == CUBE_MAP_RIGHT || face_id == CUBE_MAP_BOTTOM || face_id == CUBE_MAP_BACK)
                             {
-                                m_vertices[i] = -m_vertices[i];
+                                if (transformType == ROTATION_180_ANTICLOCKWISE || transformType == ROTATION_180_ANTICLOCKWISE_AFTER_MIRRORING_HOR)
+                                    transDegree = M_PI;
+                                else if (transformType == ROTATION_90_ANTICLOCKWISE || transformType == ROTATION_90_ANTICLOCKWISE_BEFORE_MIRRORING_HOR)
+                                    transDegree = M_PI / 2;
+                                else if (transformType == ROTATION_270_ANTICLOCKWISE || transformType == ROTATION_270_ANTICLOCKWISE_BEFORE_MIRRORING_HOR)
+                                    transDegree = M_PI / 2 * 3;
+                            }
+                            else
+                            {
+                                if (transformType == ROTATION_180_ANTICLOCKWISE || transformType == ROTATION_180_ANTICLOCKWISE_AFTER_MIRRORING_HOR)
+                                    transDegree = M_PI;
+                                else if (transformType == ROTATION_90_ANTICLOCKWISE || transformType == ROTATION_90_ANTICLOCKWISE_BEFORE_MIRRORING_HOR)
+                                    transDegree = M_PI / 2 * 3;
+                                else if (transformType == ROTATION_270_ANTICLOCKWISE || transformType == ROTATION_270_ANTICLOCKWISE_BEFORE_MIRRORING_HOR)
+                                    transDegree = M_PI / 2;
+                            }
+
+                            // different face id
+                            if (face_id == CUBE_MAP_RIGHT) // NY
+                            {
+                                float y = m_vertices[i + 1];
+                                float z = m_vertices[i + 2];
+                                m_vertices[i + 1] = y * cos(transDegree) - z * sin(transDegree);
+                                m_vertices[i + 2] = y * sin(transDegree) + z * cos(transDegree);
+                            }
+                            else if (face_id == CUBE_MAP_LEFT) // PY
+                            {
+                                float y = m_vertices[i + 1];
+                                float z = m_vertices[i + 2];
+                                m_vertices[i + 1] = y * cos(transDegree) - z * sin(transDegree);
+                                m_vertices[i + 2] = y * sin(transDegree) + z * cos(transDegree);
+                            }
+                            else if (face_id == CUBE_MAP_TOP) // PZ
+                            {
+                                float x = m_vertices[i];
+                                float z = m_vertices[i + 2];
+                                m_vertices[i] = x * cos(transDegree) - z * sin(transDegree);
+                                m_vertices[i + 2] = x * sin(transDegree) + z * cos(transDegree);
+                            }
+                            else if (face_id == CUBE_MAP_BOTTOM) // NZ
+                            {
+                                float x = m_vertices[i];
+                                float z = m_vertices[i + 2];
+                                m_vertices[i] = x * cos(transDegree) - z * sin(transDegree);
+                                m_vertices[i + 2] = x * sin(transDegree) + z * cos(transDegree);
+                            }
+                            else if (face_id == CUBE_MAP_BACK) // NX
+                            {
+                                float x = m_vertices[i];
+                                float y = m_vertices[i + 1];
+                                m_vertices[i] = x * cos(transDegree) - y * sin(transDegree);
+                                m_vertices[i + 1] = x * sin(transDegree) + y * cos(transDegree);
+                            }
+                            else if (face_id == CUBE_MAP_FRONT) // PX
+                            {
+                                float x = m_vertices[i];
+                                float y = m_vertices[i + 1];
+                                m_vertices[i] = x * cos(transDegree) - y * sin(transDegree);
+                                m_vertices[i + 1] = x * sin(transDegree) + y * cos(transDegree);
+                            }
+                            // first anti-clockwise and then hor-mirror
+                            if (transformType == ROTATION_90_ANTICLOCKWISE_BEFORE_MIRRORING_HOR || transformType == ROTATION_270_ANTICLOCKWISE_BEFORE_MIRRORING_HOR)
+                            {
+                                if (face_id == CUBE_MAP_RIGHT || face_id == CUBE_MAP_LEFT)
+                                    m_vertices[i + 2] = -m_vertices[i + 2];
+                                else if (face_id == CUBE_MAP_TOP || face_id == CUBE_MAP_BOTTOM)
+                                    m_vertices[i] = -m_vertices[i];
+                                else if (face_id == CUBE_MAP_BACK || face_id == CUBE_MAP_FRONT)
+                                    m_vertices[i] = -m_vertices[i];
                             }
                         }
                     }
