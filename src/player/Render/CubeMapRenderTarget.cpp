@@ -359,7 +359,7 @@ int32_t CubeMapRenderTarget::findQuality(RegionData *regionInfo, RectangularRegi
             }
             else if (m_transformType.find(tile_info.face_id) == m_transformType.end()) // not existed
             {
-                LOG(INFO) << "add transform type " << tile_info.transformType <<" to face id " << tile_info.face_id << endl;
+                LOG(INFO) << "add transform type " << static_cast<uint32_t>(tile_info.transformType) <<" to face id " << tile_info.face_id << endl;
                 m_transformType.insert(make_pair(tile_info.face_id, tile_info.transformType));
             }
         }
