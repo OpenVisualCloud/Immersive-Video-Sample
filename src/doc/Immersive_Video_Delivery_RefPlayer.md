@@ -17,6 +17,18 @@ In the specific implementation process, the texture that decoded frame is bind a
 
  <IMG src="img/OMAF_Compliant-Video-Delivery-RefPlayer_FBO_Rendering.png" height="450">
 
+### Rotation in render
+As shown in following figure, there exist different face descriptions in OMAF spec and OpenGL, so it’s required to align them.
+In CubeMapRenderTarget class, mOMAF2GLFaceIDMap is a map that defines the projection relationship between them.
+
+<IMG src="img/OMAF_Compliant-Video-Delivery-face_desc_in_OMAF_OpenGL.png" height="300">
+
+Second, in Create function in CubeMapMesh class, skyboxVertices is defined to describe the six face vertices without transform type information, which is shown in following figure.
+
+<IMG src="img/OMAF_Compliant-Video-Delivery-skybox_vertices.png" height="400">
+
+And in Bind function in CubeMapMesh class, the vertices in each face would be transformed according to m_transformType data. The transform action here is reverse to the action described in m_transformType, which is to rotate the scene back to NO_TRANSFORM.
+
 ## Configuration
 The configuration file, config.xml, is used to config parameters for 360 player, as shown in the following Table:
 
