@@ -39,6 +39,21 @@ OMAF Packing Plugin is a multiplexer in the pipeline to use OMAF packing library
 | plugin_path | OMAF Packing plugin path | string | N/A | "/usr/local/lib" | NO |
 | plugin_name | OMAF Packing plugin name | string | N/A | "HighResPlusFullLowResPacking" | NO |
 
+Sample command line for cube-map projected input source is as follows:
+numactl -c 1 ./ffmpeg -stream_loop -1 -i cubemap_6k.mp4 -input_type 1 -proj_type Cubemap -rc 1 -c:v:0 distributed_encoder -s:0 5760x3840 -tile_row:0 6 -tile_column:0 9 -config_file:0 config_high.txt -la_depth:0 25 -r:0 25 -g:0 25 -b:0 80M -map 0:v -c:v:1 distributed_encoder -s:1 960x640 -sws_flags neighbor -tile_row:1 2 -tile_column:1 3 -config_file:1 config_low.txt -la_depth:1 25 -r:1 25 -g:1 25 -b:1 1500K -map 0:v -vframes 3000 -f omaf_packing -packing_proj_type Cubemap -cubemap_face_file 6kcube_face_info.txt -is_live 0 -split_tile 1 -seg_duration 1 -has_extractor 0 -base_url http://xx.xx.xx.xx:8080/8kcubevod/ -out_name Test /usr/local/nginx/html/8kcubevod/
+The file "6kcube_face_info.txt" is to configure input cube-map face relation to face layout defined in OMAF spec for cube-3x2.
+The content of "6kcube_face_info.txt" is as follows:
+NY NO_TRANSFORM
+PY NO_TRANSFORM
+PZ NO_TRANSFORM
+NZ NO_TRANSFORM
+PX NO_TRANSFORM
+NX NO_TRANSFORM
+NY/PY/PZ/NZ/PX/NX mean corresponding faces location in face layout defined in OMAF spec for cube-3x2 of faces in input cube-map projected source in raster scanning sequence.
+NO_TRANSFORM means there is no additional transform of input faces, like rotation. For more transform type definitions, please refer to :
+<IMG src="img/OMAF_Compliant-Video-Delivery-transform_type.png" height="400">
+Please note that this feature is only supported for cube-3x2.
+
 ## Distribute Encoder Plugin
 Distribute Encoder Plugin is using DistributeEncoder library to do SVT-based HEVC Encoding. Plugin name is "distributed_encoder", The options are available for this plugins are listed as belows.
 

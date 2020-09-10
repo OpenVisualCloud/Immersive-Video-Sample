@@ -17,6 +17,17 @@ The main OMAF compliant features in this library are listed as follows:
 - Support customized plugin to generate sub-picture region wise packing information when extractor track will be generated.
 - Support equirectangular projection format in both extractor track mode and later binding mode.
 - Support cube-map projection format only in later binding mode.
+  When the input source is cube-map projected, input cube-map face layout and corresponding transform type need to be specified.
+  Firstly, specify the face index for each face which is defined in OMAF spec for cube-3x2.
+  PY 0
+  PX 1
+  NY 2
+  NZ 3
+  NX 4
+  PZ 5
+  Secondly, specify the transform type of the input face. The transform type is depicted in below image:
+  <IMG src="img/OMAF_Compliant-Video-Delivery-transform_type.png" height="400">
+  Now only cube-3x2 is supported.
 
 ## API Call Sequence
 - Call VROmafPackingInit API to create and initialize VROmafPacking library instance
