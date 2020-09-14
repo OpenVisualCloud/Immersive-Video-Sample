@@ -116,7 +116,7 @@ public:
     //analysis;
     bool     isInside(int32_t x, int32_t y, int32_t width, int32_t height, int32_t faceId);
     int32_t  calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol, int32_t tileRow);
-
+    int32_t  getContentCoverage(CCDef* pOutCC, int32_t coverageShapeType);
 };// END CLASS DEFINITION
 
 //! \}
