@@ -324,6 +324,8 @@ bool genViewport_isInside(void* pGenHandle, int32_t x, int32_t y, int32_t width,
 int32_t genViewport_getContentCoverage(void* pGenHandle, CCDef* pOutCC)
 {
     TgenViewport* cTAppConvCfg = (TgenViewport*)(pGenHandle);
+    int32_t coverageShapeType;
+
     if (!cTAppConvCfg)
         return -1;
 
@@ -337,7 +339,6 @@ int32_t genViewport_getContentCoverage(void* pGenHandle, CCDef* pOutCC)
     int32_t videoWidth = cTAppConvCfg->m_iInputWidth;
     int32_t videoHeight = cTAppConvCfg->m_iInputHeight;
 
-    int32_t faceNum = (cTAppConvCfg->m_sourceSVideoInfo.geoType==SVIDEO_CUBEMAP) ? 6 : 2;
     // ERP mode may have 2 faces for boundary case
     if(cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_EQUIRECT)
     {
@@ -354,16 +355,16 @@ int32_t genViewport_getContentCoverage(void* pGenHandle, CCDef* pOutCC)
         pOutCC->azimuthRange    = (uint32_t)((w * 360.f * 65536) / videoWidth);
         pOutCC->elevationRange  = (uint32_t)((h * 180.f * 65536) / videoHeight);
     }
-    else //if(cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP)
+    else if(cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP)
     {
-        for (int32_t faceid = 0; faceid < faceNum; faceid++)
-        {
-
-            pUpLeft++;
-            pDownRight++;
-        }
+         coverageShapeType = 0;
+         cTAppConvCfg->getContentCoverage(pOutCC, coverageShapeType);
     }
-
+    else
+    {
+        LOG(WARNING) << "Only Support GeoType ERP and Cubemap for Content Coverage!!!";
+        return -1;
+    }
     return 0;
 }
 
@@ -1181,4 +1182,39 @@ int32_t TgenViewport::calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol,
     }
     return ret;
 }
-//! \}
+
+int32_t TgenViewport::getContentCoverage(CCDef* pOutCC, int32_t coverageShapeType) {
+    int32_t ret;
+    /* Shape Type:
+     * 0: CubeMap
+     * 1: ERP
+     */
+    switch (coverageShapeType) {
+    case 0:
+        pOutCC->azimuthRange = m_codingSVideoInfo.viewPort.hFOV * 65536.f;
+        pOutCC->elevationRange = m_codingSVideoInfo.viewPort.vFOV * 65536.f;
+        pOutCC->centreAzimuth = m_codingSVideoInfo.viewPort.fYaw * 65536.f;
+        pOutCC->centreElevation = m_codingSVideoInfo.viewPort.fPitch * 65536.f;
+        ret = 0;
+        break;
+    case 1:
+        /* TBD: implemented by Yaw/Pitch/hFOV/vFOV directly
+         * double hFOVInRadian, pitchInRadian;
+         * hFOVInRadian = m_codingSVideoInfo.viewPort.hFOV / 180.f * S_PI;
+         * pitchInRadian = m_codingSVideoInfo.viewPort.fPitch / 180.f * S_PI;
+
+         * pOutCC->azimuthRange = sasin(sfabs(ssin(hFOVInRadian/2) / scos(pitchInRadian/2))) / S_PI * 360.f * 65536.f;
+         * pOutCC->elevationRange = m_codingSVideoInfo.viewPort.vFOV * 65536.f;
+         * pOutCC->centreAzimuth = m_codingSVideoInfo.viewPort.fYaw * 65536.f;
+         * pOutCC->centreElevation = m_codingSVideoInfo.viewPort.fPitch * 65536.f;
+         */
+        LOG(WARNING) << "Doesnt' Support to Get CC by Viewport Settings Directly for Shape Type 1!!!";
+        ret = -1;
+        break;
+    default:
+        LOG(WARNING) << "Coverage type must be 0 or 1!!!";
+        ret = -1;
+        break;
+    }
+    return ret;
+}
