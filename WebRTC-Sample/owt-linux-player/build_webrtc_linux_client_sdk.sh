@@ -105,6 +105,7 @@ install_owt_client_native () {
     git clone https://github.com/open-webrtc-toolkit/owt-client-native.git src
     cd src
     git checkout 2a9d948b59502559843d63775a395affb10cb128
+    sed -i 's/2fa91a1fc71b324ab46483777d7e6da90c57d3c6/28f5c7fd13db33267dcd7ad18851e9750c59d69a/g' DEPS
 
     gclient sync --no-history
 
