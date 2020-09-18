@@ -853,31 +853,180 @@ int32_t TgenViewport::parseCfg(  )
     int32_t faceNum = (m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 1;
     m_sourceSVideoInfo.iNumFaces = faceNum;
 
-    for (int32_t faceid = 0; faceid < faceNum; faceid++)
+    if (m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP)
     {
-        for (uint32_t i = 0; i < m_tileNumRow; i++)
+        for (int32_t faceid = 0; faceid < faceNum; faceid++)
         {
-            int32_t posX = 0;
-            float horzPos = ERP_HORZ_START;
-            for (uint32_t j = 0; j < m_tileNumCol; j++)
+            for (uint32_t i = 0; i < m_tileNumRow; i++)
             {
-                m_srd[idx].x = posX;
-                m_srd[idx].y = posY;
-                m_srd[idx].tilewidth = stepX;
-                m_srd[idx].tileheight = stepY;
-                m_srd[idx].faceId = faceid;
-                m_srd[idx].isOccupy = 0;
-                m_srd[idx].horzPos = horzPos;
-                m_srd[idx].vertPos = vertPos;
-                posX += stepX;
-                horzPos += stepHorzPos;
-                idx++;
+                for (uint32_t j = 0; j < m_tileNumCol; j++)
+                {
+                    m_srd[idx].tilewidth = stepX;
+                    m_srd[idx].tileheight = stepY;
+                    idx++;
+                }
             }
-            posY += stepY;
-            vertPos -= stepVertPos;
         }
-        posY = 0;
+        calcTilesGridInCubemap();
     }
+    else //ERP uses uniform tile split
+    {
+        for (int32_t faceid = 0; faceid < faceNum; faceid++)
+        {
+            for (uint32_t i = 0; i < m_tileNumRow; i++)
+            {
+                int32_t posX = 0;
+                float horzPos = ERP_HORZ_START;
+                for (uint32_t j = 0; j < m_tileNumCol; j++)
+                {
+                    m_srd[idx].x = posX;
+                    m_srd[idx].y = posY;
+                    m_srd[idx].tilewidth = stepX;
+                    m_srd[idx].tileheight = stepY;
+                    m_srd[idx].faceId = faceid;
+                    m_srd[idx].isOccupy = 0;
+                    m_srd[idx].horzPos = horzPos;
+                    m_srd[idx].vertPos = vertPos;
+                    posX += stepX;
+                    horzPos += stepHorzPos;
+                    idx++;
+                }
+                posY += stepY;
+                vertPos -= stepVertPos;
+            }
+            posY = 0;
+        }
+    }
+
+    return 0;
+}
+static float clampAngle(float angleIn, float minDegree, float maxDegree)
+{
+    float angleOut;
+    angleOut = angleIn;
+
+    while (angleOut > maxDegree)
+        angleOut -= 360;
+
+    while (angleOut < minDegree)
+        angleOut += 360;
+
+    return angleOut;
+}
+
+static bool isBetweenTwoLongitudes(float angleIn, float leftLongi, float rightLongi) {
+    if (leftLongi <= rightLongi) {
+        if ((angleIn <= rightLongi) && (angleIn >= leftLongi))
+            return 1;
+        else
+            return 0;
+    }
+    else if ((angleIn - rightLongi) * (angleIn - leftLongi) > 0)
+        return 1;
+    else
+        return 0;
+}
+int32_t TgenViewport::calcTilesGridInCubemap()
+{
+    uint32_t i, j, face;
+    POSType x, y, z;
+    POSType pu, pv;
+    ITileInfo* pTileGridCMP = m_srd;
+
+    SPos* gridPoint3D;
+    SPos *pTileGrid;
+
+    gridPoint3D = new SPos[FACE_NUMBER * (m_tileNumRow+1) * (m_tileNumCol+1)];
+    if (!gridPoint3D) {
+        LOG(ERROR) << "Allocate 3D Grid Point Coordinates Failed!!!";
+        return -1;
+    }
+
+    for (i = 0; i <= m_tileNumRow; i++) {
+        for (j = 0; j <= m_tileNumCol; j++) {
+            pu = (POSType)j*2 / m_tileNumCol - 1;
+            pv = (POSType)i*2 / m_tileNumRow - 1;
+
+            pTileGrid = gridPoint3D + (i * (m_tileNumCol+1)) + j;
+            pTileGrid->x = 1.0;
+            pTileGrid->y = -pv;
+            pTileGrid->z = -pu;
+
+            pTileGrid += (m_tileNumRow + 1) * (m_tileNumCol + 1);
+            pTileGrid->x = -1.0;
+            pTileGrid->y = -pv;
+            pTileGrid->z = pu;
+
+            pTileGrid += (m_tileNumRow + 1) * (m_tileNumCol + 1);
+            pTileGrid->x = pu;
+            pTileGrid->y = 1.0;
+            pTileGrid->z = pv;
+
+            pTileGrid += (m_tileNumRow + 1) * (m_tileNumCol + 1);
+            pTileGrid->x = pu;
+            pTileGrid->y = -1.0;
+            pTileGrid->z = -pv;
+
+            pTileGrid += (m_tileNumRow + 1) * (m_tileNumCol + 1);
+            pTileGrid->x = pu;
+            pTileGrid->y = -pv;
+            pTileGrid->z = 1.0;
+
+            pTileGrid += (m_tileNumRow + 1) * (m_tileNumCol + 1);
+            pTileGrid->x = -pu;
+            pTileGrid->y = -pv;
+            pTileGrid->z = -1.0;
+        }
+    }
+    pTileGrid = gridPoint3D;
+    pTileGridCMP = m_srd;
+    for (face = 0; face < FACE_NUMBER; face++)
+        for (i = 0; i < m_tileNumRow; i++)
+            for (j = 0; j < m_tileNumCol; j++) {
+                pTileGrid = &gridPoint3D[face * (m_tileNumRow + 1) * (m_tileNumCol + 1) + i * (m_tileNumRow + 1) + j];
+                x = pTileGrid->x;
+                y = pTileGrid->y;
+                z = pTileGrid->z;
+                pTileGridCMP->vertPos = HALF_PI_IN_DEGREE * sasin(y / ssqrt(x * x + y * y + z * z))/ S_PI_2;
+                pTileGridCMP->horzPos = HALF_PI_IN_DEGREE * satan(-z / x) / S_PI_2;
+                if (x < 0)
+                    pTileGridCMP->horzPos += PI_IN_DEGREE;
+                pTileGridCMP->horzPos = clampAngle(pTileGridCMP->horzPos, -180, 180);
+
+                pTileGrid++;
+                x = pTileGrid->x;
+                y = pTileGrid->y;
+                z = pTileGrid->z;
+                pTileGridCMP->vertPosTopRight = HALF_PI_IN_DEGREE * sasin(y / ssqrt(x * x + y * y + z * z)) / S_PI_2;
+                pTileGridCMP->horzPosTopRight = HALF_PI_IN_DEGREE * satan(-z / x) / S_PI_2;
+                if (x < 0)
+                    pTileGridCMP->horzPosTopRight += PI_IN_DEGREE;
+                pTileGridCMP->horzPosTopRight = clampAngle(pTileGridCMP->horzPosTopRight, -180, 180);
+
+                pTileGrid += m_tileNumCol;
+                x = pTileGrid->x;
+                y = pTileGrid->y;
+                z = pTileGrid->z;
+                pTileGridCMP->vertPosBottomLeft = HALF_PI_IN_DEGREE * sasin(y / ssqrt(x * x + y * y + z * z)) / S_PI_2;
+                pTileGridCMP->horzPosBottomLeft = HALF_PI_IN_DEGREE * satan(-z / x) / S_PI_2;
+                if (x < 0)
+                    pTileGridCMP->horzPosBottomLeft += PI_IN_DEGREE;
+                pTileGridCMP->horzPosBottomLeft = clampAngle(pTileGridCMP->horzPosBottomLeft, -180, 180);
+
+                pTileGrid++;
+                x = pTileGrid->x;
+                y = pTileGrid->y;
+                z = pTileGrid->z;
+                pTileGridCMP->vertPosBottomRight = HALF_PI_IN_DEGREE * sasin(y / ssqrt(x * x + y * y + z * z)) / S_PI_2;
+                pTileGridCMP->horzPosBottomRight = HALF_PI_IN_DEGREE * satan(-z / x) / S_PI_2;
+                if (x < 0)
+                    pTileGridCMP->horzPosBottomRight += PI_IN_DEGREE;
+                pTileGridCMP->horzPosBottomRight = clampAngle(pTileGridCMP->horzPosBottomRight, -180, 180);
+
+                pTileGrid -= m_tileNumCol + 2;
+                pTileGridCMP++;
+            }
+
     return 0;
 }
 
@@ -1157,6 +1306,184 @@ bool TgenViewport::isInside(int32_t x, int32_t y, int32_t width, int32_t height,
     return ret;
 }
 
+int32_t TgenViewport::isInsideByAngle()
+{
+    float fPitch = m_codingSVideoInfo.viewPort.fPitch;
+    float fYaw = m_codingSVideoInfo.viewPort.fYaw;
+    float hFOV = m_codingSVideoInfo.viewPort.hFOV;
+    float vFOV = m_codingSVideoInfo.viewPort.vFOV;
+    float additionalVertRange = 0.f;
+
+    ITileInfo leftPoint, rightPoint, topPoint, bottomPoint;
+    int32_t selectedTilesNum = 0;
+    int32_t idx;
+    uint32_t face_id, i, j;
+    float tileTopLeftLongi;
+    float tileBottomRightLongi;
+    float tileTopRightLongi;
+    float tileBottomLeftLongi;
+    float tileTopLeftLatti;
+    float tileTopRightLatti;
+    float tileBottomLeftLatti;
+    float tileBottomRightLatti;
+
+    double dResult;
+    clock_t lBefore = clock();
+
+    topPoint.vertPos = fPitch + vFOV / 2.0;
+    if (topPoint.vertPos > 90) {
+       additionalVertRange = topPoint.vertPos - 90;
+       topPoint.vertPos = 90;
+    }
+    bottomPoint.vertPos = fPitch - vFOV / 2.0;
+    if (bottomPoint.vertPos < -90) {
+        additionalVertRange = bottomPoint.vertPos + 90;
+        bottomPoint.vertPos = -90;
+    }
+    leftPoint.horzPos = clampAngle(fYaw - hFOV / 2.0, -180, 180);
+    leftPoint.vertPos = sasin(sfabs(ssin(hFOV / 360.f * S_PI) / scos(fPitch / 360.f * 2 * S_PI))) / S_PI * 360.f;;
+    rightPoint.horzPos = clampAngle(fYaw + hFOV / 2.0, -180, 180);
+    rightPoint.vertPos = leftPoint.vertPos;
+    topPoint.horzPos = fYaw;
+    bottomPoint.horzPos = fYaw;
+
+    for (face_id = 0; face_id < FACE_NUMBER; face_id++) {
+        if ( (face_id == 2) || (face_id == 3) )
+            continue;
+        for (i = 0; i < m_tileNumRow; i++) {
+            for (j = 0; j < m_tileNumCol; j++) {
+                idx = face_id * m_tileNumRow * m_tileNumCol + i * m_tileNumCol + j;
+                tileTopLeftLongi = m_srd[idx].horzPos;
+                tileBottomRightLongi = m_srd[idx].horzPosBottomRight;
+                tileTopRightLongi = m_srd[idx].horzPosTopRight;
+                tileBottomLeftLongi = m_srd[idx].horzPosBottomLeft;
+                tileTopLeftLatti = m_srd[idx].vertPos;
+                tileTopRightLatti = m_srd[idx].vertPosTopRight;
+                tileBottomLeftLatti = m_srd[idx].vertPosBottomLeft;
+                tileBottomRightLatti = m_srd[idx ].vertPosBottomRight;
+
+                if ((isBetweenTwoLongitudes(tileTopLeftLongi, leftPoint.horzPos, rightPoint.horzPos)
+                    && (((tileTopLeftLatti > bottomPoint.vertPos) && (tileTopLeftLatti < topPoint.vertPos))
+                    || ((tileBottomLeftLatti > bottomPoint.vertPos) && (tileBottomLeftLatti < topPoint.vertPos))) )
+                    || ( isBetweenTwoLongitudes(tileTopRightLongi, leftPoint.horzPos, rightPoint.horzPos)
+                    && (((tileTopRightLatti > bottomPoint.vertPos) && (tileTopRightLatti < topPoint.vertPos))
+                    || ((tileBottomRightLatti > bottomPoint.vertPos) && (tileBottomRightLatti < topPoint.vertPos)))) )
+                    {
+                        m_srd[idx].isOccupy = 1;
+                        m_srd[idx].faceId = face_id;
+                        selectedTilesNum++;
+                    }
+                }
+            }
+        }
+    for (i = 0; i < m_tileNumRow; i++) {
+        for (j = 0; j < m_tileNumCol; j++) {
+            /* Top Face */
+            idx = 2 * m_tileNumRow * m_tileNumCol + i * m_tileNumCol + j;
+            tileTopLeftLongi = m_srd[idx].horzPos;
+            tileBottomRightLongi = m_srd[idx].horzPosBottomRight;
+            tileTopRightLongi = m_srd[idx].horzPosTopRight;
+            tileBottomLeftLongi = m_srd[idx].horzPosBottomLeft;
+            tileTopLeftLatti = m_srd[idx].vertPos;
+            tileTopRightLatti = m_srd[idx].vertPosTopRight;
+            tileBottomLeftLatti = m_srd[idx].vertPosBottomLeft;
+            tileBottomRightLatti = m_srd[idx].vertPosBottomRight;
+
+            if ( ( (tileTopLeftLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileTopLeftLongi, fYaw-90, fYaw+90) )
+                || ( (tileBottomLeftLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileBottomLeftLongi, fYaw - 90, fYaw + 90) )
+                || ( (tileTopRightLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileTopRightLongi, fYaw - 90, fYaw + 90) )
+                || ( (tileBottomRightLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileBottomRightLongi, fYaw - 90, fYaw + 90) ) )
+            {
+                m_srd[idx].isOccupy = 1;
+                m_srd[idx].faceId = 2;
+                selectedTilesNum++;
+            }
+
+            /* Bottom Face */
+            idx = 3 * m_tileNumRow * m_tileNumCol + i * m_tileNumCol + j;
+            tileTopLeftLongi = m_srd[idx].horzPos;
+            tileBottomRightLongi = m_srd[idx].horzPosBottomRight;
+            tileTopRightLongi = m_srd[idx].horzPosTopRight;
+            tileBottomLeftLongi = m_srd[idx].horzPosBottomLeft;
+            tileTopLeftLatti = m_srd[idx].vertPos;
+            tileTopRightLatti = m_srd[idx].vertPosTopRight;
+            tileBottomLeftLatti = m_srd[idx].vertPosBottomLeft;
+            tileBottomRightLatti = m_srd[idx].vertPosBottomRight;
+
+            if (((tileTopLeftLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopLeftLongi, fYaw - 90, fYaw + 90))
+                || ((tileBottomLeftLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomLeftLongi, fYaw - 90, fYaw + 90))
+                || ((tileTopRightLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopRightLongi, fYaw - 90, fYaw + 90))
+                || ((tileBottomRightLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomRightLongi, fYaw - 90, fYaw + 90)))
+            {
+                m_srd[idx].isOccupy = 1;
+                m_srd[idx].faceId = 3;
+                selectedTilesNum++;
+            }
+        }
+    }
+    if (bottomPoint.vertPos == -90) {
+        /* Bottom Face */
+        bottomPoint.vertPos = -90 - additionalVertRange;
+        for (i = 0; i < m_tileNumRow; i++) {
+            for (j = 0; j < m_tileNumCol; j++) {
+                idx = 3 * m_tileNumRow * m_tileNumCol + i * m_tileNumCol + j;
+                tileTopLeftLongi = m_srd[idx].horzPos;
+                tileBottomRightLongi = m_srd[idx].horzPosBottomRight;
+                tileTopRightLongi = m_srd[idx].horzPosTopRight;
+                tileBottomLeftLongi = m_srd[idx].horzPosBottomLeft;
+                tileTopLeftLatti = m_srd[idx].vertPos;
+                tileTopRightLatti = m_srd[idx].vertPosTopRight;
+                tileBottomLeftLatti = m_srd[idx].vertPosBottomLeft;
+                tileBottomRightLatti = m_srd[idx].vertPosBottomRight;
+                if (((tileTopLeftLatti < bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopLeftLongi, fYaw + 90, fYaw - 90))
+                    || ((tileBottomLeftLatti < bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomLeftLongi, fYaw + 90, fYaw - 90))
+                    || ((tileTopRightLatti < bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopRightLongi, fYaw + 90, fYaw - 90))
+                    || ((tileBottomRightLatti < bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomRightLongi, fYaw + 90, fYaw - 90))) {
+                    if (m_srd[idx].isOccupy != 1) {
+                        m_srd[idx].isOccupy = 1;
+                        m_srd[idx].faceId = 3;
+                        selectedTilesNum++;
+                    }
+                }
+            }
+        }
+    }
+    else if (topPoint.vertPos == 90) {
+        bottomPoint.vertPos = 90 - additionalVertRange;
+        for (i = 0; i < m_tileNumRow; i++) {
+            for (j = 0; j < m_tileNumCol; j++) {
+                /* Top Face */
+                idx = 2 * m_tileNumRow * m_tileNumCol + i * m_tileNumCol + j;
+                tileTopLeftLongi = m_srd[idx].horzPos;
+                tileBottomRightLongi = m_srd[idx].horzPosBottomRight;
+                tileTopRightLongi = m_srd[idx].horzPosTopRight;
+                tileBottomLeftLongi = m_srd[idx].horzPosBottomLeft;
+                tileTopLeftLatti = m_srd[idx].vertPos;
+                tileTopRightLatti = m_srd[idx].vertPosTopRight;
+                tileBottomLeftLatti = m_srd[idx].vertPosBottomLeft;
+                tileBottomRightLatti = m_srd[idx].vertPosBottomRight;
+                if (((tileTopLeftLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopLeftLongi, fYaw + 90, fYaw - 90))
+                    || ((tileBottomLeftLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomLeftLongi, fYaw + 90, fYaw - 90))
+                    || ((tileTopRightLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopRightLongi, fYaw + 90, fYaw - 90))
+                    || ((tileBottomRightLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomRightLongi, fYaw + 90, fYaw - 90)))
+
+                {
+                    if (m_srd[idx].isOccupy != 1) {
+                        m_srd[idx].isOccupy = 1;
+                        m_srd[idx].faceId = 2;
+                        selectedTilesNum++;
+                    }
+                }
+            }
+        }
+    }
+    dResult = clock();
+    dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
+
+    LOG(INFO) << "Total Time for tile selection: " << dResult << " to find " << selectedTilesNum << " tiles inside!!";
+
+    return selectedTilesNum;
+}
 int32_t TgenViewport::calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol, int32_t tileRow)
 {
     if (!pTileInfo)
@@ -1164,6 +1491,7 @@ int32_t TgenViewport::calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol,
     int32_t ret = 0;
     ITileInfo *pTileInfoTmp = pTileInfo;
     int32_t faceNum = (m_sourceSVideoInfo.geoType==SVIDEO_CUBEMAP) ? 6 : 1;
+    if (m_sourceSVideoInfo.geoType == SVIDEO_EQUIRECT) {
     for (int32_t faceid = 0; faceid < faceNum; faceid++)
     {
         for (int32_t row = 0; row < tileRow; row++)
@@ -1177,8 +1505,12 @@ int32_t TgenViewport::calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol,
                     // printf("facid, x, y : %d, %d, %d\n", cubeMapFaceMap[faceid], pTileInfoTmp->x, pTileInfoTmp->y);
                 }
                 pTileInfoTmp++;
+                }
             }
         }
+    }
+    else if (m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) {
+        ret = isInsideByAngle();
     }
     return ret;
 }

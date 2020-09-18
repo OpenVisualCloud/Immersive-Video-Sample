@@ -39,8 +39,8 @@ typedef struct SIZE_DEF
     int32_t y;
 }SIZE;
 
-#define MAX_FOV_ANGLE 100;
-#define NORMAL_FACE_SIZE 960;
+#define MAX_FOV_ANGLE 100
+#define NORMAL_FACE_SIZE 960
 #define NORMAL_PITCH_MIN -75
 #define NORMAL_PITCH_MAX -15
 
@@ -73,6 +73,12 @@ struct ITileInfo
     uint32_t  isOccupy;
     float vertPos;
     float horzPos;
+    float horzPosBottomRight;
+    float horzPosBottomLeft;
+    float horzPosTopRight;
+    float vertPosBottomRight; //Record all 4 endpoint position for Cubemap usage
+    float vertPosBottomLeft;
+    float vertPosTopRight;
 };
 /// generate viewport class
 class TgenViewport
@@ -115,7 +121,9 @@ public:
     int32_t  selectregion(short inputWidth, short inputHeight, short dstWidth, short dstHeight);
     //analysis;
     bool     isInside(int32_t x, int32_t y, int32_t width, int32_t height, int32_t faceId);
+    int32_t  isInsideByAngle();
     int32_t  calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol, int32_t tileRow);
+    int32_t  calcTilesGridInCubemap();
     int32_t  getContentCoverage(CCDef* pOutCC, int32_t coverageShapeType);
 };// END CLASS DEFINITION
 
