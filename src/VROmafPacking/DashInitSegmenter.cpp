@@ -164,7 +164,7 @@ int32_t DashInitSegmenter::GenerateInitSegment(
     VCD::MP4::TrackId trackId = trackSegCtx->trackIdx;
 
     bool hadFirstFramesRemaining = m_firstFrameRemaining.size();
-    bool endOfStream = trackSegCtx->isEOS;
+    bool endOfStream = trackSegCtx->codedMeta.isEOS;
     VCD::MP4::DataItem<CodedMeta> codedMeta;
     if (!(trackSegCtx->isExtractorTrack))
     {
