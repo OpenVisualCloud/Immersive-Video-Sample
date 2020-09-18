@@ -49,7 +49,7 @@ public:
     //! \return Pose*
     //!         return Pose
     //!
-    struct Pose GetViewPort();
+    HeadPose GetViewPort();
 
     //! \brief The render function
     //!
@@ -58,10 +58,10 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus SetViewPort(struct Pose pose);
+    RenderStatus SetViewPort(HeadPose pose);
 
 private:
-    struct Pose m_pose;
+    HeadPose m_pose;
 
 };
 

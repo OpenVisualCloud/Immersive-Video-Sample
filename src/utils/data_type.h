@@ -50,6 +50,7 @@ typedef enum {
 typedef struct HEADPOSE {
   float yaw;
   float pitch;
+  uint64_t pts;
 } HeadPose;
 
 typedef struct HEADSETINFO {
@@ -160,11 +161,30 @@ typedef struct DASHPACKET {
   bool bEOS;
 } DashPacket;
 
+enum class ViewportPriority {
+  HIGH = 0,
+  LOW = 1,
+  END = 2,
+};
+
+enum class PredictionMode {
+  SingleViewpoint = 0,
+  MultiViewpoints = 1,
+  UNKNOWN,
+};
+
+typedef struct PREDICTOPTION {
+  PredictionMode mode;
+  bool usingFeedbackAngleAdjust;
+}PredictOption;
+
 typedef struct VIEWPORTANGLE {
   // Euler angle
   float yaw;
   float pitch;
   float roll;
+  uint64_t pts;
+  ViewportPriority priority;
 } ViewportAngle;
 
 #ifdef __cplusplus

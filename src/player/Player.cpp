@@ -131,7 +131,7 @@ RenderStatus Player::Play()
     {
         m_renderManager->GetStatusAndPose(&poseYaw, &posePitch, &m_status);
         m_renderManager->SetViewport(poseYaw, posePitch);
-        m_renderManager->ChangeViewport(poseYaw, posePitch);
+        m_renderManager->ChangeViewport(poseYaw, posePitch, renderCount);
         if (0 == lastTime)
         {
             lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();

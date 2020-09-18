@@ -58,7 +58,7 @@ public:
     //!
     //! \brief  de-construct
     //!
-    virtual ~RegionData();
+    ~RegionData();
 
     uint32_t GetSourceInRegion() { return m_sourceInRegion; };
     void SetSourceInRegion(uint32_t num){ m_sourceInRegion = num; };

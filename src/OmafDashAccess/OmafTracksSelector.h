@@ -47,6 +47,8 @@ VCD_OMAF_BEGIN
 
 #define POSE_SIZE 10
 
+constexpr uint64_t ptsInterval[4] = {0, 8, 15, 23}; // 30 38 45 53
+
 typedef struct POSEINFO {
   HeadPose *pose;
   uint64_t time;
@@ -86,7 +88,7 @@ class OmafTracksSelector {
   //!
   //! \brief  Load viewport prediction plugin
   //!
-  int EnablePosePrediction(std::string predictPluginName, std::string libPath);
+  int EnablePosePrediction(std::string predictPluginName, std::string libPath, bool enableExtractor);
 
   //!
   //! \brief  Get the priority of the segment

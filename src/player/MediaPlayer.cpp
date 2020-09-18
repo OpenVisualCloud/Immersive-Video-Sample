@@ -160,7 +160,7 @@ RenderStatus MediaPlayer::PlayOneVideo(int64_t pts)
     float poseYaw, posePitch;
     m_renderManager->GetStatusAndPose(&poseYaw, &posePitch, (uint32_t*)&m_status);
     m_renderManager->SetViewport(poseYaw, posePitch);
-    m_renderManager->ChangeViewport(poseYaw, posePitch);
+    m_renderManager->ChangeViewport(poseYaw, posePitch, pts);
 
     m_renderManager->Render(0);
 

@@ -85,7 +85,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus ChangeViewport(float yaw, float pitch);
+    RenderStatus ChangeViewport(float yaw, float pitch, uint64_t pts);
     //! \brief set yaw and pitch
     //!
     //! \param  [in] float

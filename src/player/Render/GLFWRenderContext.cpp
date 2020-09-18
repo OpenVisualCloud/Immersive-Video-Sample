@@ -103,6 +103,19 @@ void GLFWRenderContext::AutoChangePos(float *hPos, float *vPos)
             *vPos = RENDER_PI / 2 * sin(*hPos*1.5);
         }
     }
+    else if (!strcmp(m_motionConfig.mode, "swing"))
+    {
+        static int32_t rightOrient = 1;
+        if (*hPos > RENDER_PI / 2 + RENDER_PI)
+        {
+            rightOrient = -1;
+        }
+        else if (*hPos < -RENDER_PI / 2 + RENDER_PI)
+        {
+            rightOrient = 1;
+        }
+        *hPos += 2 * RENDER_PI / m_motionConfig.freq * rightOrient;
+    }
     else //xml input check
     {
         LOG(ERROR)<<"test motion option support only smooth and sharp mode!"<<std::endl;
