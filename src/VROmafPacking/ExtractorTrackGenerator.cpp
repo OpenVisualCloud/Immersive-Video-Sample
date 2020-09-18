@@ -167,10 +167,75 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
     {
         LOG(INFO) << "Additional tile needs to be selected for tiles stitching !" << std::endl;
         selectedTilesNum++;
-        tilesInView[selectedTilesNum-1].x = 0;
-        tilesInView[selectedTilesNum-1].y = 0;
-        tilesInView[selectedTilesNum-1].idx = 0;
-        tilesInView[selectedTilesNum-1].faceId = 0;
+        tilesInView[selectedTilesNum-1].x = tilesInView[0].x;
+        tilesInView[selectedTilesNum-1].y = tilesInView[0].y;
+        tilesInView[selectedTilesNum-1].idx = tilesInView[0].idx;
+        tilesInView[selectedTilesNum-1].faceId = tilesInView[0].faceId;
+    }
+
+    //adjust selected tiles number again to make sure packed sub-picture width/height ratio to a normal range
+    sqrtedSize = (uint32_t)sqrt(selectedTilesNum);
+    while(sqrtedSize && (selectedTilesNum % sqrtedSize)) { sqrtedSize--; }
+    uint32_t dividedSize = selectedTilesNum / sqrtedSize;
+    uint32_t supplementedNum = 0;
+    if (((sqrtedSize > dividedSize) && ((sqrtedSize - dividedSize) > 3)) ||
+        ((dividedSize > sqrtedSize) && ((dividedSize - sqrtedSize) > 3)))
+    {
+        LOG(INFO) << "High packed sub-picture width/height ratio  " << (sqrtedSize > dividedSize ? sqrtedSize : dividedSize) << " :  " << (sqrtedSize > dividedSize ? dividedSize : sqrtedSize) << std::endl;
+    }
+
+    while ((sqrtedSize > dividedSize) && ((sqrtedSize - dividedSize) > 3))
+    {
+        selectedTilesNum++;
+        supplementedNum++;
+        tilesInView[selectedTilesNum-1].x = tilesInView[supplementedNum].x;
+        tilesInView[selectedTilesNum-1].y = tilesInView[supplementedNum].y;
+        tilesInView[selectedTilesNum-1].idx = tilesInView[supplementedNum].idx;
+        tilesInView[selectedTilesNum-1].faceId = tilesInView[supplementedNum].faceId;
+        sqrtedSize = (uint32_t)sqrt(selectedTilesNum);
+        while(sqrtedSize && (selectedTilesNum % sqrtedSize)) { sqrtedSize--; }
+        if (sqrtedSize == 1)
+        {
+            selectedTilesNum++;
+            supplementedNum++;
+            tilesInView[selectedTilesNum-1].x = tilesInView[supplementedNum].x;
+            tilesInView[selectedTilesNum-1].y = tilesInView[supplementedNum].y;
+            tilesInView[selectedTilesNum-1].idx = tilesInView[supplementedNum].idx;
+            tilesInView[selectedTilesNum-1].faceId = tilesInView[supplementedNum].faceId;
+            sqrtedSize = (uint32_t)sqrt(selectedTilesNum);
+            while(sqrtedSize && (selectedTilesNum % sqrtedSize)) { sqrtedSize--; }
+        }
+
+        dividedSize = selectedTilesNum / sqrtedSize;
+    }
+    while (( dividedSize > sqrtedSize) && ((dividedSize - sqrtedSize) > 3))
+    {
+        selectedTilesNum++;
+        supplementedNum++;
+        tilesInView[selectedTilesNum-1].x = tilesInView[supplementedNum].x;
+        tilesInView[selectedTilesNum-1].y = tilesInView[supplementedNum].y;
+        tilesInView[selectedTilesNum-1].idx = tilesInView[supplementedNum].idx;
+        tilesInView[selectedTilesNum-1].faceId = tilesInView[supplementedNum].faceId;
+        sqrtedSize = (uint32_t)sqrt(selectedTilesNum);
+        while(sqrtedSize && (selectedTilesNum % sqrtedSize)) { sqrtedSize--; }
+        if (sqrtedSize == 1)
+        {
+            selectedTilesNum++;
+            supplementedNum++;
+            tilesInView[selectedTilesNum-1].x = tilesInView[supplementedNum].x;
+            tilesInView[selectedTilesNum-1].y = tilesInView[supplementedNum].y;
+            tilesInView[selectedTilesNum-1].idx = tilesInView[supplementedNum].idx;
+            tilesInView[selectedTilesNum-1].faceId = tilesInView[supplementedNum].faceId;
+            sqrtedSize = (uint32_t)sqrt(selectedTilesNum);
+            while(sqrtedSize && (selectedTilesNum % sqrtedSize)) { sqrtedSize--; }
+        }
+
+        dividedSize = selectedTilesNum / sqrtedSize;
+    }
+
+    if (supplementedNum > 0)
+    {
+        LOG(INFO) << "Supplement  " << supplementedNum << " tiles for packed sub-picture width/height ratio  " << (dividedSize > sqrtedSize ? dividedSize : sqrtedSize) << " :  " << (dividedSize > sqrtedSize ? sqrtedSize : dividedSize) << std::endl;
     }
 
     CCDef *outCC = new CCDef;
@@ -485,7 +550,6 @@ int32_t ExtractorTrackGenerator::CheckAndFillInitInfo()
     for ( ; rateIter != bitRateRanking.rend(); rateIter++)
     {
         uint64_t bitRate = *rateIter;
-        printf("bitRate is %ld \n", bitRate);
         for (it = m_streams->begin(); it != m_streams->end(); it++)
         {
             MediaStream *stream = it->second;
