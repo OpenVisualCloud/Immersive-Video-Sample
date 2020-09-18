@@ -328,6 +328,17 @@ OMAF_STATUS OmafReaderManager::OpenInitSegment(std::shared_ptr<OmafSegment> pIni
       return ERROR_INVALID;
     }
 
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+    //trace
+    const char *trackType = "init_track";
+    uint64_t segSize = pInitSeg->GetSegSize();
+    char tileRes[128] = { 0 };
+    snprintf(tileRes, 128, "%s", "none");
+    tracepoint(bandwidth_tp_provider, packed_segment_size, 0, trackType, tileRes, 0, segSize);
+#endif
+#endif
+
     pInitSeg->RegisterStateChange([this](std::shared_ptr<OmafSegment> pInitSeg, OmafSegment::State state) {
       this->initSegmentStateChange(std::move(pInitSeg), state);
     });
@@ -726,6 +737,7 @@ void OmafReaderManager::initSegmentStateChange(std::shared_ptr<OmafSegment> pIni
   try {
     if (state != OmafSegment::State::OPEN_SUCCES) {
       LOG(ERROR) << "Failed to open the init segment, state= " << static_cast<int>(state) << std::endl;
+      LOG(ERROR) <<" Track id is  " << pInitSeg->GetTrackId() << std::endl;
       return;
     }
 
@@ -882,6 +894,33 @@ void OmafReaderManager::normalSegmentStateChange(std::shared_ptr<OmafSegment> se
       LOG(WARNING) << "Can't find the dash node for coming segment!" << std::endl;
       return;
     }
+
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+    //trace
+    if (opened_dash_node.get() != nullptr) {
+        if (opened_dash_node->isExtractor()) {
+            const char *trackType = "extractor_track";
+            uint64_t segSize = segment->GetSegSize();
+            char tileRes[128] = { 0 };
+            snprintf(tileRes, 128, "%s", "none");
+            int trackIndex = segment->GetTrackId();
+            uint32_t nSegID = segment->GetSegID();
+            tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, segSize);
+        }
+        else {
+            const char *trackType = "tile_track";
+            uint64_t segSize = segment->GetSegSize();
+            char tileRes[128] = { 0 };
+            snprintf(tileRes, 128, "%s", "none");
+            int trackIndex = segment->GetTrackId();
+            uint32_t nSegID = segment->GetSegID();
+            tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, segSize);
+        }
+    }
+#endif
+#endif
+
 
     // 2. append to the dash opened list
     {
