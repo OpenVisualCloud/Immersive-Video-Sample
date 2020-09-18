@@ -38,8 +38,7 @@
 #define _VIEWPORTPREDICT_H_
 
 #include <stdlib.h>
-#include <string>
-#include <list>
+#include <map>
 #include "data_type.h"
 
 #ifdef __cplusplus
@@ -50,22 +49,33 @@ typedef void* Handler;
 
 //! \brief Initialze the viewport prediction algorithm
 //!
-//! \param  [in] uint32_t
-//!              pose interval
-//!         [in] uint32_t
-//!              previous pose count
-//!         [in] uint32_t
-//!              predict interval
+//! \param  [in] PredictOption
+//!              predict option
 //!
-Handler ViewportPredict_Init(uint32_t pose_interval, uint32_t pre_pose_count, uint32_t predict_interval);
+Handler ViewportPredict_Init(PredictOption option);
+//! \brief set original viewport angle
+//!
+//! \param  [in] Handler
+//!              viewport prediction handler
+//!         [in] ViewportAngle*
+//!              original viewport angle
+//!
+int32_t ViewportPredict_SetViewport(Handler hdl, ViewportAngle *angle);
 //! \brief viewport prediction process
 //!
-//! \param  [in] std::list<ViewportAngle>
-//!              pose history
-//! \return ViewportAngle*
-//!              return predicted viewport pose
+//! \param  [in] Handler
+//!              viewport prediction handler
+//!         [in] uint64_t
+//!              first pts of predict angle
+//!         [out] std::map<uint64_t, ViewportAngle*>&
+//!              predicted viewport map
 //!
-ViewportAngle* ViewportPredict_PredictPose(Handler hdl, std::list<ViewportAngle> pose_history);
+int32_t ViewportPredict_PredictPose(Handler hdl, uint64_t pre_first_pts, std::map<uint64_t, ViewportAngle*>& predict_viewport_list);
+
+//!
+//! \brief uninit the viewport prediction algorithm
+//!
+int32_t ViewportPredict_unInit(Handler hdl);
 
 #ifdef __cplusplus
 }

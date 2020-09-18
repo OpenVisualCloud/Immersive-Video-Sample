@@ -120,7 +120,7 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
   }
 
   // won't get viewport if pose hasn't changed
-  if (previousPose && mPose && !IsDifferentPose(previousPose, mPose) && historySize > 1) {
+  if (previousPose && mPose && !IsDifferentPose(previousPose, mPose) && historySize > 1 && !mUsePrediction) {
     LOG(INFO) << "pose hasn't changed!" << endl;
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
@@ -207,37 +207,14 @@ OmafExtractor* OmafExtractorTracksSelector::GetNearestExtractor(OmafMediaStream*
 
 ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMediaStream* pStream) {
   ListExtractor extractors;
+  int64_t historySize = 0;
   {
     std::lock_guard<std::mutex> lock(mMutex);
     if (mPoseHistory.size() <= 1) {
       return extractors;
     }
   }
-  if (mPredictPluginMap.size() == 0) {
-    LOG(ERROR) << "predict plugin map is empty!" << endl;
-    return extractors;
-  }
-  ViewportPredictPlugin* plugin = mPredictPluginMap.at(mPredictPluginName);
-  uint32_t pose_interval = POSE_INTERVAL;
-  uint32_t pre_pose_count = PREDICTION_POSE_COUNT;
-  uint32_t predict_interval = PREDICTION_INTERVAL;
-  plugin->Intialize(pose_interval, pre_pose_count, predict_interval);
-  std::list<ViewportAngle> pose_history;
-  {
-    std::lock_guard<std::mutex> lock(mMutex);
-    for (auto it = mPoseHistory.begin(); it != mPoseHistory.end(); it++) {
-      ViewportAngle angle;
-      angle.yaw = it->pose->yaw;
-      angle.pitch = it->pose->pitch;
-      angle.roll = 0;
-      pose_history.push_front(angle);
-    }
-  }
-  std::vector<ViewportAngle*> predict_angles = plugin->Predict(pose_history);
-  if (predict_angles.empty()) {
-    LOG(ERROR) << "predictPose_func return an invalid value!" << endl;
-    return extractors;
-  }
+
   HeadPose* previousPose = mPose;
   {
     std::lock_guard<std::mutex> lock(mMutex);
@@ -246,9 +223,10 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
     if (!mPose) {
       return extractors;
     }
+    historySize = mPoseHistory.size();
   }
   // won't get viewport if pose hasn't changed
-  if (previousPose && mPose && !IsDifferentPose(previousPose, mPose) && pose_history.size() > 1) {
+  if (previousPose && mPose && !IsDifferentPose(previousPose, mPose) && historySize > 1) {
     LOG(INFO) << "pose hasn't changed!" << endl;
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
@@ -257,16 +235,36 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
 #endif
 #endif
     SAFE_DELETE(previousPose);
-    for (uint32_t i = 0; i < predict_angles.size(); i++)
-    {
-      SAFE_DELETE(predict_angles[i]);
-    }
     return extractors;
   }
-  // to select extractor;
+  // if viewport changed, then predict viewport using pose history.
+  if (mPredictPluginMap.size() == 0)
+  {
+      LOG(ERROR)<<"predict plugin map is empty!"<<endl;
+      return extractors;
+  }
+  // 1. figure out the pts of predicted angle
+  uint32_t current_segment_num = pStream->GetSegmentNumber();
+
+  DashStreamInfo *stream_info = pStream->GetStreamInfo();
+  if (stream_info == nullptr) return extractors;
+
+  int32_t stream_frame_rate = stream_info->framerate_num / stream_info->framerate_den;
+  uint64_t first_predict_pts = current_segment_num > 0 ? (current_segment_num - 1) * stream_frame_rate : 0;
+  // 2. predict process
+  ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);
+  std::map<uint64_t, ViewportAngle*> predict_angles;
+  plugin->Predict(first_predict_pts, predict_angles);
+  if (predict_angles.empty())
+  {
+      LOG(INFO)<<"predictPose_func return an invalid value!"<<endl;
+      return extractors;
+  }
+  // to select extractor, only support SingleViewport mode in prediction.
   HeadPose* predictPose = new HeadPose;
-  predictPose->yaw = predict_angles[0]->yaw;
-  predictPose->pitch = predict_angles[0]->pitch;
+  ViewportAngle *angle = predict_angles[first_predict_pts];
+  predictPose->yaw = angle->yaw;
+  predictPose->pitch = angle->pitch;
   LOG(INFO) << "Start to select extractor tracks!" << endl;
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
@@ -288,10 +286,6 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   }
   SAFE_DELETE(previousPose);
   SAFE_DELETE(predictPose);
-  for (uint32_t i = 0; i < predict_angles.size(); i++)
-  {
-    SAFE_DELETE(predict_angles[i]);
-  }
   predict_angles.clear();
   return extractors;
 }

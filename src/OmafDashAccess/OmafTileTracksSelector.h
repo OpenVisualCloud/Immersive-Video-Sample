@@ -99,7 +99,7 @@ private:
 
     TracksMap GetTileTracksByPose(OmafMediaStream* pStream);
 
-    std::map<int, TracksMap> GetTileTracksByPosePrediction(OmafMediaStream* pStream);
+    std::vector<std::pair<ViewportPriority, TracksMap>> GetTileTracksByPosePrediction(OmafMediaStream* pStream);
 
     //TracksMap GetCoveredTileTracks(OmafMediaStream* pStream, CCDef* outCC);
 
@@ -107,7 +107,6 @@ private:
 
 private:
     TracksMap                 m_currentTracks;
-    std::map<int, TracksMap>  m_predictedTracks;
 };
 
 VCD_OMAF_END;

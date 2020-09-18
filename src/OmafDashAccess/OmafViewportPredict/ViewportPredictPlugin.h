@@ -40,16 +40,16 @@
 #include "../general.h"
 #include <stdlib.h>
 #include <vector>
+#include <map>
 
 VCD_OMAF_BEGIN
 
-#define POSE_INTERVAL         40
-#define PREDICTION_POSE_COUNT 25
-#define PREDICTION_INTERVAL   1000
-
 typedef void* Handler;
-typedef Handler (*INIT_FUNC)(uint32_t,uint32_t,uint32_t);
-typedef ViewportAngle* (*PREDICTPOSE_FUNC)(Handler, std::list<ViewportAngle>);
+// define function point of plugin interfaces
+typedef Handler (*INIT_FUNC)(PredictOption);
+typedef int32_t (*SETVIEWPORT_FUNC)(Handler, ViewportAngle*);
+typedef int32_t (*PREDICTPOSE_FUNC)(Handler, uint64_t, std::map<uint64_t, ViewportAngle*>&);
+typedef int32_t (*DESTROY_FUNC)(Handler);
 
 class ViewportPredictPlugin
 {
@@ -72,30 +72,41 @@ public:
     int LoadPlugin(const char* lib_path);
     //! \brief intialize plugin
     //!
-    //! \param  [in] uint32_t
-    //!              pose interval
-    //!         [in] uint32_t
-    //!              previous pose count
-    //!         [in] uint32_t
-    //!              predict interval
+    //! \param  [in] PredictOption
+    //!              predict option
     //!
     //! \return int
     //!         ERROR code
     //!
-    int Intialize(uint32_t pose_interval, uint32_t pre_pose_count, uint32_t predict_interval);
+    int Intialize(PredictOption option);
+    //! \brief set original viewport angle
+    //!
+    //! \param  [in] ViewportAngle*
+    //!              original viewport angle
+    //!
+    int SetViewport(ViewportAngle *angle);
     //! \brief viewport prediction process
     //!
-    //! \param  [in] std::list<ViewportAngle>
-    //!              pose history
-    //! \return ViewportAngle*
-    //!              return predicted viewport pose
+    //! \param  [in] uint64_t
+    //!              first pts of predict angle
+    //!         [in] std::map<uint64_t, ViewportAngle*>&
+    //!              output predict angle list
+    //! \return int
+    //!         ERROR code
     //!
-    std::vector<ViewportAngle*> Predict(std::list<ViewportAngle> pose_history);
+    int Predict(uint64_t pre_first_pts, std::map<uint64_t, ViewportAngle*>& predict_viewport_list);
+    //!
+    //! \brief viewport prediction destroy function
+    //!
+    int Destroy();
+
 private:
     Handler          m_libHandler;
     Handler          m_predictHandler;
     INIT_FUNC        m_initFunc;
+    SETVIEWPORT_FUNC m_setViewportFunc;
     PREDICTPOSE_FUNC m_predictFunc;
+    DESTROY_FUNC     m_destroyFunc;
 };
 
 VCD_OMAF_END;

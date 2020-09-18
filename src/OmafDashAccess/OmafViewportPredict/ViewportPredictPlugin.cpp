@@ -45,6 +45,7 @@ ViewportPredictPlugin::ViewportPredictPlugin()
     m_predictHandler  = NULL;
     m_predictFunc     = NULL;
     m_initFunc        = NULL;
+    m_setViewportFunc = NULL;
 }
 
 ViewportPredictPlugin::~ViewportPredictPlugin()
@@ -75,6 +76,13 @@ int ViewportPredictPlugin::LoadPlugin(const char* lib_path)
         dlclose(m_libHandler);
         return ERROR_INVALID;
     }
+    m_setViewportFunc = (SETVIEWPORT_FUNC)dlsym(m_libHandler, "ViewportPredict_SetViewport");
+    if (dlerror() != NULL)
+    {
+        LOG(ERROR)<<"failed to load ViewportPredict_SetViewport func!"<<endl;
+        dlclose(m_libHandler);
+        return ERROR_INVALID;
+    }
     m_predictFunc = (PREDICTPOSE_FUNC)dlsym(m_libHandler, "ViewportPredict_PredictPose");
     if (dlerror() != NULL)
     {
@@ -82,12 +90,19 @@ int ViewportPredictPlugin::LoadPlugin(const char* lib_path)
         dlclose(m_libHandler);
         return ERROR_INVALID;
     }
+    m_destroyFunc = (DESTROY_FUNC)dlsym(m_libHandler, "ViewportPredict_unInit");
+    if (dlerror() != NULL)
+    {
+        LOG(ERROR)<<"failed to load ViewportPredict_unInit func!"<<endl;
+        dlclose(m_libHandler);
+        return ERROR_INVALID;
+    }
     return ERROR_NONE;
 }
 
-int ViewportPredictPlugin::Intialize(uint32_t pose_interval, uint32_t pre_pose_count, uint32_t predict_interval)
+int ViewportPredictPlugin::Intialize(PredictOption option)
 {
-    Handler predict_handler = m_initFunc(pose_interval, pre_pose_count, predict_interval);
+    Handler predict_handler = m_initFunc(option);
     if (NULL == predict_handler)
     {
         LOG(ERROR)<<"handler init failed!"<<std::endl;
@@ -97,23 +112,24 @@ int ViewportPredictPlugin::Intialize(uint32_t pose_interval, uint32_t pre_pose_c
     return ERROR_NONE;
 }
 
-std::vector<ViewportAngle*> ViewportPredictPlugin::Predict(std::list<ViewportAngle> pose_history)
+int ViewportPredictPlugin::SetViewport(ViewportAngle *angle)
 {
-    // need to predict multiple viewpoints in next segment.
-    std::vector<ViewportAngle*> predict_angles;
-    if (pose_history.size() == 0)
+    if (angle == nullptr)
     {
-        LOG(ERROR)<<"pose history is empty now!"<<endl;
-        return predict_angles;
+        LOG(ERROR) << " Viewport angle is null! " << endl;
+        return ERROR_NULL_PTR;
     }
-    ViewportAngle* predict_angle = m_predictFunc(m_predictHandler, pose_history);
-    if (predict_angle == NULL)
-    {
-        LOG(ERROR)<<"predictPose_func return an invalid value!"<<endl;
-        return predict_angles;
-    }
-    predict_angles.push_back(predict_angle);
-    return predict_angles;
+    return m_setViewportFunc(m_predictHandler, angle);
+}
+
+int ViewportPredictPlugin::Predict(uint64_t pre_first_pts, std::map<uint64_t, ViewportAngle*>& predict_viewport_list)
+{
+    return m_predictFunc(m_predictHandler, pre_first_pts, predict_viewport_list);
+}
+
+int ViewportPredictPlugin::Destroy()
+{
+    return m_destroyFunc(m_predictHandler);
 }
 
 VCD_OMAF_END

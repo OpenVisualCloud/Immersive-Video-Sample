@@ -63,6 +63,11 @@ OmafTracksSelector::~OmafTracksSelector() {
 
     mPoseHistory.clear();
   }
+  if (mUsePrediction && !mPredictPluginMap.empty())
+  {
+    ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);
+    if (plugin != nullptr) plugin->Destroy();
+  }
 
   if (mPredictPluginMap.size()) {
     for (auto &p : mPredictPluginMap) {
@@ -167,15 +172,47 @@ int OmafTracksSelector::UpdateViewport(HeadPose *pose) {
     SAFE_DELETE(pit.pose);
     mPoseHistory.pop_back();
   }
+  // if using viewport prediction, set real time viewports.
+  if (mUsePrediction && !mPredictPluginMap.empty())
+  {
+    ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);
+    ViewportAngle *angle = new ViewportAngle;
+    angle->yaw = pose->yaw;
+    angle->pitch = pose->pitch;
+    angle->pts = pose->pts;
+    plugin->SetViewport(angle);
+  }
   return ERROR_NONE;
 }
 
-int OmafTracksSelector::EnablePosePrediction(std::string predictPluginName, std::string libPath) {
+int OmafTracksSelector::EnablePosePrediction(std::string predictPluginName, std::string libPath, bool enableExtractor) {
   mUsePrediction = true;
   mPredictPluginName.assign(predictPluginName);
   mLibPath.assign(libPath);
+  // 1. load plugin
   int ret = InitializePredictPlugins();
-  return ret;
+  if (ret != ERROR_NONE)
+  {
+    LOG(ERROR) << "Failed in loading predict plugin" << endl;
+    return ret;
+  }
+  // 2. initial plugin
+  ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);
+  PredictOption option;
+  option.usingFeedbackAngleAdjust = true;
+  if (enableExtractor){
+    option.mode = PredictionMode::SingleViewpoint;
+  }
+  else{
+    option.mode = PredictionMode::MultiViewpoints;
+  }
+  ret = plugin->Intialize(option);
+  if (ret != ERROR_NONE)
+  {
+    LOG(ERROR) << "Failed in initializing predict plugin" << endl;
+    return ret;
+  }
+  return ERROR_NONE;
 }
 
 int OmafTracksSelector::InitializePredictPlugins() {

@@ -44,11 +44,11 @@ ViewPortManager::ViewPortManager()
 ViewPortManager::~ViewPortManager()
 {
 }
-struct Pose ViewPortManager::GetViewPort()
+HeadPose ViewPortManager::GetViewPort()
 {
     return m_pose;
 }
-RenderStatus ViewPortManager::SetViewPort(struct Pose pose)
+RenderStatus ViewPortManager::SetViewPort(HeadPose pose)
 {
     m_pose.yaw   = pose.yaw;
     m_pose.pitch = pose.pitch;

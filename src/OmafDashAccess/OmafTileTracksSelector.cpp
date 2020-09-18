@@ -52,20 +52,6 @@ OmafTileTracksSelector::~OmafTileTracksSelector()
 {
     if (m_currentTracks.size())
         m_currentTracks.clear();
-
-    if (m_predictedTracks.size())
-    {
-        std::map<int, TracksMap>::iterator it;
-        for (it = m_predictedTracks.begin(); it != m_predictedTracks.end(); it++)
-        {
-            if ((it->second).size())
-            {
-                (it->second).clear();
-            }
-        }
-
-        m_predictedTracks.clear();
-    }
 }
 
 bool IsSelectionChanged(TracksMap selection1, TracksMap selection2)
@@ -108,44 +94,43 @@ bool IsSelectionChanged(TracksMap selection1, TracksMap selection2)
 int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
 {
     TracksMap selectedTracks;
-    if (mUsePrediction) // using prediction
+    if (mUsePrediction && mPoseHistory.size() >= POSE_SIZE) // using prediction
     {
-        std::map<int, TracksMap> predictedTracksMap = GetTileTracksByPosePrediction(pStream);
-        if (predictedTracksMap.empty())
+        std::vector<std::pair<ViewportPriority, TracksMap>>  predictedTracksArray = GetTileTracksByPosePrediction(pStream);
+        if (predictedTracksArray.empty()) // Prediction error occurs
         {
-            if (mPoseHistory.size() < POSE_SIZE)
-            {
-                selectedTracks = GetTileTracksByPose(pStream);
-            }
+            selectedTracks = GetTileTracksByPose(pStream);
         }
         else
         {
-            // fetch union set of predictedTracksMap
-            std::map<int, TracksMap>::iterator it = predictedTracksMap.begin();
-            for ( ; it != predictedTracksMap.end(); it++)
+            uint32_t rowSize = pStream->GetRowSize();
+            uint32_t colSize = pStream->GetColSize();
+            // fetch union set of predictedTracksArray ordered by ViewportPriority
+            std::sort(predictedTracksArray.begin(), predictedTracksArray.end(), \
+                [&](std::pair<ViewportPriority, TracksMap> track1, std::pair<ViewportPriority, TracksMap> track2) { return track1.first < track2.first;});
+            for (uint32_t i = 0; i < predictedTracksArray.size(); i++)
             {
-                TracksMap oneTracks = it->second;
+                TracksMap oneTracks = predictedTracksArray[i].second;
                 TracksMap::iterator iter = oneTracks.begin();
                 for ( ; iter != oneTracks.end(); iter++)
                 {
-                    // ignore when key is identical.
-                    selectedTracks.insert(*iter);
+                    // ignore when key is identical and have tracks selection limitation.
+                    if (selectedTracks.size() <= rowSize * colSize / 2)
+                    {
+                        selectedTracks.insert(*iter);
+                    }
+                    else break;
                 }
             }
         }
-
-        if (predictedTracksMap.size())
+        // clear predictedTracksArray
+        if (predictedTracksArray.size())
         {
-            std::map<int, TracksMap>::iterator it = predictedTracksMap.begin();
-            for ( ; it != predictedTracksMap.end(); it++)
+            for (uint32_t i = 0; i < predictedTracksArray.size(); i++)
             {
-                if ((it->second).size())
-                {
-                    (it->second).clear();
-                }
+                predictedTracksArray[i].second.clear();
             }
-
-            predictedTracksMap.clear();
+            predictedTracksArray.clear();
         }
     }
     else // not using prediction
@@ -217,7 +202,7 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
     }
 
     // won't get viewport if pose hasn't changed
-    if( previousPose && mPose && !IsPoseChanged( previousPose, mPose ) && historySize > 1)
+    if( previousPose && mPose && !IsPoseChanged( previousPose, mPose ) && historySize > 1 && !mUsePrediction)
     {
         LOG(INFO)<<"pose hasn't changed!"<<endl;
 #ifndef _ANDROID_NDK_OPTION_
@@ -387,10 +372,10 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     return selectedTracks;
 }
 
-std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
+std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetTileTracksByPosePrediction(
     OmafMediaStream *pStream)
 {
-    std::map<int, TracksMap> predictedTracks;
+    std::vector<std::pair<ViewportPriority, TracksMap>> predictedTracks;
     int64_t historySize = 0;
     HeadPose* previousPose = NULL;
     {
@@ -432,38 +417,33 @@ std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
         LOG(ERROR)<<"predict plugin map is empty!"<<endl;
         return predictedTracks;
     }
+    // 1. figure out the pts of predicted angle
+    uint32_t current_segment_num = pStream->GetSegmentNumber();
+
+    DashStreamInfo *stream_info = pStream->GetStreamInfo();
+    if (stream_info == nullptr) return predictedTracks;
+
+    int32_t stream_frame_rate = stream_info->framerate_num / stream_info->framerate_den;
+    uint64_t first_predict_pts = current_segment_num > 0 ? (current_segment_num - 1) * stream_frame_rate : 0;
+    // 2. predict process
     ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);
-    uint32_t pose_interval = POSE_INTERVAL;
-    uint32_t pre_pose_count = PREDICTION_POSE_COUNT;
-    uint32_t predict_interval = PREDICTION_INTERVAL;
-    plugin->Intialize(pose_interval, pre_pose_count, predict_interval);
-    std::list<ViewportAngle> pose_history;
-    {
-        std::lock_guard<std::mutex> lock(mMutex);
-        for (auto it=mPoseHistory.begin(); it!=mPoseHistory.end(); it++)
-        {
-            ViewportAngle angle;
-            angle.yaw = it->pose->yaw;
-            angle.pitch = it->pose->pitch;
-            angle.roll = 0;
-            pose_history.push_front(angle);
-        }
-    }
-    std::vector<ViewportAngle*> predict_angles = plugin->Predict(pose_history);
+    std::map<uint64_t, ViewportAngle*> predict_angles;
+    LOG(INFO) << "first_predict_pts " << first_predict_pts << endl;
+    plugin->Predict(first_predict_pts, predict_angles);
     if (predict_angles.empty())
     {
-        LOG(ERROR)<<"predictPose_func return an invalid value!"<<endl;
+        LOG(INFO)<<"predictPose_func return an invalid value!"<<endl;
         return predictedTracks;
     }
-    // to select tile tracks;
+    // candicate nums to select tile tracks
     uint32_t poseCandicateNum = predict_angles.size();
     HeadPose *predictPose = new HeadPose[poseCandicateNum];
     if (!predictPose)
         return predictedTracks;
     for (uint32_t i = 0; i < poseCandicateNum; i++)
     {
-        predictPose[i].yaw = predict_angles[i]->yaw;//predict_angle is also a list NEED TO ADD
-        predictPose[i].pitch = predict_angles[i]->pitch;
+        predictPose[i].yaw = predict_angles[ptsInterval[i] + first_predict_pts]->yaw;
+        predictPose[i].pitch = predict_angles[ptsInterval[i] + first_predict_pts]->pitch;
         LOG(INFO) << "Start to select tile tracks!" << endl;
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
@@ -474,7 +454,7 @@ std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
         TracksMap selectedTracks = SelectTileTracks(pStream, &predictPose[i]);
         if (selectedTracks.size() && previousPose)
         {
-            predictedTracks.insert(make_pair(i, selectedTracks));
+            predictedTracks.push_back(make_pair(predict_angles[ptsInterval[i] + first_predict_pts]->priority, selectedTracks));
             LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") !"<<endl;
 
 #ifndef _ANDROID_NDK_OPTION_
@@ -487,10 +467,6 @@ std::map<int, TracksMap> OmafTileTracksSelector::GetTileTracksByPosePrediction(
     }
     SAFE_DELETE(previousPose);
     SAFE_DELETE(predictPose);
-    for (uint32_t i = 0; i < poseCandicateNum; i++)
-    {
-        SAFE_DELETE(predict_angles[i]);
-    }
     predict_angles.clear();
     return predictedTracks;
 }

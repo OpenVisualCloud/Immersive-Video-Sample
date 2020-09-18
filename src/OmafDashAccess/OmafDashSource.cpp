@@ -266,7 +266,7 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enable
   }
 
   m_selector->SetProjectionFmt(projFmt);
-  if (enablePredictor) m_selector->EnablePosePrediction(predictPluginName, libPath);
+  if (enablePredictor) m_selector->EnablePosePrediction(predictPluginName, libPath, enableExtractor);
   // Setup initial Viewport and select Adaption Set
   auto it = mMapStream.begin();
   if (it == mMapStream.end()) {
@@ -539,6 +539,7 @@ int OmafDashSource::TimedSelectSegements() {
   std::map<int, OmafMediaStream*>::iterator it;
   for (it = this->mMapStream.begin(); it != this->mMapStream.end(); it++) {
     OmafMediaStream* pStream = it->second;
+    pStream->SetSegmentNumber(dcount);
     ret = m_selector->SelectTracks(pStream);
     if (ERROR_NONE != ret) break;
   }

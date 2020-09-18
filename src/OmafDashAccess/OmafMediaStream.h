@@ -214,6 +214,8 @@ class OmafMediaStream {
 
   uint32_t GetColSize() { return m_pStreamInfo ? m_pStreamInfo->tileColNum : 0; };
 
+  uint32_t GetSegmentNumber() { return m_activeSegmentNum;};
+
   bool IsExtractorEnabled() { return m_enabledExtractor; };
 
   void SetEnabledExtractor(bool enabledExtractor) { m_enabledExtractor = enabledExtractor; };
@@ -223,6 +225,8 @@ class OmafMediaStream {
   void SetNeedVideoParams(bool needParams) { m_needParams = needParams; };
 
   void SetMaxStitchResolution(uint32_t width, uint32_t height) { m_stitch->SetMaxStitchResolution(width, height); };
+
+  void SetSegmentNumber( uint32_t seg_num ) { m_activeSegmentNum = seg_num; } ;
 
   std::list<MediaPacket*> GetOutTilesMergedPackets();
 
@@ -293,6 +297,8 @@ private:
 
   int m_status;
   uint64_t m_currFrameIdx;  //<! the frame index which is currently processed
+
+  uint32_t m_activeSegmentNum;
 };
 
 VCD_OMAF_END;

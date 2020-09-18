@@ -133,6 +133,7 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   }
   clientInfo.pose->yaw = 0;
   clientInfo.pose->pitch = 0;
+  clientInfo.pose->pts = 0;
   clientInfo.viewPort_hFOV = renderConfig.viewportHFOV;
   clientInfo.viewPort_vFOV = renderConfig.viewportVFOV;
   clientInfo.viewPort_Width = renderConfig.viewportWidth;
@@ -285,10 +286,7 @@ bool DashMediaSource::IsEOS() {
   return false;  // vod return false or live always false
 }
 
-RenderStatus DashMediaSource::ChangeViewport(float yaw, float pitch) {
-  HeadPose pose;
-  pose.yaw = yaw;
-  pose.pitch = pitch;
+RenderStatus DashMediaSource::ChangeViewport(HeadPose pose) {
   OmafAccess_ChangeViewport(m_handler, &pose);
   return RENDER_STATUS_OK;
 }

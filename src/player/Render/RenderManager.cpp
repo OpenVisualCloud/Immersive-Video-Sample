@@ -214,13 +214,17 @@ RenderStatus RenderManager::CreateRender(int32_t projFormat) {
 
 bool RenderManager::IsEOS() { return m_mediaSource->IsEOS() || !(m_renderContext->isRunning()); }
 
-RenderStatus RenderManager::ChangeViewport(float yaw, float pitch) {
-  m_mediaSource->ChangeViewport(yaw, pitch);
+RenderStatus RenderManager::ChangeViewport(float yaw, float pitch, uint64_t pts) {
+  HeadPose pose = {0};
+  pose.yaw = yaw;
+  pose.pitch = pitch;
+  pose.pts = pts;
+  m_mediaSource->ChangeViewport(pose);
   return RENDER_STATUS_OK;
 }
 
 RenderStatus RenderManager::SetViewport(float yaw, float pitch) {
-  struct Pose pose;
+  HeadPose pose;
   pose.yaw = yaw;
   pose.pitch = pitch;
   ScopeLock lock(m_poseLock);
@@ -231,7 +235,7 @@ RenderStatus RenderManager::SetViewport(float yaw, float pitch) {
 
 RenderStatus RenderManager::GetViewport(float *yaw, float *pitch) {
   ScopeLock lock(m_poseLock);
-  struct Pose pose = m_viewPortManager->GetViewPort();
+  HeadPose pose = m_viewPortManager->GetViewPort();
   *yaw = pose.yaw;
   *pitch = pose.pitch;
   return RENDER_STATUS_OK;
