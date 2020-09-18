@@ -466,7 +466,7 @@ vector<pair<uint32_t, uint32_t>> OmafTilesStitch::GenerateMostSquareArr(uint32_t
         pair<uint32_t, uint32_t> oneArrangement; // pair < row, col >
         uint32_t size = i < splitNum - 1 ? normalSplitPacketSize : lastSplitPacketSize;
         uint32_t sqrtedSize = (uint32_t)sqrt(size);
-        while (sqrtedSize && size % sqrtedSize) {
+        while (sqrtedSize && (size % sqrtedSize)) {
             sqrtedSize--;
         }
         if (sqrtedSize == 0)
@@ -474,7 +474,66 @@ vector<pair<uint32_t, uint32_t>> OmafTilesStitch::GenerateMostSquareArr(uint32_t
             LOG(ERROR) << " square size cannot be zero! " << std::endl;
             return arrangementArr;
         }
+        if ((size) > 4 && (sqrtedSize == 1))
+        {
+            size++;
+            sqrtedSize = (uint32_t)sqrt(size);
+            while (sqrtedSize && (size % sqrtedSize)) {
+                sqrtedSize--;
+            }
+        }
         uint32_t dividedSize = size / sqrtedSize;
+
+        uint32_t supplementedNum = 0;
+        if (dividedSize > sqrtedSize)
+        {
+            while((dividedSize - sqrtedSize) > 3)
+            {
+                size++;
+                supplementedNum++;
+                sqrtedSize = (uint32_t)sqrt(size);
+                while (sqrtedSize && (size % sqrtedSize)) {
+                    sqrtedSize--;
+                }
+                if (sqrtedSize == 1)
+                {
+                    size++;
+                    supplementedNum++;
+                    sqrtedSize = (uint32_t)sqrt(size);
+                    while (sqrtedSize && (size % sqrtedSize)) {
+                        sqrtedSize--;
+                    }
+                }
+                dividedSize = size / sqrtedSize;
+            }
+        }
+        if (sqrtedSize > dividedSize)
+        {
+            while((sqrtedSize - dividedSize) > 3)
+            {
+                size++;
+                supplementedNum++;
+                sqrtedSize = (uint32_t)sqrt(size);
+                while (sqrtedSize && (size % sqrtedSize)) {
+                    sqrtedSize--;
+                }
+                if (sqrtedSize == 1)
+                {
+                    size++;
+                    supplementedNum++;
+                    sqrtedSize = (uint32_t)sqrt(size);
+                    while (sqrtedSize && (size % sqrtedSize)) {
+                        sqrtedSize--;
+                    }
+                }
+                dividedSize = size / sqrtedSize;
+            }
+        }
+        if (supplementedNum > 0)
+        {
+            LOG(INFO) << "Repeat  " << supplementedNum << "  tiles to make sure normal packed sub-picture width/height ratio for split  " << i << std::endl;
+        }
+
         LOG(INFO) << " one arrangement has the tile division of " << sqrtedSize << " x " << dividedSize << std::endl;
         if (dividedSize > sqrtedSize) {
         oneArrangement = std::make_pair(sqrtedSize, dividedSize);
@@ -517,7 +576,7 @@ std::map<QualityRank, std::vector<TilesMergeArrangement *>> OmafTilesStitch::Cal
     oneTileHeight = srd.height;
     uint32_t packetsSize = packets.size();
     uint32_t sqrtedSize = (uint32_t)sqrt(packetsSize);
-    while (sqrtedSize && packetsSize % sqrtedSize) {
+    while (sqrtedSize && (packetsSize % sqrtedSize)) {
       sqrtedSize--;
     }
     uint32_t divdedSize = packetsSize / sqrtedSize;
@@ -529,6 +588,29 @@ std::map<QualityRank, std::vector<TilesMergeArrangement *>> OmafTilesStitch::Cal
       tileColsNum = sqrtedSize;
       tileRowsNum = divdedSize;
     }
+
+    while ((tileColsNum - tileRowsNum) > 3)
+    {
+        packetsSize++;
+        sqrtedSize = (uint32_t)sqrt(packetsSize);
+        while (sqrtedSize && (packetsSize % sqrtedSize)) { sqrtedSize--; }
+        if (sqrtedSize == 1)
+        {
+            packetsSize++;
+            sqrtedSize = (uint32_t)sqrt(packetsSize);
+            while (sqrtedSize && (packetsSize % sqrtedSize)) { sqrtedSize--; }
+        }
+        divdedSize = packetsSize / sqrtedSize;
+
+        if (divdedSize > sqrtedSize) {
+          tileColsNum = divdedSize;
+          tileRowsNum = sqrtedSize;
+        } else {
+          tileColsNum = sqrtedSize;
+          tileRowsNum = divdedSize;
+        }
+    }
+
     width = oneTileWidth * tileColsNum;
     height = oneTileHeight * tileRowsNum;
     // check if need to split into multiple videos
@@ -704,14 +786,30 @@ vector<std::unique_ptr<RegionWisePacking>> OmafTilesStitch::CalculateMergedRwpkF
     totalPacketNum += mergeLayout[i]->tilesLayout.tileColsNum * mergeLayout[i]->tilesLayout.tileRowsNum;
     packetSizeOfEachArr[i] = totalPacketNum;
   }
-  if (totalPacketNum != packets.size())
-  {
-    LOG(ERROR) << " total packet number is not equal to seleceted packet size! " << std::endl;
-    return ret;
-  }
+
   uint8_t regIdx = 0;
   uint32_t packetArrCnt = 0;
-  for (itPacket = packets.begin(); itPacket != packets.end(); itPacket++) {
+  for (itPacket = packets.begin(); ; itPacket++) {
+    if (regIdx >= totalPacketNum)
+        break;
+
+    if (itPacket == packets.end())
+    {
+        if (totalPacketNum > packets.size())
+        {
+            itPacket = packets.begin();
+        }
+        else if (totalPacketNum == packets.size())
+        {
+            break;
+        }
+        else
+        {
+            LOG(ERROR) << " total packet number is less than seleceted packet size! " << std::endl;
+            return ret;
+        }
+    }
+
     if (regIdx >= packetSizeOfEachArr[packetArrCnt]){
       packetArrCnt++;
     }
@@ -874,14 +972,30 @@ vector<std::unique_ptr<RegionWisePacking>> OmafTilesStitch::CalculateMergedRwpkF
     totalPacketNum += mergeLayout[i]->tilesLayout.tileColsNum * mergeLayout[i]->tilesLayout.tileRowsNum;
     packetSizeOfEachArr[i] = totalPacketNum;
   }
-  if (totalPacketNum != packets.size())
-  {
-    LOG(ERROR) << " total packet number is not equal to seleceted packet size! " << std::endl;
-    return ret;
-  }
+
   uint8_t regIdx = 0;
   uint32_t packetArrCnt = 0;
-  for (itPacket = packets.begin(); itPacket != packets.end(); itPacket++) {
+  for (itPacket = packets.begin(); ; itPacket++) {
+    if (regIdx >= totalPacketNum)
+        break;
+
+    if (itPacket == packets.end())
+    {
+        if (totalPacketNum > packets.size())
+        {
+            itPacket = packets.begin();
+        }
+        else if (totalPacketNum == packets.size())
+        {
+            break;
+        }
+        else
+        {
+            LOG(ERROR) << " total packet number is less than seleceted packet size! " << std::endl;
+            return ret;
+        }
+    }
+
     if (regIdx >= packetSizeOfEachArr[packetArrCnt]){
       packetArrCnt++;
     }
@@ -999,19 +1113,9 @@ int32_t OmafTilesStitch::IsArrChanged(QualityRank qualityRanking, vector<TilesMe
       for (uint32_t i = 0; i < layOut.size(); i++) {
         uint32_t width = layOut[i]->mergedWidth;
         uint32_t height = layOut[i]->mergedHeight;
-        uint8_t tileRowsNum = layOut[i]->tilesLayout.tileRowsNum;
-        uint8_t tileColsNum = layOut[i]->tilesLayout.tileColsNum;
 
         uint32_t initWidth = initLayOut[i]->mergedWidth;
         uint32_t initHeight = initLayOut[i]->mergedHeight;
-        uint8_t initTileRowsNum = initLayOut[i]->tilesLayout.tileRowsNum;
-        uint8_t initTileColsNum = initLayOut[i]->tilesLayout.tileColsNum;
-
-        if ((width == initWidth) && (height == initHeight) && (tileRowsNum == initTileRowsNum) &&
-            (tileColsNum == initTileColsNum)) {
-          if (m_selectedTiles[qualityRanking].size() < ((uint32_t)(initTileRowsNum) * (uint32_t)(initTileColsNum)))
-            *packetLost = true;
-        }
 
         if ((width == initWidth) && (height < initHeight)) {
           LOG(INFO) << "Packet not lost but tiles merge layout has been changed !" << std::endl;
@@ -1200,8 +1304,11 @@ int32_t OmafTilesStitch::InitMergedDataAndRealSize(QualityRank qualityRanking, s
     return ERROR_NONE;
 }
 
-int32_t OmafTilesStitch::UpdateMergedDataAndRealSize(QualityRank qualityRanking, std::map<uint32_t, MediaPacket *> packets,
-         uint8_t tileColsNum, bool arrangeChanged, uint32_t width, uint32_t height, uint32_t initWidth, uint32_t initHeight, char *mergedData, uint64_t *realSize, uint32_t index, vector<uint32_t> needPacketSize) {
+int32_t OmafTilesStitch::UpdateMergedDataAndRealSize(
+    QualityRank qualityRanking, std::map<uint32_t, MediaPacket *> packets,
+    uint8_t tileColsNum, bool arrangeChanged, uint32_t width, uint32_t height,
+    uint32_t initWidth, uint32_t initHeight, char *mergedData, uint64_t *realSize,
+    uint32_t index, vector<uint32_t> needPacketSize, uint64_t layoutNum) {
 
     uint32_t tilesIdx = 0;
     int32_t tileWidth = 0;
@@ -1218,9 +1325,20 @@ int32_t OmafTilesStitch::UpdateMergedDataAndRealSize(QualityRank qualityRanking,
     std::map<uint32_t, MediaPacket *>::iterator itPacket = packets.begin();
     if (index > 0)
       std::advance(itPacket, needPacketSize[index - 1]);
+    if (itPacket == packets.end())
+    {
+        if (needPacketSize[layoutNum-1] > packets.size())
+            itPacket = packets.begin();
+    }
+
     uint32_t packetSize = index == 0 ? needPacketSize[index] : needPacketSize[index] - needPacketSize[index - 1];
     uint32_t cnt = 0;
-    for (; itPacket != packets.end(); itPacket++) {
+    for (; ; itPacket++) {
+      if (itPacket == packets.end())
+      {
+          if (needPacketSize[layoutNum-1] > packets.size())
+              itPacket = packets.begin();
+      }
       cnt++;
       if (cnt > packetSize) break;
       MediaPacket *onePacket = itPacket->second;
@@ -1457,7 +1575,11 @@ int32_t OmafTilesStitch::GenerateOutputMergedPackets() {
       mergedPacket->SetSourceResolution(0, resolution);
       mergedPacket->SetEOS(firstPacket->GetEOS());
 
-      if (ERROR_NONE != UpdateMergedDataAndRealSize(qualityRanking, packets, tileColsNum, arrangeChanged, width, height, initWidth, initHeight, mergedData, &realSize, index, needAccumPacketSize)) {
+      if (ERROR_NONE != UpdateMergedDataAndRealSize(
+                            qualityRanking, packets, tileColsNum,
+                            arrangeChanged, width, height, initWidth,
+                            initHeight, mergedData, &realSize, index,
+                            needAccumPacketSize, layOut.size())) {
           LOG(ERROR) << " Failed to update mergedData and realSize! " << std::endl;
           SAFE_DELETE(mergedPacket);
           return OMAF_ERROR_OPERATION;

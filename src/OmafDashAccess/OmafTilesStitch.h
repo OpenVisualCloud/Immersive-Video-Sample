@@ -227,8 +227,11 @@ private:
 
   int32_t InitMergedDataAndRealSize(QualityRank qualityRanking, std::map<uint32_t, MediaPacket *> packets, char* mergedData, uint64_t* realSize, uint32_t index);
 
-  int32_t UpdateMergedDataAndRealSize(QualityRank qualityRanking, std::map<uint32_t, MediaPacket *> packets,
-         uint8_t tileColsNum, bool arrangeChanged, uint32_t width, uint32_t height, uint32_t initWidth, uint32_t initHeight, char *mergedData, uint64_t *realSize, uint32_t index, vector<uint32_t> needPacketSize);
+  int32_t UpdateMergedDataAndRealSize(
+      QualityRank qualityRanking, std::map<uint32_t, MediaPacket *> packets,
+      uint8_t tileColsNum, bool arrangeChanged, uint32_t width, uint32_t height,
+      uint32_t initWidth, uint32_t initHeight, char *mergedData, uint64_t *realSize,
+      uint32_t index, vector<uint32_t> needPacketSize, uint64_t layoutNum);
 
   int32_t UpdateInitTilesMergeArr();
 
