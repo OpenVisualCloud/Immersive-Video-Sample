@@ -1103,4 +1103,58 @@ TEST_F(I360SCVPTest, cubemapUsage)
     EXPECT_TRUE(ret == 0);
     EXPECT_TRUE(param.outputBitstreamLen > 0);
 }
+
+TEST_F(I360SCVPTest, cubemapGetTilesInViewport)
+{
+    int ret = 0;
+    param.paramViewPort.faceWidth = 512 * 4;
+    param.paramViewPort.faceHeight = 512 * 4;
+    param.paramViewPort.geoTypeInput = EGeometryType(E_SVIDEO_CUBEMAP);
+    param.paramViewPort.viewportHeight = 960;
+    param.paramViewPort.viewportWidth = 960;
+    param.paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;
+    param.paramViewPort.tileNumCol = 4;
+    param.paramViewPort.tileNumRow = 4;
+    param.paramViewPort.viewPortYaw = -90;
+    param.paramViewPort.viewPortPitch = 0;
+    param.paramViewPort.viewPortFOVH = 80;
+    param.paramViewPort.viewPortFOVV = 80;
+    param.usedType = E_VIEWPORT_ONLY;
+    param.paramViewPort.paramVideoFP.cols = 3;
+    param.paramViewPort.paramVideoFP.rows = 2;
+    param.paramViewPort.paramVideoFP.faces[0][0].idFace = 4;
+    param.paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
+    param.paramViewPort.paramVideoFP.faces[0][0].faceHeight = 512 * 4;
+    param.paramViewPort.paramVideoFP.faces[0][0].faceHeight = 512 * 4;
+    param.paramViewPort.paramVideoFP.faces[0][1].idFace = 0;
+    param.paramViewPort.paramVideoFP.faces[0][1].rotFace = NO_TRANSFORM;
+    param.paramViewPort.paramVideoFP.faces[0][2].idFace = 5;
+    param.paramViewPort.paramVideoFP.faces[0][2].rotFace = NO_TRANSFORM;
+
+    param.paramViewPort.paramVideoFP.faces[1][0].idFace = 3;
+    param.paramViewPort.paramVideoFP.faces[1][0].rotFace = ROTATION_180_ANTICLOCKWISE;
+    param.paramViewPort.paramVideoFP.faces[1][1].idFace = 1;
+    param.paramViewPort.paramVideoFP.faces[1][1].rotFace = ROTATION_270_ANTICLOCKWISE;
+    param.paramViewPort.paramVideoFP.faces[1][2].idFace = 2;
+    param.paramViewPort.paramVideoFP.faces[1][2].rotFace = NO_TRANSFORM;
+    void* pI360SCVP = I360SCVP_Init(&param);
+    EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        return;
+    }
+    float raw = 0;
+    float pitch = 60;
+    Param_ViewportOutput paramViewportOutput;
+    TileDef* tilesInViewport = new TileDef[1024];
+
+    I360SCVP_setViewPort(pI360SCVP, raw, pitch);
+    I360SCVP_getTilesInViewport(tilesInViewport, &paramViewportOutput, pI360SCVP);
+    ret = I360SCVP_process(&param, pI360SCVP);
+
+    I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(ret == 0);
+}
+
 }

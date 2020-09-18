@@ -33,6 +33,8 @@
 #define ERP_VERT_ANGLE 180
 #define ERP_HORZ_START -180
 #define ERP_VERT_START 90
+#define PI_IN_DEGREE 180
+#define HALF_PI_IN_DEGREE 90
 
 // ====================================================================================================================
 // Class definition
