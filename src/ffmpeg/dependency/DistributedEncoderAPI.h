@@ -266,6 +266,7 @@ typedef struct DISTRIBUTEDENCODERPARAM{
     DispatchType                type;               //!< task dispatch type
     SupplementalEnhancementInfo suppleEnhanceInfo;  //!< Supplemental Enhancement Information
     CodecAppOption              codecOption;        //!< decoder/encoder choice and the settings
+    bool                        glog_initialized;   //!< whether glog has been initialized
 }DistributedEncoderParam;
 
 #ifdef __cplusplus

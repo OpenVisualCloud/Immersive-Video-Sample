@@ -688,7 +688,7 @@ new file mode 100644
 index 0000000..332bf7b
 --- /dev/null
 +++ b/FFmpeg/libavcodec/distributed_encoder.c
-@@ -0,0 +1,622 @@
+@@ -0,0 +1,629 @@
 +/*
 +* Scalable Video Technology for distributed encoder library plugin
 +*
@@ -725,6 +725,8 @@ index 0000000..332bf7b
 +
 +#include "internal.h"
 +#include "avcodec.h"
++
++static bool glog_initialized = false;
 +
 +typedef struct DEContext {
 +    const AVClass *class;
@@ -773,6 +775,7 @@ index 0000000..332bf7b
 +    DEContext   *deCxt = avctx->priv_data;
 +
 +    memset(DEparams, 0, sizeof(DistributedEncoderParam));
++    DEparams->glog_initialized = glog_initialized;
 +
 +    EncoderParam            params;
 +    memset(&params, 0, sizeof(EncoderParam));
@@ -937,6 +940,10 @@ index 0000000..332bf7b
 +    if(!deCxt->handle)
 +    {
 +        return AVERROR(EINVAL);
++    }
++    else
++    {
++        glog_initialized = true;
 +    }
 +
 +    return 0;
