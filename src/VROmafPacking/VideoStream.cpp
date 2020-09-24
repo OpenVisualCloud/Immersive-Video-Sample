@@ -442,7 +442,7 @@ int32_t VideoStream::Initialize(
 
     if (initInfo->projType != (EGeometryType)(m_projType))
     {
-        LOG(ERROR) << "Not matched projection type in bitstream and initial information !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Not matched projection type in bitstream and initial information !\n");
         return OMAF_ERROR_INVALID_PROJECTIONTYPE;
     }
 
@@ -457,7 +457,7 @@ int32_t VideoStream::Initialize(
     {
         if (!(initInfo->cubeMapInfo))
         {
-            LOG(ERROR) << "There is no input CubeMap information in initial information !" << std::endl;
+            OMAF_LOG(LOG_ERROR, "There is no input CubeMap information in initial information !\n");
             return OMAF_ERROR_BAD_PARAM;
         }
         m_cubeMapInfo[0] = (initInfo->cubeMapInfo)->face0MapInfo;
@@ -469,14 +469,14 @@ int32_t VideoStream::Initialize(
 
         if (m_tileInCol % 2)
         {
-            LOG(ERROR) << "Each face in CubeMap should have the same tile rows !" << std::endl;
+            OMAF_LOG(LOG_ERROR, "Each face in CubeMap should have the same tile rows !\n");
             return OMAF_ERROR_BAD_PARAM;
         }
         m_tileRowsInFace = m_tileInCol / 2;
 
         if (m_tileInRow % 3)
         {
-            LOG(ERROR) << "Each face in CubeMap should have the same tile cols !" << std::endl;
+            OMAF_LOG(LOG_ERROR, "Each face in CubeMap should have the same tile cols !\n");
             return OMAF_ERROR_BAD_PARAM;
         }
         m_tileColsInFace = m_tileInRow / 3;

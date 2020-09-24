@@ -110,33 +110,33 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
 {
     if (!m_360scvpParam || !m_360scvpHandle)
     {
-        LOG(ERROR) << "360SCVP should be set up before selecting tiles based on viewport !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "360SCVP should be set up before selecting tiles based on viewport !\n");
         return OMAF_ERROR_NULL_PTR;
     }
 
     if ((yaw < -180.0) || (yaw > 180.0))
     {
-        LOG(ERROR) << "Invalid yaw in selecting tiles based on viewport !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Invalid yaw in selecting tiles based on viewport !\n");
         return OMAF_ERROR_INVALID_DATA;
     }
 
     if ((pitch < -90.0) || (pitch > 90.0))
     {
-        LOG(ERROR) << "Invalid pitch in selecting tiles based on viewport !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Invalid pitch in selecting tiles based on viewport !\n");
         return OMAF_ERROR_INVALID_DATA;
     }
 
     int32_t ret = I360SCVP_setViewPort(m_360scvpHandle, yaw, pitch);
     if (ret)
     {
-        LOG(ERROR) << "Failed to set viewport !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Failed to set viewport !\n");
         return OMAF_ERROR_SCVP_SET_FAILED;
     }
 
     ret = I360SCVP_process(m_360scvpParam, m_360scvpHandle);
     if (ret)
     {
-        LOG(ERROR) << "Failed in 360SCVP process !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Failed in 360SCVP process !\n");
         return OMAF_ERROR_SCVP_PROCESS_FAILED;
     }
 
@@ -144,7 +144,7 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
     TileDef *tilesInView = new TileDef[1024];
     if (!tilesInView)
     {
-        LOG(ERROR) << "Failed to create tiles def array !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Failed to create tiles def array !\n");
         return OMAF_ERROR_NULL_PTR;
     }
 
@@ -155,7 +155,7 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
     selectedTilesNum = I360SCVP_getTilesInViewport(tilesInView, &paramViewport, m_360scvpHandle);
     if ((selectedTilesNum <= 0) || ((uint64_t)(selectedTilesNum) > totalTiles))
     {
-        LOG(ERROR) << "Unreasonable selected tiles number based on viewport !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Unreasonable selected tiles number based on viewport !\n");
         delete [] tilesInView;
         tilesInView = NULL;
         return OMAF_ERROR_SCVP_INCORRECT_RESULT;
@@ -165,7 +165,7 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
     while(sqrtedSize && (selectedTilesNum % sqrtedSize)) { sqrtedSize--; }
     if (sqrtedSize == 1)
     {
-        LOG(INFO) << "Additional tile needs to be selected for tiles stitching !" << std::endl;
+        OMAF_LOG(LOG_INFO, "Additional tile needs to be selected for tiles stitching !\n");
         selectedTilesNum++;
         tilesInView[selectedTilesNum-1].x = tilesInView[0].x;
         tilesInView[selectedTilesNum-1].y = tilesInView[0].y;
@@ -178,10 +178,11 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
     while(sqrtedSize && (selectedTilesNum % sqrtedSize)) { sqrtedSize--; }
     uint32_t dividedSize = selectedTilesNum / sqrtedSize;
     uint32_t supplementedNum = 0;
+
     if (((sqrtedSize > dividedSize) && ((sqrtedSize - dividedSize) > 3)) ||
         ((dividedSize > sqrtedSize) && ((dividedSize - sqrtedSize) > 3)))
     {
-        LOG(INFO) << "High packed sub-picture width/height ratio  " << (sqrtedSize > dividedSize ? sqrtedSize : dividedSize) << " :  " << (sqrtedSize > dividedSize ? dividedSize : sqrtedSize) << std::endl;
+        OMAF_LOG(LOG_INFO, "High packed sub-picture width/height ratio %u : %u\n", (sqrtedSize > dividedSize ? sqrtedSize : dividedSize), (sqrtedSize > dividedSize ? dividedSize : sqrtedSize));
     }
 
     while ((sqrtedSize > dividedSize) && ((sqrtedSize - dividedSize) > 3))
@@ -235,7 +236,7 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
 
     if (supplementedNum > 0)
     {
-        LOG(INFO) << "Supplement  " << supplementedNum << " tiles for packed sub-picture width/height ratio  " << (dividedSize > sqrtedSize ? dividedSize : sqrtedSize) << " :  " << (dividedSize > sqrtedSize ? sqrtedSize : dividedSize) << std::endl;
+        OMAF_LOG(LOG_INFO, "Supplement %u tiles for packed sub-picture width/height ratio %u : %u\n", supplementedNum, (dividedSize > sqrtedSize ? dividedSize : sqrtedSize), (dividedSize > sqrtedSize ? sqrtedSize : dividedSize));
     }
 
     CCDef *outCC = new CCDef;
@@ -248,7 +249,7 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
     ret = I360SCVP_getContentCoverage(m_360scvpHandle, outCC);
     if (ret)
     {
-        LOG(ERROR) << "Failed to calculate Content coverage information !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Failed to calculate Content coverage information !\n");
         delete [] tilesInView;
         tilesInView = NULL;
         delete outCC;
@@ -343,7 +344,7 @@ int32_t ExtractorTrackGenerator::CalculateViewportNum()
     m_360scvpParam = new param_360SCVP;
     if (!m_360scvpParam)
     {
-        LOG(ERROR) << "Failed to create 360SCVP parameter !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Failed to create 360SCVP parameter !\n");
         return OMAF_ERROR_NULL_PTR;
     }
 
@@ -403,7 +404,7 @@ int32_t ExtractorTrackGenerator::CalculateViewportNum()
     m_360scvpHandle = I360SCVP_Init(m_360scvpParam);
     if (!m_360scvpHandle)
     {
-        LOG(ERROR) << "Failed to create 360SCVP handle !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Failed to create 360SCVP handle !\n");
         return OMAF_ERROR_SCVP_INIT_FAILED;
     }
 
@@ -472,7 +473,7 @@ int32_t ExtractorTrackGenerator::FillDstContentCoverage(
     viewportCC = m_viewportCCInfo[viewportIdx];
     if (!viewportCC)
     {
-        LOG(ERROR) << "There is no calculated CC info for the viewport !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "There is no calculated CC info for the viewport !\n");
         return OMAF_ERROR_NULL_PTR;
     }
 
@@ -665,7 +666,7 @@ int32_t ExtractorTrackGenerator::Initialize()
     if (ret)
         return ret;
 
-    LOG(INFO) << "Total Viewport number is  " << m_viewportNum << std::endl;
+    OMAF_LOG(LOG_INFO, "Total Viewport number is %d\n", m_viewportNum);
 
     std::set<uint16_t> allSelectedNums;
     std::map<uint16_t, std::map<uint16_t, TileDef*>>::iterator itSelection;
@@ -676,7 +677,7 @@ int32_t ExtractorTrackGenerator::Initialize()
     }
     std::set<uint16_t>::reverse_iterator numIter = allSelectedNums.rbegin();
     uint16_t maxSelectedNum = *numIter;
-    LOG(INFO) << "Maxmum selected tiles number in viewport is  " << maxSelectedNum << std::endl;
+    OMAF_LOG(LOG_INFO, "Maxmum selected tiles number in viewport is %d\n", maxSelectedNum);
 
     for (itSelection = m_tilesSelection.begin(); itSelection != m_tilesSelection.end(); itSelection++)
     {
@@ -772,7 +773,7 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
             int32_t retInit = extractorTrack->Initialize();
             if (retInit)
             {
-                LOG(ERROR) << "Failed to initialize extractor track !" << std::endl;
+                OMAF_LOG(LOG_ERROR, "Failed to initialize extractor track !\n");
 
                 std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
                 for ( ; itET != extractorTrackMap.end(); )

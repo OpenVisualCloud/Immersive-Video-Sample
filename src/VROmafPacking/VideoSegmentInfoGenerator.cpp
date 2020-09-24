@@ -31,6 +31,7 @@
 //! Created on April 30, 2019, 6:04 AM
 //!
 
+#include <utility>
 #include "VideoSegmentInfoGenerator.h"
 
 VCD_NS_BEGIN

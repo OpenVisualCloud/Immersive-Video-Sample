@@ -117,17 +117,6 @@ typedef struct ViewportInformation
 }ViewportInformation;
 
 //!
-//! \enum:  TilesMergingType
-//! \brief: define the tiles merging type, like two resolutions
-//!         tiles merging type
-//
-//typedef enum
-//{
-//    OnlyOneVideo       = 0,
-//    TwoResTilesMerging = 1
-//}TilesMergingType;
-
-//!
 //! \struct: SegmentationInfo
 //! \brief:  define the segmentation information set by the
 //!          library interface externally, including segment
@@ -201,6 +190,7 @@ typedef struct InitialInfo
 
     EGeometryType           projType;          //mandatory
     InputCubeMapInfo        *cubeMapInfo;      //needed if projType is E_SVIDEO_CUBEMAP
+    void                    *logFunction;       //external log callback function pointer, NULL if external log is not used
 }InitialInfo;
 
 //!

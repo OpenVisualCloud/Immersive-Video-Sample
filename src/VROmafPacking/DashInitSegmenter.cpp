@@ -148,7 +148,7 @@ void DashInitSegmenter::AddH265ExtractorTrack(VCD::MP4::TrackId trackId, CodedMe
     map<TrackId, TrackConfig>::const_iterator iter = m_config.tracks.find(trackId);
     if (iter == m_config.tracks.end())
     {
-        LOG(ERROR) << "Can't find specified track index !" << endl;
+        OMAF_LOG(LOG_ERROR, "Can't find specified track index !\n");
         return;
     }
     TrackConfig trackCfg = iter->second;
@@ -162,7 +162,7 @@ int32_t DashInitSegmenter::GenerateInitSegment(
     map<VCD::MP4::TrackId, TrackSegmentCtx*> tileTrackSegCtxs)
 {
     VCD::MP4::TrackId trackId = trackSegCtx->trackIdx;
-
+    OMAF_LOG(LOG_INFO, "Generate initial segment !\n");
     bool hadFirstFramesRemaining = m_firstFrameRemaining.size();
     bool endOfStream = trackSegCtx->codedMeta.isEOS;
     VCD::MP4::DataItem<CodedMeta> codedMeta;

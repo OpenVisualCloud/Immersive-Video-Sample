@@ -79,6 +79,17 @@ public:
     int32_t InitOmafPackage(InitialInfo *initInfo);
 
     //!
+    //! \brief  Set the customized logging callback function
+    //!
+    //! \param  [in] logFunction
+    //!         the pointer to customized logging callback function
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t SetLogCallBack(LogFunction logFunction);
+
+    //!
     //! \brief  Packet the specified media stream
     //!
     //! \param  [in] streamIdx

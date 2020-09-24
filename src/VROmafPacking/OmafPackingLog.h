@@ -25,40 +25,26 @@
  */
 
 //!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
+//! \file:   OmafPackingLog.h
+//! \brief:  Include the log function declaration
 //!
 //! Created on April 30, 2019, 6:04 AM
 //!
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#ifndef _PACKINGLOG_H_
+#define _PACKINGLOG_H_
 
-#include "../utils/ns_def.h"
-#include "../utils/error.h"
-#include "OmafPackingLog.h"
+#include "../utils/Log.h"
 
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
+//global logging callback function
+extern LogFunction logCallBack;
 
-extern "C"
-{
-#include "safestringlib/safe_mem_lib.h"
-}
+#define FILE_NAME(x) (strrchr(x, '/') ? strrchr(x, '/')+1:x)
 
-#define DELETE_MEMORY(x) \
-    if (x)               \
-    {                    \
-        delete x;        \
-        x = NULL;        \
-    }
+#define PRINT_LOG(logLevel, source, line, fmt, args...)   \
+    logCallBack(logLevel, source, line, fmt, ##args);    \
 
-#define DELETE_ARRAY(x)  \
-    if (x)               \
-    {                    \
-        delete[] x;      \
-        x = NULL;        \
-    }
+#define OMAF_LOG(logLevel, fmt, args...)                             \
+    PRINT_LOG(logLevel, FILE_NAME(__FILE__), __LINE__, fmt, ##args)  \
 
-#endif /* _COMMON_H_ */
+#endif /* _PACKINGLOG_H_ */

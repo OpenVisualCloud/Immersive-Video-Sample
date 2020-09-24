@@ -155,6 +155,10 @@ int32_t OmafPackage::InitOmafPackage(InitialInfo *initInfo)
         return OMAF_ERROR_NULL_PTR;
 
     m_initInfo = initInfo;
+    if (initInfo->logFunction)
+        logCallBack = (LogFunction)(initInfo->logFunction);
+    else
+        logCallBack = GlogFunction; //default log callback function
 
     uint8_t videoStreamsNum = initInfo->bsNumVideo;
     if (!videoStreamsNum)
@@ -179,6 +183,15 @@ int32_t OmafPackage::InitOmafPackage(InitialInfo *initInfo)
     if (ret)
         return OMAF_ERROR_CREATE_SEGMENTATION;
 
+    return ERROR_NONE;
+}
+
+int32_t OmafPackage::SetLogCallBack(LogFunction logFunction)
+{
+    if (!logFunction)
+        return OMAF_ERROR_NULL_PTR;
+
+    logCallBack = logFunction;
     return ERROR_NONE;
 }
 

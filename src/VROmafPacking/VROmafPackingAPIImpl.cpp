@@ -33,6 +33,7 @@
 
 #include "VROmafPackingAPI.h"
 #include "OmafPackage.h"
+#include "Log.h"
 
 VCD_USE_VRVIDEO;
 
@@ -53,6 +54,23 @@ Handler VROmafPackingInit(InitialInfo *initInfo)
     }
 
     return (Handler)((long)omafPackage);
+}
+
+int32_t VROmafPackingSetLogCallBack(Handler hdl, void* externalLog)
+{
+    OmafPackage *omafPackage = (OmafPackage*)hdl;
+    if (!omafPackage)
+        return OMAF_ERROR_NULL_PTR;
+
+    LogFunction logFunction = (LogFunction)externalLog;
+    if (!logFunction)
+        return OMAF_ERROR_NULL_PTR;
+
+    int32_t ret = omafPackage->SetLogCallBack(logFunction);
+    if (ret)
+        return ret;
+
+    return ERROR_NONE;
 }
 
 int32_t VROmafPackingWriteSegment(Handler hdl, uint8_t streamIdx, FrameBSInfo *frameInfo)

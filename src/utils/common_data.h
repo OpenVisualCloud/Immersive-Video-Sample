@@ -25,40 +25,20 @@
  */
 
 //!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
+//! \file:   common_data.h
+//! \brief:  common data type definition used by all components
 //!
 //! Created on April 30, 2019, 6:04 AM
 //!
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
-
-#include "../utils/ns_def.h"
-#include "../utils/error.h"
-#include "OmafPackingLog.h"
-
 #include <stdint.h>
-#include <string.h>
-#include <stdio.h>
 
-extern "C"
+typedef enum
 {
-#include "safestringlib/safe_mem_lib.h"
-}
+    LOG_INFO = 0,
+    LOG_WARNING,
+    LOG_ERROR,
+    LOG_FATAL,
+}LogLevel;
 
-#define DELETE_MEMORY(x) \
-    if (x)               \
-    {                    \
-        delete x;        \
-        x = NULL;        \
-    }
-
-#define DELETE_ARRAY(x)  \
-    if (x)               \
-    {                    \
-        delete[] x;      \
-        x = NULL;        \
-    }
-
-#endif /* _COMMON_H_ */
+typedef void (*LogFunction)(LogLevel logLevel, const char* sourceFile, uint64_t line, const char* fmt, ...);
