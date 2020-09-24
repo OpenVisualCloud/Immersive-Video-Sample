@@ -58,6 +58,22 @@ typedef void* Handler;
 Handler VROmafPackingInit(InitialInfo *initInfo);
 
 //!
+//! \brief  VR OMAF Packing library set customized logging callback.
+//!         The default logging callback is glog.
+//!         If customized logging callback is needed, call this API
+//!         after initialization API
+//!
+//! \param  [in] hdl
+//!         VR OMAF Packing library handle
+//! \param  [in] externalLog
+//!         the customized logging callback function pointer
+//!
+//! \return int32_t
+//!         ERROR_NONE if success, else failed reason
+//!
+int32_t VROmafPackingSetLogCallBack(Handler hdl, void* externalLog);
+
+//!
 //! \brief  VR OMAF Packing library writes segment for specified
 //!         media stream, called when one new frame is needed to
 //!         be written into the segment

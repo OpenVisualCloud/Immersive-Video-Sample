@@ -131,7 +131,7 @@ int32_t MpdGenerator::Initialize()
         {
             if (chmod(&(m_segInfo->dirName[0]), modeFile) != 0)
             {
-                LOG(ERROR) << "Failed to change write mode for folder " << m_segInfo->dirName << " ! " << std::endl;
+                OMAF_LOG(LOG_ERROR, "Failed to change write mode for folder %s\n", m_segInfo->dirName);
                 return OMAF_ERROR_CHANGE_FOLDERMODE_FAILED;
             }
         }
@@ -140,7 +140,7 @@ int32_t MpdGenerator::Initialize()
     {
         if (mkdir(&(m_segInfo->dirName[0]), modeFile) != 0)
         {
-            LOG(ERROR) << "Failed to create folder " << m_segInfo->dirName << " ! " << std::endl;
+            OMAF_LOG(LOG_ERROR, "Failed to create folder %s\n", m_segInfo->dirName);
             return OMAF_ERROR_CREATE_FOLDER_FAILED;
         }
     }

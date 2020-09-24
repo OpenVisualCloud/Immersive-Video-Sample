@@ -210,7 +210,8 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
 
     if (m_videosNum != bitRateRanking.size())
     {
-        LOG(ERROR) << "Invalid video streams number !" << std::endl;
+        //LOG(ERROR) << "Invalid video streams number !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Invalid video streams number !\n");
         return OMAF_ERROR_VIDEO_NUM;
     }
     m_videosBitrate = new uint64_t[m_videosNum];
@@ -761,7 +762,7 @@ int32_t DefaultSegmentation::StartExtractorTrackSegmentation(
 
     if (ret)
     {
-        LOG(ERROR) << "Failed to create extractor track segmentation thread !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Failed to create extractor track segmentation thread !\n");
         return OMAF_ERROR_CREATE_THREAD;
     }
 
@@ -777,7 +778,7 @@ int32_t DefaultSegmentation::StartLastExtractorTrackSegmentation(
 
     if (ret)
     {
-        LOG(ERROR) << "Failed to create extractor track segmentation thread !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Failed to create extractor track segmentation thread !\n");
         return OMAF_ERROR_CREATE_THREAD;
     }
 
@@ -810,7 +811,7 @@ int32_t DefaultSegmentation::ExtractorTrackSegmentation()
     pthread_t threadId = pthread_self();
     if (threadId == 0)
     {
-        LOG(ERROR) << "NULL thread id for extractor track segmentation !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "NULL thread id for extractor track segmentation !\n");
         return OMAF_ERROR_INVALID_THREAD;
     }
 
@@ -845,7 +846,7 @@ int32_t DefaultSegmentation::ExtractorTrackSegmentation()
         }
         if (itExtractorTrack == extractorTracks->end())
         {
-            LOG(ERROR) << "Can't find specified Extractor Track! " << std::endl;
+            OMAF_LOG(LOG_ERROR, "Can't find specified Extractor Track!\n");
             return OMAF_ERROR_INVALID_DATA;
         }
         isFrameReady = ((m_currSegedFrmNum == (m_prevSegedFrmNum + 1)) && (extractorTrack->GetProcessedFrmNum() == m_currProcessedFrmNum) && (m_currSegedFrmNum == (m_currProcessedFrmNum + 1)));
@@ -861,7 +862,7 @@ int32_t DefaultSegmentation::ExtractorTrackSegmentation()
 
             if (itExtractorTrack == extractorTracks->end())
             {
-                LOG(ERROR) << "Can't find specified Extractor Track! " << std::endl;
+                OMAF_LOG(LOG_ERROR, "Can't find specified Extractor Track!\n");
                 return OMAF_ERROR_INVALID_DATA;
             }
 
@@ -874,7 +875,7 @@ int32_t DefaultSegmentation::ExtractorTrackSegmentation()
             itET = m_extractorSegCtx.find(extractorTrack1);
             if (itET == m_extractorSegCtx.end())
             {
-                LOG(ERROR) << "Can't find segmentation context for specified extractor track !" << std::endl;
+                OMAF_LOG(LOG_ERROR, "Can't find segmentation context for specified extractor track !\n");
                 return OMAF_ERROR_INVALID_DATA;
             }
             TrackSegmentCtx *trackSegCtx = itET->second;
@@ -908,7 +909,7 @@ int32_t DefaultSegmentation::LastExtractorTrackSegmentation()
     pthread_t threadId = pthread_self();
     if (threadId == 0)
     {
-        LOG(ERROR) << "NULL thread id for extractor track segmentation !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "NULL thread id for extractor track segmentation !\n");
         return OMAF_ERROR_INVALID_THREAD;
     }
 
@@ -942,7 +943,7 @@ int32_t DefaultSegmentation::LastExtractorTrackSegmentation()
         }
         if (itExtractorTrack == extractorTracks->end())
         {
-            LOG(ERROR) << "Can't find specified Extractor Track! " << std::endl;
+            OMAF_LOG(LOG_ERROR, "Can't find specified Extractor Track!\n");
             return OMAF_ERROR_INVALID_DATA;
         }
 
@@ -959,7 +960,7 @@ int32_t DefaultSegmentation::LastExtractorTrackSegmentation()
 
             if (itExtractorTrack == extractorTracks->end())
             {
-                LOG(ERROR) << "Can't find specified Extractor Track! " << std::endl;
+                OMAF_LOG(LOG_ERROR, "Can't find specified Extractor Track!\n");
                 return OMAF_ERROR_INVALID_DATA;
             }
 
@@ -971,7 +972,7 @@ int32_t DefaultSegmentation::LastExtractorTrackSegmentation()
             itET = m_extractorSegCtx.find(extractorTrack1);
             if (itET == m_extractorSegCtx.end())
             {
-                LOG(ERROR) << "Can't find segmentation context for specified extractor track !" << std::endl;
+                OMAF_LOG(LOG_ERROR, "Can't find segmentation context for specified extractor track !\n");
                 return OMAF_ERROR_INVALID_DATA;
             }
             TrackSegmentCtx *trackSegCtx = itET->second;
@@ -1107,9 +1108,9 @@ int32_t DefaultSegmentation::VideoSegmentation()
             m_threadNumForET = extractorTrackNum / m_segInfo->extractorTracksPerSegThread + 1;
         }
 
-        LOG(INFO) << "Lanuch  " << m_threadNumForET << " threads for Extractor Track segmentation!" << std::endl;
-        LOG(INFO) << "Average Extractor Track number per thread is  " << m_aveETPerSegThread << std::endl;
-        LOG(INFO) << "The last thread involves  " << m_lastETPerSegThread << " Extractor Tracks !" << std::endl;
+        OMAF_LOG(LOG_INFO, "Lanuch %d threads for Extractor Track segmentation!\n", m_threadNumForET);
+        OMAF_LOG(LOG_INFO, "Average Extractor Track number per thread is %d\n", m_aveETPerSegThread);
+        OMAF_LOG(LOG_INFO, "The last thread involves %d Extractor Tracks !\n", m_lastETPerSegThread);
     }
 
     while (1)
@@ -1250,7 +1251,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
             }
             if (m_extractorThreadIds.size() != m_threadNumForET)
             {
-                LOG(ERROR) << "Launched threads number  " << (m_extractorThreadIds.size()) << " doesn't match calculated threads number  " << m_threadNumForET << std::endl;
+                 OMAF_LOG(LOG_ERROR, "Launched threads number %ld doesn't match calculated threads number %d\n", (m_extractorThreadIds.size()), m_threadNumForET);
             }
 
             usleep(2000);
@@ -1297,7 +1298,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
             std::chrono::high_resolution_clock clock;
             uint64_t before = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-            LOG(INFO) << "Complete one seg in  " << (before - currentT) << " ms" << std::endl;
+            OMAF_LOG(LOG_INFO, "Complete one seg in %lld ms\n", (before - currentT));
             currentT = before;
         }
 
@@ -1358,7 +1359,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 if (ret)
                     return ret;
             }
-            LOG(INFO) << "Total  " << m_framesNum << " frames written into segments!" << std::endl;
+            OMAF_LOG(LOG_INFO, "Total %ld frames written into segments!\n", m_framesNum);
             break;
         }
         m_framesNum++;

@@ -25,40 +25,13 @@
  */
 
 //!
-//! \file:   common.h
-//! \brief:  Include the common system and data type header files that needed
+//! \file:   OmafPackingLog.cpp
+//! \brief:  Include the log function implementation
 //!
 //! Created on April 30, 2019, 6:04 AM
 //!
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
-
-#include "../utils/ns_def.h"
-#include "../utils/error.h"
 #include "OmafPackingLog.h"
 
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
 
-extern "C"
-{
-#include "safestringlib/safe_mem_lib.h"
-}
-
-#define DELETE_MEMORY(x) \
-    if (x)               \
-    {                    \
-        delete x;        \
-        x = NULL;        \
-    }
-
-#define DELETE_ARRAY(x)  \
-    if (x)               \
-    {                    \
-        delete[] x;      \
-        x = NULL;        \
-    }
-
-#endif /* _COMMON_H_ */
+LogFunction logCallBack = GlogFunction;
