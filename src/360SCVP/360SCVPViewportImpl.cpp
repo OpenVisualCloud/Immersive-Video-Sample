@@ -859,13 +859,21 @@ int32_t TgenViewport::parseCfg(  )
         {
             for (uint32_t i = 0; i < m_tileNumRow; i++)
             {
+                int32_t posX = 0;
                 for (uint32_t j = 0; j < m_tileNumCol; j++)
                 {
+                    m_srd[idx].x = posX;
+                    m_srd[idx].y = posY;
                     m_srd[idx].tilewidth = stepX;
                     m_srd[idx].tileheight = stepY;
+                    m_srd[idx].faceId = faceid;
+                    m_srd[idx].isOccupy = 0;
+                    posX += stepX;
                     idx++;
                 }
+                posY += stepY;
             }
+            posY = 0;
         }
         calcTilesGridInCubemap();
     }
