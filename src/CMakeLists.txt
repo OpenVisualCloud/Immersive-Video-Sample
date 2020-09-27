@@ -67,6 +67,7 @@ IF(${TARGET} STREQUAL "server")
                   --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP/"
                   --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/main_encoder/"
                   --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/util/"
+                  --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/utils/common_data.h"
                   --extra-ldflags="-L${CMAKE_BINARY_DIR}/VROmafPacking/"
                   --extra-ldflags="-L${CMAKE_BINARY_DIR}/360SCVP/"
                   --extra-ldflags="-L${CMAKE_BINARY_DIR}/distributed_encoder/main_encoder/" &&
