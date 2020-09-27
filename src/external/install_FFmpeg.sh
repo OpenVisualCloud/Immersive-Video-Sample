@@ -3,28 +3,28 @@
 TARGET=$1
 REPO=$2
 
+cd ..
 if [ "${REPO}" != "oss" ] ; then
-    cd ..
     if [ ! -d "./FFmpeg" ] ; then
-        git clone https://github.com/FFmpeg/FFmpeg.git
+        if [ ! -f "./ffmpeg-4.3.1.tar.xz" ] ; then
+            wget http://ffmpeg.org/releases/ffmpeg-4.3.1.tar.xz
+        fi
+        tar xf ffmpeg-4.3.1.tar.xz && mv ffmpeg-4.3.1 FFmpeg
     fi
-    if [ "${TARGET}" == "server" ] ; then
+    if [ ! -f "FFmpeg/libavcodec/distributed_encoder.c" ] ; then
         cd FFmpeg
-        git checkout release/4.1
-        git checkout c2ac3b8e6a040e33d53fa13548848c8ba981a8e4
+        patch -p1 < ../ffmpeg/patches/FFmpeg_OMAF.patch
         cd ..
-        patch -p1 < ffmpeg/patches/FFmpeg_OMAF.patch
     fi
-else
-    cd ..
 fi
 
 if [ "${TARGET}" == "server" ] ; then
 
-    patch -p1 < ffmpeg/patches/enable_libopenhevc.patch
     mkdir -p build/external/ffmpeg_server
     cd build/external/ffmpeg_server
-    ../../../FFmpeg/configure --prefix=/usr --libdir=/usr/local/lib --enable-static --enable-shared --enable-gpl --enable-nonfree --disable-optimizations --disable-vaapi
+    ../../../FFmpeg/configure --prefix=/usr --libdir=/usr/local/lib \
+        --enable-static --enable-shared --enable-gpl --enable-nonfree \
+        --disable-optimizations --disable-vaapi
     make -j $(nproc)
     sudo make install
 
