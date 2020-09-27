@@ -4127,7 +4127,7 @@ new file mode 100644
 index 0000000..0a66efa
 --- /dev/null
 +++ b/FFmpeg/libavformat/omaf_packing_enc.c
-@@ -0,0 +1,569 @@
+@@ -0,0 +1,617 @@
 +/*
 + * Intel tile Dash muxer
 + *
@@ -4167,6 +4167,7 @@ index 0000000..0a66efa
 +
 +#include "360SCVPAPI.h"
 +#include "VROmafPackingAPI.h"
++#include "common_data.h"
 +
 +typedef struct {
 +    int         streamIdx;
@@ -4208,6 +4209,7 @@ index 0000000..0a66efa
 +    int64_t        frameNum;
 +    BufferedFrame  bufferedFrames[1024];
 +    int            bufferedFramesNum;
++    bool           need_external_log;
 +} OMAFContext;
 +
 +static uint8_t convert_face_index(char *face_name)
@@ -4248,6 +4250,42 @@ index 0000000..0a66efa
 +        return ROTATION_270_ANTICLOCKWISE;
 +    else
 +        return NO_TRANSFORM;
++}
++
++static void ffmpeg_log_callback(LogLevel log_level, const char* file_name, uint64_t line_num, const char* fmt, ...)
++{
++    va_list vl;
++    va_start(vl, fmt);
++
++    switch (log_level)
++    {
++        case LOG_INFO:
++        {
++            av_vlog(NULL, AV_LOG_INFO, fmt, vl);
++            break;
++        }
++        case LOG_WARNING:
++        {
++            av_vlog(NULL, AV_LOG_WARNING, fmt, vl);
++            break;
++        }
++        case LOG_ERROR:
++        {
++            av_vlog(NULL, AV_LOG_ERROR, fmt, vl);
++            break;
++        }
++        case LOG_FATAL:
++        {
++            av_vlog(NULL, AV_LOG_FATAL, fmt, vl);
++            break;
++        }
++        default:
++        {
++            av_log(NULL, AV_LOG_ERROR, "Invalid log level !");
++            break;
++        }
++    }
++    va_end(vl);
 +}
 +
 +static int omaf_init(AVFormatContext *s)
@@ -4306,7 +4344,16 @@ index 0000000..0a66efa
 +    {
 +        initInfo->pluginPath = NULL;
 +        initInfo->pluginName = NULL;
-+        initInfo->fixedPackedPicRes = NULL;
++        initInfo->fixedPackedPicRes = false;
++    }
++
++    if (c->need_external_log)
++    {
++        initInfo->logFunction = (void*)(ffmpeg_log_callback);
++    }
++    else
++    {
++        initInfo->logFunction = NULL;
 +    }
 +
 +    initInfo->bsBuffers = (BSBuffer*)malloc(sizeof(BSBuffer) * initInfo->bsNumVideo);
@@ -4670,6 +4717,7 @@ index 0000000..0a66efa
 +    { "plugin_path", "OMAF Packing plugin path", OFFSET(pluginPath), AV_OPT_TYPE_STRING, {.str = "/usr/local/lib"}, 0, 0, E },
 +    { "plugin_name", "OMAF Packing plugin name", OFFSET(pluginName), AV_OPT_TYPE_STRING, {.str = "HighResPlusFullLowResPacking"}, 0, 0, E },
 +    { "fixed_extractors_res", "whether extractor track needs the fixed resolution", OFFSET(fixedPackedPicRes), AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, E },
++    { "need_external_log", "whether external log callback is needed", OFFSET(need_external_log), AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, E },
 +    { NULL },
 +};
 +
