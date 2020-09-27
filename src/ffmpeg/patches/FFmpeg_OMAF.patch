@@ -1,70 +1,70 @@
-diff --git a/FFmpeg/Changelog b/FFmpeg/Changelog
-index 0343ce9..f1c70df 100644
---- a/FFmpeg/Changelog
-+++ b/FFmpeg/Changelog
-@@ -33,6 +33,8 @@ version <next>:
- - ilbc decoder
- - audio denoiser as afftdn filter
- - AV1 parser
-+- add SVT(scalable Video Technology) HEVC encoder
-+- add tiled-base distribute encoder based on SVT & x265
- - SER demuxer
- - sinc audio filter source
- - chromahold filter
-diff --git a/FFmpeg/configure b/FFmpeg/configure
-index 85d5dd5..c168651 100755
---- a/FFmpeg/configure
-+++ b/FFmpeg/configure
-@@ -262,6 +262,15 @@ External library support:
-   --enable-libspeex        enable Speex de/encoding via libspeex [no]
-   --enable-libsrt          enable Haivision SRT protocol via libsrt [no]
-   --enable-libssh          enable SFTP protocol via libssh [no]
-+  --enable-libsvthevc      enable HEVC encodig via SVT [no]
+diff -urN FFmpeg/configure FFmpeg-patched/configure
+--- FFmpeg/configure	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/configure	2020-09-27 13:35:13.977526503 +0800
+@@ -252,6 +252,7 @@
+   --enable-libopencv       enable video filtering via libopencv [no]
+   --enable-libopenh264     enable H.264 encoding via OpenH264 [no]
+   --enable-libopenjpeg     enable JPEG 2000 de/encoding via OpenJPEG [no]
++  --enable-libopenhevc     enable HEVC decoding via OpenHEVC [no]
+   --enable-libopenmpt      enable decoding tracked files via libopenmpt [no]
+   --enable-libopus         enable Opus de/encoding via libopus [no]
+   --enable-libpulse        enable Pulseaudio input via libpulse [no]
+@@ -293,6 +294,16 @@
+   --enable-libxcb-shape    enable X11 grabbing shape rendering [autodetect]
+   --enable-libxvid         enable Xvid encoding via xvidcore,
+                            native MPEG-4/Xvid encoder exists [no]
++  --enable-libsvthevc             enable HEVC encodig via SVT [no]
 +  --enable-libDistributedEncoder  enable Distributed Encoder [no]
-+  --enable-hevctile        enable HEVC tile encodig via SVT or x265 [no]
-+  --enable-libstitch       enable HEVC tile stitch library [no]
-+  --enable-libgpac         enable DASH mux with libgpac [no]
-+  --enable-libVROmafPacking enable OMAF Compliance packing muxer [no]
-+  --enable-libVRDashStreaming enable VR DASH streaming and demuxer library [no]
-+  --enable-libOmafDashAccess enable OMAF Compliance DASH streaming and demuxer library [no]
-+  --enable-libtransform360 enable Transform360 to transform projection from ERP to cubemap [no]
-   --enable-libtensorflow   enable TensorFlow as a DNN module backend
-                            for DNN based filters like sr [no]
-   --enable-libtesseract    enable Tesseract, needed for ocr filter [no]
-@@ -1664,6 +1673,7 @@ EXTERNAL_LIBRARY_GPL_LIST="
-     libcdio
++  --enable-hevctile               enable HEVC tile encodig via SVT or x265 [no]
++  --enable-libstitch              enable HEVC tile stitch library [no]
++  --enable-libgpac                enable DASH mux with libgpac [no]
++  --enable-libVROmafPacking       enable OMAF Compliance packing muxer [no]
++  --enable-libVRDashStreaming     enable VR DASH streaming and demuxer library [no]
++  --enable-libOmafDashAccess      enable OMAF Compliance DASH streaming and demuxer library [no]
++  --enable-libtransform360        enable Transform360 to transform projection from ERP to cubemap [no]
++  --enable-libxcam                enable image processing via xcam [no]
+   --enable-libxml2         enable XML parsing using the C library libxml2, needed
+                            for dash demuxing support [no]
+   --enable-libzimg         enable z.lib, needed for zscale filter [no]
+@@ -1721,6 +1732,7 @@
      libdavs2
      librubberband
-+    libsvthevc    
      libvidstab
++    libsvthevc
      libx264
      libx265
-@@ -1725,6 +1735,7 @@ EXTERNAL_LIBRARY_LIST="
+     libxavs
+@@ -1783,6 +1795,13 @@
      libjack
      libklvanc
      libkvazaar
 +    libgpac
-     libmodplug
-     libmp3lame
-     libmysofa
-@@ -1746,10 +1757,16 @@ EXTERNAL_LIBRARY_LIST="
-     libtensorflow
-     libtesseract
-     libtheora
 +    libstitch
 +    libDistributedEncoder
 +    libtransform360
-     libtwolame
-     libv4l2
-     libvorbis
-     libvpx
 +    libVRDashStreaming
 +    libOmafDashAccess
 +    libVROmafPacking
+     libmodplug
+     libmp3lame
+     libmysofa
+@@ -1791,6 +1810,7 @@
+     libopenjpeg
+     libopenmpt
+     libopus
++    libopenhevc
+     libpulse
+     librabbitmq
+     librav1e
+@@ -1812,6 +1832,7 @@
+     libvpx
      libwavpack
      libwebp
++    libxcam
      libxml2
-@@ -3080,6 +3097,9 @@ pcm_mulaw_at_encoder_select="audio_frame_queue"
+     libzimg
+     libzmq
+@@ -3194,8 +3215,13 @@
  chromaprint_muxer_deps="chromaprint"
  h264_videotoolbox_encoder_deps="pthreads"
  h264_videotoolbox_encoder_select="videotoolbox_encoder"
@@ -73,35 +73,44 @@ index 85d5dd5..c168651 100755
 +hevc_tile_encoder_deps="libsvthevc libstitch"
  hevc_videotoolbox_encoder_deps="pthreads"
  hevc_videotoolbox_encoder_select="videotoolbox_encoder"
++libopenhevc_decoder_deps="libopenhevc"
++libsvt_hevc_encoder_deps="libsvthevc"
  libaom_av1_decoder_deps="libaom"
-@@ -3217,6 +3237,9 @@ spdif_muxer_select="adts_header"
+ libaom_av1_encoder_deps="libaom"
+ libaom_av1_encoder_select="extract_extradata_bsf"
+@@ -3343,9 +3369,14 @@
  spx_muxer_select="ogg_muxer"
  swf_demuxer_suggest="zlib"
  tak_demuxer_select="tak_parser"
 +tile_dash_muxer_select="libgpac"
 +tile_dash_demuxer_select="libOmafDashAccess"
 +omaf_packing_muxer_select="libVROmafPacking"
+ truehd_demuxer_select="mlp_parser"
  tg2_muxer_select="mov_muxer"
  tgp_muxer_select="mov_muxer"
++tile_dash_demuxer_select="libOmafDashAccess"
++omaf_packing_muxer_select="libVROmafPacking"
  vobsub_demuxer_select="mpegps_demuxer"
-@@ -3466,6 +3489,8 @@ pixfmts_super2xsai_test_deps="super2xsai_filter"
+ w64_demuxer_select="wav_demuxer"
+ w64_muxer_select="wav_muxer"
+@@ -3559,6 +3590,7 @@
+ overlay_qsv_filter_deps="libmfx"
+ overlay_qsv_filter_select="qsvvpp"
+ overlay_vulkan_filter_deps="vulkan libglslang"
++xcam_filter_deps="libxcam"
+ owdenoise_filter_deps="gpl"
+ pad_opencl_filter_deps="opencl"
+ pan_filter_deps="swresample"
+@@ -3613,6 +3645,8 @@
  tinterlace_filter_deps="gpl"
  tinterlace_merge_test_deps="tinterlace_filter"
  tinterlace_pad_test_deps="tinterlace_filter"
 +transform360_filter_deps="libtransform360"
 +transform360_filter_select="libtransform360"
  tonemap_filter_deps="const_nan"
+ tonemap_vaapi_filter_deps="vaapi VAProcFilterParameterBufferHDRToneMapping"
  tonemap_opencl_filter_deps="opencl const_nan"
- unsharp_opencl_filter_deps="opencl"
-@@ -3481,6 +3506,7 @@ scale_vaapi_filter_deps="vaapi"
- vpp_qsv_filter_deps="libmfx"
- vpp_qsv_filter_select="qsvvpp"
- 
-+
- # examples
- avio_dir_cmd_deps="avformat avutil"
- avio_reading_deps="avformat avcodec avutil"
-@@ -6080,6 +6106,10 @@ enabled libgme            && { check_pkg_config libgme libgme gme/gme.h gme_new_
+@@ -6314,6 +6348,13 @@
  enabled libgsm            && { for gsm_hdr in "gsm.h" "gsm/gsm.h"; do
                                     check_lib libgsm "${gsm_hdr}" gsm_create -lgsm && break;
                                 done || die "ERROR: libgsm not found"; }
@@ -109,10 +118,21 @@ index 85d5dd5..c168651 100755
 +enabled libVROmafPacking  && require_pkg_config libVROmafPacking VROmafPacking VROmafPackingAPI.h VROmafPackingInit
 +enabled libVRDashStreaming && require_pkg_config libVRDashStreaming VRDashStreaming VRDashStreamingAPI.h DashStreaming_Init
 +enabled libOmafDashAccess && require_pkg_config libOmafDashAccess OmafDashAccess OmafDashAccessApi.h OmafAccess_Init
++enabled libxcam           && { check_pkg_config libxcam "libxcam >= 1.4.0" "capi/xcam_handle.h" xcam_create_handle ||
++                               die "ERROR: libxcam must be installed and version must be >= 1.4.0"; }
++
  enabled libilbc           && require libilbc ilbc.h WebRtcIlbcfix_InitDecode -lilbc $pthreads_extralibs
  enabled libklvanc         && require libklvanc libklvanc/vanc.h klvanc_context_create -lklvanc
  enabled libkvazaar        && require_pkg_config libkvazaar "kvazaar >= 0.8.1" kvazaar.h kvz_api_get
-@@ -6129,6 +6159,10 @@ enabled libsoxr           && require libsoxr soxr.h soxr_create -lsoxr
+@@ -6344,6 +6385,7 @@
+                                  require libopencv opencv2/core/core_c.h cvCreateImageHeader -lopencv_core -lopencv_imgproc; } ||
+                                require_pkg_config libopencv opencv opencv/cxcore.h cvCreateImageHeader; }
+ enabled libopenh264       && require_pkg_config libopenh264 openh264 wels/codec_api.h WelsGetCodecVersion
++enabled libopenhevc       && require libopenhevc libopenhevc/openhevc.h  oh_decode -lopenhevc -lm
+ enabled libopenjpeg       && { check_pkg_config libopenjpeg "libopenjp2 >= 2.1.0" openjpeg.h opj_version ||
+                                { require_pkg_config libopenjpeg "libopenjp2 >= 2.1.0" openjpeg.h opj_version -DOPJ_STATIC && add_cppflags -DOPJ_STATIC; } }
+ enabled libopenmpt        && require_pkg_config libopenmpt "libopenmpt >= 0.2.6557" libopenmpt/libopenmpt.h openmpt_module_create -lstdc++ && append libopenmpt_extralibs "-lstdc++"
+@@ -6369,6 +6411,10 @@
  enabled libssh            && require_pkg_config libssh libssh libssh/sftp.h sftp_init
  enabled libspeex          && require_pkg_config libspeex speex speex/speex.h speex_decoder_init
  enabled libsrt            && require_pkg_config libsrt "srt >= 1.3.0" srt/srt.h srt_socket
@@ -123,20 +143,101 @@ index 85d5dd5..c168651 100755
  enabled libtensorflow     && require libtensorflow tensorflow/c/c_api.h TF_Version -ltensorflow
  enabled libtesseract      && require_pkg_config libtesseract tesseract tesseract/capi.h TessBaseAPICreate
  enabled libtheora         && require libtheora theora/theoraenc.h th_info_init -ltheoraenc -ltheoradec -logg
-diff --git a/FFmpeg/fftools/ffmpeg.c b/FFmpeg/fftools/ffmpeg.c
-index da4259a..ec42201 100644
---- a/FFmpeg/fftools/ffmpeg.c
-+++ b/FFmpeg/fftools/ffmpeg.c
-@@ -1327,6 +1327,8 @@ static void do_video_out(OutputFile *of,
+diff -urN FFmpeg/doc/filters.texi FFmpeg-patched/doc/filters.texi
+--- FFmpeg/doc/filters.texi	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/doc/filters.texi	2020-09-27 13:35:13.073526575 +0800
+@@ -25732,3 +25732,79 @@
+ @end table
+
+ @c man end MULTIMEDIA SOURCES
++
++@section xcam
++Image processing supported through libXCam.
++
++To enable compilation of @var{xcam} filter you need to configure FFmpeg with
++@code{--enable-libxcam}.
++
++libXCam supports automotive surround view stitching, 360 video stitching,
++digital video stabilization, noise reduction and so on. For more information
++about libxcam see @url{https://github.com/intel/libxcam}.
++
++@subsection Options
++
++@table @option
++
++@item inputs
++The number of inputs. Default is @code{1}. 3dnr, waveletnr, fisheye, defog
++and dvs handlers support one input, stitch and stitchcl handlers support
++dynamic inputs.
++
++@item w
++Output video width. Default is @code{0}.
++If the value is 0, the corresponding input width is used for the output.
++
++@item h
++Output video height. Default is @code{0}.
++If the value is 0, the corresponding input height is used for the output.
++
++@item fmt
++Pixel format. Default is @code{auto}.
++
++@table @samp
++@item auto
++Negotiate pixel format automatically, selects the input pixel format as the
++processing format.
++@item nv12
++NV12 format. All handlers support NV12 format.
++@item yuv420
++YUV420 format. Currently, only @b{soft} stitching supports YUV420 format.
++@end table
++
++@item name
++Handler name. Default is @code{stitch}.
++
++@table @samp
++@item 3dnr
++3D denoising
++@item waveletnr
++Wavelet denoising
++@item fisheye
++Fisheye calibration
++@item defog
++Fog removal
++@item dvs
++Digital video stabilizer
++@item stitch
++Soft/GLES/Vulkan stitching, supports automotive surround view stitching and
++360 video stitching.
++@item stitchcl
++OpenCL stitching, supports automotive surround view stitching and 360 video
++stitching.
++@end table
++
++@item allocoutbuf
++Whether or not to allocate output buffer. Default is @code{1}.
++
++@item params
++Private parameters for each handler. Currently, only @b{stitch} and
++@b{stitchcl} handlers have private parameters.
++
++@end table
++
++@subsection Examples
++
++For more detailed examples see @url{https://github.com/intel/libxcam/wiki/Tests#1-ffmpeg-xcam}.
++
+diff -urN FFmpeg/fftools/ffmpeg.c FFmpeg-patched/fftools/ffmpeg.c
+--- FFmpeg/fftools/ffmpeg.c	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/fftools/ffmpeg.c	2020-09-27 13:35:13.078526574 +0800
+@@ -1314,6 +1314,7 @@
              if (ost->logfile && enc->stats_out) {
                  fprintf(ost->logfile, "%s", enc->stats_out);
              }
-+
 +            break;
          }
-     }
-     ost->sync_opts++;
-@@ -1524,6 +1526,7 @@ static int reap_filters(int flush)
+         ost->sync_opts++;
+         /*
+@@ -1508,6 +1509,7 @@
              }
  
              av_frame_unref(filtered_frame);
@@ -144,43 +245,10 @@ index da4259a..ec42201 100644
          }
      }
  
-@@ -4091,10 +4094,10 @@ static int init_input_thread(int i)
- {
-     int ret;
-     InputFile *f = input_files[i];
--
-+//#if 0
-     if (nb_input_files == 1)
-         return 0;
--
-+//#endif
-     if (f->ctx->pb ? !f->ctx->pb->seekable :
-         strcmp(f->ctx->iformat->name, "lavfi"))
-         f->non_blocking = 1;
-@@ -4146,7 +4149,9 @@ static int get_input_packet(InputFile *f, AVPacket *pkt)
-     }
- 
- #if HAVE_THREADS
-+//#if 0
-     if (nb_input_files > 1)
-+//#endif
-         return get_input_packet_mt(f, pkt);
- #endif
-     return av_read_frame(f->ctx, pkt);
-diff --git a/FFmpeg/fftools/ffplay.c b/FFmpeg/fftools/ffplay.c
-index ab1f9fa..c59fab5 100644
---- a/FFmpeg/fftools/ffplay.c
-+++ b/FFmpeg/fftools/ffplay.c
-@@ -2922,6 +2922,8 @@ static int read_thread(void *arg)
-     if (infinite_buffer < 0 && is->realtime)
-         infinite_buffer = 1;
- 
-+    //TiledDASHDecContext *c = ic->priv_data;
-+    //c->mClearBuf = true;
-     for (;;) {
-         if (is->abort_request)
-             break;
-@@ -3346,15 +3348,22 @@ static void event_loop(VideoState *cur_stream)
+diff -urN FFmpeg/fftools/ffplay.c FFmpeg-patched/fftools/ffplay.c
+--- FFmpeg/fftools/ffplay.c	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/fftools/ffplay.c	2020-09-27 13:35:13.078526574 +0800
+@@ -3355,15 +3355,22 @@
                  seek_chapter(cur_stream, -1);
                  break;
              case SDLK_LEFT:
@@ -209,7 +277,7 @@ index ab1f9fa..c59fab5 100644
                  incr = -60.0;
              do_seek:
                      if (seek_by_bytes) {
-@@ -3381,6 +3390,7 @@ static void event_loop(VideoState *cur_stream)
+@@ -3390,6 +3397,7 @@
                          stream_seek(cur_stream, (int64_t)(pos * AV_TIME_BASE), (int64_t)(incr * AV_TIME_BASE), 0);
                      }
                  break;
@@ -217,71 +285,33 @@ index ab1f9fa..c59fab5 100644
              default:
                  break;
              }
-diff --git a/FFmpeg/libavcodec/Makefile b/FFmpeg/libavcodec/Makefile
-index a97055e..430419d 100644
---- a/FFmpeg/libavcodec/Makefile
-+++ b/FFmpeg/libavcodec/Makefile
-@@ -374,6 +374,10 @@ OBJS-$(CONFIG_HEVC_QSV_DECODER)        += qsvdec_h2645.o
- OBJS-$(CONFIG_HEVC_QSV_ENCODER)        += qsvenc_hevc.o hevc_ps_enc.o       \
-                                           hevc_data.o
- OBJS-$(CONFIG_HEVC_RKMPP_DECODER)      += rkmppdec.o
-+OBJS-$(CONFIG_HEVC_SVT_ENCODER)        += libsvt_hevc.o
-+OBJS-$(CONFIG_DISTRIBUTED_ENCODER)     += distributed_encoder.o
-+OBJS-$(CONFIG_HEVC_TILE_ENCODER)       += tile_encoder.o \
-+                                          tile_encode_svt_impl.o
- OBJS-$(CONFIG_HEVC_VAAPI_ENCODER)      += vaapi_encode_h265.o h265_profile_level.o
- OBJS-$(CONFIG_HEVC_V4L2M2M_DECODER)    += v4l2_m2m_dec.o
- OBJS-$(CONFIG_HEVC_V4L2M2M_ENCODER)    += v4l2_m2m_enc.o
-@@ -540,6 +544,8 @@ OBJS-$(CONFIG_RA_144_ENCODER)          += ra144enc.o ra144.o celp_filters.o
- OBJS-$(CONFIG_RA_288_DECODER)          += ra288.o celp_filters.o
- OBJS-$(CONFIG_RALF_DECODER)            += ralf.o
- OBJS-$(CONFIG_RASC_DECODER)            += rasc.o
-+OBJS-$(CONFIG_HEVC_BYPASSVIDEO_DECODER) += bypass_hevc_decoder.o
-+OBJS-$(CONFIG_H264_BYPASSVIDEO_DECODER) += bypass_h264_decoder.o
- OBJS-$(CONFIG_RAWVIDEO_DECODER)        += rawdec.o
- OBJS-$(CONFIG_RAWVIDEO_ENCODER)        += rawenc.o
- OBJS-$(CONFIG_REALTEXT_DECODER)        += realtextdec.o ass.o
-diff --git a/FFmpeg/libavcodec/allcodecs.c b/FFmpeg/libavcodec/allcodecs.c
-index c0b4d56..e587e11 100644
---- a/FFmpeg/libavcodec/allcodecs.c
-+++ b/FFmpeg/libavcodec/allcodecs.c
-@@ -143,6 +143,8 @@ extern AVCodec ff_h264_qsv_decoder;
+diff -urN FFmpeg/libavcodec/allcodecs.c FFmpeg-patched/libavcodec/allcodecs.c
+--- FFmpeg/libavcodec/allcodecs.c	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavcodec/allcodecs.c	2020-09-27 13:35:13.111526572 +0800
+@@ -146,7 +146,10 @@
  extern AVCodec ff_h264_rkmpp_decoder;
  extern AVCodec ff_hap_encoder;
  extern AVCodec ff_hap_decoder;
 +extern AVCodec ff_hevc_bypassvideo_decoder;
 +extern AVCodec ff_h264_bypassvideo_decoder;
  extern AVCodec ff_hevc_decoder;
++extern AVCodec ff_libopenhevc_decoder;
  extern AVCodec ff_hevc_qsv_decoder;
  extern AVCodec ff_hevc_rkmpp_decoder;
-@@ -745,6 +747,9 @@ extern AVCodec ff_hevc_cuvid_decoder;
- extern AVCodec ff_hevc_mediacodec_decoder;
+ extern AVCodec ff_hevc_v4l2m2m_decoder;
+@@ -781,6 +784,9 @@
+ extern AVCodec ff_hevc_mf_encoder;
  extern AVCodec ff_hevc_nvenc_encoder;
  extern AVCodec ff_hevc_qsv_encoder;
-+extern AVCodec ff_hevc_svt_encoder;
++extern AVCodec ff_libsvt_hevc_encoder;
 +extern AVCodec ff_distributed_encoder;
 +extern AVCodec ff_hevc_tile_encoder;
  extern AVCodec ff_hevc_v4l2m2m_encoder;
  extern AVCodec ff_hevc_vaapi_encoder;
  extern AVCodec ff_hevc_videotoolbox_encoder;
-diff --git a/FFmpeg/libavcodec/avcodec.h b/FFmpeg/libavcodec/avcodec.h
-index 705a3ce..cb94a67 100644
---- a/FFmpeg/libavcodec/avcodec.h
-+++ b/FFmpeg/libavcodec/avcodec.h
-@@ -229,6 +229,8 @@ enum AVCodecID {
-     AV_CODEC_ID_JPEGLS,
-     AV_CODEC_ID_MPEG4,
-     AV_CODEC_ID_RAWVIDEO,
-+    AV_CODEC_ID_HEVCBYPASSVIDEO,
-+    AV_CODEC_ID_H264BYPASSVIDEO,
-     AV_CODEC_ID_MSMPEG4V1,
-     AV_CODEC_ID_MSMPEG4V2,
-     AV_CODEC_ID_MSMPEG4V3,
-diff --git a/FFmpeg/libavcodec/bypass_decoder.h b/FFmpeg/libavcodec/bypass_decoder.h
-new file mode 100644
-index 0000000..49b668a
---- /dev/null
-+++ b/FFmpeg/libavcodec/bypass_decoder.h
+diff -urN FFmpeg/libavcodec/bypass_decoder.h FFmpeg-patched/libavcodec/bypass_decoder.h
+--- FFmpeg/libavcodec/bypass_decoder.h	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavcodec/bypass_decoder.h	2020-09-27 13:35:13.176526567 +0800
 @@ -0,0 +1,63 @@
 +/*
 + * Raw Video Decoder
@@ -346,11 +376,9 @@ index 0000000..49b668a
 +};
 +
 +
-diff --git a/FFmpeg/libavcodec/bypass_h264_decoder.c b/FFmpeg/libavcodec/bypass_h264_decoder.c
-new file mode 100644
-index 0000000..2092ace
---- /dev/null
-+++ b/FFmpeg/libavcodec/bypass_h264_decoder.c
+diff -urN FFmpeg/libavcodec/bypass_h264_decoder.c FFmpeg-patched/libavcodec/bypass_h264_decoder.c
+--- FFmpeg/libavcodec/bypass_h264_decoder.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavcodec/bypass_h264_decoder.c	2020-09-27 13:35:13.176526567 +0800
 @@ -0,0 +1,150 @@
 +/*
 + * Raw Video Decoder
@@ -502,11 +530,9 @@ index 0000000..2092ace
 +    .priv_class     = &bypassdec_class,
 +    .capabilities   = AV_CODEC_CAP_PARAM_CHANGE,
 +};
-diff --git a/FFmpeg/libavcodec/bypass_hevc_decoder.c b/FFmpeg/libavcodec/bypass_hevc_decoder.c
-new file mode 100644
-index 0000000..8561d8d
---- /dev/null
-+++ b/FFmpeg/libavcodec/bypass_hevc_decoder.c
+diff -urN FFmpeg/libavcodec/bypass_hevc_decoder.c FFmpeg-patched/libavcodec/bypass_hevc_decoder.c
+--- FFmpeg/libavcodec/bypass_hevc_decoder.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavcodec/bypass_hevc_decoder.c	2020-09-27 13:35:13.176526567 +0800
 @@ -0,0 +1,150 @@
 +/*
 + * Raw Video Decoder
@@ -658,11 +684,10 @@ index 0000000..8561d8d
 +    .priv_class     = &bypassdec_class,
 +    .capabilities   = AV_CODEC_CAP_PARAM_CHANGE,
 +};
-diff --git a/FFmpeg/libavcodec/codec_desc.c b/FFmpeg/libavcodec/codec_desc.c
-index 67a3054..a810d39 100644
---- a/FFmpeg/libavcodec/codec_desc.c
-+++ b/FFmpeg/libavcodec/codec_desc.c
-@@ -127,6 +127,20 @@ static const AVCodecDescriptor codec_descriptors[] = {
+diff -urN FFmpeg/libavcodec/codec_desc.c FFmpeg-patched/libavcodec/codec_desc.c
+--- FFmpeg/libavcodec/codec_desc.c	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavcodec/codec_desc.c	2020-09-27 13:35:13.183526566 +0800
+@@ -130,6 +130,20 @@
          .props     = AV_CODEC_PROP_INTRA_ONLY | AV_CODEC_PROP_LOSSLESS,
      },
      {
@@ -683,11 +708,21 @@ index 67a3054..a810d39 100644
          .id        = AV_CODEC_ID_MSMPEG4V1,
          .type      = AVMEDIA_TYPE_VIDEO,
          .name      = "msmpeg4v1",
-diff --git a/FFmpeg/libavcodec/distributed_encoder.c b/FFmpeg/libavcodec/distributed_encoder.c
-new file mode 100644
-index 0000000..332bf7b
---- /dev/null
-+++ b/FFmpeg/libavcodec/distributed_encoder.c
+diff -urN FFmpeg/libavcodec/codec_id.h FFmpeg-patched/libavcodec/codec_id.h
+--- FFmpeg/libavcodec/codec_id.h	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavcodec/codec_id.h	2020-09-27 13:35:13.390526550 +0800
+@@ -60,6 +60,8 @@
+     AV_CODEC_ID_JPEGLS,
+     AV_CODEC_ID_MPEG4,
+     AV_CODEC_ID_RAWVIDEO,
++    AV_CODEC_ID_HEVCBYPASSVIDEO,
++    AV_CODEC_ID_H264BYPASSVIDEO,
+     AV_CODEC_ID_MSMPEG4V1,
+     AV_CODEC_ID_MSMPEG4V2,
+     AV_CODEC_ID_MSMPEG4V3,
+diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/distributed_encoder.c
+--- FFmpeg/libavcodec/distributed_encoder.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavcodec/distributed_encoder.c	2020-09-27 13:35:13.193526565 +0800
 @@ -0,0 +1,629 @@
 +/*
 +* Scalable Video Technology for distributed encoder library plugin
@@ -814,9 +849,9 @@ index 0000000..332bf7b
 +    // tile related setting
 +    params.tile_columnCnt = deCxt->tile_column;
 +    params.tile_rowCnt = deCxt->tile_row;
-+    params.MCTS_enable = (params.tile_columnCnt * params.tile_rowCnt) > 1 ? 1 : 0;
 +    params.target_socket = -1;
 +    params.local_mode = false;
++    params.MCTS_enable = (params.tile_columnCnt * params.tile_rowCnt) > 1 ? 1 : 0;
 +
 +    if (deCxt->in_parallel && params.MCTS_enable)
 +        params.in_parallel = true;
@@ -1318,11 +1353,33 @@ index 0000000..332bf7b
 +    .caps_internal  = FF_CODEC_CAP_INIT_CLEANUP,
 +    .wrapper_name   = "distributed_encoder",
 +};
-diff --git a/FFmpeg/libavcodec/h264_parser.c b/FFmpeg/libavcodec/h264_parser.c
-index 5f9a9c4..89d7366 100644
---- a/FFmpeg/libavcodec/h264_parser.c
-+++ b/NNmpeg/libavcodec/h264_parser.c
-@@ -706,7 +706,7 @@ static av_cold int init(AVCodecParserContext *s)
+diff -urN FFmpeg/libavcodec/encode.c FFmpeg-patched/libavcodec/encode.c
+--- FFmpeg/libavcodec/encode.c	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavcodec/encode.c	2020-09-27 13:35:13.203526565 +0800
+@@ -430,12 +430,13 @@
+         int ret;
+         if (avctx->internal->draining && !(avctx->codec->capabilities & AV_CODEC_CAP_DELAY))
+             return AVERROR_EOF;
+-        ret = avctx->codec->receive_packet(avctx, avpkt);
+-        if (!ret)
+-            // Encoders must always return ref-counted buffers.
+-            // Side-data only packets have no data and can be not ref-counted.
+-            av_assert0(!avpkt->data || avpkt->buf);
+-        return ret;
++        // ret = avctx->codec->receive_packet(avctx, avpkt);
++        // if (!ret)
++        //     // Encoders must always return ref-counted buffers.
++        //     // Side-data only packets have no data and can be not ref-counted.
++        //     av_assert0(!avpkt->data || avpkt->buf);
++        // return ret;
++        return ret = avctx->codec->receive_packet(avctx, avpkt);
+     }
+
+     // Emulation via old API.
+diff -urN FFmpeg/libavcodec/h264_parser.c FFmpeg-patched/libavcodec/h264_parser.c
+--- FFmpeg/libavcodec/h264_parser.c	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavcodec/h264_parser.c	2020-09-27 13:35:13.224526563 +0800
+@@ -703,7 +703,7 @@
  }
  
  AVCodecParser ff_h264_parser = {
@@ -1331,11 +1388,10 @@ index 5f9a9c4..89d7366 100644
      .priv_data_size = sizeof(H264ParseContext),
      .parser_init    = init,
      .parser_parse   = h264_parse,
-diff --git a/FFmpeg/libavcodec/hevc_parser.c b/FFmpeg/libavcodec/hevc_parser.c
-index 369d133..e720f9d 100644
---- a/FFmpeg/libavcodec/hevc_parser.c
-+++ b/FFmpeg/libavcodec/hevc_parser.c
-@@ -370,7 +370,7 @@ static void hevc_parser_close(AVCodecParserContext *s)
+diff -urN FFmpeg/libavcodec/hevc_parser.c FFmpeg-patched/libavcodec/hevc_parser.c
+--- FFmpeg/libavcodec/hevc_parser.c	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavcodec/hevc_parser.c	2020-09-27 13:35:13.232526562 +0800
+@@ -381,7 +381,7 @@
  }
  
  AVCodecParser ff_hevc_parser = {
@@ -1344,11 +1400,191 @@ index 369d133..e720f9d 100644
      .priv_data_size = sizeof(HEVCParserContext),
      .parser_parse   = hevc_parse,
      .parser_close   = hevc_parser_close,
-diff --git a/FFmpeg/libavcodec/libsvt_hevc.c b/FFmpeg/libavcodec/libsvt_hevc.c
-new file mode 100644
-index 0000000..9b7a310
---- /dev/null
-+++ b/FFmpeg/libavcodec/libsvt_hevc.c
+diff -urN FFmpeg/libavcodec/libopenhevc.c FFmpeg-patched/libavcodec/libopenhevc.c
+--- FFmpeg/libavcodec/libopenhevc.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavcodec/libopenhevc.c	2020-09-27 13:35:13.433526546 +0800
+@@ -0,0 +1,178 @@
++/*
++ * OpenHEVC video Decoder
++ *
++ * This file is part of FFmpeg.
++ *
++ * FFmpeg is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * FFmpeg is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with FFmpeg; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
++ */
++
++#include <libopenhevc/openhevc.h>
++#include "avcodec.h"
++#include "internal.h"
++#include "libavutil/imgutils.h"
++#include "libavutil/opt.h"
++#include "libavutil/common.h"
++#include "libavutil/internal.h"
++
++//#define DEBUG
++typedef struct OpenHevcContext{
++	const AVClass *class;
++	OHHandle handle;
++#ifdef DEBUG
++	FILE *fout;
++#endif
++	int thread_count;
++	int thread_type;
++	int temporal_layer_id;
++	int quality_layer_id;
++}OpenHevcContext;
++static av_cold int openhevc_close(AVCodecContext *ctx)
++{
++	OpenHevcContext *c = ctx->priv_data;
++	if(c->handle){
++		oh_close(c->handle);
++		c->handle = NULL;
++	}
++#ifdef DEBUG
++	if(c->fout){
++		fclose(c->fout);
++	}
++#endif
++	return 0;
++}
++static av_cold int openhevc_init(AVCodecContext *ctx)
++{
++	OpenHevcContext *c = ctx->priv_data;
++	c->handle = oh_init(c->thread_count, c->thread_type);
++	if(!c->handle){
++		av_log(ctx,AV_LOG_ERROR,"oh_init failed\n");
++		return AVERROR_EXTERNAL;
++	}
++	size_t extra_size_alloc;
++	extra_size_alloc = ctx->extradata_size > 0 ? (ctx->extradata_size +AV_INPUT_BUFFER_PADDING_SIZE) : 0;
++	if(extra_size_alloc){
++		oh_extradata_cpy(c->handle, ctx->extradata, extra_size_alloc);
++	}
++	oh_disable_cropping(c->handle, !!(ctx->flags2 & AV_CODEC_FLAG2_IGNORE_CROP));
++	oh_start(c->handle);
++	oh_select_temporal_layer(c->handle,c->temporal_layer_id);
++	oh_select_active_layer(c->handle,c->quality_layer_id);
++	oh_select_view_layer(c->handle,c->quality_layer_id);
++#ifdef DEBUG
++	c->fout = fopen("output.yuv","wb");
++	if(!c->fout){
++		printf("open file failed !\n");
++		return -1;
++	}
++#endif
++	return 0;
++}
++
++static int openhevc_decode(AVCodecContext *ctx, void *data, int *got_frame, AVPacket *avpkt)
++{
++	OpenHevcContext *c = ctx->priv_data;
++	AVFrame *picture = data;
++	int ret;
++	OHFrame openHevcFrame;
++
++	ret = oh_decode(c->handle, avpkt->data, avpkt->size, avpkt->pts);
++	if(ret<0){
++		av_log(ctx, AV_LOG_ERROR, "failed to decode frame\n");
++		return AVERROR_EXTERNAL;
++	}
++	if(ret){
++		uint8_t *data_ptr_array[4] = {NULL};
++		int stride_array[4] = {0};
++
++		oh_output_update(c->handle, 1, &openHevcFrame);
++		oh_frameinfo_update(c->handle, &openHevcFrame.frame_par);
++
++		if(av_image_check_size(openHevcFrame.frame_par.width, openHevcFrame.frame_par.height, 0, ctx))
++			return AVERROR_INVALIDDATA;
++		ctx->pix_fmt = AV_PIX_FMT_YUV420P;
++		ff_set_dimensions(ctx, openHevcFrame.frame_par.width, openHevcFrame.frame_par.height);
++
++		if((ret=ff_get_buffer(ctx, picture, 0))<0)
++			return ret;
++		picture->sample_aspect_ratio.num = openHevcFrame.frame_par.sample_aspect_ratio.num;
++		picture->sample_aspect_ratio.den = openHevcFrame.frame_par.sample_aspect_ratio.den;
++
++		data_ptr_array[0] = (uint8_t *)openHevcFrame.data_y_p;
++		data_ptr_array[1] = (uint8_t *)openHevcFrame.data_cb_p;
++		data_ptr_array[2] = (uint8_t *)openHevcFrame.data_cr_p;
++
++		stride_array[0] = openHevcFrame.frame_par.linesize_y;
++		stride_array[1] = openHevcFrame.frame_par.linesize_cb;
++		stride_array[2] = openHevcFrame.frame_par.linesize_cr;
++#ifdef DEBUG
++		if (c->fout) {
++		    int format = openHevcFrame.frame_par.chromat_format == OH_YUV420 ? 1 : 0;
++                    fwrite( (uint8_t *)openHevcFrame.data_y_p ,  sizeof(uint8_t) , openHevcFrame.frame_par.linesize_y  * openHevcFrame.frame_par.height,  c->fout);
++                    fwrite( (uint8_t *)openHevcFrame.data_cb_p , sizeof(uint8_t) , openHevcFrame.frame_par.linesize_cb * openHevcFrame.frame_par.height >> format, c->fout);
++                    fwrite( (uint8_t *)openHevcFrame.data_cr_p , sizeof(uint8_t) , openHevcFrame.frame_par.linesize_cr * openHevcFrame.frame_par.height >> format, c->fout);
++                                }
++#endif
++//		av_image_copy(picture->data, picture->linesize, (uint8_t **)data_ptr_array, stride_array, ctx->pix_fmt, picture->width, picture->height);
++		picture->data[0] = data_ptr_array[0];
++		picture->data[1] = data_ptr_array[1];
++		picture->data[2] = data_ptr_array[2];
++		picture->linesize[0] = stride_array[0];
++		picture->linesize[1] = stride_array[1];
++		picture->linesize[2] = stride_array[2];
++		picture->format = ctx->pix_fmt;
++
++		picture->pts = avpkt->pts;
++	        picture->pkt_dts = avpkt->dts;
++		picture->pkt_duration = avpkt->duration;
++
++		*got_frame = 1;
++	}
++	return avpkt->size;
++
++}
++static void openhevc_flush(AVCodecContext *avctx)
++{
++	OpenHevcContext *c = avctx->priv_data;
++	oh_flush(c->handle);
++}
++#define OFFSET(x) offsetof(OpenHevcContext, x)
++#define VE (AV_OPT_FLAG_DECODING_PARAM | AV_OPT_FLAG_VIDEO_PARAM)
++static const AVOption options[] = {
++	{"thread_count", "for how many threads to be executed, 1 is for default", OFFSET(thread_count), AV_OPT_TYPE_INT, {.i64 = 1}, 0, INT_MAX, VE},
++	{"thread_type", "which multithreads methods to use, 1 is for default", OFFSET(thread_type), AV_OPT_TYPE_INT, {.i64 = 1}, 0, INT_MAX, VE},
++	{"temporal_layer_id","temporal layer id,7 is for default",OFFSET(temporal_layer_id),AV_OPT_TYPE_INT,{.i64 = 7}, 0 , INT_MAX, VE},
++	{"quality_layer_id","quality layer id,0 is for default",OFFSET(quality_layer_id),AV_OPT_TYPE_INT,{.i64 = 0}, 0 , INT_MAX, VE},
++	{NULL},
++};
++static const AVClass openhevc_class = {
++	.class_name = "libopenhevc",
++	.item_name = av_default_item_name,
++	.option = options,
++	.version = LIBAVUTIL_VERSION_INT,
++};
++AVCodec ff_libopenhevc_decoder = {
++	.name = "libopenhevc",
++	.long_name = NULL_IF_CONFIG_SMALL("libopenhevc HEVC decoder"),
++	.type = AVMEDIA_TYPE_VIDEO,
++	.id = AV_CODEC_ID_HEVC,
++	.priv_data_size = sizeof(OpenHevcContext),
++	.priv_class = &openhevc_class,
++	.init = openhevc_init,
++	.flush = openhevc_flush,
++	.close = openhevc_close,
++	.decode = openhevc_decode,
++	.capabilities = AV_CODEC_CAP_DELAY | AV_CODEC_CAP_DR1,
++	.caps_internal = FF_CODEC_CAP_SETS_PKT_DTS | FF_CODEC_CAP_INIT_THREADSAFE | FF_CODEC_CAP_INIT_CLEANUP,
++};
+diff -urN FFmpeg/libavcodec/libsvt_hevc.c FFmpeg-patched/libavcodec/libsvt_hevc.c
+--- FFmpeg/libavcodec/libsvt_hevc.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavcodec/libsvt_hevc.c	2020-09-27 13:35:13.262526560 +0800
 @@ -0,0 +1,341 @@
 +/*
 +* Scalable Video Technology for HEVC encoder library plugin
@@ -1691,16 +1927,764 @@ index 0000000..9b7a310
 +    .wrapper_name   = "libsvt_hevc",
 +};
 +
-diff --git a/FFmpeg/libavcodec/tile_encode_svt_impl.c b/FFmpeg/libavcodec/tile_encode_svt_impl.c
-new file mode 100644
-index 0000000..e18f8b6
---- /dev/null
-+++ b/FFmpeg/libavcodec/tile_encode_svt_impl.c
-@@ -0,0 +1,488 @@
+diff -urN FFmpeg/libavcodec/Makefile FFmpeg-patched/libavcodec/Makefile
+--- FFmpeg/libavcodec/Makefile	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavcodec/Makefile	2020-09-27 13:35:13.080526574 +0800
+@@ -96,6 +96,7 @@
+ OBJS-$(CONFIG_H264PRED)                += h264pred.o
+ OBJS-$(CONFIG_H264QPEL)                += h264qpel.o
+ OBJS-$(CONFIG_HEVCPARSE)               += hevc_parse.o h2645_parse.o hevc_ps.o hevc_sei.o hevc_data.o
++OBJS-$(CONFIG_LIBOPENHEVC_DECODER)	   += libopenhevc.o
+ OBJS-$(CONFIG_HPELDSP)                 += hpeldsp.o
+ OBJS-$(CONFIG_HUFFMAN)                 += huffman.o
+ OBJS-$(CONFIG_HUFFYUVDSP)              += huffyuvdsp.o
+@@ -387,6 +388,10 @@
+ OBJS-$(CONFIG_HEVC_MF_ENCODER)         += mfenc.o mf_utils.o
+ OBJS-$(CONFIG_HEVC_NVENC_ENCODER)      += nvenc_hevc.o
+ OBJS-$(CONFIG_NVENC_HEVC_ENCODER)      += nvenc_hevc.o
++OBJS-$(CONFIG_LIBSVT_HEVC_ENCODER)     += libsvt_hevc.o
++OBJS-$(CONFIG_DISTRIBUTED_ENCODER)     += distributed_encoder.o
++OBJS-$(CONFIG_HEVC_TILE_ENCODER)       += tile_encoder.o \
++                                          tile_encode_svt_impl.o
+ OBJS-$(CONFIG_HEVC_QSV_DECODER)        += qsvdec_h2645.o
+ OBJS-$(CONFIG_HEVC_QSV_ENCODER)        += qsvenc_hevc.o hevc_ps_enc.o       \
+                                           hevc_data.o
+@@ -568,6 +573,8 @@
+ OBJS-$(CONFIG_RA_288_DECODER)          += ra288.o celp_filters.o
+ OBJS-$(CONFIG_RALF_DECODER)            += ralf.o
+ OBJS-$(CONFIG_RASC_DECODER)            += rasc.o
++OBJS-$(CONFIG_HEVC_BYPASSVIDEO_DECODER) += bypass_hevc_decoder.o
++OBJS-$(CONFIG_H264_BYPASSVIDEO_DECODER) += bypass_h264_decoder.o
+ OBJS-$(CONFIG_RAWVIDEO_DECODER)        += rawdec.o
+ OBJS-$(CONFIG_RAWVIDEO_ENCODER)        += rawenc.o
+ OBJS-$(CONFIG_REALTEXT_DECODER)        += realtextdec.o ass.o
+diff -urN FFmpeg/libavcodec/tile_encoder.c FFmpeg-patched/libavcodec/tile_encoder.c
+--- FFmpeg/libavcodec/tile_encoder.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavcodec/tile_encoder.c	2020-09-27 13:35:13.371526551 +0800
+@@ -0,0 +1,586 @@
 +/*
 + * Intel tile encoder
 + *
 + * Copyright (c) 2018 Intel Cooperation 
++ *
++ * This file is part of FFmpeg.
++ *
++ * FFmpeg is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * FFmpeg is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with FFmpeg; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
++ */
++
++#include <stdint.h>
++#include <string.h>
++
++#include "libavutil/attributes.h"
++#include "libavutil/avassert.h"
++#include "libavutil/dict.h"
++#include "libavutil/error.h"
++#include "libavutil/imgutils.h"
++#include "libavutil/internal.h"
++#include "libavutil/log.h"
++#include "libavutil/mem.h"
++#include "libavutil/pixdesc.h"
++#include "libavutil/opt.h"
++
++#include "tile_encoder.h"
++
++//pthread_mutex_t mutex;
++//pthread_cond_t cond;
++
++typedef struct TileEncoderContext {
++    const AVClass *class;
++    EncoderWrapper api;
++    enum ENC_LIB   enc_lib;
++    enum TILE_MODE tile_mode;
++
++    //for average size tile, the input just give the layout, such as 3x3, 4x4
++    int            tiles_gw;
++    int            tiles_gh;
++
++    //for fix size tile, the last one of colum or row is not the fixed value
++    int            fix_tiles_w;
++    int            fix_tiles_h;
++    char          *params;
++} TileEncoderContext;
++
++// Support fix size tile
++static int assign_tiles_fix( TileEncoderContext* ctx )
++{
++    EncoderWrapper* wrapper = &(ctx->api);
++
++    int *tiles_col_width, *tiles_row_height;
++    tiles_col_width = (int *)malloc(ctx->tiles_gw * sizeof(int));
++    tiles_row_height = (int *)malloc(ctx->tiles_gh * sizeof(int));
++    for (int i=0;i<ctx->tiles_gw - 1;i++)tiles_col_width[i]=ctx->fix_tiles_w;
++    for (int i=0;i<ctx->tiles_gh - 1;i++)tiles_row_height[i]=ctx->fix_tiles_h;
++
++    wrapper->tile_num = ctx->tiles_gw * ctx->tiles_gh;
++    wrapper->tile_w = ctx->tiles_gw;
++    wrapper->tile_h = ctx->tiles_gh;
++
++    for(int i = 0; i < ctx->tiles_gh; i++)
++    {
++        for(int j = 0; j < ctx->tiles_gw; j++)
++        {
++            int idx = i * ctx->tiles_gw + j;
++            wrapper->tile_info[idx].left    = (j == 0) ? 0 : wrapper->tile_info[idx - 1].left + tiles_col_width[j-1];
++            wrapper->tile_info[idx].top     = (i == 0) ? 0 : wrapper->tile_info[(i-1)*ctx->tiles_gw + j].top + tiles_row_height[i-1];
++            wrapper->tile_info[idx].tHeight = (i == ctx->tiles_gh - 1) ? wrapper->height - wrapper->tile_info[idx].top : tiles_row_height[i];
++            wrapper->tile_info[idx].tWidth  = (j == ctx->tiles_gw - 1) ? wrapper->width - wrapper->tile_info[idx].left : tiles_col_width[j];
++        }
++    }
++
++    if(tiles_col_width)
++    {
++        free(tiles_col_width);
++        tiles_col_width = NULL;
++    }
++    if(tiles_row_height)
++    {
++        free(tiles_row_height);
++        tiles_row_height = NULL;
++    }
++
++    return 0;
++}
++static int assign_tiles_avg( TileEncoderContext* ctx )
++{
++    EncoderWrapper* wrapper = &(ctx->api);
++
++    wrapper->tile_num = ctx->tiles_gw * ctx->tiles_gh;
++    wrapper->tile_w = ctx->tiles_gw;
++    wrapper->tile_h = ctx->tiles_gh;
++
++#define LCU_SIZE 64
++
++    // Width and Height should be divisible by LCU_SIZE
++    int width_in_lcu = wrapper->width / LCU_SIZE;
++    int height_in_lcu = wrapper->height / LCU_SIZE;
++
++    // (6.5.1) in Rec. ITU-T H.265 v5 (02/2018)
++    int *tiles_col_width, *tiles_row_height;
++    tiles_col_width = (int *)malloc(ctx->tiles_gw * sizeof(int));
++    tiles_row_height = (int *)malloc(ctx->tiles_gh * sizeof(int));
++    for( int i=0; i<ctx->tiles_gw; i++)
++    {
++        tiles_col_width[i] = (i+1) * width_in_lcu / ctx->tiles_gw - i * width_in_lcu / ctx->tiles_gw;
++    }
++    for( int i=0; i<ctx->tiles_gh; i++)
++    {
++        tiles_row_height[i] = (i+1) * height_in_lcu / ctx->tiles_gh - i * height_in_lcu / ctx->tiles_gh;
++
++    }
++
++    for(int i = 0; i < ctx->tiles_gh; i++)
++    {
++        for(int j = 0; j < ctx->tiles_gw; j++)
++        {
++            int idx = i * ctx->tiles_gw + j;
++            wrapper->tile_info[idx].left    = (j == 0) ? 0 : wrapper->tile_info[idx - 1].left + tiles_col_width[j-1] * LCU_SIZE;
++            wrapper->tile_info[idx].top     = (i == 0) ? 0 : wrapper->tile_info[(i-1)*ctx->tiles_gw + j].top + tiles_row_height[i-1] * LCU_SIZE;
++            wrapper->tile_info[idx].tHeight = tiles_row_height[i] * LCU_SIZE;
++            wrapper->tile_info[idx].tWidth  = tiles_col_width[j] * LCU_SIZE;
++        }
++    }
++
++    if(tiles_col_width)
++    {
++        free(tiles_col_width);
++        tiles_col_width = NULL;
++    }
++    if(tiles_row_height)
++    {
++        free(tiles_row_height);
++        tiles_row_height = NULL;
++    }
++
++    return 0;
++}
++
++/// assign bit rate for each tile.
++int get_tile_bitrate(EncoderWrapper* wrapper, int idx)
++{
++    int bit_rate = wrapper->avctx->bit_rate;
++    double percent = 0.0;
++    
++    if( 0==bit_rate ) bit_rate = wrapper->avctx->bit_rate_tolerance;
++    
++    ///FIXME if there is more suitable way to calculate bit rate for each tile
++    percent = (double)( wrapper->tile_info[idx].tHeight * wrapper->tile_info[idx].tWidth ) / (double)(wrapper->width * wrapper->height);
++    
++    return (int) (bit_rate * percent);
++    
++ }
++
++int get_tile_maxrate(EncoderWrapper* wrapper, int idx)
++{
++    int max_rate = wrapper->avctx->rc_max_rate;
++    
++    ///FIXME if there is more suitable way to calculate bit rate for each tile
++    double percent = (double)( wrapper->tile_info[idx].tHeight * wrapper->tile_info[idx].tWidth ) / (double)(wrapper->width * wrapper->height);
++    
++    return (int) (max_rate * percent);
++
++}
++
++int bFifoReady( EncoderWrapper* wrapper )
++{
++    int eos = 0;
++    int ready = 0;
++    for(int i=0; i<wrapper->tile_num; i++){
++        if( wrapper->tile_info[i].outpkt_fifo ){
++            if( av_fifo_size(wrapper->tile_info[i].outpkt_fifo) ){
++                ready++;
++            }else{
++                if(wrapper->tile_info[i].eos) eos++;
++            }
++        }
++    }
++    if( ready == wrapper->tile_num ) return 1;
++    if( eos == wrapper->tile_num ) return AVERROR_EOF;
++
++    return 0;
++}
++int bs_tile_stitching(EncoderWrapper* wrapper, AVPacket* outPkt)
++{
++    int ret = 0;
++    AVPacket pkt[MAX_TILES];
++    int bReady = bFifoReady(wrapper);
++    int totalsize=0;
++    uint8_t* dst = NULL;
++    if( AVERROR_EOF == bReady ) return AVERROR_EOF;
++    
++    if( 1 == bReady ){
++        for(int i=0; i<wrapper->tile_num; i++){
++            av_fifo_generic_read( wrapper->tile_info[i].outpkt_fifo, &pkt[i],  sizeof(AVPacket),  NULL);
++#ifdef FILE_DEBUG
++            wrapper->tile_info[i].nSpkt += 1;
++            av_log(wrapper->avctx, AV_LOG_DEBUG, "######tile id=%d, getpkt=%d, stitched packet=%d#########\n", i, wrapper->tile_info[i].nGetpkt, wrapper->tile_info[i].nSpkt);
++            av_log(wrapper->avctx, AV_LOG_DEBUG, "**********tile id = %d, packet size = %d, packet addr=%p!!!\n", i,pkt[i].size, pkt[i].data);
++#endif
++            totalsize += pkt[i].size;
++        }
++
++        // Sometimes the size of output is larger than size of input,
++        // so we alloc 2 times larger size packet.
++        ret = ff_alloc_packet2(wrapper->avctx, outPkt, 2*totalsize, 2*totalsize);
++        if( ret < 0) return -1;
++
++        dst = outPkt->data;
++
++        // call stitching library
++        wrapper->paramTiledStream.pOutputTiledBitstream = dst;
++
++        for (int i = 0; i < wrapper->paramTiledStream.tilesHeightCount; i++)
++        {
++            for (int j = 0; j < wrapper->paramTiledStream.tilesWidthCount; j++)
++            {
++                param_oneStream_info *ptempinput = wrapper->paramTiledStream.pTiledBitstream[i*wrapper->paramTiledStream.tilesWidthCount + j];
++                ptempinput->pTiledBitstreamBuffer = pkt[i*wrapper->paramTiledStream.tilesWidthCount + j].data;
++                ptempinput->inputBufferLen = pkt[i*wrapper->paramTiledStream.tilesWidthCount + j].size;
++            }
++        }
++
++        wrapper->paramTiledStream.inputBistreamsLen = totalsize;
++        genTiledStream_process(&(wrapper->paramTiledStream), wrapper->pGen);
++        dst += wrapper->paramTiledStream.outputiledbistreamlen;
++        outPkt->size = wrapper->paramTiledStream.outputiledbistreamlen;
++/*
++#ifdef FILE_DEBUG
++        for(int i=0; i<wrapper->tile_num; i++){
++            memcpy(dst, pkt[i].data, pkt[i].size);
++            dst += pkt[i].size;
++            fwrite(pkt[i].data, 1, pkt[i].size, wrapper->tile_info[i].file);
++        }
++#endif
++*/
++        // Send vps+sps+pps info
++        AVCodecContext* avctx = wrapper->avctx;
++        if(avctx->extradata_size == 0)
++        {
++            unsigned char *headerAddr;
++            avctx->extradata_size = genTiledStream_getParam(wrapper->pGen, ID_GEN_TILED_BITSTREAMS_HEADER, &headerAddr);
++            avctx->extradata = av_malloc(avctx->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
++            if (!avctx->extradata) {
++                av_log(avctx, AV_LOG_ERROR,
++                       "Cannot allocate HEVC header of size %d.\n", avctx->extradata_size);
++                return AVERROR(ENOMEM);
++            }
++            memcpy(avctx->extradata, headerAddr, avctx->extradata_size);
++        }
++
++        switch (wrapper->paramTiledStream.sliceType) {
++        case SLICE_IDR:
++        case SLICE_I:
++            avctx->coded_frame->pict_type = AV_PICTURE_TYPE_I;
++            break;
++        case SLICE_P:
++            avctx->coded_frame->pict_type = AV_PICTURE_TYPE_P;
++            break;
++        case SLICE_B:
++            avctx->coded_frame->pict_type = AV_PICTURE_TYPE_B;
++            break;
++        }
++
++        //outPkt->pts = paramTiledStream.pts;
++
++        ///unref the packet read from fifo
++        for(int i=0; i<wrapper->tile_num; i++){
++            av_packet_unref(&pkt[i]);
++            free(pkt[i].data);
++        }
++
++        return 0;
++    }
++    return -1;
++}
++
++int get_tile_frame_copy(EncoderWrapper* wrapper, int tile_idx, const AVFrame *pic, AVFrame** tile_pic )
++{
++    int ret = 0;
++    uint8_t* src = NULL;
++    uint8_t* dst = NULL;
++    int factor = 1;
++    AVFrame* frame = NULL;
++    
++    if( NULL == *tile_pic ){
++        *tile_pic = av_frame_alloc();
++        if (!*tile_pic) {
++            av_freep(*tile_pic);
++            return AVERROR(ENOMEM);
++        }
++    }
++    
++    frame = *tile_pic;
++    frame->height = wrapper->tile_info[tile_idx].tHeight;
++    frame->width  = wrapper->tile_info[tile_idx].tWidth;
++
++    frame->format = pic->format;
++
++    if (!frame->data[0]) {
++        ret = av_frame_get_buffer(frame, 32);
++        if (ret < 0){
++            av_freep(*tile_pic);
++            return ret;
++        }
++    }
++
++    ///current copy is based on YUV420p format
++    for( int planner=0; planner<3; planner++ ){
++        if( planner > 0 ){
++            factor = 2;
++        }
++        src = pic->data[planner] + pic->linesize[planner]*(wrapper->tile_info[tile_idx].top / factor) + wrapper->tile_info[tile_idx].left / factor;
++        dst = frame->data[planner];
++        for( int i=0; i<frame->height/factor; i++ ){
++            src += pic->linesize[planner];
++            dst += frame->linesize[planner];
++            memcpy( dst, src, frame->width / factor );
++        }
++    }
++
++    return ret;
++}
++
++int get_tile_frame_nocopy(EncoderWrapper* wrapper, int tile_idx, const AVFrame *pic, AVFrame** tile_pic )
++{
++    AVFrame* frame = NULL;
++    int factor = 1;
++    
++    if( NULL == *tile_pic ){
++        *tile_pic = av_frame_alloc();
++        if (!*tile_pic) {
++            av_freep(*tile_pic);
++            return AVERROR(ENOMEM);
++        }
++    }
++    
++    frame = *tile_pic;
++    frame->height = wrapper->tile_info[tile_idx].tHeight;
++    frame->width = wrapper->tile_info[tile_idx].tWidth;
++    frame->format = pic->format;
++
++    for( int i=0; i<4; i++ ){
++        if( i > 0 ){
++            factor = 2;
++        }
++        frame->data[i] = pic->data[i] + pic->linesize[i]*(wrapper->tile_info[tile_idx].top / factor) + wrapper->tile_info[tile_idx].left / factor;
++        frame->linesize[i] = pic->linesize[i];
++    }
++
++    return 0;
++}
++
++static av_cold int tile_encode_close(AVCodecContext *avctx)
++{
++    TileEncoderContext *ctx = avctx->priv_data;
++    EncoderWrapper *wrapper = &(ctx->api);
++    AVFifoBuffer* fifo = NULL;
++
++    if(wrapper->pGen)
++    {
++        genTiledStream_unInit(wrapper->pGen);
++    }
++
++    if (wrapper->paramTiledStream.pTiledBitstream)
++    {
++        for (int i = 0; i < wrapper->paramTiledStream.tilesHeightCount; i++)
++        {
++            for (int j = 0; j < wrapper->paramTiledStream.tilesWidthCount; j++)
++            {
++                free(wrapper->paramTiledStream.pTiledBitstream[i*wrapper->paramTiledStream.tilesWidthCount + j]);
++                wrapper->paramTiledStream.pTiledBitstream[i*wrapper->paramTiledStream.tilesWidthCount + j] = NULL;
++            }
++        }
++        free(wrapper->paramTiledStream.pTiledBitstream);
++        wrapper->paramTiledStream.pTiledBitstream = NULL;
++    }
++    if(avctx->extradata)
++    {
++        free(avctx->extradata);
++        avctx->extradata = NULL;
++    }
++
++    if(wrapper->tid)
++    {
++        free(wrapper->tid);
++        wrapper->tid = NULL;
++    }
++    if(wrapper->tile_enc_info)
++    {
++        free(wrapper->tile_enc_info);
++        wrapper->tile_enc_info = NULL;
++    }
++
++    if( NULL != ctx->api.enc_close )
++        ctx->api.enc_close(&(ctx->api));
++
++    for( int i=0; i < ctx->api.tile_num; i++ ){
++
++#ifdef FILE_DEBUG
++        if(ctx->api.tile_info[i].file) fclose(ctx->api.tile_info[i].file);
++#endif
++
++        fifo = ctx->api.tile_info[i].outpkt_fifo;
++        while ( fifo && av_fifo_size(fifo)) {
++            AVPacket pkt;
++            av_fifo_generic_read(fifo, &pkt,  sizeof(pkt),  NULL);
++            free(pkt.data);
++            av_packet_unref(&pkt);
++        }
++        av_fifo_free(fifo);
++        fifo = NULL;
++    }
++    return 0;
++}
++
++static av_cold int tile_encode_init(AVCodecContext *avctx)
++{
++    TileEncoderContext *ctx = avctx->priv_data;
++    EncoderWrapper* wrapper = &(ctx->api);
++    int ret = 0;
++    char filename[256];
++
++    wrapper->width = avctx->coded_width;
++    wrapper->height = avctx->coded_height;
++
++    wrapper->avctx = avctx;
++    switch(ctx->tile_mode){
++        case FIX_SIZE:
++            wrapper->uniform_split = false;
++            assign_tiles_fix( ctx );
++            break;
++        case AVG_SIZE:
++            wrapper->uniform_split = true;
++            assign_tiles_avg( ctx );
++            break;
++        default:
++            break;
++    }
++
++
++    switch(ctx->enc_lib){
++        case ENC_X265:
++            wrapper->enc_close = libx265_enc_close;
++            wrapper->enc_frame = libx265_enc_frame;
++            wrapper->enc_init  = libx265_enc_init;
++            break;
++        case ENC_SVT:
++            wrapper->enc_close = svt_enc_close;
++            wrapper->enc_frame = svt_enc_frame;
++            wrapper->enc_init  = svt_enc_init;
++            break;
++        default:
++            break;
++    }
++
++    pthread_mutex_init(&(wrapper->mutex), NULL);
++    pthread_cond_init(&(wrapper->cond), NULL);
++    wrapper->tid = malloc(wrapper->tile_num * sizeof(pthread_t));
++    wrapper->tile_enc_info = malloc(wrapper->tile_num * sizeof(TileEncoderInfo));
++    for(int i=0; i<wrapper->tile_num; i++){
++        wrapper->tile_info[i].tBitrate = get_tile_bitrate(wrapper, i);
++        wrapper->tile_info[i].tMaxrate = get_tile_maxrate(wrapper, i);
++        wrapper->tile_info[i].eos = 0;
++        wrapper->tile_info[i].outpkt_fifo = av_fifo_alloc( FIFO_SIZE * sizeof(AVPacket));
++#ifdef FILE_DEBUG
++        wrapper->tile_info[i].nGetpkt = 0;
++        wrapper->tile_info[i].nSpkt = 0;
++        sprintf(filename, "out_%d.265", i);
++        wrapper->tile_info[i].file = fopen(filename, "wb+");
++#endif
++        wrapper->tile_enc_info[i].ctx      = wrapper;
++        wrapper->tile_enc_info[i].tile_idx = i;
++
++        ret = pthread_create(&wrapper->tid[i], NULL, svt_enc_tile, &(wrapper->tile_enc_info[i]));
++        if(0 != ret)
++        {
++            av_log(avctx, AV_LOG_ERROR, "Cannot create thread!\n");
++            return ret;
++        }
++    }
++
++    if( NULL != ctx->api.enc_init ){
++        ret = wrapper->enc_init(wrapper);
++        if( 0 != ret ) return ret;
++    }
++
++    wrapper->paramTiledStream.tilesHeightCount = wrapper->tile_h;
++    wrapper->paramTiledStream.tilesWidthCount  = wrapper->tile_w;
++    wrapper->paramTiledStream.tilesUniformSpacing = wrapper->uniform_split;
++    wrapper->paramTiledStream.frameWidth = wrapper->width;
++    wrapper->paramTiledStream.frameHeight = wrapper->height;
++    wrapper->paramTiledStream.pTiledBitstream = (param_oneStream_info**)malloc(wrapper->tile_h * wrapper->tile_w * sizeof(param_oneStream_info *));
++    if (!wrapper->paramTiledStream.pTiledBitstream)
++    {
++        printf("memory alloc failed!");
++        return 1;
++    }
++
++    for (int i = 0; i < wrapper->paramTiledStream.tilesHeightCount; i++)
++    {
++        for (int j = 0; j < wrapper->paramTiledStream.tilesWidthCount; j++)
++        {
++            wrapper->paramTiledStream.pTiledBitstream[i*wrapper->paramTiledStream.tilesWidthCount + j] = (param_oneStream_info*)malloc(sizeof(param_oneStream_info));
++        }
++    }
++
++    wrapper->pGen = genTiledStream_Init(&(wrapper->paramTiledStream));
++    if (!wrapper->pGen)
++    {
++        printf("the initialize failed\n");
++        return 1;
++    }
++
++    return 0;
++}
++
++static int tile_encode_frame(AVCodecContext *avctx, AVPacket *pkt,
++                                const AVFrame *pic, int *got_packet)
++{
++    TileEncoderContext *ctx = avctx->priv_data;
++    if( NULL != ctx->api.enc_frame )
++        ctx->api.enc_frame(&(ctx->api), pkt, pic, got_packet);
++
++    return 0;
++}
++
++#define OFFSET(x) offsetof(TileEncoderContext, x)
++#define VE AV_OPT_FLAG_VIDEO_PARAM | AV_OPT_FLAG_ENCODING_PARAM
++static const AVOption options[] = {
++    { "enc", "what's the encoder for each tile. so far, x265=1, svt=2.", OFFSET(enc_lib), AV_OPT_TYPE_INT, { .i64 = 2 }, 0, 3, VE },
++    { "tile_mode", "specify how to divide the tiles of the picture: 1 fixed size tiles; 2. grid layout, 3x3, 4x4.", OFFSET(tile_mode), AV_OPT_TYPE_INT, { .i64 = 2 }, 0, 3, VE },
++    { "tiles_gw", "horizontal grid number of tiles; available when tile is divided via grid layout .", OFFSET(tiles_gw), AV_OPT_TYPE_INT, { .i64 = 1 }, 0, INT_MAX, VE },
++    { "tiles_gh", "vertical grid number of tiles; available when tile is divided via grid layout .", OFFSET(tiles_gh), AV_OPT_TYPE_INT, { .i64 = 1 }, 0, INT_MAX, VE },
++    { "tiles_fixw", "horizontal width of tiles; available when tile is divided via fixed size.", OFFSET(fix_tiles_w), AV_OPT_TYPE_INT, { .i64 = 512 }, 0, INT_MAX, VE },
++    { "tiles_fixh", "vertical height of tiles; available when tile is divided via fixed size.", OFFSET(fix_tiles_h), AV_OPT_TYPE_INT, { .i64 = 512 }, 0, INT_MAX, VE },
++    { "params", "Set parameters as a comma-separated list of key=value pairs.", OFFSET(params), AV_OPT_TYPE_STRING, { .str = NULL }, 0, 0, VE },
++    { NULL },
++};
++
++static const AVClass class = {
++    .class_name = "hevc_tile_encoder",
++    .item_name  = av_default_item_name,
++    .option     = options,
++    .version    = LIBAVUTIL_VERSION_INT,
++};
++
++static const AVCodecDefault defaults[] = {
++    { "b", "0" },
++    { NULL },
++};
++
++AVCodec ff_hevc_tile_encoder = {
++    .name             = "hevc_tile_encoder",
++    .long_name        = NULL_IF_CONFIG_SMALL("distribute tile H.265 / HEVC"),
++    .type             = AVMEDIA_TYPE_VIDEO,
++    .id               = AV_CODEC_ID_HEVC,
++    .capabilities     = AV_CODEC_CAP_DELAY,
++    .pix_fmts         = (const enum AVPixelFormat[]){ AV_PIX_FMT_YUV420P,
++                                                    AV_PIX_FMT_YUV420P10,
++                                                    AV_PIX_FMT_NONE },
++
++    .priv_class       = &class,
++    .priv_data_size   = sizeof(TileEncoderContext),
++    .defaults         = defaults,
++
++    .init             = tile_encode_init,
++    .encode2          = tile_encode_frame,
++    .close            = tile_encode_close,
++
++    .caps_internal    = FF_CODEC_CAP_INIT_THREADSAFE | FF_CODEC_CAP_INIT_CLEANUP,
++
++    .wrapper_name     = "hevc_tile_encoder",
++};
+diff -urN FFmpeg/libavcodec/tile_encoder.h FFmpeg-patched/libavcodec/tile_encoder.h
+--- FFmpeg/libavcodec/tile_encoder.h	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavcodec/tile_encoder.h	2020-09-27 13:35:13.371526551 +0800
+@@ -0,0 +1,125 @@
++/*
++ * Intel tile encoder
++ *
++ * Copyright (c) 2018 Intel Cooperation 
++ *
++ * This file is part of FFmpeg.
++ *
++ * FFmpeg is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * FFmpeg is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with FFmpeg; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
++ */
++
++#ifndef TILE_ENCODER_H
++#define TILE_ENCODER_H
++#define FILE_DEBUG
++
++#include "libavutil/fifo.h"
++
++#include "avcodec.h"
++#include "internal.h"
++#include <stdio.h>
++#include <pthread.h>
++#include <unistd.h>
++#include <stdbool.h>
++
++#include "genTiledstreamAPI.h"
++
++#define MAX_TILES 256
++#define FIFO_SIZE 8024
++
++enum ENC_LIB{
++    ENC_NULL = 0,
++    ENC_X265 = 1,
++    ENC_SVT  = 2
++};
++
++enum TILE_MODE{
++    NULL_MODE = 0,
++    FIX_SIZE  = 1,
++    AVG_SIZE  = 2
++};
++typedef int (*ENC_CLOSE)(void*);
++typedef int (*ENC_INIT)(void*);
++typedef int (*ENC_FRAME)(void*, AVPacket*, const AVFrame*, int*);
++
++typedef struct TileInfo{
++        int            top;
++        int            left;
++        int            tWidth;
++        int            tHeight;
++        int            tBitrate;
++        int            tMaxrate;
++        AVFifoBuffer*  outpkt_fifo;
++        int            proc_idx;
++        int            eos;
++        void*          enc_ctx;
++        AVPacket*      internal_pkt;
++#ifdef FILE_DEBUG
++        int            nGetpkt;
++        int            nSpkt;
++        FILE*          file;
++#endif
++} TileInfo;
++
++typedef struct TileEncoderInfo{
++    void          *ctx;
++    int           tile_idx;
++}TileEncoderInfo;
++
++typedef struct EncoderWrapper{
++        AVCodecContext* avctx;
++
++        int             width;
++        int             height;
++        void*           enc_param;
++
++        bool            uniform_split;
++        int             tile_num;
++        int             tile_w;
++        int             tile_h;
++        TileInfo        tile_info[MAX_TILES];
++
++        ENC_CLOSE       enc_close;
++        ENC_INIT        enc_init;
++        ENC_FRAME       enc_frame;
++
++        TileEncoderInfo *tile_enc_info;
++        pthread_t       *tid;
++        int             initialized;
++
++        void            *pGen;
++        param_gen_tiledStream paramTiledStream;
++        pthread_mutex_t mutex;
++        pthread_cond_t cond;
++} EncoderWrapper;
++
++int get_tile_frame_copy(EncoderWrapper* wrapper, int tile_idx, const AVFrame *pic, AVFrame** tile_pic );
++int get_tile_frame_nocopy(EncoderWrapper* wrapper, int tile_idx, const AVFrame *pic, AVFrame** tile_pic );
++
++int bs_tile_stitching(EncoderWrapper* wrapper, AVPacket* outPkt);
++int get_tile_bitrate(EncoderWrapper* wrapper, int idx);
++int get_tile_maxrate(EncoderWrapper* wrapper, int idx);
++
++int libx265_enc_close(void* ctx);
++int libx265_enc_init(void* ctx);
++int libx265_enc_frame(void* ctx, AVPacket *pkt, const AVFrame *pic, int *got_packet);
++
++int svt_enc_close(void* ctx);
++int svt_enc_init(void* ctx);
++int svt_enc_frame(void* ctx, AVPacket *pkt, const AVFrame *pic, int *got_packet);
++int svt_enc_tile(TileEncoderInfo *tile_enc_info);
++int bFifoReady( EncoderWrapper* wrapper );
++
++#endif /* TILE_ENCODER_H */
++
+diff -urN FFmpeg/libavcodec/tile_encode_svt_impl.c FFmpeg-patched/libavcodec/tile_encode_svt_impl.c
+--- FFmpeg/libavcodec/tile_encode_svt_impl.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavcodec/tile_encode_svt_impl.c	2020-09-27 13:35:13.371526551 +0800
+@@ -0,0 +1,488 @@
++/*
++ * Intel tile encoder
++ *
++ * Copyright (c) 2018 Intel Cooperation
 + *
 + * This file is part of FFmpeg.
 + *
@@ -1826,14 +2810,14 @@ index 0000000..e18f8b6
 +    svt_enc->out_buf->nSize       = sizeof(EB_BUFFERHEADERTYPE);
 +    svt_enc->out_buf->nAllocLen   = svt_enc->raw_size;
 +    svt_enc->out_buf->pAppPrivate = NULL;
-+    
++
 +    return ret;
 +
 +failed:
 +    free_buffer(svt_enc);
 +    return AVERROR(ENOMEM);
 +
-+    
++
 +}
 +
 +static EB_ERRORTYPE config_enc_params(EncoderWrapper* wrapper, int tile_idx, EB_H265_ENC_CONFIGURATION  *param )
@@ -1895,11 +2879,11 @@ index 0000000..e18f8b6
 +
 +    EB_ERRORTYPE ret = EB_ErrorNone;
 +    SvtEncoder* svt_enc = NULL;
-+    
++
 +    ctx->svt_enc  = av_mallocz(sizeof(*ctx->svt_enc));
 +    if (!ctx->svt_enc)
 +        return AVERROR(ENOMEM);
-+    
++
 +    svt_enc = ctx->svt_enc;
 +
 +    ctx->eos_flag = 0;
@@ -1937,14 +2921,14 @@ index 0000000..e18f8b6
 +    in_data->luma = frame->data[0];
 +    in_data->cb   = frame->data[1];
 +    in_data->cr   = frame->data[2];
-+    
++
 +	// stride info
 +    in_data->yStride  = frame->linesize[0] >> is16bit;
 +    in_data->cbStride = frame->linesize[1] >> is16bit;
 +    in_data->crStride = frame->linesize[2] >> is16bit;
 +
 +    headerPtr->nFilledLen   += lumaReadSize * 3/2u;
-+    
++
 +}
 +
 +static int eb_send_frame(EncoderWrapper* wrapper, int tile_idx, const AVFrame *frame)
@@ -1973,9 +2957,9 @@ index 0000000..e18f8b6
 +        return ret;
 +    }
 +    get_tile_frame_nocopy(wrapper, tile_idx, frame, &tile_pic);
-+    av_log(wrapper->avctx, AV_LOG_DEBUG, "------tile id = %d start frame address: y=%p, u=%p, v=%p!!!\n", 
++    av_log(wrapper->avctx, AV_LOG_DEBUG, "------tile id = %d start frame address: y=%p, u=%p, v=%p!!!\n",
 +                                          tile_idx, tile_pic->data[0], tile_pic->data[1], tile_pic->data[2]);
-+   
++
 +    read_in_data(&svt_enc->enc_params, tile_pic, headerPtr);
 +
 +    //headerPtr->nOffset    = 0;
@@ -1990,7 +2974,7 @@ index 0000000..e18f8b6
 +    av_log(wrapper->avctx, AV_LOG_DEBUG, "tile id = %d start to send frame, times = %d!!!\n", tile_idx, q->i);
 +
 +    EbH265EncSendPicture(svt_enc->svt_handle, headerPtr);
-+    
++
 +    if(NULL!= tile_pic) av_frame_free(&tile_pic);
 +    return ret;
 +}
@@ -2001,7 +2985,7 @@ index 0000000..e18f8b6
 +    SvtEncoder  *svt_enc = q->svt_enc;
 +    EB_BUFFERHEADERTYPE   *headerPtr = svt_enc->out_buf;
 +    EB_ERRORTYPE          stream_status = EB_ErrorNone;
-+    
++
 +    int ret = 0;
 +
 +    //if ((ret = ff_alloc_packet2(wrapper->avctx, pkt, svt_enc->raw_size, 0)) < 0){
@@ -2010,7 +2994,7 @@ index 0000000..e18f8b6
 +    //}
 +    pkt->data = malloc(svt_enc->raw_size);
 +    pkt->size = svt_enc->raw_size;
-+    
++
 +    headerPtr->pBuffer = pkt->data;
 +    stream_status = EbH265GetPacket(svt_enc->svt_handle, headerPtr, q->eos_flag);
 +    if ((stream_status == EB_NoErrorEmptyQueue)){
@@ -2021,7 +3005,7 @@ index 0000000..e18f8b6
 +    pkt->pts = headerPtr->pts;
 +    pkt->dts = headerPtr->dts;
 +    ret = (headerPtr->nFlags & EB_BUFFERFLAG_EOS) ? AVERROR_EOF : 0;
-+    
++
 +    av_log(wrapper->avctx, AV_LOG_DEBUG, "tile id = %d ret = %d!!!\n", tile_idx, ret);
 +    return ret;
 +}
@@ -2049,13 +3033,13 @@ index 0000000..e18f8b6
 +    for(int i=0; i<wrapper->tile_num; i++){
 +        svt_ctx = (SvtContext*)wrapper->tile_info[i].enc_ctx;
 +        if( NULL != svt_ctx){
-+            eb_enc_close(wrapper, i); 
++            eb_enc_close(wrapper, i);
 +            free(svt_ctx);
 +        }
 +        wrapper->tile_info[i].enc_ctx = NULL;
 +    }
 +    
-+    return 0;   
++    return 0;
 +}
 +
 +int svt_enc_init(void* ctx)
@@ -2094,7 +3078,7 @@ index 0000000..e18f8b6
 +    EncoderWrapper* wrapper = (EncoderWrapper*)ctx;
 +    SvtContext *q = NULL;
 +    
-+    int ret = 0;  
++    int ret = 0;
 +
 +    for(int i=0; i<wrapper->tile_num; i++){
 +        q = (SvtContext *)wrapper->tile_info[i].enc_ctx;
@@ -2138,7 +3122,7 @@ index 0000000..e18f8b6
 +
 +    EncoderWrapper *wrapper = (EncoderWrapper*)tile_enc_info->ctx;
 +    int            tile_idx = tile_enc_info->tile_idx;
-+    
++
 +    while(1)
 +    {
 +        if(wrapper->initialized)
@@ -2185,11 +3169,9 @@ index 0000000..e18f8b6
 +
 +    return ret;
 +}
-diff --git a/FFmpeg/libavcodec/tile_encode_x265_impl.c b/FFmpeg/libavcodec/tile_encode_x265_impl.c
-new file mode 100644
-index 0000000..c464db9
---- /dev/null
-+++ b/FFmpeg/libavcodec/tile_encode_x265_impl.c
+diff -urN FFmpeg/libavcodec/tile_encode_x265_impl.c FFmpeg-patched/libavcodec/tile_encode_x265_impl.c
+--- FFmpeg/libavcodec/tile_encode_x265_impl.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavcodec/tile_encode_x265_impl.c	2020-09-27 13:35:13.371526551 +0800
 @@ -0,0 +1,477 @@
 +/*
 + * Intel tile encoder
@@ -2278,8 +3260,8 @@ index 0000000..c464db9
 +
 +    if (ctx->encoder)
 +        ctx->api->encoder_close(ctx->encoder);
-+    
-+    return 0;    
++
++    return 0;
 +}
 +
 +static int x265_single_init( EncoderWrapper* wrapper, int tile_idx )
@@ -2489,7 +3471,7 @@ index 0000000..c464db9
 +        memcpy(avctx->extradata, nal[0].payload, avctx->extradata_size);
 +    }
 +*/
-+    return 0;    
++    return 0;
 +}
 +
 +static int x265_single_frame( EncoderWrapper* wrapper, int tile_idx, AVPacket *pkt, const AVFrame *pic, int *got_packet  )
@@ -2507,10 +3489,10 @@ index 0000000..c464db9
 +    int i;
 +
 +    ctx->api->picture_init(ctx->params, &x265pic);
-+    
++
 +    if (pic) {
 +        get_tile_frame_nocopy(wrapper, tile_idx, pic, &tile_pic);
-+        
++
 +        for (i = 0; i < 3; i++) {
 +           x265pic.planes[i] = tile_pic->data[i];
 +           x265pic.stride[i] = tile_pic->linesize[i];
@@ -2528,9 +3510,9 @@ index 0000000..c464db9
 +
 +    ret = ctx->api->encoder_encode(ctx->encoder, &nal, &nnal,
 +                                   pic ? &x265pic : NULL, &x265pic_out);
-+    
++
 +    if(NULL!= tile_pic) av_frame_free(&tile_pic);
-+    
++
 +    if (ret < 0)
 +        return AVERROR_EXTERNAL;
 +
@@ -2586,24 +3568,24 @@ index 0000000..c464db9
 +        pkt->flags |= AV_PKT_FLAG_DISPOSABLE;
 +
 +    *got_packet = 1;
-+    
-+    return 0;    
++
++    return 0;
 +}
 +
 +int libx265_enc_close(void* ctx)
 +{
 +    EncoderWrapper* wrapper = (EncoderWrapper*)ctx;
 +    x265Context* x265_ctx = NULL;
-+    
++
 +    for(int i=0; i<wrapper->tile_num; i++){
 +        x265_ctx = (x265Context*)wrapper->tile_info[i].enc_ctx;
 +        if( NULL != x265_ctx){
-+            x265_single_close(wrapper, i); 
++            x265_single_close(wrapper, i);
 +            free(x265_ctx);
 +        }
 +        wrapper->tile_info[i].enc_ctx = NULL;
 +    }
-+    
++
 +    return 0;
 +}
 +
@@ -2611,7 +3593,7 @@ index 0000000..c464db9
 +{
 +    EncoderWrapper* wrapper = (EncoderWrapper*)ctx;
 +    x265Context* x265_ctx = NULL;
-+    
++
 +    for(int i=0; i<wrapper->tile_num; i++){
 +        x265_ctx = malloc(sizeof(x265Context));
 +        x265_ctx->api         = NULL;
@@ -2625,7 +3607,7 @@ index 0000000..c464db9
 +        x265_ctx->bit_rate    = wrapper->tile_info[i].tBitrate;
 +        x265_ctx->rc_max_rate = wrapper->tile_info[i].tMaxrate;
 +        wrapper->tile_info[i].enc_ctx = x265_ctx;
-+        x265_single_init(wrapper, i); 
++        x265_single_init(wrapper, i);
 +    }
 +    return 0;
 +}
@@ -2633,16 +3615,16 @@ index 0000000..c464db9
 +int libx265_enc_frame(void* ctx, AVPacket *pkt, const AVFrame *pic, int *got_packet)
 +{
 +    EncoderWrapper* wrapper = (EncoderWrapper*)ctx;
-+    int ret = 0;  
++    int ret = 0;
 +    int       got_pkt = 0;
 +    
 +    for(int i=0; i<wrapper->tile_num; i++){
 +        if( wrapper->tile_info[i].eos ) continue;
 +        got_pkt = 0;
 +        AVPacket tile_pkts = {0};
-+        
++
 +        ret = x265_single_frame(wrapper, i, &tile_pkts, pic, &got_pkt);
-+        
++
 +        if( got_pkt ){
 +            av_log(wrapper->avctx, AV_LOG_DEBUG, "**********tile id = %d receive_packet got packet!!!\n", i);
 +            av_fifo_generic_write( wrapper->tile_info[i].outpkt_fifo, &tile_pkts, sizeof(AVPacket), NULL);
@@ -2656,771 +3638,60 @@ index 0000000..c464db9
 +        }
 +    }
 +    
-+    //FIXME, suppose all encoder has the rhythm to get packet, so there is no buffer in the first time 
++    //FIXME, suppose all encoder has the rhythm to get packet, so there is no buffer in the first time
 +    ret = bs_tile_stitching(wrapper, pkt);
 +    
 +    if( AVERROR_EOF == ret ){
 +        return AVERROR_EOF;
 +    }
 +    *got_packet = 1;
-+    
++
 +    if( -1 == ret ) *got_packet = 0;
-+    
++
 +    return 0;
 +}
 \ No newline at end of file
-diff --git a/FFmpeg/libavcodec/tile_encoder.c b/FFmpeg/libavcodec/tile_encoder.c
-new file mode 100644
-index 0000000..08b0fb6
---- /dev/null
-+++ b/FFmpeg/libavcodec/tile_encoder.c
-@@ -0,0 +1,586 @@
-+/*
-+ * Intel tile encoder
-+ *
-+ * Copyright (c) 2018 Intel Cooperation 
-+ *
-+ * This file is part of FFmpeg.
-+ *
-+ * FFmpeg is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU Lesser General Public
-+ * License as published by the Free Software Foundation; either
-+ * version 2.1 of the License, or (at your option) any later version.
-+ *
-+ * FFmpeg is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ * Lesser General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with FFmpeg; if not, write to the Free Software
-+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-+ */
-+
-+#include <stdint.h>
-+#include <string.h>
-+
-+#include "libavutil/attributes.h"
-+#include "libavutil/avassert.h"
-+#include "libavutil/dict.h"
-+#include "libavutil/error.h"
-+#include "libavutil/imgutils.h"
-+#include "libavutil/internal.h"
-+#include "libavutil/log.h"
-+#include "libavutil/mem.h"
-+#include "libavutil/pixdesc.h"
-+#include "libavutil/opt.h"
-+
-+#include "tile_encoder.h"
-+
-+//pthread_mutex_t mutex;
-+//pthread_cond_t cond;
-+
-+typedef struct TileEncoderContext {
-+    const AVClass *class;
-+    EncoderWrapper api;
-+    enum ENC_LIB   enc_lib;
-+    enum TILE_MODE tile_mode;
-+    
-+    //for average size tile, the input just give the layout, such as 3x3, 4x4
-+    int            tiles_gw;
-+    int            tiles_gh;
-+    
-+    //for fix size tile, the last one of colum or row is not the fixed value
-+    int            fix_tiles_w;
-+    int            fix_tiles_h;
-+    char          *params;
-+} TileEncoderContext;
-+
-+// Support fix size tile
-+static int assign_tiles_fix( TileEncoderContext* ctx )
-+{
-+    EncoderWrapper* wrapper = &(ctx->api);
-+
-+    int *tiles_col_width, *tiles_row_height;
-+    tiles_col_width = (int *)malloc(ctx->tiles_gw * sizeof(int));
-+    tiles_row_height = (int *)malloc(ctx->tiles_gh * sizeof(int));
-+    for (int i=0;i<ctx->tiles_gw - 1;i++)tiles_col_width[i]=ctx->fix_tiles_w;
-+    for (int i=0;i<ctx->tiles_gh - 1;i++)tiles_row_height[i]=ctx->fix_tiles_h;
-+
-+    wrapper->tile_num = ctx->tiles_gw * ctx->tiles_gh;
-+    wrapper->tile_w = ctx->tiles_gw;
-+    wrapper->tile_h = ctx->tiles_gh;
-+
-+    for(int i = 0; i < ctx->tiles_gh; i++)
-+    {
-+        for(int j = 0; j < ctx->tiles_gw; j++)
-+        {
-+            int idx = i * ctx->tiles_gw + j;
-+            wrapper->tile_info[idx].left    = (j == 0) ? 0 : wrapper->tile_info[idx - 1].left + tiles_col_width[j-1];
-+            wrapper->tile_info[idx].top     = (i == 0) ? 0 : wrapper->tile_info[(i-1)*ctx->tiles_gw + j].top + tiles_row_height[i-1];
-+            wrapper->tile_info[idx].tHeight = (i == ctx->tiles_gh - 1) ? wrapper->height - wrapper->tile_info[idx].top : tiles_row_height[i];
-+            wrapper->tile_info[idx].tWidth  = (j == ctx->tiles_gw - 1) ? wrapper->width - wrapper->tile_info[idx].left : tiles_col_width[j];
-+        }
-+    }
-+
-+    if(tiles_col_width)
-+    {
-+        free(tiles_col_width);
-+        tiles_col_width = NULL;
-+    }
-+    if(tiles_row_height)
-+    {
-+        free(tiles_row_height);
-+        tiles_row_height = NULL;
-+    }
-+
-+    return 0;
-+}
-+static int assign_tiles_avg( TileEncoderContext* ctx )
-+{
-+    EncoderWrapper* wrapper = &(ctx->api);
-+    
-+    wrapper->tile_num = ctx->tiles_gw * ctx->tiles_gh;
-+    wrapper->tile_w = ctx->tiles_gw;
-+    wrapper->tile_h = ctx->tiles_gh;
-+
-+#define LCU_SIZE 64
-+    
-+    // Width and Height should be divisible by LCU_SIZE
-+    int width_in_lcu = wrapper->width / LCU_SIZE;
-+    int height_in_lcu = wrapper->height / LCU_SIZE;
-+
-+    // (6.5.1) in Rec. ITU-T H.265 v5 (02/2018)
-+    int *tiles_col_width, *tiles_row_height;
-+    tiles_col_width = (int *)malloc(ctx->tiles_gw * sizeof(int));
-+    tiles_row_height = (int *)malloc(ctx->tiles_gh * sizeof(int));
-+    for( int i=0; i<ctx->tiles_gw; i++)
-+    {
-+        tiles_col_width[i] = (i+1) * width_in_lcu / ctx->tiles_gw - i * width_in_lcu / ctx->tiles_gw;
-+    }
-+    for( int i=0; i<ctx->tiles_gh; i++)
-+    {
-+        tiles_row_height[i] = (i+1) * height_in_lcu / ctx->tiles_gh - i * height_in_lcu / ctx->tiles_gh;
-+
-+    }
-+
-+    for(int i = 0; i < ctx->tiles_gh; i++)
-+    {
-+        for(int j = 0; j < ctx->tiles_gw; j++)
-+        {
-+            int idx = i * ctx->tiles_gw + j;
-+            wrapper->tile_info[idx].left    = (j == 0) ? 0 : wrapper->tile_info[idx - 1].left + tiles_col_width[j-1] * LCU_SIZE;
-+            wrapper->tile_info[idx].top     = (i == 0) ? 0 : wrapper->tile_info[(i-1)*ctx->tiles_gw + j].top + tiles_row_height[i-1] * LCU_SIZE;
-+            wrapper->tile_info[idx].tHeight = tiles_row_height[i] * LCU_SIZE;
-+            wrapper->tile_info[idx].tWidth  = tiles_col_width[j] * LCU_SIZE;
-+        }
-+    }
-+
-+    if(tiles_col_width)
-+    {
-+        free(tiles_col_width);
-+        tiles_col_width = NULL;
-+    }
-+    if(tiles_row_height)
-+    {
-+        free(tiles_row_height);
-+        tiles_row_height = NULL;
-+    }
-+
-+    return 0;
-+}
-+
-+/// assign bit rate for each tile.
-+int get_tile_bitrate(EncoderWrapper* wrapper, int idx)
-+{
-+    int bit_rate = wrapper->avctx->bit_rate;
-+    double percent = 0.0;
-+    
-+    if( 0==bit_rate ) bit_rate = wrapper->avctx->bit_rate_tolerance;
-+    
-+    ///FIXME if there is more suitable way to calculate bit rate for each tile
-+    percent = (double)( wrapper->tile_info[idx].tHeight * wrapper->tile_info[idx].tWidth ) / (double)(wrapper->width * wrapper->height);
-+    
-+    return (int) (bit_rate * percent);
-+    
-+ }
-+
-+int get_tile_maxrate(EncoderWrapper* wrapper, int idx)
-+{
-+    int max_rate = wrapper->avctx->rc_max_rate;
-+    
-+    ///FIXME if there is more suitable way to calculate bit rate for each tile
-+    double percent = (double)( wrapper->tile_info[idx].tHeight * wrapper->tile_info[idx].tWidth ) / (double)(wrapper->width * wrapper->height);
-+    
-+    return (int) (max_rate * percent);
-+
-+}
-+
-+int bFifoReady( EncoderWrapper* wrapper )
-+{
-+    int eos = 0;
-+    int ready = 0;
-+    for(int i=0; i<wrapper->tile_num; i++){
-+        if( wrapper->tile_info[i].outpkt_fifo ){
-+            if( av_fifo_size(wrapper->tile_info[i].outpkt_fifo) ){
-+                ready++;
-+            }else{
-+                if(wrapper->tile_info[i].eos) eos++;
-+            }
-+        }
-+    }
-+    if( ready == wrapper->tile_num ) return 1;
-+    if( eos == wrapper->tile_num ) return AVERROR_EOF;
-+
-+    return 0;
-+}
-+int bs_tile_stitching(EncoderWrapper* wrapper, AVPacket* outPkt)
-+{
-+    int ret = 0;
-+    AVPacket pkt[MAX_TILES];
-+    int bReady = bFifoReady(wrapper);
-+    int totalsize=0;
-+    uint8_t* dst = NULL;
-+    if( AVERROR_EOF == bReady ) return AVERROR_EOF;
-+    
-+    if( 1 == bReady ){
-+        for(int i=0; i<wrapper->tile_num; i++){
-+            av_fifo_generic_read( wrapper->tile_info[i].outpkt_fifo, &pkt[i],  sizeof(AVPacket),  NULL);
-+#ifdef FILE_DEBUG
-+            wrapper->tile_info[i].nSpkt += 1;
-+            av_log(wrapper->avctx, AV_LOG_DEBUG, "######tile id=%d, getpkt=%d, stitched packet=%d#########\n", i, wrapper->tile_info[i].nGetpkt, wrapper->tile_info[i].nSpkt);
-+            av_log(wrapper->avctx, AV_LOG_DEBUG, "**********tile id = %d, packet size = %d, packet addr=%p!!!\n", i,pkt[i].size, pkt[i].data);
-+#endif
-+            totalsize += pkt[i].size;            
-+        }
-+        
-+        // Sometimes the size of output is larger than size of input,
-+        // so we alloc 2 times larger size packet.
-+        ret = ff_alloc_packet2(wrapper->avctx, outPkt, 2*totalsize, 2*totalsize);
-+        if( ret < 0) return -1;
-+        
-+        dst = outPkt->data;
-+
-+        // call stitching library
-+        wrapper->paramTiledStream.pOutputTiledBitstream = dst;
-+
-+        for (int i = 0; i < wrapper->paramTiledStream.tilesHeightCount; i++)
-+        {
-+            for (int j = 0; j < wrapper->paramTiledStream.tilesWidthCount; j++)
-+            {
-+                param_oneStream_info *ptempinput = wrapper->paramTiledStream.pTiledBitstream[i*wrapper->paramTiledStream.tilesWidthCount + j];
-+                ptempinput->pTiledBitstreamBuffer = pkt[i*wrapper->paramTiledStream.tilesWidthCount + j].data;
-+                ptempinput->inputBufferLen = pkt[i*wrapper->paramTiledStream.tilesWidthCount + j].size;
-+            }
-+        }
-+
-+        wrapper->paramTiledStream.inputBistreamsLen = totalsize;
-+        genTiledStream_process(&(wrapper->paramTiledStream), wrapper->pGen);
-+        dst += wrapper->paramTiledStream.outputiledbistreamlen;
-+        outPkt->size = wrapper->paramTiledStream.outputiledbistreamlen;
-+/*
-+#ifdef FILE_DEBUG
-+        for(int i=0; i<wrapper->tile_num; i++){
-+            memcpy(dst, pkt[i].data, pkt[i].size);
-+            dst += pkt[i].size;
-+            fwrite(pkt[i].data, 1, pkt[i].size, wrapper->tile_info[i].file);
-+        }
-+#endif
-+*/
-+        // Send vps+sps+pps info
-+        AVCodecContext* avctx = wrapper->avctx;
-+        if(avctx->extradata_size == 0)
-+        {
-+            unsigned char *headerAddr;
-+            avctx->extradata_size = genTiledStream_getParam(wrapper->pGen, ID_GEN_TILED_BITSTREAMS_HEADER, &headerAddr);
-+            avctx->extradata = av_malloc(avctx->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
-+            if (!avctx->extradata) {
-+                av_log(avctx, AV_LOG_ERROR,
-+                       "Cannot allocate HEVC header of size %d.\n", avctx->extradata_size);
-+                return AVERROR(ENOMEM);
-+            }
-+            memcpy(avctx->extradata, headerAddr, avctx->extradata_size);
-+        }
-+
-+        switch (wrapper->paramTiledStream.sliceType) {
-+        case SLICE_IDR:
-+        case SLICE_I:
-+            avctx->coded_frame->pict_type = AV_PICTURE_TYPE_I;
-+            break;
-+        case SLICE_P:
-+            avctx->coded_frame->pict_type = AV_PICTURE_TYPE_P;
-+            break;
-+        case SLICE_B:
-+            avctx->coded_frame->pict_type = AV_PICTURE_TYPE_B;
-+            break;
-+        }
-+
-+        //outPkt->pts = paramTiledStream.pts;
-+
-+        ///unref the packet read from fifo
-+        for(int i=0; i<wrapper->tile_num; i++){
-+            av_packet_unref(&pkt[i]);
-+            free(pkt[i].data);
-+        }
-+        
-+        return 0;
-+    }
-+    return -1;
-+}
-+
-+int get_tile_frame_copy(EncoderWrapper* wrapper, int tile_idx, const AVFrame *pic, AVFrame** tile_pic )
-+{
-+    int ret = 0;
-+    uint8_t* src = NULL;
-+    uint8_t* dst = NULL;
-+    int factor = 1;
-+    AVFrame* frame = NULL;
-+    
-+    if( NULL == *tile_pic ){
-+        *tile_pic = av_frame_alloc();
-+        if (!*tile_pic) {
-+            av_freep(*tile_pic);
-+            return AVERROR(ENOMEM);
-+        }
-+    }
-+    
-+    frame = *tile_pic;
-+    frame->height = wrapper->tile_info[tile_idx].tHeight;
-+    frame->width  = wrapper->tile_info[tile_idx].tWidth;
-+    
-+    frame->format = pic->format;
-+
-+    if (!frame->data[0]) {
-+        ret = av_frame_get_buffer(frame, 32);
-+        if (ret < 0){
-+            av_freep(*tile_pic);
-+            return ret;
-+        }
-+    }
-+    
-+    ///current copy is based on YUV420p format
-+    for( int planner=0; planner<3; planner++ ){
-+        if( planner > 0 ){
-+            factor = 2;
-+        }
-+        src = pic->data[planner] + pic->linesize[planner]*(wrapper->tile_info[tile_idx].top / factor) + wrapper->tile_info[tile_idx].left / factor;
-+        dst = frame->data[planner];
-+        for( int i=0; i<frame->height/factor; i++ ){
-+            src += pic->linesize[planner];
-+            dst += frame->linesize[planner];
-+            memcpy( dst, src, frame->width / factor );
-+        }
-+    }
-+    
-+    return ret;
-+}
-+
-+int get_tile_frame_nocopy(EncoderWrapper* wrapper, int tile_idx, const AVFrame *pic, AVFrame** tile_pic )
-+{
-+    AVFrame* frame = NULL;
-+    int factor = 1;
-+    
-+    if( NULL == *tile_pic ){
-+        *tile_pic = av_frame_alloc();
-+        if (!*tile_pic) {
-+            av_freep(*tile_pic);
-+            return AVERROR(ENOMEM);
-+        }
-+    }
-+    
-+    frame = *tile_pic;
-+    frame->height = wrapper->tile_info[tile_idx].tHeight;
-+    frame->width = wrapper->tile_info[tile_idx].tWidth;
-+    frame->format = pic->format;
-+            
-+    for( int i=0; i<4; i++ ){
-+        if( i > 0 ){
-+            factor = 2;
-+        }
-+        frame->data[i] = pic->data[i] + pic->linesize[i]*(wrapper->tile_info[tile_idx].top / factor) + wrapper->tile_info[tile_idx].left / factor;
-+        frame->linesize[i] = pic->linesize[i];
-+    }
-+            
-+    return 0;
-+}
-+
-+static av_cold int tile_encode_close(AVCodecContext *avctx)
-+{
-+    TileEncoderContext *ctx = avctx->priv_data;
-+    EncoderWrapper *wrapper = &(ctx->api);
-+    AVFifoBuffer* fifo = NULL;
-+
-+    if(wrapper->pGen)
-+    {
-+        genTiledStream_unInit(wrapper->pGen);
-+    }
-+
-+    if (wrapper->paramTiledStream.pTiledBitstream)
-+    {
-+        for (int i = 0; i < wrapper->paramTiledStream.tilesHeightCount; i++)
-+        {
-+            for (int j = 0; j < wrapper->paramTiledStream.tilesWidthCount; j++)
-+            {
-+                free(wrapper->paramTiledStream.pTiledBitstream[i*wrapper->paramTiledStream.tilesWidthCount + j]);
-+                wrapper->paramTiledStream.pTiledBitstream[i*wrapper->paramTiledStream.tilesWidthCount + j] = NULL;
-+            }
-+        }
-+        free(wrapper->paramTiledStream.pTiledBitstream);
-+        wrapper->paramTiledStream.pTiledBitstream = NULL;
-+    }
-+    if(avctx->extradata)
-+    {
-+        free(avctx->extradata);
-+        avctx->extradata = NULL;
-+    }
-+
-+    if(wrapper->tid)
-+    {
-+        free(wrapper->tid);
-+        wrapper->tid = NULL;
-+    }
-+    if(wrapper->tile_enc_info)
-+    {
-+        free(wrapper->tile_enc_info);
-+        wrapper->tile_enc_info = NULL;
-+    }
-+
-+    if( NULL != ctx->api.enc_close )
-+        ctx->api.enc_close(&(ctx->api));
-+
-+    for( int i=0; i < ctx->api.tile_num; i++ ){
-+        
-+#ifdef FILE_DEBUG
-+        if(ctx->api.tile_info[i].file) fclose(ctx->api.tile_info[i].file);
-+#endif
-+        
-+        fifo = ctx->api.tile_info[i].outpkt_fifo;
-+        while ( fifo && av_fifo_size(fifo)) {
-+            AVPacket pkt;
-+            av_fifo_generic_read(fifo, &pkt,  sizeof(pkt),  NULL);
-+            free(pkt.data);
-+            av_packet_unref(&pkt);
-+        } 
-+        av_fifo_free(fifo);
-+        fifo = NULL;
-+    }
-+    return 0;
-+}
-+
-+static av_cold int tile_encode_init(AVCodecContext *avctx)
-+{
-+    TileEncoderContext *ctx = avctx->priv_data;
-+    EncoderWrapper* wrapper = &(ctx->api);
-+    int ret = 0; 
-+    char filename[256];
-+    
-+    wrapper->width = avctx->coded_width;
-+    wrapper->height = avctx->coded_height;
-+    
-+    wrapper->avctx = avctx;
-+    switch(ctx->tile_mode){
-+        case FIX_SIZE:
-+            wrapper->uniform_split = false;
-+            assign_tiles_fix( ctx );
-+            break;
-+        case AVG_SIZE:
-+            wrapper->uniform_split = true;
-+            assign_tiles_avg( ctx );
-+            break;
-+        default:
-+            break;
-+    }
-+    
-+    
-+    switch(ctx->enc_lib){
-+        case ENC_X265:
-+            wrapper->enc_close = libx265_enc_close;
-+            wrapper->enc_frame = libx265_enc_frame;
-+            wrapper->enc_init  = libx265_enc_init;
-+            break;
-+        case ENC_SVT:
-+            wrapper->enc_close = svt_enc_close;
-+            wrapper->enc_frame = svt_enc_frame;
-+            wrapper->enc_init  = svt_enc_init;
-+            break;
-+        default:
-+            break;
-+    }
-+
-+    pthread_mutex_init(&(wrapper->mutex), NULL);
-+    pthread_cond_init(&(wrapper->cond), NULL);
-+    wrapper->tid = malloc(wrapper->tile_num * sizeof(pthread_t));
-+    wrapper->tile_enc_info = malloc(wrapper->tile_num * sizeof(TileEncoderInfo));
-+    for(int i=0; i<wrapper->tile_num; i++){
-+        wrapper->tile_info[i].tBitrate = get_tile_bitrate(wrapper, i);
-+        wrapper->tile_info[i].tMaxrate = get_tile_maxrate(wrapper, i);
-+        wrapper->tile_info[i].eos = 0;
-+        wrapper->tile_info[i].outpkt_fifo = av_fifo_alloc( FIFO_SIZE * sizeof(AVPacket));
-+#ifdef FILE_DEBUG
-+        wrapper->tile_info[i].nGetpkt = 0;
-+        wrapper->tile_info[i].nSpkt = 0;        
-+        sprintf(filename, "out_%d.265", i);
-+        wrapper->tile_info[i].file = fopen(filename, "wb+");
-+#endif
-+        wrapper->tile_enc_info[i].ctx      = wrapper;
-+        wrapper->tile_enc_info[i].tile_idx = i;
-+
-+        ret = pthread_create(&wrapper->tid[i], NULL, svt_enc_tile, &(wrapper->tile_enc_info[i]));
-+        if(0 != ret)
-+        {
-+            av_log(avctx, AV_LOG_ERROR, "Cannot create thread!\n");
-+            return ret;
-+        }
-+    }
-+    
-+    if( NULL != ctx->api.enc_init ){
-+        ret = wrapper->enc_init(wrapper); 
-+        if( 0 != ret ) return ret;
-+    }
-+
-+    wrapper->paramTiledStream.tilesHeightCount = wrapper->tile_h;
-+    wrapper->paramTiledStream.tilesWidthCount  = wrapper->tile_w;
-+    wrapper->paramTiledStream.tilesUniformSpacing = wrapper->uniform_split;
-+    wrapper->paramTiledStream.frameWidth = wrapper->width;
-+    wrapper->paramTiledStream.frameHeight = wrapper->height;
-+    wrapper->paramTiledStream.pTiledBitstream = (param_oneStream_info**)malloc(wrapper->tile_h * wrapper->tile_w * sizeof(param_oneStream_info *));
-+    if (!wrapper->paramTiledStream.pTiledBitstream)
-+    {
-+        printf("memory alloc failed!");
-+        return 1;
-+    }
-+
-+    for (int i = 0; i < wrapper->paramTiledStream.tilesHeightCount; i++)
-+    {
-+        for (int j = 0; j < wrapper->paramTiledStream.tilesWidthCount; j++)
-+        {
-+            wrapper->paramTiledStream.pTiledBitstream[i*wrapper->paramTiledStream.tilesWidthCount + j] = (param_oneStream_info*)malloc(sizeof(param_oneStream_info));
-+        }
-+    }
-+
-+    wrapper->pGen = genTiledStream_Init(&(wrapper->paramTiledStream));
-+    if (!wrapper->pGen)
-+    {
-+        printf("the initialize failed\n");
-+        return 1;
-+    }
-+
-+    return 0;
-+}
-+
-+static int tile_encode_frame(AVCodecContext *avctx, AVPacket *pkt,
-+                                const AVFrame *pic, int *got_packet)
-+{
-+    TileEncoderContext *ctx = avctx->priv_data;
-+    if( NULL != ctx->api.enc_frame )
-+        ctx->api.enc_frame(&(ctx->api), pkt, pic, got_packet);
-+    
-+    return 0;
-+}
-+
-+#define OFFSET(x) offsetof(TileEncoderContext, x)
-+#define VE AV_OPT_FLAG_VIDEO_PARAM | AV_OPT_FLAG_ENCODING_PARAM
-+static const AVOption options[] = {
-+    { "enc", "what's the encoder for each tile. so far, x265=1, svt=2.", OFFSET(enc_lib), AV_OPT_TYPE_INT, { .i64 = 2 }, 0, 3, VE },
-+    { "tile_mode", "specify how to divide the tiles of the picture: 1 fixed size tiles; 2. grid layout, 3x3, 4x4.", OFFSET(tile_mode), AV_OPT_TYPE_INT, { .i64 = 2 }, 0, 3, VE },
-+    { "tiles_gw", "horizontal grid number of tiles; available when tile is divided via grid layout .", OFFSET(tiles_gw), AV_OPT_TYPE_INT, { .i64 = 1 }, 0, INT_MAX, VE },
-+    { "tiles_gh", "vertical grid number of tiles; available when tile is divided via grid layout .", OFFSET(tiles_gh), AV_OPT_TYPE_INT, { .i64 = 1 }, 0, INT_MAX, VE },
-+    { "tiles_fixw", "horizontal width of tiles; available when tile is divided via fixed size.", OFFSET(fix_tiles_w), AV_OPT_TYPE_INT, { .i64 = 512 }, 0, INT_MAX, VE },
-+    { "tiles_fixh", "vertical height of tiles; available when tile is divided via fixed size.", OFFSET(fix_tiles_h), AV_OPT_TYPE_INT, { .i64 = 512 }, 0, INT_MAX, VE },
-+    { "params", "Set parameters as a comma-separated list of key=value pairs.", OFFSET(params), AV_OPT_TYPE_STRING, { .str = NULL }, 0, 0, VE },
-+    { NULL },
-+};
-+
-+static const AVClass class = {
-+    .class_name = "hevc_tile_encoder",
-+    .item_name  = av_default_item_name,
-+    .option     = options,
-+    .version    = LIBAVUTIL_VERSION_INT,
-+};
-+
-+static const AVCodecDefault defaults[] = {
-+    { "b", "0" },
-+    { NULL },
-+};
-+
-+AVCodec ff_hevc_tile_encoder = {
-+    .name             = "hevc_tile_encoder",
-+    .long_name        = NULL_IF_CONFIG_SMALL("distribute tile H.265 / HEVC"),
-+    .type             = AVMEDIA_TYPE_VIDEO,
-+    .id               = AV_CODEC_ID_HEVC,
-+    .capabilities     = AV_CODEC_CAP_DELAY,
-+    .pix_fmts         = (const enum AVPixelFormat[]){ AV_PIX_FMT_YUV420P,
-+                                                    AV_PIX_FMT_YUV420P10,
-+                                                    AV_PIX_FMT_NONE },
-+
-+    .priv_class       = &class,
-+    .priv_data_size   = sizeof(TileEncoderContext),
-+    .defaults         = defaults,
-+
-+    .init             = tile_encode_init,
-+    .encode2          = tile_encode_frame,
-+    .close            = tile_encode_close,
-+
-+    .caps_internal    = FF_CODEC_CAP_INIT_THREADSAFE | FF_CODEC_CAP_INIT_CLEANUP,
-+
-+    .wrapper_name     = "hevc_tile_encoder",
-+};
-diff --git a/FFmpeg/libavcodec/tile_encoder.h b/FFmpeg/libavcodec/tile_encoder.h
-new file mode 100644
-index 0000000..d9afc5c
---- /dev/null
-+++ b/FFmpeg/libavcodec/tile_encoder.h
-@@ -0,0 +1,125 @@
-+/*
-+ * Intel tile encoder
-+ *
-+ * Copyright (c) 2018 Intel Cooperation 
-+ *
-+ * This file is part of FFmpeg.
-+ *
-+ * FFmpeg is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU Lesser General Public
-+ * License as published by the Free Software Foundation; either
-+ * version 2.1 of the License, or (at your option) any later version.
-+ *
-+ * FFmpeg is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-+ * Lesser General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with FFmpeg; if not, write to the Free Software
-+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-+ */
-+
-+#ifndef TILE_ENCODER_H
-+#define TILE_ENCODER_H
-+#define FILE_DEBUG
-+
-+#include "libavutil/fifo.h"
-+
-+#include "avcodec.h"
-+#include "internal.h"
-+#include <stdio.h>
-+#include <pthread.h>
-+#include <unistd.h>
-+#include <stdbool.h>
-+
-+#include "genTiledstreamAPI.h"
-+
-+#define MAX_TILES 256
-+#define FIFO_SIZE 8024
-+
-+enum ENC_LIB{
-+    ENC_NULL = 0,
-+    ENC_X265 = 1,
-+    ENC_SVT  = 2            
-+};
-+
-+enum TILE_MODE{
-+    NULL_MODE = 0,
-+    FIX_SIZE  = 1,
-+    AVG_SIZE  = 2
-+};
-+typedef int (*ENC_CLOSE)(void*);
-+typedef int (*ENC_INIT)(void*);
-+typedef int (*ENC_FRAME)(void*, AVPacket*, const AVFrame*, int*);
-+
-+typedef struct TileInfo{
-+        int            top;
-+        int            left;
-+        int            tWidth;
-+        int            tHeight;
-+        int            tBitrate;
-+        int            tMaxrate;
-+        AVFifoBuffer*  outpkt_fifo;
-+        int            proc_idx;
-+        int            eos;
-+        void*          enc_ctx;
-+        AVPacket*      internal_pkt;
-+#ifdef FILE_DEBUG
-+        int            nGetpkt;
-+        int            nSpkt;
-+        FILE*          file; 
-+#endif
-+} TileInfo;
-+
-+typedef struct TileEncoderInfo{
-+    void          *ctx;
-+    int           tile_idx;
-+}TileEncoderInfo;
-+
-+typedef struct EncoderWrapper{
-+        AVCodecContext* avctx;
-+        
-+        int             width;
-+        int             height;
-+        void*           enc_param;
-+
-+        bool            uniform_split;
-+        int             tile_num;
-+        int             tile_w;
-+        int             tile_h;
-+        TileInfo        tile_info[MAX_TILES];   
-+        
-+        ENC_CLOSE       enc_close;
-+        ENC_INIT        enc_init;
-+        ENC_FRAME       enc_frame;
-+
-+        TileEncoderInfo *tile_enc_info;
-+        pthread_t       *tid;
-+        int             initialized;
-+
-+        void            *pGen;
-+        param_gen_tiledStream paramTiledStream;
-+        pthread_mutex_t mutex;
-+        pthread_cond_t cond;
-+} EncoderWrapper;
-+
-+int get_tile_frame_copy(EncoderWrapper* wrapper, int tile_idx, const AVFrame *pic, AVFrame** tile_pic );
-+int get_tile_frame_nocopy(EncoderWrapper* wrapper, int tile_idx, const AVFrame *pic, AVFrame** tile_pic );
-+    
-+int bs_tile_stitching(EncoderWrapper* wrapper, AVPacket* outPkt);
-+int get_tile_bitrate(EncoderWrapper* wrapper, int idx);
-+int get_tile_maxrate(EncoderWrapper* wrapper, int idx);
-+    
-+int libx265_enc_close(void* ctx);
-+int libx265_enc_init(void* ctx);
-+int libx265_enc_frame(void* ctx, AVPacket *pkt, const AVFrame *pic, int *got_packet);
-+    
-+int svt_enc_close(void* ctx);
-+int svt_enc_init(void* ctx);
-+int svt_enc_frame(void* ctx, AVPacket *pkt, const AVFrame *pic, int *got_packet);
-+int svt_enc_tile(TileEncoderInfo *tile_enc_info);
-+int bFifoReady( EncoderWrapper* wrapper );
-+
-+#endif /* TILE_ENCODER_H */
-+
-diff --git a/FFmpeg/libavfilter/Makefile b/FFmpeg/libavfilter/Makefile
-index 7beec31..e3cd0d2 100644
---- a/FFmpeg/libavfilter/Makefile
-+++ b/FFmpeg/libavfilter/Makefile
-@@ -382,6 +382,7 @@ OBJS-$(CONFIG_TMIX_FILTER)                   += vf_mix.o framesync.o
- OBJS-$(CONFIG_TONEMAP_FILTER)                += vf_tonemap.o colorspace.o
- OBJS-$(CONFIG_TONEMAP_OPENCL_FILTER)         += vf_tonemap_opencl.o colorspace.o opencl.o \
-                                                 opencl/tonemap.o opencl/colorspace_common.o
-+OBJS-$(CONFIG_TRANSFORM360_FILTER)           += vf_transform360.o
- OBJS-$(CONFIG_TRANSPOSE_FILTER)              += vf_transpose.o
- OBJS-$(CONFIG_TRANSPOSE_NPP_FILTER)          += vf_transpose_npp.o
- OBJS-$(CONFIG_TRIM_FILTER)                   += trim.o
-diff --git a/FFmpeg/libavfilter/allfilters.c b/FFmpeg/libavfilter/allfilters.c
-index 6f1e7cf..563777e 100644
---- a/FFmpeg/libavfilter/allfilters.c
-+++ b/FFmpeg/libavfilter/allfilters.c
-@@ -364,6 +364,7 @@ extern AVFilter ff_vf_tlut2;
+diff -urN FFmpeg/libavfilter/allfilters.c FFmpeg-patched/libavfilter/allfilters.c
+--- FFmpeg/libavfilter/allfilters.c	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavfilter/allfilters.c	2020-09-27 13:35:13.453526545 +0800
+@@ -406,6 +406,7 @@
  extern AVFilter ff_vf_tmix;
  extern AVFilter ff_vf_tonemap;
  extern AVFilter ff_vf_tonemap_opencl;
 +extern AVFilter ff_vf_transform360;
+ extern AVFilter ff_vf_tonemap_vaapi;
+ extern AVFilter ff_vf_tpad;
  extern AVFilter ff_vf_transpose;
- extern AVFilter ff_vf_transpose_npp;
- extern AVFilter ff_vf_trim;
-diff --git a/FFmpeg/libavfilter/vf_transform360.c b/FFmpeg/libavfilter/vf_transform360.c
-new file mode 100644
-index 0000000..44674bc
---- /dev/null
-+++ b/FFmpeg/libavfilter/vf_transform360.c
+@@ -444,6 +445,7 @@
+ extern AVFilter ff_vf_zmq;
+ extern AVFilter ff_vf_zoompan;
+ extern AVFilter ff_vf_zscale;
++extern AVFilter ff_vf_xcam;
+
+ extern AVFilter ff_vsrc_allrgb;
+ extern AVFilter ff_vsrc_allyuv;
+diff -urN FFmpeg/libavfilter/Makefile FFmpeg-patched/libavfilter/Makefile
+--- FFmpeg/libavfilter/Makefile	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavfilter/Makefile	2020-09-27 13:35:13.450526545 +0800
+@@ -143,6 +143,7 @@
+ OBJS-$(CONFIG_VIBRATO_FILTER)                += af_vibrato.o generate_wave_table.o
+ OBJS-$(CONFIG_VOLUME_FILTER)                 += af_volume.o
+ OBJS-$(CONFIG_VOLUMEDETECT_FILTER)           += af_volumedetect.o
++OBJS-$(CONFIG_XCAM_FILTER)                   += vf_xcam.o
+
+ OBJS-$(CONFIG_AEVALSRC_FILTER)               += aeval.o
+ OBJS-$(CONFIG_AFIRSRC_FILTER)                += asrc_afirsrc.o
+@@ -426,6 +427,7 @@
+ OBJS-$(CONFIG_TONEMAP_FILTER)                += vf_tonemap.o colorspace.o
+ OBJS-$(CONFIG_TONEMAP_OPENCL_FILTER)         += vf_tonemap_opencl.o colorspace.o opencl.o \
+                                                 opencl/tonemap.o opencl/colorspace_common.o
++OBJS-$(CONFIG_TRANSFORM360_FILTER)           += vf_transform360.o
+ OBJS-$(CONFIG_TONEMAP_VAAPI_FILTER)          += vf_tonemap_vaapi.o vaapi_vpp.o
+ OBJS-$(CONFIG_TPAD_FILTER)                   += vf_tpad.o
+ OBJS-$(CONFIG_TRANSPOSE_FILTER)              += vf_transpose.o
+diff -urN FFmpeg/libavfilter/vf_transform360.c FFmpeg-patched/libavfilter/vf_transform360.c
+--- FFmpeg/libavfilter/vf_transform360.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavfilter/vf_transform360.c	2020-09-27 13:35:13.495526541 +0800
 @@ -0,0 +1,483 @@
 +/**
 + * Copyright (c) 2015-present, Facebook, Inc.
@@ -3905,59 +4176,376 @@ index 0000000..44674bc
 +    .inputs      = avfilter_vf_transform_inputs,
 +    .outputs     = avfilter_vf_transform_outputs,
 +};
-diff --git a/FFmpeg/libavformat/Makefile b/FFmpeg/libavformat/Makefile
-index e99e915..4225abe 100644
---- a/FFmpeg/libavformat/Makefile
-+++ b/FFmpeg/libavformat/Makefile
-@@ -145,6 +145,8 @@ OBJS-$(CONFIG_DATA_DEMUXER)              += rawdec.o
- OBJS-$(CONFIG_DATA_MUXER)                += rawenc.o
- OBJS-$(CONFIG_DASH_MUXER)                += dash.o dashenc.o hlsplaylist.o
- OBJS-$(CONFIG_DASH_DEMUXER)              += dash.o dashdec.o
-+OBJS-$(CONFIG_TILE_DASH_DEMUXER)         += tiled_dash_dec.o
-+OBJS-$(CONFIG_LIBVROMAFPACKING)          += omaf_packing_enc.o
- OBJS-$(CONFIG_DAUD_DEMUXER)              += dauddec.o
- OBJS-$(CONFIG_DAUD_MUXER)                += daudenc.o
- OBJS-$(CONFIG_DCSTR_DEMUXER)             += dcstr.o
-diff --git a/FFmpeg/libavformat/allformats.c b/FFmpeg/libavformat/allformats.c
-index 9e41718..e9acbd1 100644
---- a/FFmpeg/libavformat/allformats.c
-+++ b/FFmpeg/libavformat/allformats.c
-@@ -164,6 +164,8 @@ extern AVInputFormat  ff_gdv_demuxer;
- extern AVInputFormat  ff_genh_demuxer;
- extern AVInputFormat  ff_gif_demuxer;
- extern AVOutputFormat ff_gif_muxer;
-+extern AVOutputFormat ff_tile_dash_muxer;
+diff -urN FFmpeg/libavfilter/vf_xcam.c FFmpeg-patched/libavfilter/vf_xcam.c
+--- FFmpeg/libavfilter/vf_xcam.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavfilter/vf_xcam.c	2020-09-27 13:35:13.516526540 +0800
+@@ -0,0 +1,350 @@
++/*
++ * Copyright (c) 2020 Intel Corporation, all rights reserved.
++ *
++ * This file is part of FFmpeg.
++ *
++ * FFmpeg is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * FFmpeg is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with FFmpeg; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
++ */
++
++/**
++ * @file
++ * libxcam wrapper functions
++ */
++
++#include <xcam/capi/xcam_handle.h>
++#include "libavutil/avstring.h"
++#include "libavutil/opt.h"
++#include "framesync.h"
++#include "internal.h"
++
++typedef struct XCamVideoFilterBuf {
++    XCamVideoBuffer buf;
++    AVFrame *frame;
++} XCamVideoFilterBuf;
++
++typedef struct XCAMContext {
++    const AVClass *class;
++
++    int nb_inputs;
++    int w;
++    int h;
++    char *fmt;
++    char *name;
++    int allocoutbuf;
++    char *params;
++
++    XCamHandle *handle;
++    uint32_t v4l2_fmt;
++
++    XCamVideoFilterBuf *inbufs[XCAM_MAX_INPUTS_NUM + 1];
++    FFFrameSync fs;
++} XCAMContext;
++
++static void xcambuf_ref(XCamVideoBuffer *buf) {
++    return;
++}
++
++static void xcambuf_unref(XCamVideoBuffer *buf) {
++    return;
++}
++
++static uint8_t *xcambuf_map(XCamVideoBuffer *buf) {
++    XCamVideoFilterBuf *avfilter_buf = (XCamVideoFilterBuf *)(buf);
++    return avfilter_buf->frame->data[0];
++}
++
++static void xcambuf_unmap(XCamVideoBuffer *buf) {
++    return;
++}
++
++static int xcambuf_get_fd(XCamVideoBuffer *buf) {
++    return 1;
++}
++
++static void fill_xcambuf_from_avframe(XCamVideoFilterBuf *buf, AVFrame *frame)
++{
++    buf->frame = frame;
++}
++
++static void fill_avframe_from_xcambuf(AVFrame *frame, XCamVideoBuffer *buf)
++{
++    XCamVideoBufferPlanarInfo planar;
++
++    uint8_t *start = xcam_video_buffer_map(buf);
++    if (!start)
++        return;
++
++    for (uint32_t idx = 0; idx < buf->info.components; idx++) {
++        uint8_t *src = start + buf->info.offsets[idx];
++        uint8_t *dest = frame->data[idx];
++        xcam_video_buffer_get_planar_info(&buf->info, &planar, idx);
++
++        for (uint32_t h = 0; h < planar.height; h++) {
++            memcpy(dest, src, frame->linesize[idx]);
++            src += buf->info.strides[idx];
++            dest += frame->linesize[idx];
++        }
++    }
++
++    xcam_video_buffer_unmap (buf);
++}
++
++static uint32_t avfmt_to_v4l2fmt(int avfmt) {
++    if (avfmt == AV_PIX_FMT_YUV420P)
++        return V4L2_PIX_FMT_YUV420;
++    return V4L2_PIX_FMT_NV12;
++}
++
++static int set_parameters(AVFilterContext *ctx, const AVFilterLink *inlink, const AVFilterLink *outlink)
++{
++    XCAMContext *s = inlink->dst->priv;
++
++    char params[XCAM_MAX_PARAMS_LENGTH] = { 0 };
++    snprintf(params, XCAM_MAX_PARAMS_LENGTH - 1, "inw=%d inh=%d outw=%d outh=%d fmt=%d allocoutbuf=%d %s",
++        inlink->w, inlink->h, outlink->w, outlink->h, s->v4l2_fmt, s->allocoutbuf, s->params);
++
++    if (xcam_handle_set_parameters(s->handle, params) != XCAM_RETURN_NO_ERROR) {
++        av_log(ctx, AV_LOG_ERROR, "xcam handler set parameters failed\n");
++        return AVERROR(EINVAL);
++    }
++
++    return 0;
++}
++
++static int
++init_xcambuf_info(XCAMContext *s, XCamVideoBuffer *buf, AVFrame *frame)
++{
++    XCamReturn ret = xcam_video_buffer_info_reset(
++        &buf->info, s->v4l2_fmt, frame->width, frame->height, frame->linesize[0], frame->height, 0);
++    if (ret != XCAM_RETURN_NO_ERROR)
++        return AVERROR(EINVAL);
++
++    for (int i = 0; frame->linesize[i]; i++) {
++        buf->info.offsets[i] = frame->data[i] - frame->data[0];
++        buf->info.strides[i] = frame->linesize[i];
++    }
++    buf->mem_type = XCAM_MEM_TYPE_CPU;
++
++    return 0;
++}
++
++static int xcam_execute(FFFrameSync *fs)
++{
++    AVFilterContext *ctx = fs->parent;
++    XCAMContext *s = fs->opaque;
++    AVFilterLink *outlink;
++    AVFrame *outframe, *frame;
++    XCamVideoBuffer *outbuf = NULL;
++
++    XCamVideoFilterBuf **inbufs = s->inbufs;
++    for (int i = 0; i < ctx->nb_inputs; i++) {
++        int error = ff_framesync_get_frame(&s->fs, i, &frame, 0);
++        if (error < 0)
++            return error;
++        if (init_xcambuf_info(s, &inbufs[i]->buf, frame) != 0)
++            return AVERROR(EINVAL);
++        fill_xcambuf_from_avframe(inbufs[i], frame);
++    }
++
++    if (xcam_handle_execute(s->handle, (XCamVideoBuffer **)inbufs, &outbuf) != XCAM_RETURN_NO_ERROR) {
++        av_log(ctx, AV_LOG_ERROR, "execute xcam handler failed\n");
++        return AVERROR(EINVAL);
++    }
++
++    outlink = ctx->outputs[0];
++    if (!(outframe = ff_get_video_buffer(outlink, outlink->w, outlink->h))) {
++        av_frame_free(&frame);
++        return AVERROR(ENOMEM);
++    }
++    av_frame_copy_props(outframe, frame);
++
++    fill_avframe_from_xcambuf(outframe, outbuf);
++    xcam_video_buffer_unref(outbuf);
++
++    return ff_filter_frame(outlink, outframe);
++}
++
++static int xcam_query_formats(AVFilterContext *ctx)
++{
++    XCAMContext *s = ctx->priv;
++    AVFilterFormats *formats = NULL;
++
++    static const enum AVPixelFormat nv12_fmts[] = {AV_PIX_FMT_NV12, AV_PIX_FMT_NONE};
++    static const enum AVPixelFormat yuv420_fmts[] = {AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE};
++    static const enum AVPixelFormat auto_fmts[] = {AV_PIX_FMT_NV12, AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE};
++
++    const enum AVPixelFormat *pix_fmts = NULL;
++    if (!av_strcasecmp(s->fmt, "nv12"))
++        pix_fmts = nv12_fmts;
++    else if (!av_strcasecmp(s->fmt, "yuv420"))
++        pix_fmts = yuv420_fmts;
++    else
++        pix_fmts = auto_fmts;
++
++    if (!(formats = ff_make_format_list(pix_fmts)))
++        return AVERROR(ENOMEM);
++
++    return ff_set_common_formats(ctx, formats);
++}
++
++static int xcam_config_output(AVFilterLink *outlink)
++{
++    AVFilterContext *ctx = outlink->src;
++    XCAMContext *s = ctx->priv;
++    AVFilterLink *inlink = ctx->inputs[0];
++    int ret = 0;
++
++    s->v4l2_fmt = avfmt_to_v4l2fmt(inlink->format);
++    if (s->w && s->h) {
++        outlink->w = s->w;
++        outlink->h = s->h;
++    } else {
++        outlink->w = inlink->w;
++        outlink->h = inlink->h;
++    }
++
++    set_parameters(ctx, inlink, outlink);
++    if (xcam_handle_init(s->handle) != XCAM_RETURN_NO_ERROR) {
++        av_log(ctx, AV_LOG_ERROR, "init xcam handler failed\n");
++        return AVERROR(EINVAL);
++    }
++
++    if ((ret = ff_framesync_init(&s->fs, ctx, ctx->nb_inputs)) < 0)
++        return ret;
++    s->fs.opaque = s;
++    s->fs.on_event = xcam_execute;
++    for (int i = 0; i < ctx->nb_inputs; i++) {
++        FFFrameSyncIn *in = &s->fs.in[i];
++        in->time_base = ctx->inputs[i]->time_base;
++        in->sync      = 1;
++        in->before    = EXT_STOP;
++        in->after     = EXT_STOP;
++    }
++    ret = ff_framesync_configure(&s->fs);
++    outlink->time_base = s->fs.time_base;
++
++    return ret;
++}
++
++static av_cold int xcam_init(AVFilterContext *ctx)
++{
++    XCAMContext *s = ctx->priv;
++    int ret = 0;
++
++    s->handle = xcam_create_handle(s->name);
++    if (!s->handle) {
++        av_log(ctx, AV_LOG_ERROR, "create xcam handler failed\n");
++        return AVERROR(EINVAL);
++    }
++
++    for (int i = 0; i < s->nb_inputs; i++) {
++        s->inbufs[i] = av_mallocz_array(1, sizeof(*s->inbufs[i]));
++        if (!s->inbufs[i])
++            return AVERROR(ENOMEM);
++        s->inbufs[i]->buf.ref = xcambuf_ref;
++        s->inbufs[i]->buf.unref = xcambuf_unref;
++        s->inbufs[i]->buf.map = xcambuf_map;
++        s->inbufs[i]->buf.unmap = xcambuf_unmap;
++        s->inbufs[i]->buf.get_fd = xcambuf_get_fd;
++    }
++
++    for (int i = 0; i < s->nb_inputs; i++) {
++        AVFilterPad pad = { .type = AVMEDIA_TYPE_VIDEO };
++        pad.name = av_asprintf("input%d", i);
++        if (!pad.name)
++            return AVERROR(ENOMEM);
++
++        if ((ret = ff_insert_inpad(ctx, i, &pad)) < 0) {
++            av_freep(&pad.name);
++            return ret;
++        }
++    }
++
++    return 0;
++}
++
++static av_cold void xcam_uninit(AVFilterContext *ctx)
++{
++    XCAMContext *s = ctx->priv;
++
++    ff_framesync_uninit(&s->fs);
++    for (int i = 0; i < s->nb_inputs; i++) {
++        if (s->inbufs[i])
++            av_freep(&s->inbufs[i]);
++        if (ctx->input_pads)
++            av_freep(&ctx->input_pads[i].name);
++    }
++
++    xcam_destroy_handle(s->handle);
++    s->handle = NULL;
++}
++
++static int xcam_activate(AVFilterContext *ctx)
++{
++    XCAMContext *s = ctx->priv;
++    return ff_framesync_activate(&s->fs);
++}
++
++#define OFFSET(x) offsetof(XCAMContext, x)
++#define FLAGS AV_OPT_FLAG_VIDEO_PARAM|AV_OPT_FLAG_FILTERING_PARAM
++#define CONST_STRING(name, help, unit) \
++    { name, help, 0, AV_OPT_TYPE_CONST, { .str=name }, 0, 0, FLAGS, unit }
++
++static const AVOption xcam_options[] = {
++    { "inputs", "number of inputs", OFFSET(nb_inputs), AV_OPT_TYPE_INT, { .i64 = 1 }, 1, XCAM_MAX_INPUTS_NUM, FLAGS },
++    { "w",  "output width", OFFSET(w), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, INT_MAX, FLAGS },
++    { "h", "output height", OFFSET(h), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, INT_MAX, FLAGS },
++    { "fmt", "pixel format", OFFSET(fmt), AV_OPT_TYPE_STRING, { .str = "auto" }, 0, 0, FLAGS, "fmt" },
++        CONST_STRING("auto",   "automatic format negotiation", "fmt"),
++        CONST_STRING("nv12",   "NV12 format",                  "fmt"),
++        CONST_STRING("yuv420", "YUV420 format",                "fmt"),
++    { "name",   "handler name", OFFSET(name), AV_OPT_TYPE_STRING, { .str = "stitch" }, 0, 0, FLAGS, "name" },
++        CONST_STRING("3dnr",      "3d denoising",               "name"),
++        CONST_STRING("waveletnr", "wavelet denoising",          "name"),
++        CONST_STRING("fisheye",   "fisheye calibration",        "name"),
++        CONST_STRING("defog",     "fog removal",                "name"),
++        CONST_STRING("dvs",       "digital video stabilizer",   "name"),
++        CONST_STRING("stitch",    "soft/GLES/Vulkan stitching", "name"),
++        CONST_STRING("stitchcl",  "OpenCL stitching",           "name"),
++    { "allocoutbuf",  "alloc output buffer", OFFSET(allocoutbuf), AV_OPT_TYPE_BOOL, { .i64 = 1 }, 0, 1, FLAGS },
++    { "params", "private parameters for each handle, usage: params=help=1 field0=value0 field1=value1 ...",
++        OFFSET(params), AV_OPT_TYPE_STRING, { .str = NULL }, 0, 0, FLAGS },
++    { NULL }
++};
++
++AVFILTER_DEFINE_CLASS(xcam);
++
++static const AVFilterPad xcam_outputs[] = {
++    {
++        .name         = "default",
++        .type         = AVMEDIA_TYPE_VIDEO,
++        .config_props = xcam_config_output
++    },
++    { NULL }
++};
++
++AVFilter ff_vf_xcam = {
++    .name          = "xcam",
++    .description   = NULL_IF_CONFIG_SMALL("Apply image processing using libxcam"),
++    .priv_size     = sizeof(XCAMContext),
++    .priv_class    = &xcam_class,
++    .init          = xcam_init,
++    .query_formats = xcam_query_formats,
++    .outputs       = xcam_outputs,
++    .activate      = xcam_activate,
++    .uninit        = xcam_uninit,
++    .flags         = AVFILTER_FLAG_DYNAMIC_INPUTS
++};
++
+diff -urN FFmpeg/libavformat/allformats.c FFmpeg-patched/libavformat/allformats.c
+--- FFmpeg/libavformat/allformats.c	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavformat/allformats.c	2020-09-27 13:35:13.518526539 +0800
+@@ -187,6 +187,8 @@
+ extern AVOutputFormat ff_hds_muxer;
+ extern AVInputFormat  ff_hevc_demuxer;
+ extern AVOutputFormat ff_hevc_muxer;
 +extern AVOutputFormat ff_omaf_packing_muxer;
- extern AVInputFormat  ff_gsm_demuxer;
- extern AVOutputFormat ff_gsm_muxer;
- extern AVInputFormat  ff_gxf_demuxer;
-@@ -402,6 +404,9 @@ extern AVOutputFormat ff_tgp_muxer;
- extern AVInputFormat  ff_thp_demuxer;
- extern AVInputFormat  ff_threedostr_demuxer;
- extern AVInputFormat  ff_tiertexseq_demuxer;
 +extern AVInputFormat  ff_tile_dash_demuxer;
-+extern AVOutputFormat ff_tile_dash_muxer;
-+extern AVOutputFormat ff_omaf_packing_muxer;
- extern AVOutputFormat ff_mkvtimestamp_v2_muxer;
- extern AVInputFormat  ff_tmv_demuxer;
- extern AVInputFormat  ff_truehd_demuxer;
-diff --git a/FFmpeg/libavformat/flv.h b/FFmpeg/libavformat/flv.h
-index df5ce3d..97324cc 100644
---- a/FFmpeg/libavformat/flv.h
-+++ b/FFmpeg/libavformat/flv.h
-@@ -109,6 +109,7 @@ enum {
-     FLV_CODECID_H264    = 7,
-     FLV_CODECID_REALH263= 8,
-     FLV_CODECID_MPEG4   = 9,
-+    FLV_CODECID_HEVC    = 12,
- };
- 
- enum {
-diff --git a/FFmpeg/libavformat/flvdec.c b/FFmpeg/libavformat/flvdec.c
-index a2dea46..e28d62b 100644
---- a/FFmpeg/libavformat/flvdec.c
-+++ b/FFmpeg/libavformat/flvdec.c
-@@ -293,6 +293,8 @@ static int flv_same_video_codec(AVCodecParameters *vpar, int flags)
+ extern AVInputFormat  ff_hls_demuxer;
+ extern AVOutputFormat ff_hls_muxer;
+ extern AVInputFormat  ff_hnm_demuxer;
+diff -urN FFmpeg/libavformat/flvdec.c FFmpeg-patched/libavformat/flvdec.c
+--- FFmpeg/libavformat/flvdec.c	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavformat/flvdec.c	2020-09-27 13:35:13.527526539 +0800
+@@ -318,6 +318,8 @@
          return vpar->codec_id == AV_CODEC_ID_VP6A;
      case FLV_CODECID_H264:
          return vpar->codec_id == AV_CODEC_ID_H264;
@@ -3966,7 +4554,7 @@ index a2dea46..e28d62b 100644
      default:
          return vpar->codec_tag == flv_codecid;
      }
-@@ -342,6 +344,11 @@ static int flv_set_video_codec(AVFormatContext *s, AVStream *vstream,
+@@ -367,6 +369,11 @@
          par->codec_id = AV_CODEC_ID_MPEG4;
          ret = 3;
          break;
@@ -3978,7 +4566,7 @@ index a2dea46..e28d62b 100644
      default:
          avpriv_request_sample(s, "Video codec (%x)", flv_codecid);
          par->codec_tag = flv_codecid;
-@@ -1157,6 +1164,7 @@ retry_duration:
+@@ -1222,6 +1229,7 @@
  
      if (st->codecpar->codec_id == AV_CODEC_ID_AAC ||
          st->codecpar->codec_id == AV_CODEC_ID_H264 ||
@@ -3986,7 +4574,7 @@ index a2dea46..e28d62b 100644
          st->codecpar->codec_id == AV_CODEC_ID_MPEG4) {
          int type = avio_r8(s->pb);
          size--;
-@@ -1166,8 +1174,8 @@ retry_duration:
+@@ -1231,8 +1239,8 @@
              goto leave;
          }
  
@@ -3997,7 +4585,7 @@ index a2dea46..e28d62b 100644
              int32_t cts = (avio_rb24(s->pb) + 0xff800000) ^ 0xff800000;
              pts = dts + cts;
              if (cts < 0) { // dts might be wrong
-@@ -1182,7 +1190,7 @@ retry_duration:
+@@ -1247,7 +1255,7 @@
              }
          }
          if (type == 0 && (!st->codecpar->extradata || st->codecpar->codec_id == AV_CODEC_ID_AAC ||
@@ -4006,20 +4594,18 @@ index a2dea46..e28d62b 100644
              AVDictionaryEntry *t;
  
              if (st->codecpar->extradata) {
-diff --git a/FFmpeg/libavformat/flvenc.c b/FFmpeg/libavformat/flvenc.c
-index e4863f1..aa0d52f 100644
---- a/FFmpeg/libavformat/flvenc.c
-+++ b/FFmpeg/libavformat/flvenc.c
-@@ -34,7 +34,7 @@
- #include "libavutil/opt.h"
- #include "libavcodec/put_bits.h"
- #include "libavcodec/aacenctab.h"
--
+diff -urN FFmpeg/libavformat/flvenc.c FFmpeg-patched/libavformat/flvenc.c
+--- FFmpeg/libavformat/flvenc.c	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavformat/flvenc.c	2020-09-27 13:35:13.527526539 +0800
+@@ -29,6 +29,7 @@
+ #include "avc.h"
+ #include "avformat.h"
+ #include "flv.h"
 +#include "hevc.h"
- 
- static const AVCodecTag flv_video_codec_ids[] = {
-     { AV_CODEC_ID_FLV1,     FLV_CODECID_H263 },
-@@ -46,6 +46,7 @@ static const AVCodecTag flv_video_codec_ids[] = {
+ #include "internal.h"
+ #include "metadata.h"
+ #include "libavutil/opt.h"
+@@ -46,6 +47,7 @@
      { AV_CODEC_ID_VP6,      FLV_CODECID_VP6 },
      { AV_CODEC_ID_VP6A,     FLV_CODECID_VP6A },
      { AV_CODEC_ID_H264,     FLV_CODECID_H264 },
@@ -4027,7 +4613,7 @@ index e4863f1..aa0d52f 100644
      { AV_CODEC_ID_NONE,     0 }
  };
  
-@@ -491,7 +492,7 @@ static void flv_write_codec_header(AVFormatContext* s, AVCodecParameters* par, i
+@@ -491,7 +493,7 @@
      FLVContext *flv = s->priv_data;
  
      if (par->codec_id == AV_CODEC_ID_AAC || par->codec_id == AV_CODEC_ID_H264
@@ -4036,7 +4622,7 @@ index e4863f1..aa0d52f 100644
          int64_t pos;
          avio_w8(pb,
                  par->codec_type == AVMEDIA_TYPE_VIDEO ?
-@@ -537,7 +538,11 @@ static void flv_write_codec_header(AVFormatContext* s, AVCodecParameters* par, i
+@@ -537,7 +539,11 @@
              avio_w8(pb, par->codec_tag | FLV_FRAME_KEY); // flags
              avio_w8(pb, 0); // AVC sequence header
              avio_wb24(pb, 0); // composition time
@@ -4049,7 +4635,7 @@ index e4863f1..aa0d52f 100644
          }
          data_size = avio_tell(pb) - pos;
          avio_seek(pb, -data_size - 10, SEEK_CUR);
-@@ -840,7 +845,7 @@ end:
+@@ -844,7 +850,7 @@
              AVCodecParameters *par = s->streams[i]->codecpar;
              FLVStreamContext *sc = s->streams[i]->priv_data;
              if (par->codec_type == AVMEDIA_TYPE_VIDEO &&
@@ -4058,7 +4644,7 @@ index e4863f1..aa0d52f 100644
                  put_avc_eos_tag(pb, sc->last_ts);
          }
      }
-@@ -891,13 +896,12 @@ static int flv_write_packet(AVFormatContext *s, AVPacket *pkt)
+@@ -895,7 +901,7 @@
      if (par->codec_id == AV_CODEC_ID_VP6F || par->codec_id == AV_CODEC_ID_VP6A ||
          par->codec_id == AV_CODEC_ID_VP6  || par->codec_id == AV_CODEC_ID_AAC)
          flags_size = 2;
@@ -4067,14 +4653,7 @@ index e4863f1..aa0d52f 100644
          flags_size = 5;
      else
          flags_size = 1;
- 
--    if (par->codec_id == AV_CODEC_ID_AAC || par->codec_id == AV_CODEC_ID_H264
--            || par->codec_id == AV_CODEC_ID_MPEG4) {
-+    if (par->codec_id == AV_CODEC_ID_AAC || par->codec_id == AV_CODEC_ID_H264 || par->codec_id == AV_CODEC_ID_MPEG4) {
-         int side_size = 0;
-         uint8_t *side = av_packet_get_side_data(pkt, AV_PKT_DATA_NEW_EXTRADATA, &side_size);
-         if (side && side_size > 0 && (side_size != par->extradata_size || memcmp(side, par->extradata, side_size))) {
-@@ -913,6 +917,24 @@ static int flv_write_packet(AVFormatContext *s, AVPacket *pkt)
+@@ -913,6 +919,24 @@
          }
      }
  
@@ -4099,7 +4678,7 @@ index e4863f1..aa0d52f 100644
      if (flv->delay == AV_NOPTS_VALUE)
          flv->delay = -pkt->dts;
  
-@@ -960,6 +982,10 @@ static int flv_write_packet(AVFormatContext *s, AVPacket *pkt)
+@@ -966,6 +990,10 @@
          if (par->extradata_size > 0 && *(uint8_t*)par->extradata != 1)
              if ((ret = ff_avc_parse_nal_units_buf(pkt->data, &data, &size)) < 0)
                  return ret;
@@ -4110,7 +4689,7 @@ index e4863f1..aa0d52f 100644
      } else if (par->codec_id == AV_CODEC_ID_AAC && pkt->size > 2 &&
                 (AV_RB16(pkt->data) & 0xfff0) == 0xfff0) {
          if (!s->streams[pkt->stream_index]->nb_frames) {
-@@ -1029,9 +1055,9 @@ static int flv_write_packet(AVFormatContext *s, AVPacket *pkt)
+@@ -1036,9 +1064,9 @@
              else
                  avio_w8(pb, ((FFALIGN(par->width,  16) - par->width) << 4) |
                               (FFALIGN(par->height, 16) - par->height));
@@ -4122,12 +4701,33 @@ index e4863f1..aa0d52f 100644
              avio_w8(pb, 1); // AVC NALU
              avio_wb24(pb, pkt->pts - pkt->dts);
          }
-diff --git a/FFmpeg/libavformat/omaf_packing_enc.c b/FFmpeg/libavformat/omaf_packing_enc.c
-new file mode 100644
-index 0000000..0a66efa
---- /dev/null
-+++ b/FFmpeg/libavformat/omaf_packing_enc.c
-@@ -0,0 +1,617 @@
+diff -urN FFmpeg/libavformat/flv.h FFmpeg-patched/libavformat/flv.h
+--- FFmpeg/libavformat/flv.h	2020-07-09 17:17:46.000000000 +0800
++++ FFmpeg-patched/libavformat/flv.h	2020-09-27 13:35:13.527526539 +0800
+@@ -110,6 +110,7 @@
+     FLV_CODECID_H264    = 7,
+     FLV_CODECID_REALH263= 8,
+     FLV_CODECID_MPEG4   = 9,
++    FLV_CODECID_HEVC    = 12,
+ };
+
+ enum {
+diff -urN FFmpeg/libavformat/Makefile FFmpeg-patched/libavformat/Makefile
+--- FFmpeg/libavformat/Makefile	2020-07-11 18:39:30.000000000 +0800
++++ FFmpeg-patched/libavformat/Makefile	2020-09-27 13:35:13.519526539 +0800
+@@ -148,6 +148,8 @@
+ OBJS-$(CONFIG_DATA_MUXER)                += rawenc.o
+ OBJS-$(CONFIG_DASH_MUXER)                += dash.o dashenc.o hlsplaylist.o
+ OBJS-$(CONFIG_DASH_DEMUXER)              += dash.o dashdec.o
++OBJS-$(CONFIG_TILE_DASH_DEMUXER)         += tiled_dash_dec.o
++OBJS-$(CONFIG_LIBVROMAFPACKING)          += omaf_packing_enc.o
+ OBJS-$(CONFIG_DAUD_DEMUXER)              += dauddec.o
+ OBJS-$(CONFIG_DAUD_MUXER)                += daudenc.o
+ OBJS-$(CONFIG_DCSTR_DEMUXER)             += dcstr.o
+diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_packing_enc.c
+--- FFmpeg/libavformat/omaf_packing_enc.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavformat/omaf_packing_enc.c	2020-09-27 13:35:13.543526537 +0800
+@@ -0,0 +1,616 @@
 +/*
 + * Intel tile Dash muxer
 + *
@@ -4624,7 +5224,6 @@ index 0000000..0a66efa
 +                av_log(s, AV_LOG_ERROR, "Failed to create VR Omaf Packing handler \n");
 +                return AVERROR(EINVAL);
 +            }
-+
 +            c->frameNum++;
 +        }
 +    }
@@ -4745,12 +5344,10 @@ index 0000000..0a66efa
 +};
 +
 +
-diff --git a/FFmpeg/libavformat/tiled_dash_dec.c b/FFmpeg/libavformat/tiled_dash_dec.c
-new file mode 100644
-index 0000000..8e469af
---- /dev/null
-+++ b/FFmpeg/libavformat/tiled_dash_dec.c
-@@ -0,0 +1,342 @@
+diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_dash_dec.c
+--- FFmpeg/libavformat/tiled_dash_dec.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavformat/tiled_dash_dec.c	2020-09-27 13:35:13.559526536 +0800
+@@ -0,0 +1,344 @@
 +/*
 + * Intel tile Dash Demuxer
 + *
@@ -4933,6 +5530,8 @@ index 0000000..8e469af
 +    c->mClearBuf = false;
 +    c->needHeaders = true;
 +    c->client = (DashStreamingClient *)malloc(sizeof(DashStreamingClient));
++    memset(&c->client->omaf_params.proxy, 0, sizeof(OmafHttpProxy));
++    memset(&c->client->omaf_params.predictor_params, 0, sizeof(OmafPredictorParams));
 +    c->client->source_type = MultiResSource;//DefaultSource;
 +    c->client->media_url = s->filename;
 +    c->client->enable_extractor = c->enable_extractor;
@@ -5093,11 +5692,9 @@ index 0000000..8e469af
 +    .read_seek      = tiled_dash_read_seek,
 +    .flags          = AVFMT_NO_BYTE_SEEK,
 +};
-diff --git a/FFmpeg/libavformat/tiled_dash_dec.h b/FFmpeg/libavformat/tiled_dash_dec.h
-new file mode 100644
-index 0000000..20e4f53
---- /dev/null
-+++ b/FFmpeg/libavformat/tiled_dash_dec.h
+diff -urN FFmpeg/libavformat/tiled_dash_dec.h FFmpeg-patched/libavformat/tiled_dash_dec.h
+--- FFmpeg/libavformat/tiled_dash_dec.h	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavformat/tiled_dash_dec.h	2020-09-27 13:35:13.557526536 +0800
 @@ -0,0 +1,65 @@
 +/*
 + * Intel tile Dash muxer
@@ -5164,11 +5761,9 @@ index 0000000..20e4f53
 +
 +#endif
 +
-diff --git a/FFmpeg/libavformat/tiled_dash_enc.c b/FFmpeg/libavformat/tiled_dash_enc.c
-new file mode 100644
-index 0000000..9ece06d
---- /dev/null
-+++ b/FFmpeg/libavformat/tiled_dash_enc.c
+diff -urN FFmpeg/libavformat/tiled_dash_enc.c FFmpeg-patched/libavformat/tiled_dash_enc.c
+--- FFmpeg/libavformat/tiled_dash_enc.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavformat/tiled_dash_enc.c	2020-09-27 13:35:13.557526536 +0800
 @@ -0,0 +1,359 @@
 +/*
 + * Intel tile Dash muxer
@@ -5529,11 +6124,9 @@ index 0000000..9ece06d
 +};
 +
 +
-diff --git a/FFmpeg/libavformat/tiled_dash_parse.c b/FFmpeg/libavformat/tiled_dash_parse.c
-new file mode 100644
-index 0000000..a762508
---- /dev/null
-+++ b/FFmpeg/libavformat/tiled_dash_parse.c
+diff -urN FFmpeg/libavformat/tiled_dash_parse.c FFmpeg-patched/libavformat/tiled_dash_parse.c
+--- FFmpeg/libavformat/tiled_dash_parse.c	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavformat/tiled_dash_parse.c	2020-09-27 13:35:13.558526536 +0800
 @@ -0,0 +1,1624 @@
 +/*
 + * Intel tile Dash muxer
@@ -7159,11 +7752,9 @@ index 0000000..a762508
 +
 +    return 0;
 +}
-diff --git a/FFmpeg/libavformat/tiled_dash_parse.h b/FFmpeg/libavformat/tiled_dash_parse.h
-new file mode 100644
-index 0000000..38857fe
---- /dev/null
-+++ b/FFmpeg/libavformat/tiled_dash_parse.h
+diff -urN FFmpeg/libavformat/tiled_dash_parse.h FFmpeg-patched/libavformat/tiled_dash_parse.h
+--- FFmpeg/libavformat/tiled_dash_parse.h	1970-01-01 08:00:00.000000000 +0800
++++ FFmpeg-patched/libavformat/tiled_dash_parse.h	2020-09-27 13:35:13.558526536 +0800
 @@ -0,0 +1,168 @@
 +/*
 + * Intel tile Dash muxer
