@@ -436,6 +436,7 @@ typedef struct PARAM_360SCVP
     unsigned char         *pOutputSEI;
     unsigned int           outputSEILen;
     uint32_t               timeStamp;
+    void                  *logFunction;       //external log callback function pointer, NULL if external log is not used
 }param_360SCVP;
 
 //!
@@ -649,6 +650,16 @@ int32_t I360SCVP_GetParameter(void* p360SCVPHandle, int32_t paramID, void** pVal
 //!           not 0, if fail
 //!
 int32_t I360SCVP_SetParameter(void* p360SCVPHandle, int32_t paramID, void* pValue);
+
+//!
+//! \brief    This function can set the logcallback funciton.
+//!
+//! \param    void*     p360SCVPHandle,  input,     which is created by the I360SVCP_Init function
+//! \param    void*     externalLog,     input,     the specified logcallback function
+//!
+//! \return   int32_t, the status of the function.
+//!           ERROR_NONE if success, else failed reason
+int32_t I360SCVPSetLogCallBack(void* p360SCVPHandle, void* externalLog);
 
 #ifdef __cplusplus
 }

@@ -32,9 +32,9 @@
 #include "360SCVPMergeStreamAPI.h"
 #include "360SCVPCommonDef.h"
 #include "360SCVPHevcEncHdr.h"
+#include "360SCVPLog.h"
 #include "360SCVPImpl.h"
 #include "360SCVPHevcTileMerge.h"
-
 
 TstitchStream::TstitchStream()
 {
@@ -242,7 +242,7 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
 
     /* Check the paramVideoFP rows / cols exceeds the maximum array size */
     if (pViewPortInfo->paramVideoFP.rows > 6 || pViewPortInfo->paramVideoFP.cols > 6) {
-        LOG(ERROR) << "Viewport rows / cols too big: rows is " << pViewPortInfo->paramVideoFP.rows << " cols is " << pViewPortInfo->paramVideoFP.cols << "!!";
+        SCVP_LOG(LOG_ERROR, "Viewport rows / cols too big: rows is %d, col is %d\n", pViewPortInfo->paramVideoFP.rows, pViewPortInfo->paramVideoFP.cols);
         return -1;
     }
 
@@ -258,6 +258,15 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
     }
     m_pViewport = genViewport_Init(&m_pViewportParam);
     return 0;
+}
+
+int32_t TstitchStream::SetLogCallBack(LogFunction logFunction)
+{
+    if (!logFunction)
+        return OMAF_ERROR_NULL_PTR;
+
+    logCallBack = logFunction;
+    return ERROR_NONE;
 }
 
 int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t sliceSize)
@@ -311,7 +320,7 @@ int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t slic
     m_mergeStreamParam.lowRes.pHeader = (param_oneStream_info *)malloc(sizeof(param_oneStream_info));
 
     if (!m_mergeStreamParam.highRes.pHeader || !m_mergeStreamParam.lowRes.pHeader) {
-        LOG(ERROR) << "Init Merge Failed: pHeader of highRes or lowRes is NULL!!!";
+        SCVP_LOG(LOG_ERROR, "Init Merge Failed: pHeader of highRes or lowRes is NULL\n");
         if (m_mergeStreamParam.highRes.pHeader) {
             free(m_mergeStreamParam.highRes.pHeader);
             m_mergeStreamParam.highRes.pHeader = NULL;
@@ -328,7 +337,7 @@ int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t slic
     m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer = (uint8_t *)malloc(100);
 
     if (!m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer || !m_mergeStreamParam.lowRes.pHeader->pTiledBitstreamBuffer) {
-        LOG(ERROR) << "Init Merge Failed: Tiled Bitstream Buffer of highRes or lowRes is not allocated!!!";
+        SCVP_LOG(LOG_ERROR, "Init Merge Failed: Tiled Bitstream Buffer of highRes or lowRes is not allocated\n");
 
         if (m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer) {
             free(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
@@ -351,7 +360,7 @@ int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t slic
 
     m_mergeStreamParam.highRes.pTiledBitstreams = (param_oneStream_info **)malloc(HR_ntile * sizeof(param_oneStream_info *));
     if (!m_mergeStreamParam.highRes.pTiledBitstreams) {
-        LOG(ERROR) << "Init Merge Failed: Tiled Bitstreams of highRes is not allocated!!!";
+        SCVP_LOG(LOG_ERROR, "Init Merge Failed: Tiled Bitstreams of highRes is not allocated\n");
 
         if (m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer) {
             free(m_mergeStreamParam.highRes.pHeader->pTiledBitstreamBuffer);
@@ -505,6 +514,11 @@ int32_t TstitchStream::init(param_360SCVP* pParamStitchStream)
     m_usedType = pParamStitchStream->usedType;
     m_dstRwpk.rectRegionPacking = NULL;
     pParamStitchStream->paramViewPort.usageType = (UsageType)(pParamStitchStream->usedType);
+    if (pParamStitchStream->logFunction)
+        logCallBack = (LogFunction)(pParamStitchStream->logFunction);
+    else
+        logCallBack = GlogFunction;
+
     if (m_usedType == E_PARSER_FOR_CLIENT)
     {
         return ret;
@@ -773,7 +787,6 @@ int32_t TstitchStream::feedParamToGenStream(param_360SCVP* pParamStitchStream)
     param_oneStream_info *pTmpLowHdr = m_mergeStreamParam.lowRes.pHeader;
     pTmpLowHdr->pTiledBitstreamBuffer = pParamStitchStream->pInputLowBitstream;
     pTmpLowHdr->inputBufferLen = m_specialDataLen[1];
-    LOG(INFO) << "the tiled idx = ";
 
     tile_merge_reset(m_pMergeStream);
 
@@ -791,12 +804,11 @@ int32_t TstitchStream::feedParamToGenStream(param_360SCVP* pParamStitchStream)
 
             pTmpHigh[idx]->inputBufferLen = (pTmpTile->idx!=0) ? m_pNalInfo[0][pTmpTile->idx].nalLen : m_pNalInfo[0][pTmpTile->idx].nalLen- m_specialDataLen[0];
             pTmpHigh[idx]->pTiledBitstreamBuffer = (pTmpTile->idx != 0) ? m_pNalInfo[0][pTmpTile->idx].pNalStream : m_pNalInfo[0][pTmpTile->idx].pNalStream + m_specialDataLen[0];
-            LOG(INFO) << pTmpTile->idx;
+            SCVP_LOG(LOG_INFO, "Get the %d th tile\n", pTmpTile->idx);
             pTmpTile++;
             idx++;
         }
     }
-
     idx = 0;
     for (int32_t i = 0; i < m_tileHeightCountSel[1]; i++)
     {
@@ -807,7 +819,7 @@ int32_t TstitchStream::feedParamToGenStream(param_360SCVP* pParamStitchStream)
 
             pTmpLow[idx]->inputBufferLen = (idx != 0) ? m_pNalInfo[1][idx].nalLen : m_pNalInfo[1][idx].nalLen - m_specialDataLen[1];
             pTmpLow[idx]->pTiledBitstreamBuffer = (idx != 0) ? m_pNalInfo[1][idx].pNalStream : m_pNalInfo[1][idx].pNalStream + m_specialDataLen[1];
-            LOG(INFO) << idx;
+            SCVP_LOG(LOG_INFO, "Get the %d th tile\n", idx);
             idx++;
         }
     }
@@ -832,7 +844,7 @@ int32_t TstitchStream::getViewPortTiles()
         ret = genViewport_process(&m_pViewportParam, m_pViewport);
     if (ret)
     {
-        LOG(ERROR) << "gen viewport process error!";
+        SCVP_LOG(LOG_ERROR, "gen viewport process error!\n");
         return -1;
     }
     if(m_usedType == E_MERGE_AND_VIEWPORT)
