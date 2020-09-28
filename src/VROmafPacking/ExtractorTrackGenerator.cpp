@@ -236,7 +236,9 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
 
     if (supplementedNum > 0)
     {
-        OMAF_LOG(LOG_INFO, "Supplement %u tiles for packed sub-picture width/height ratio %u : %u\n", supplementedNum, (dividedSize > sqrtedSize ? dividedSize : sqrtedSize), (dividedSize > sqrtedSize ? sqrtedSize : dividedSize));
+        OMAF_LOG(LOG_INFO, "Supplement %u tiles for packed sub-picture width/height ratio\n", supplementedNum);
+
+        OMAF_LOG(LOG_INFO, "Now packed sub-picture width/height ratio %u : %u\n", (dividedSize > sqrtedSize ? dividedSize : sqrtedSize), (dividedSize > sqrtedSize ? sqrtedSize : dividedSize));
     }
 
     CCDef *outCC = new CCDef;

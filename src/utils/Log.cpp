@@ -38,95 +38,56 @@ extern "C"
 #include "safestringlib/safe_mem_lib.h"
 }
 
-//LogFunction logCallBack = GlogFunction;
+#define GetOneParamValue(type, param)              \
+    ((strncmp(type, "char", 4) == 0) ? param.charParam : ((strncmp(type, "uint32_t", 8) == 0) ? param.uint32Param : ((strncmp(type, "int32_t", 7) == 0) ? param.int32Param : ((strncmp(type, "int64_t", 7) == 0) ? param.int64Param : ((strncmp(type, "\0", 1) == 0) ? param.charParam : '!')))))       \
 
-ParamVariant GetParameter(const char *type, va_list params)
-{
-    if (!type)
-        return -1;
+#define Print2ParamCharPlusChar(logLevel,sourceFile,line,fmt1,param0,fmt2,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << param0.charParam << " " << fmt2 << " " << param1.charParam << std::endl;\
 
-    if (strncmp(type, "char", 4) == 0)
-        return va_arg(params, int32_t);
-    else if (strncmp(type, "string", 6) == 0)
-        return va_arg(params, char*);
-    else if (strncmp(type, "uint32_t", 8) == 0)
-        return va_arg(params, uint32_t);
-    else if (strncmp(type, "int32_t", 7) == 0)
-        return va_arg(params, int32_t);
-    else if (strncmp(type, "int64_t", 7) == 0)
-        return va_arg(params, int64_t);
-    else if (strncmp(type, "\0", 1) == 0)
-        return '!';
+#define Print2ParamCharPlusString(logLevel,sourceFile,line,fmt1,param0,fmt2,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << param0.charParam << " " << fmt2 << " " << param1.stringParam << std::endl;\
 
-    return -1;
-}
+#define Print2ParamStringPlusString(logLevel,sourceFile,line,fmt1,param0,fmt2,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << param0.stringParam << " " << fmt2 << " " << param1.stringParam << std::endl;\
 
-void GlogSupport3Params(LogLevel logLevel, const char* sourceFile, uint64_t line, std::list<std::pair<const char*, char*>>& tempStrs, va_list params)
-{
-    if (tempStrs.size() != 3)
-        return;
+#define Print2ParamStringPlusChar(logLevel,sourceFile,line,fmt1,param0,fmt2,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << param0.stringParam << " " << fmt2 << " " << param1.charParam << std::endl;\
 
-    std::list<std::pair<const char*, char*>>::iterator it  = tempStrs.begin();
-    std::list<std::pair<const char*, char*>>::iterator it1 = tempStrs.begin();
-    it1++;
-    std::list<std::pair<const char*, char*>>::iterator it2 = tempStrs.begin();
-    it2++;
-    it2++;
+#define Print2ParamStringPlusInt(logLevel,sourceFile,line,fmt1,param0,fmt2,type,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << param0.stringParam << " " << fmt2 << " " << GetOneParamValue(type,param1) << std::endl;\
 
-    ParamVariant param0 = GetParameter(it->first, params);
-    ParamVariant param1 = GetParameter(it1->first, params);
-    ParamVariant param2 = GetParameter(it2->first, params);
+#define Print2ParamCharPlusInt(logLevel,sourceFile,line,fmt1,param0,fmt2,type,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << param0.charParam << " " << fmt2 << " " << GetOneParamValue(type,param1) << std::endl;\
 
-    char *newFmt0 = it2->second;
-    char *newFmt1 = newFmt0;
-    char *newFmt2 = strchr(newFmt1, '\n');
-    char *newFmt3 = NULL;
-    if (newFmt2)
-    {
-        newFmt3 = new char[1024];
-        memset_s(newFmt3, 1024, 0);
-        uint32_t moveCnt = newFmt2 - newFmt0;
-        memcpy_s(newFmt3, moveCnt, newFmt0, moveCnt);
-        newFmt3[moveCnt] = '\0';
-    }
+#define Print2ParamIntPlusChar(logLevel,sourceFile,line,fmt1,type,param0,fmt2,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << GetOneParamValue(type,param0) << " " << fmt2 << " " << param1.charParam << std::endl;\
 
-    switch (logLevel)
-    {
-        case LOG_INFO:
-        {
-            LOG(INFO) << "" << sourceFile << ":" << line << "  " << (it->second) << " " << param0 << " " << (it1->second) << " " << param1 << " " << (newFmt3 ? newFmt3 : newFmt0) << " " << param2 << std::endl;
-            break;
-        }
-        case LOG_WARNING:
-        {
-            LOG(WARNING) << "" << sourceFile << ":" << line << "  " << (it->second) << " " << param0 << " " << (it1->second) << " " << param1 << " " << (newFmt3 ? newFmt3 : newFmt0) << " " << param2 << std::endl;
-            break;
-        }
-        case LOG_ERROR:
-        {
-            LOG(ERROR) << "" << sourceFile << ":" << line << "  " << (it->second) << " " << param0 << " " << (it1->second) << " " << param1 << " " << (newFmt3 ? newFmt3 : newFmt0) << " " << param2 << std::endl;
-            break;
-        }
-        case LOG_FATAL:
-        {
-            LOG(FATAL) << "" << sourceFile << ":" << line << "  " << (it->second) << " " << param0 << " " << (it1->second) << " " << param1 << " " << (newFmt3 ? newFmt3 : newFmt0) << " " << param2 << std::endl;
-            break;
-        }
-        default:
-        {
-            LOG(ERROR) << "Invalid log level !" << std::endl;
-            break;
-        }
-    }
+#define Print2ParamIntPlusString(logLevel,sourceFile,line,fmt1,type,param0,fmt2,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << GetOneParamValue(type,param0) << " " << fmt2 << " " << param1.stringParam << std::endl;\
 
-    if (newFmt3)
-    {
-        delete [] newFmt3;
-        newFmt3 = NULL;
-    }
+#define Print2ParamIntPlusInt(logLevel,sourceFile,line,fmt1,type0,param0,fmt2,type1,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << GetOneParamValue(type0,param0) << " " << fmt2 << " " << GetOneParamValue(type1,param1) << std::endl;\
 
-    return;
-}
+#define Print2ParamCharPlusDouble(logLevel,sourceFile,line,fmt1,param0,fmt2,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << param0.charParam << " " << fmt2 << " " << param1.doubleParam << std::endl;\
+
+#define Print2ParamStringPlusDouble(logLevel,sourceFile,line,fmt1,param0,fmt2,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << param0.stringParam << " " << fmt2 << " " << param1.doubleParam << std::endl;\
+
+#define Print2ParamIntPlusDouble(logLevel,sourceFile,line,fmt1,type,param0,fmt2,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << GetOneParamValue(type,param0) << " " << fmt2 << " " << param1.doubleParam << std::endl;\
+
+#define Print2ParamDoublePlusDouble(logLevel,sourceFile,line,fmt1,param0,fmt2,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << param0.doubleParam << " " << fmt2 << " " << param1.doubleParam << std::endl;\
+
+#define Print2ParamDoublePlusChar(logLevel,sourceFile,line,fmt1,param0,fmt2,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << param0.doubleParam << " " << fmt2 << " " << param1.charParam << std::endl;\
+
+#define Print2ParamDoublePlusInt(logLevel,sourceFile,line,fmt1,param0,fmt2,type,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << param0.doubleParam << " " << fmt2 << " " << GetOneParamValue(type,param1) << std::endl;\
+
+#define Print2ParamDoublePlusString(logLevel,sourceFile,line,fmt1,param0,fmt2,param1) \
+    LOG(logLevel) << "" << sourceFile << ":" << line << "  " << fmt1 << " " << param0.doubleParam << " " << fmt2 << " " << param1.stringParam << std::endl;\
 
 void GlogSupport2Params(LogLevel logLevel, const char* sourceFile, uint64_t line, std::list<std::pair<const char*, char*>>& tempStrs, va_list params)
 {
@@ -137,8 +98,68 @@ void GlogSupport2Params(LogLevel logLevel, const char* sourceFile, uint64_t line
     std::list<std::pair<const char*, char*>>::iterator it1 = tempStrs.begin();
     it1++;
 
-    ParamVariant param0 = GetParameter(it->first, params);
-    ParamVariant param1 = GetParameter(it1->first, params);
+    ParamValue param0;
+    ParamValue param1;
+    const char *type0 = it->first;
+    const char *type1 = it1->first;
+
+    if (strncmp(type0, "char", 4) == 0)
+    {
+        param0.charParam = va_arg(params, int32_t);
+    }
+    else if (strncmp(type0, "string", 6) == 0)
+    {
+        param0.stringParam = va_arg(params, char*);
+    }
+    else if (strncmp(type0, "uint32_t", 8) == 0)
+    {
+        param0.uint32Param = va_arg(params, uint32_t);
+    }
+    else if (strncmp(type0, "int32_t", 7) == 0)
+    {
+        param0.int32Param = va_arg(params, int32_t);
+    }
+    else if (strncmp(type0, "int64_t", 7) == 0)
+    {
+        param0.int64Param = va_arg(params, int64_t);
+    }
+    else if (strncmp(type0, "double", 5) == 0)
+    {
+        param0.doubleParam = va_arg(params, double);
+    }
+    else if (strncmp(type0, "\0", 2) == 0)
+    {
+        param0.charParam = '!';
+    }
+
+    if (strncmp(type1, "char", 4) == 0)
+    {
+        param1.charParam = va_arg(params, int32_t);
+    }
+    else if (strncmp(type1, "string", 6) == 0)
+    {
+        param1.stringParam = va_arg(params, char*);
+    }
+    else if (strncmp(type1, "uint32_t", 8) == 0)
+    {
+        param1.uint32Param = va_arg(params, uint32_t);
+    }
+    else if (strncmp(type1, "int32_t", 7) == 0)
+    {
+        param1.int32Param = va_arg(params, int32_t);
+    }
+    else if (strncmp(type1, "int64_t", 7) == 0)
+    {
+        param1.int64Param = va_arg(params, int64_t);
+    }
+    else if (strncmp(type1, "double", 5) == 0)
+    {
+        param1.doubleParam = va_arg(params, double);
+    }
+    else if (strncmp(type1, "\0", 2) == 0)
+    {
+        param1.charParam = '!';
+    }
 
     char *newFmt0 = it1->second;
     char *newFmt1 = newFmt0;
@@ -157,22 +178,284 @@ void GlogSupport2Params(LogLevel logLevel, const char* sourceFile, uint64_t line
     {
         case LOG_INFO:
         {
-            LOG(INFO) << "" << sourceFile << ":" << line << "  " << (it->second) << " " << param0 << " " << (newFmt3 ? newFmt3 : newFmt0) << " " << param1 << std::endl;
+            if ((strncmp(type0, "string", 6) == 0) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamStringPlusString(INFO,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "string", 6) == 0) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamStringPlusChar(INFO,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamCharPlusChar(INFO,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamCharPlusString(INFO,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamCharPlusInt(INFO,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+            else if ((strncmp(type0, "string", 6) == 0) && ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamStringPlusInt(INFO,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamIntPlusChar(INFO,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamIntPlusString(INFO,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) &&
+                    ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamIntPlusInt(INFO,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamDoublePlusDouble(INFO,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamDoublePlusChar(INFO,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamDoublePlusString(INFO,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "string", 6) == 0) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamStringPlusDouble(INFO,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamCharPlusDouble(INFO,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamIntPlusDouble(INFO,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamDoublePlusInt(INFO,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+
             break;
         }
         case LOG_WARNING:
         {
-            LOG(WARNING) << "" << sourceFile << ":" << line << "  " << (it->second) << " " << param0 << " " << (newFmt3 ? newFmt3 : newFmt0) << " " << param1 << std::endl;
+
+            if ((strncmp(type0, "string", 6) == 0) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamStringPlusString(WARNING,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "string", 6) == 0) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamStringPlusChar(WARNING,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamCharPlusChar(WARNING,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamCharPlusString(WARNING,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamCharPlusInt(WARNING,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+            else if ((strncmp(type0, "string", 6) == 0) && ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamStringPlusInt(WARNING,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamIntPlusChar(WARNING,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamIntPlusString(WARNING,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) &&
+                    ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamIntPlusInt(WARNING,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamDoublePlusDouble(WARNING,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamDoublePlusChar(WARNING,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamDoublePlusString(WARNING,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "string", 6) == 0) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamStringPlusDouble(WARNING,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamCharPlusDouble(WARNING,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamIntPlusDouble(WARNING,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamDoublePlusInt(WARNING,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+
             break;
         }
         case LOG_ERROR:
         {
-            LOG(ERROR) << "" << sourceFile << ":" << line << "  " << (it->second) << " " << param0 << " " << (newFmt3 ? newFmt3 : newFmt0) << " " << param1 << std::endl;
+
+            if ((strncmp(type0, "string", 6) == 0) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamStringPlusString(ERROR,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "string", 6) == 0) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamStringPlusChar(ERROR,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamCharPlusChar(ERROR,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamCharPlusString(ERROR,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamCharPlusInt(ERROR,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+            else if ((strncmp(type0, "string", 6) == 0) && ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamStringPlusInt(ERROR,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamIntPlusChar(ERROR,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamIntPlusString(ERROR,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) &&
+                    ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamIntPlusInt(ERROR,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamDoublePlusDouble(ERROR,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamDoublePlusChar(ERROR,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamDoublePlusString(ERROR,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "string", 6) == 0) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamStringPlusDouble(ERROR,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamCharPlusDouble(ERROR,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamIntPlusDouble(ERROR,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamDoublePlusInt(ERROR,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+
             break;
         }
         case LOG_FATAL:
         {
-            LOG(FATAL) << "" << sourceFile << ":" << line << "  " << (it->second) << " " << param0 << " " << (newFmt3 ? newFmt3 : newFmt0) << " " << param1 << std::endl;
+            if ((strncmp(type0, "string", 6) == 0) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamStringPlusString(FATAL,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "string", 6) == 0) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamStringPlusChar(FATAL,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamCharPlusChar(FATAL,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamCharPlusString(FATAL,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamCharPlusInt(FATAL,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+            else if ((strncmp(type0, "string", 6) == 0) && ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamStringPlusInt(FATAL,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamIntPlusChar(FATAL,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamIntPlusString(FATAL,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) &&
+                    ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamIntPlusInt(FATAL,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamDoublePlusDouble(FATAL,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && ((strncmp(type1, "char", 4) == 0) || (strncmp(type1, "\0", 2) == 0)))
+            {
+                Print2ParamDoublePlusChar(FATAL,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && (strncmp(type1, "string", 6) == 0))
+            {
+                Print2ParamDoublePlusString(FATAL,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "string", 6) == 0) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamStringPlusDouble(FATAL,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "char", 4) == 0) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamCharPlusDouble(FATAL,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if (((strncmp(type0, "string", 6) != 0) && (strncmp(type0, "char", 4) != 0) && (strncmp(type0, "double", 6) != 0)) && (strncmp(type1, "double", 6) == 0))
+            {
+                Print2ParamIntPlusDouble(FATAL,sourceFile,line,it->second,type0,param0,(newFmt3 ? newFmt3 : newFmt0),param1);
+            }
+            else if ((strncmp(type0, "double", 6) == 0) && ((strncmp(type1, "string", 6) != 0) && (strncmp(type1, "char", 4) != 0) && (strncmp(type1, "double", 6) != 0)))
+            {
+                Print2ParamDoublePlusInt(FATAL,sourceFile,line,it->second,param0,(newFmt3 ? newFmt3 : newFmt0),type1,param1);
+            }
+
             break;
         }
         default:
@@ -197,6 +480,37 @@ void GlogSupport1Param(LogLevel logLevel, const char* sourceFile, uint64_t line,
         return;
 
     std::list<std::pair<const char*, char*>>::iterator it = tempStrs.begin();
+    ParamValue param0;
+    const char *type0 = it->first;
+    if (strncmp(type0, "char", 4) == 0)
+    {
+        param0.charParam = va_arg(params, int32_t);
+    }
+    else if (strncmp(type0, "string", 6) == 0)
+    {
+        param0.stringParam = va_arg(params, char*);
+    }
+    else if (strncmp(type0, "uint32_t", 8) == 0)
+    {
+        param0.uint32Param = va_arg(params, uint32_t);
+    }
+    else if (strncmp(type0, "int32_t", 7) == 0)
+    {
+        param0.int32Param = va_arg(params, int32_t);
+    }
+    else if (strncmp(type0, "int64_t", 7) == 0)
+    {
+        param0.int64Param = va_arg(params, int64_t);
+    }
+    else if (strncmp(type0, "double", 6) == 0)
+    {
+        param0.doubleParam = va_arg(params, double);
+    }
+    else if (strncmp(type0, "\0", 2) == 0)
+    {
+        param0.charParam = '!';
+    }
+
     char *newFmt0 = it->second;
     char *newFmt1 = newFmt0;
     char *newFmt2 = strchr(newFmt1, '\n');
@@ -214,22 +528,54 @@ void GlogSupport1Param(LogLevel logLevel, const char* sourceFile, uint64_t line,
     {
         case LOG_INFO:
         {
-            LOG(INFO) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << GetParameter(it->first, params) << std::endl;
+            if ((strncmp(type0, "char", 4) == 0) || (strncmp(type0, "\0", 2) == 0))
+                LOG(INFO) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << param0.charParam << std::endl;
+            else if (strncmp(type0, "string", 6) == 0)
+                LOG(INFO) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << param0.stringParam << std::endl;
+            else if (strncmp(type0, "double", 6) == 0)
+                LOG(INFO) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << param0.doubleParam << std::endl;
+            else
+                LOG(INFO) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << GetOneParamValue(type0,param0) << std::endl;
+
             break;
         }
         case LOG_WARNING:
         {
-            LOG(WARNING) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << GetParameter(it->first, params) << std::endl;
+            if ((strncmp(type0, "char", 4) == 0) || (strncmp(type0, "\0", 2) == 0))
+                LOG(WARNING) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << param0.charParam << std::endl;
+            else if (strncmp(type0, "string", 6) == 0)
+                LOG(WARNING) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << param0.stringParam << std::endl;
+            else if (strncmp(type0, "double", 6) == 0)
+                LOG(WARNING) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << param0.doubleParam << std::endl;
+            else
+                LOG(WARNING) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << GetOneParamValue(type0,param0) << std::endl;
+
             break;
         }
         case LOG_ERROR:
         {
-            LOG(ERROR) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << GetParameter(it->first, params) << std::endl;
+            if ((strncmp(type0, "char", 4) == 0) || (strncmp(type0, "\0", 2) == 0))
+                LOG(ERROR) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << param0.charParam << std::endl;
+            else if (strncmp(type0, "string", 6) == 0)
+                LOG(ERROR) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << param0.stringParam << std::endl;
+            else if (strncmp(type0, "double", 6) == 0)
+                LOG(ERROR) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << param0.doubleParam << std::endl;
+            else
+                LOG(ERROR) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << GetOneParamValue(type0,param0) << std::endl;
+
             break;
         }
         case LOG_FATAL:
         {
-            LOG(FATAL) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << GetParameter(it->first, params) << std::endl;
+            if ((strncmp(type0, "char", 4) == 0) || (strncmp(type0, "\0", 2) == 0))
+                LOG(FATAL) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << param0.charParam << std::endl;
+            else if (strncmp(type0, "string", 6) == 0)
+                LOG(FATAL) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << param0.stringParam << std::endl;
+            else if (strncmp(type0, "double", 6) == 0)
+                LOG(FATAL) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << param0.doubleParam << std::endl;
+            else
+                LOG(FATAL) << "" << sourceFile << ":" << line << "  " << (newFmt3 ? newFmt3 : newFmt0) << " " << GetOneParamValue(type0,param0) << std::endl;
+
             break;
         }
         default:
@@ -317,6 +663,10 @@ void GlogFunction(LogLevel logLevel, const char* sourceFile, uint64_t line, cons
             {
                 tempStrs.push_back(std::make_pair("int32_t", str));
             }
+            else if (type1 == 'f')
+            {
+                tempStrs.push_back(std::make_pair("double", str));
+            }
             else if ((type1 == 'l') && (type2 == 'd'))
             {
                 tempStrs.push_back(std::make_pair("int32_t", str));
@@ -352,18 +702,13 @@ void GlogFunction(LogLevel logLevel, const char* sourceFile, uint64_t line, cons
     }
 
     uint64_t strCnt = tempStrs.size();
-    if (strCnt > 3)
+    if (strCnt > 2)
     {
-        LOG(ERROR) << "Now more than three parameters are not supported in glog output !" << std::endl;
+        LOG(ERROR) << "Now more than two parameters are not supported in glog output !" << std::endl;
     }
 
     switch (strCnt)
     {
-        case 3:
-        {
-            GlogSupport3Params(logLevel, sourceFile, line, tempStrs, params);
-            break;
-        }
         case 2:
         {
             GlogSupport2Params(logLevel, sourceFile, line, tempStrs, params);
