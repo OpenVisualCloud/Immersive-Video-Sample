@@ -40,44 +40,16 @@
 #include <utility>
 #include <stdarg.h>
 #include <list>
-#include "boost/variant.hpp"
 
-//global logging callback function
-//extern LogFunction logCallBack;
-
-typedef boost::variant<char, char*, uint32_t, int32_t, int64_t> ParamVariant;
-
-//!
-//! \brief  Get next input parameter from variable parameters list
-//!         according to type
-//!
-//! \param  [in] type
-//!         the variable type of next parameter in variable parameters list
-//! \param  [in] params
-//!         the variable parameters list
-//!
-//! \return ParamVariant
-//!         the next parameter value in variable parameters list
-//!
-ParamVariant GetParameter(const char *type, va_list params);
-
-//!
-//! \brief  Output log information by glog for three variables
-//!
-//! \param  [in] logLevel
-//!         the level of the logging
-//! \param  [in] sourceFile
-//!         the source file name where log information comes from
-//! \param  [in] line
-//!         the line number the output log information in source file
-//! \param  [in] tempStrs
-//!         the separated log informaion format
-//! \param  [in] params
-//!         the variable parameters list
-//!
-//! \return void
-//!
-void GlogSupport3Params(LogLevel logLevel, const char* sourceFile, uint64_t line, std::list<std::pair<const char*, char*>>& tempStrs, va_list params);
+union ParamValue
+{
+    char charParam;
+    char *stringParam;
+    uint32_t uint32Param;
+    int32_t  int32Param;
+    int64_t  int64Param;
+    double   doubleParam;
+};
 
 //!
 //! \brief  Output log information by glog for two variables
