@@ -37,7 +37,8 @@
 #include "360SCVPViewPort.h"
 #include "360SCVPViewportImpl.h"
 #include "360SCVPViewportAPI.h"
-#include "../utils/GlogWrapper.h"
+#include "360SCVPLog.h"
+
 #ifdef WIN32
 #define strdup _strdup
 #endif
@@ -136,7 +137,8 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
 
             viewPortWidth = floor((float)(viewPortWidth) / (float)(cTAppConvCfg->m_srd[0].tilewidth) + 0.499) * cTAppConvCfg->m_srd[0].tilewidth;
             viewPortHeightmax = floor((float)(viewPortHeight) / (float)(cTAppConvCfg->m_srd[0].tileheight) + 0.499) * cTAppConvCfg->m_srd[0].tileheight;
-            LOG(INFO) << "viewPortWidthMax = " << viewPortWidth << " viewPortHeightMax = " << viewPortHeightmax << " tile_width " << cTAppConvCfg->m_srd[0].tilewidth << " tile_height " << cTAppConvCfg->m_srd[0].tileheight;
+            SCVP_LOG(LOG_INFO, "viewPortWidthMax = %d, viewPortHeightMax = %d,\n", viewPortWidth, viewPortHeightmax);
+            SCVP_LOG(LOG_INFO, "tile_width = %d, tile_height = %d\n", cTAppConvCfg->m_srd[0].tilewidth, cTAppConvCfg->m_srd[0].tileheight);
 
             maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 1);
             if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
@@ -175,7 +177,7 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
             viewPortHeight = int32_t(pDownRight->y - pUpLeft->y);
             if (viewPortHeightmax < viewPortHeight)
                 viewPortHeightmax = viewPortHeight;
-            LOG(INFO) << "viewPortWidthMax = " << viewPortWidth << " viewPortHeightMax = " << viewPortHeightmax;
+            SCVP_LOG(LOG_INFO, "viewPortWidthMax = %d, viewPortHeightMax = %d\n", viewPortWidth, viewPortHeightmax);
 
             pUpLeft++;
             pDownRight++;
@@ -362,7 +364,7 @@ int32_t genViewport_getContentCoverage(void* pGenHandle, CCDef* pOutCC)
     }
     else
     {
-        LOG(WARNING) << "Only Support GeoType ERP and Cubemap for Content Coverage!!!";
+        SCVP_LOG(LOG_WARNING, "Only Support GeoType ERP and Cubemap for Content Coverage\n");
         return -1;
     }
     return 0;
@@ -822,7 +824,7 @@ int32_t TgenViewport::parseCfg(  )
     m_sourceSVideoInfo.iFaceHeight = m_iInputHeight;
     if(!m_faceSizeAlignment)
     {
-        LOG(WARNING) << "FaceSizeAlignment must be greater than 0, it is reset to 8 (default value).";
+        SCVP_LOG(LOG_WARNING, "FaceSizeAlignment must be greater than 0, it is reset to 8 (default value)\n");
         m_faceSizeAlignment = 8;
     }
     // if(m_faceSizeAlignment &1) // && numberToChromaFormat(tmpInputChromaFormat)==CHROMA_420
@@ -946,7 +948,7 @@ int32_t TgenViewport::calcTilesGridInCubemap()
 
     gridPoint3D = new SPos[FACE_NUMBER * (m_tileNumRow+1) * (m_tileNumCol+1)];
     if (!gridPoint3D) {
-        LOG(ERROR) << "Allocate 3D Grid Point Coordinates Failed!!!";
+        SCVP_LOG(LOG_ERROR, "Allocate 3D Grid Point Coordinates Failed\n");
         return -1;
     }
 
@@ -1168,7 +1170,7 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
         pTmpDownRight->y = m_pDownRight->y;
     }
     dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
-    LOG(INFO) << "Total Time for tile selection: " << dResult;
+    SCVP_LOG(LOG_INFO, "Total Time for tile selection: %l ms\n", floor(dResult*1000));
     return 0;
 }
 
@@ -1220,7 +1222,7 @@ int32_t  TgenViewport::convert()
     }
 
     dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
-    LOG(INFO) << "Total Time: " << dResult << " sec.";
+    SCVP_LOG(LOG_INFO, "Total Time: %d mili second.\n", (int32_t)floor(dResult*1000));
 
     if(pcInputGeomtry)
     {
@@ -1488,7 +1490,7 @@ int32_t TgenViewport::isInsideByAngle()
     dResult = clock();
     dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
 
-    LOG(INFO) << "Total Time for tile selection: " << dResult << " to find " << selectedTilesNum << " tiles inside!!";
+    SCVP_LOG(LOG_INFO, "Total Time for tile selection: %l ms to find %l tiles inside\n", floor(dResult*1000), selectedTilesNum);
 
     return selectedTilesNum;
 }
@@ -1548,11 +1550,11 @@ int32_t TgenViewport::getContentCoverage(CCDef* pOutCC, int32_t coverageShapeTyp
          * pOutCC->centreAzimuth = m_codingSVideoInfo.viewPort.fYaw * 65536.f;
          * pOutCC->centreElevation = m_codingSVideoInfo.viewPort.fPitch * 65536.f;
          */
-        LOG(WARNING) << "Doesnt' Support to Get CC by Viewport Settings Directly for Shape Type 1!!!";
+        SCVP_LOG(LOG_WARNING, "Doesnt' Support to Get CC by Viewport Settings Directly for Shape Type 1\n");
         ret = -1;
         break;
     default:
-        LOG(WARNING) << "Coverage type must be 0 or 1!!!";
+        SCVP_LOG(LOG_WARNING, "Coverage type must be 0 or 1\n");
         ret = -1;
         break;
     }

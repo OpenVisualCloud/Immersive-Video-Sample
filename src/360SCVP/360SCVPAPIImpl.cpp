@@ -33,6 +33,7 @@
 #include "360SCVPAPI.h"
 #include "360SCVPCommonDef.h"
 #include "360SCVPHevcEncHdr.h"
+#include "360SCVPLog.h"
 #include "360SCVPImpl.h"
 
 void* I360SCVP_Init(param_360SCVP* pParam360SCVP)
@@ -321,4 +322,21 @@ int32_t I360SCVP_SetParameter(void* p360SCVPHandle, int32_t paramID, void* pValu
         break;
     }
     return ret;
+}
+
+int32_t I360SCVPSetLogCallBack(void* p360SCVPHandle, void* externalLog)
+{
+    TstitchStream* pStitch = (TstitchStream*)p360SCVPHandle;
+    if (!pStitch)
+        return 1;
+
+    LogFunction logFunction = (LogFunction)externalLog;
+    if (!logFunction)
+        return OMAF_ERROR_NULL_PTR;
+
+    int32_t ret = pStitch->SetLogCallBack(logFunction);
+    if (ret)
+        return ret;
+
+    return ERROR_NONE;
 }
