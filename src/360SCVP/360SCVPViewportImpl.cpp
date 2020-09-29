@@ -137,8 +137,8 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
 
             viewPortWidth = floor((float)(viewPortWidth) / (float)(cTAppConvCfg->m_srd[0].tilewidth) + 0.499) * cTAppConvCfg->m_srd[0].tilewidth;
             viewPortHeightmax = floor((float)(viewPortHeight) / (float)(cTAppConvCfg->m_srd[0].tileheight) + 0.499) * cTAppConvCfg->m_srd[0].tileheight;
-            SCVP_LOG(LOG_INFO, "viewPortWidthMax = %d, viewPortHeightMax = %d,\n", viewPortWidth, viewPortHeightmax);
-            SCVP_LOG(LOG_INFO, "tile_width = %d, tile_height = %d\n", cTAppConvCfg->m_srd[0].tilewidth, cTAppConvCfg->m_srd[0].tileheight);
+            SCVP_LOG(LOG_INFO, "viewPortWidthMax is %d, viewPortHeightMax is %d\n", viewPortWidth, viewPortHeightmax);
+            SCVP_LOG(LOG_INFO, "tilewidth is %d , tileheight is %d\n", cTAppConvCfg->m_srd[0].tilewidth, cTAppConvCfg->m_srd[0].tileheight);
 
             maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 1);
             if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
@@ -1170,7 +1170,7 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
         pTmpDownRight->y = m_pDownRight->y;
     }
     dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
-    SCVP_LOG(LOG_INFO, "Total Time for tile selection: %l ms\n", floor(dResult*1000));
+    SCVP_LOG(LOG_INFO, "Total Time for tile selection: %f s\n", dResult);
     return 0;
 }
 
@@ -1222,7 +1222,7 @@ int32_t  TgenViewport::convert()
     }
 
     dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
-    SCVP_LOG(LOG_INFO, "Total Time: %d mili second.\n", (int32_t)floor(dResult*1000));
+    SCVP_LOG(LOG_INFO, "Total Time: %f second. \n", dResult);
 
     if(pcInputGeomtry)
     {
@@ -1490,7 +1490,7 @@ int32_t TgenViewport::isInsideByAngle()
     dResult = clock();
     dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
 
-    SCVP_LOG(LOG_INFO, "Total Time for tile selection: %l ms to find %l tiles inside\n", floor(dResult*1000), selectedTilesNum);
+    SCVP_LOG(LOG_INFO, "Total Time for tile selection: %f ms to find inside tile number is %d\n", dResult, selectedTilesNum);
 
     return selectedTilesNum;
 }
