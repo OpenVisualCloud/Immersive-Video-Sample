@@ -89,7 +89,8 @@ public:
         std::map<uint8_t, MediaStream*> *streams,
         uint8_t *videoIdxInMedia,
         uint16_t tilesNumInViewport,
-        uint16_t maxSelectedTilesNum);
+        uint16_t maxSelectedTilesNum,
+        LogFunction logging);
 
     //!
     //! \brief  Generate the region wise packing information for

@@ -36,7 +36,7 @@
 #include <string.h>
 
 #include "../../../utils/error.h"
-#include "../../../utils/GlogWrapper.h"
+#include "../PackingPluginLog.h"
 #include "HighResPlusFullLowResPacking.h"
 
 HighPlusFullLowRegionWisePackingGenerator::HighPlusFullLowRegionWisePackingGenerator()
@@ -180,7 +180,7 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateMergedTilesArrange(Ti
 
     if (!m_selectedTilesNum || !m_maxSelectedTilesNum || (m_selectedTilesNum > m_maxSelectedTilesNum))
     {
-        LOG(ERROR) << "Invalid maxmum selected tiles number and actual selected tiles number in viewport !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Invalid maxmum selected tiles number and actual selected tiles number in viewport !\n");
         return OMAF_ERROR_INVALID_DATA;
     }
 
@@ -197,7 +197,7 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateMergedTilesArrange(Ti
 
     if (!m_hrTilesInCol || !m_hrTilesInRow)
     {
-        LOG(ERROR) << "High resolution tiles row or column numbers are 0 !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "High resolution tiles row or column numbers are 0 !\n");
         return OMAF_ERROR_INVALID_DATA;
     }
 
@@ -207,7 +207,7 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateMergedTilesArrange(Ti
     packedHeight = m_highTileHeight * m_hrTilesInCol;
     if (packedHeight % m_lowTileHeight)
     {
-        LOG(ERROR) << "Packed sub-picture height can't be divided by low resolution tile height !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Packed sub-picture height can't be divided by low resolution tile height !\n");
         return OMAF_ERROR_INVALID_DATA;
     }
 
@@ -269,10 +269,16 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::Initialize(
     std::map<uint8_t, VideoStreamInfo*> *streams,
     uint8_t *videoIdxInMedia,
     uint16_t tilesNumInViewport,
-    uint16_t maxSelectedTilesNum)
+    uint16_t maxSelectedTilesNum,
+    void    *externalLog)
 {
     if (!streams || !videoIdxInMedia)
         return OMAF_ERROR_NULL_PTR;
+
+    if (externalLog)
+        logCallBack = (LogFunction)externalLog;
+    else
+        logCallBack = GlogFunction;
 
     uint8_t videoStreamIdx = 0;
     std::map<uint8_t, VideoStreamInfo*>::iterator it;

@@ -19,6 +19,8 @@ install(TARGETS HighResPlusFullLowResPacking
         ARCHIVE DESTINATION lib/static)
 
 install(FILES ${PROJECT_SOURCE_DIR}/../../../utils/error.h DESTINATION include)
+install(FILES ${PROJECT_SOURCE_DIR}/../../../utils/common_data.h DESTINATION include)
+install(FILES ${PROJECT_SOURCE_DIR}/../../../utils/Log.h DESTINATION include)
 install(FILES ${PROJECT_SOURCE_DIR}/../OMAFPackingPluginAPI.h DESTINATION include)
 install(FILES ${PROJECT_SOURCE_DIR}/HighResPlusFullLowResPacking.h DESTINATION include)
 install(FILES ${PROJECT_SOURCE_DIR}/HighResPlusFullLowResPacking.pc DESTINATION lib/pkgconfig)

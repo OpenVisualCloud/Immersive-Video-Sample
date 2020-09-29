@@ -124,7 +124,8 @@ public:
         std::map<uint8_t, VideoStreamInfo*> *streams,
         uint8_t *videoIdxInMedia,
         uint16_t tilesNumInViewport,
-        uint16_t maxSelectedTilesNum) = 0;
+        uint16_t maxSelectedTilesNum,
+        void    *externalLog) = 0;
 
     //!
     //! \brief  Generate the region wise packing information for

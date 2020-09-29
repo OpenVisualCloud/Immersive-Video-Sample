@@ -418,6 +418,7 @@ int32_t VideoStream::Initialize(
     m_360scvpParam->usedType                         = E_PARSER_ONENAL;
     m_360scvpParam->pInputBitstream                  = bs->data;
     m_360scvpParam->inputBitstreamLen                = bs->dataSize;
+    m_360scvpParam->logFunction                      = (void*)logCallBack;
 
     m_360scvpHandle = I360SCVP_Init(m_360scvpParam);
     if (!m_360scvpHandle)
