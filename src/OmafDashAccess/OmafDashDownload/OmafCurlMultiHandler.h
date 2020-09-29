@@ -110,7 +110,7 @@ class OmafDownloadTask : public VCD::NonCopyable {
   virtual ~OmafDownloadTask() {
     dcb_ = nullptr;
     scb_ = nullptr;
-    VLOG(VLOG_TRACE) << "Release the " << this->to_string() << std::endl;
+    OMAF_LOG(LOG_INFO, "Release the %s\n", this->to_string().c_str());
   }
 
  public:
@@ -233,7 +233,7 @@ class OmafCurlMultiDownloader : public VCD::NonCopyable {
   inline size_t size() const noexcept {  // return ready_task_list_.size() + run_task_map_.size();
     int size = task_size_.load();
     if (size < 0) {
-      LOG(FATAL) << "The task size is in invalid state!" << std::endl;
+      OMAF_LOG(LOG_FATAL, "The task size is in invalid state!\n");
     }
     return static_cast<size_t>(size);
   }

@@ -47,7 +47,7 @@
 #include <regex>
 #include <sstream>
 #include <string>
-#include "../../utils/GlogWrapper.h"
+//#include "../../utils/GlogWrapper.h"
 #include "../../utils/ns_def.h"
 #include "data_type.h"
 
@@ -110,7 +110,7 @@ using namespace std;
 #define CheckPrintLogAndReturn(status, log, level) \
   {                                                \
     if (status != OD_STATUS_SUCCESS) {             \
-      LOG(level) << log << endl;                   \
+      OMAF_LOG(level, log);                        \
       return status;                               \
     }                                              \
   }
@@ -131,7 +131,7 @@ using namespace std;
 #define CheckNullPtr_PrintLog_ReturnNullPtr(ptr, log, level) \
   {                                                          \
     if (!ptr) {                                              \
-      LOG(level) << log << endl;                             \
+      OMAF_LOG(level, log);                                  \
       return nullptr;                                        \
     }                                                        \
   }
@@ -154,7 +154,7 @@ using namespace std;
 #define CheckNullPtr_PrintLog_ReturnStatus(ptr, log, level, status) \
   {                                                                 \
     if (!ptr) {                                                     \
-      LOG(level) << log << endl;                                    \
+      OMAF_LOG(level, log);                                         \
       return status;                                                \
     }                                                               \
   }

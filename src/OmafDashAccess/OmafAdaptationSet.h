@@ -177,7 +177,7 @@ class OmafAdaptationSet {
           return INVALID_QUALITY_RANKING;
       }
     } catch (const std::exception& ex) {
-      LOG(ERROR) << "Exception when parse the quality ranking. ex: " << ex.what() << std::endl;
+      OMAF_LOG(LOG_ERROR, "Exception when parse the quality ranking. ex: %s\n", ex.what());
       return INVALID_QUALITY_RANKING;
     }
   };

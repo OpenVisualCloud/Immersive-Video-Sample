@@ -55,7 +55,7 @@ void PeriodElement::AddAdaptationSet(AdaptationSetElement* adaptionSet)
 {
     if(!adaptionSet)
     {
-        LOG(ERROR)<<"Fail to add adaptionSet in PeriodElement."<<endl;
+        OMAF_LOG(LOG_ERROR, "Fail to add adaptionSet in PeriodElement.\n");
         return;
     }
     m_adaptionSets.push_back(adaptionSet);

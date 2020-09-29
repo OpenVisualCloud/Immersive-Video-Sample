@@ -63,30 +63,30 @@ int OmafMPDParser::ParseMPD(std::string mpd_file, OMAFSTREAMS& listStream) {
 
   mMPDURL = mpd_file;
 
-  LOG(INFO) << "To parse the mpd file: " << mMPDURL << std::endl;
+  OMAF_LOG(LOG_INFO, "To parse the mpd file: %s\n", mMPDURL.c_str());
 
   ODStatus st = mParser->Generate(const_cast<char*>(mMPDURL.c_str()), mCacheDir);
   if (st != OD_STATUS_SUCCESS) {
     // mLock->unlock();
-    LOG(ERROR) << "Failed to load MPD file: " << mpd_file << std::endl;
+    OMAF_LOG(LOG_ERROR, "Failed to load MPD file: %s\n", mpd_file.c_str());
     return st;
   }
 
   mMpd = mParser->GetGeneratedMPD();
   if (nullptr == mMpd) {
-    LOG(ERROR) << "Failed to get the generated mpd!" << std::endl;
+    OMAF_LOG(LOG_ERROR, "Failed to get the generated mpd!\n");
     return ERROR_PARSE;
   }
 
   ret = ParseMPDInfo();
   if (ret != ERROR_NONE) {
-    LOG(ERROR) << "Failed to parse MPD file: " << mpd_file << std::endl;
+    OMAF_LOG(LOG_ERROR, "Failed to parse MPD file: %s\n", mpd_file.c_str());
     return ret;
   }
 
   ret = ParseStreams(listStream);
   if (ret != ERROR_NONE) {
-    LOG(ERROR) << "Failed to parse media streams from MPD file: " << mpd_file << std::endl;
+    OMAF_LOG(LOG_ERROR, "Failed to parse media streams from MPD file: %s\n", mpd_file.c_str());
     return ret;
   }
 
@@ -226,11 +226,10 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
 
     streamsMap.insert(std::make_pair(type, mTmpStream));
   }
-  LOG(INFO) << "allExtractorCnt" << allExtractorCnt << endl;
+  OMAF_LOG(LOG_INFO, "allExtractorCnt %u\n", allExtractorCnt);
   if (allExtractorCnt < mapAdaptationSets.size()) {
     if (mExtractorEnabled) {
-      LOG(INFO) << "There isn't extractor track from MPD parsing, extractor track enablement should be false !"
-                << std::endl;
+      OMAF_LOG(LOG_INFO, "There isn't extractor track from MPD parsing, extractor track enablement should be false !\n");
       mExtractorEnabled = false;
       ret = OMAF_INVALID_EXTRACTOR_ENABLEMENT;
     }

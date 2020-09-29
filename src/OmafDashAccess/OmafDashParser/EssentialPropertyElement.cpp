@@ -55,10 +55,10 @@ ODStatus EssentialPropertyElement::ParseSchemeIdUriAndValue()
     if(GetSchemeIdUri() == SCHEMEIDURI_SRD)
     {
         if(0 == GetValue().length())
-            LOG(WARNING)<<"SRD doesn't have value."<<endl;
+            OMAF_LOG(LOG_WARNING,"SRD doesn't have value.\n");
 
         m_srd = new OmafSrd();
-        CheckNullPtr_PrintLog_ReturnStatus(m_srd, "Failed to create OmafSrd.", ERROR, OD_STATUS_OPERATION_FAILED);
+        CheckNullPtr_PrintLog_ReturnStatus(m_srd, "Failed to create OmafSrd.", LOG_ERROR, OD_STATUS_OPERATION_FAILED);
 
         m_srd->SetInfo((char*)GetValue().c_str());
     }
@@ -68,7 +68,7 @@ ODStatus EssentialPropertyElement::ParseSchemeIdUriAndValue()
         ProjectionFormat format = static_cast<ProjectionFormat>(pf);
         if(format < PF_UNKNOWN || format > PF_RESERVED)
         {
-            LOG(WARNING)<<"the projection format is invalid."<<endl;
+            OMAF_LOG(LOG_WARNING,"the projection format is invalid.\n");
             return OD_STATUS_INVALID;
         }
 
@@ -79,7 +79,7 @@ ODStatus EssentialPropertyElement::ParseSchemeIdUriAndValue()
         RwpkType rwpkPackingType = (RwpkType)StringToInt(GetRwpkPackingType());
         if(rwpkPackingType <= RWPK_UNKNOWN || rwpkPackingType >= RWPK_RESERVED)
         {
-            LOG(WARNING)<<"the RWPK type is invalid."<<endl;
+            OMAF_LOG(LOG_WARNING,"the RWPK type is invalid.\n");
             return OD_STATUS_INVALID;
         }
 

@@ -22,33 +22,16 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
-
  */
 
 //!
-//! \file:   ViewportElement.cpp
-//! \brief:  Viewport element class
+//! \file:   OmafDashAccessLog.cpp
+//! \brief:  Include the log function implementation
+//!
+//! Created on April 30, 2019, 6:04 AM
 //!
 
-#include "ViewportElement.h"
+#include "OmafDashAccessLog.h"
 
-VCD_OMAF_BEGIN
 
-ViewportElement::~ViewportElement()
-{
-}
-
-ODStatus ViewportElement::ParseSchemeIdUriAndValue()
-{
-    if(GetSchemeIdUri() == SCHEMEIDURI_VIEWPORT)
-    {
-        if(0 == GetValue().length())
-            OMAF_LOG(LOG_WARNING, "SRD doesn't have value.\n");
-
-        //TBD
-    }
-
-    return OD_STATUS_SUCCESS;
-}
-
-VCD_OMAF_END;
+LogFunction logCallBack = GlogFunction;

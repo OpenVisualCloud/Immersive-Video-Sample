@@ -60,22 +60,22 @@ ODStatus SupplementalPropertyElement::ParseSchemeIdUriAndValue()
     if(GetSchemeIdUri() == SCHEMEIDURI_SRD)
     {
         if(0 == GetValue().length())
-            LOG(WARNING)<<"SRD doesn't have value."<<endl;
+            OMAF_LOG(LOG_WARNING, "SRD doesn't have value.\n");
 
         m_srd = new OmafSrd();
-        CheckNullPtr_PrintLog_ReturnStatus(m_srd, "Failed to create OmafSrd.", ERROR, OD_STATUS_OPERATION_FAILED);
+        CheckNullPtr_PrintLog_ReturnStatus(m_srd, "Failed to create OmafSrd.\n", LOG_ERROR, OD_STATUS_OPERATION_FAILED);
 
         m_srd->SetInfo((char*)GetValue().c_str());
     }
     else if(GetSchemeIdUri() == SCHEMEIDURI_SRQR)
     {
         m_srqr = new SphereQuality();
-        CheckNullPtr_PrintLog_ReturnStatus(m_srqr, "Failed to create SphereQuality.", ERROR, OD_STATUS_OPERATION_FAILED);
+        CheckNullPtr_PrintLog_ReturnStatus(m_srqr, "Failed to create SphereQuality.\n", LOG_ERROR, OD_STATUS_OPERATION_FAILED);
     }
     else if(GetSchemeIdUri() == SCHEMEIDURI_PRESELECTION)
     {
         m_preselection = new PreselValue();
-        CheckNullPtr_PrintLog_ReturnStatus(m_preselection, "Failed to create PreselValue.", ERROR, OD_STATUS_OPERATION_FAILED);
+        CheckNullPtr_PrintLog_ReturnStatus(m_preselection, "Failed to create PreselValue.\n", LOG_ERROR, OD_STATUS_OPERATION_FAILED);
 
         string preselVal = GetValue();
         std::vector<std::string> splitTag;
@@ -92,7 +92,7 @@ ODStatus SupplementalPropertyElement::ParseSchemeIdUriAndValue()
             if(s.length())
                 m_preselection->SelAsIDs.push_back(StringToInt(s));
             else
-                LOG(WARNING)<<"this adaptation set ID is invalid."<<endl;
+                OMAF_LOG(LOG_WARNING, "this adaptation set ID is invalid.\n");
         }
 
     }
@@ -108,7 +108,7 @@ ODStatus SupplementalPropertyElement::SetSphereRegionQuality(SphRegionQualityEle
 
     m_sphRegionQuality = sphRegionQuality;
 
-    CheckNullPtr_PrintLog_ReturnStatus(m_srqr, "The input SphereQuality is null.", ERROR, OD_STATUS_INVALID);
+    CheckNullPtr_PrintLog_ReturnStatus(m_srqr, "The input SphereQuality is null.\n", LOG_ERROR, OD_STATUS_INVALID);
 
     memset(m_srqr, 0 , sizeof(SphereQuality));
     m_srqr->shape_type = sphRegionQuality->GetShapeType();

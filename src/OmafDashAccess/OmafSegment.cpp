@@ -94,8 +94,7 @@ int OmafSegment::Open(std::shared_ptr<OmafDashSegmentClient> dash_client) noexce
         });
     return ERROR_NONE;
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Exception when start downloading the file: " << ds_params_.dash_url_ << ", ex: " << ex.what()
-               << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when start downloading the file: %s, ex: %s\n", ds_params_.dash_url_.c_str(), ex.what());
     return ERROR_INVALID;
   }
 }
@@ -108,8 +107,7 @@ int OmafSegment::Stop() noexcept {
     dash_client_->remove(ds_params_);
     return ERROR_NONE;
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Exception when start downloading the file: " << ds_params_.dash_url_ << ", ex: " << ex.what()
-               << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when start downloading the file: %s, ex: %s\n", ds_params_.dash_url_.c_str(), ex.what());
     return ERROR_INVALID;
   }
 }
@@ -159,15 +157,15 @@ int OmafSegment::CacheToFile() noexcept {
     cache_file_ = DOWNLOADMANAGER::GetInstance()->GetCacheFolder() + "/" +
                   DOWNLOADMANAGER::GetInstance()->AssignCacheFileName() + fileName;
     if (!dash_stream_.cacheToFile(cache_file_)) {
-      LOG(ERROR) << "Failed to cache the dash to file: " << cache_file_ << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to cache the dash to file: %s\n", cache_file_.c_str());
       return OMAF_ERROR_FILE_WRITE;
     }
 
-    VLOG(VLOG_TRACE) << "Success to cache dash to file: " << cache_file_ << ". url=" << ds_params_.dash_url_
-                     << "file size=" << dash_stream_.GetStreamSize() << std::endl;
+    OMAF_LOG(LOG_INFO, "Success to cache dash to file: %s. url=%s\n", cache_file_.c_str(), ds_params_.dash_url_.c_str());
+    OMAF_LOG(LOG_INFO, "And file size=%ld\n", dash_stream_.GetStreamSize());
     return ERROR_NONE;
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Exception when cache dash to file: " << cache_file_ << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when cache dash to file: %s\n", cache_file_.c_str());
     return ERROR_INVALID;
   }
 }

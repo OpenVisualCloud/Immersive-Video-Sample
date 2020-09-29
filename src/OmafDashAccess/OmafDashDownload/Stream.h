@@ -182,7 +182,7 @@ class StreamBlocks : public VCD::NonCopyable, public VCD::MP4::StreamIO {
       of.close();
       return true;
     } catch (const std::exception &ex) {
-      LOG(ERROR) << "Exception when cache the file: " << filename << ", ex: " << ex.what() << std::endl;
+      OMAF_LOG(LOG_ERROR, "Exception when cache the file: %s, ex: %s\n", filename.c_str(), ex.what());
       if (of.is_open()) {
         of.close();
       }

@@ -92,7 +92,7 @@ int OmafExtractorTracksSelector::SelectTracks(OmafMediaStream* pStream) {
 bool OmafExtractorTracksSelector::IsDifferentPose(HeadPose* pose1, HeadPose* pose2) {
   // return false if two pose is same
   if (abs(pose1->yaw - pose2->yaw) < 1e-3 && abs(pose1->pitch - pose2->pitch) < 1e-3) {
-    LOG(INFO) << "pose has not changed!" << std::endl;
+    OMAF_LOG(LOG_INFO, "pose has not changed!\n");
     return false;
   }
   return true;
@@ -121,7 +121,7 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
 
   // won't get viewport if pose hasn't changed
   if (previousPose && mPose && !IsDifferentPose(previousPose, mPose) && historySize > 1 && !mUsePrediction) {
-    LOG(INFO) << "pose hasn't changed!" << endl;
+    OMAF_LOG(LOG_INFO, "pose hasn't changed!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
     // trace
@@ -132,7 +132,7 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
   }
 
   // to select extractor;
-  LOG(INFO) << "Start to select extractor tracks!" << endl;
+  OMAF_LOG(LOG_INFO, "Start to select extractor tracks!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
         // trace
@@ -141,8 +141,9 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
 #endif
   OmafExtractor* selectedExtractor = SelectExtractor(pStream, mPose);
   if (selectedExtractor && previousPose) {
-    LOG(INFO) << "pose has changed from (" << previousPose->yaw << "," << previousPose->pitch << ") to (" << mPose->yaw
-              << "," << mPose->pitch << ") ! extractor id is: " << selectedExtractor->GetID() << endl;
+    OMAF_LOG(LOG_INFO, "For extractor track %d\n", selectedExtractor->GetID());
+    OMAF_LOG(LOG_INFO, "pose has changed from yaw %f, pitch %f\n", previousPose->yaw, previousPose->pitch);
+    OMAF_LOG(LOG_INFO, "to yaw %f, pitch %f\n", mPose->yaw, mPose->pitch);
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
     // trace
@@ -227,7 +228,7 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   }
   // won't get viewport if pose hasn't changed
   if (previousPose && mPose && !IsDifferentPose(previousPose, mPose) && historySize > 1) {
-    LOG(INFO) << "pose hasn't changed!" << endl;
+    OMAF_LOG(LOG_INFO, "pose hasn't changed!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
     // trace
@@ -240,7 +241,7 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   // if viewport changed, then predict viewport using pose history.
   if (mPredictPluginMap.size() == 0)
   {
-      LOG(ERROR)<<"predict plugin map is empty!"<<endl;
+      OMAF_LOG(LOG_ERROR,"predict plugin map is empty!\n");
       return extractors;
   }
   // 1. figure out the pts of predicted angle
@@ -257,7 +258,7 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   plugin->Predict(first_predict_pts, predict_angles);
   if (predict_angles.empty())
   {
-      LOG(INFO)<<"predictPose_func return an invalid value!"<<endl;
+      OMAF_LOG(LOG_INFO, "predictPose_func return an invalid value!\n");
       return extractors;
   }
   // to select extractor, only support SingleViewport mode in prediction.
@@ -265,7 +266,7 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   ViewportAngle *angle = predict_angles[first_predict_pts];
   predictPose->yaw = angle->yaw;
   predictPose->pitch = angle->pitch;
-  LOG(INFO) << "Start to select extractor tracks!" << endl;
+  OMAF_LOG(LOG_INFO, "Start to select extractor tracks!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
         // trace
@@ -275,8 +276,9 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   OmafExtractor* selectedExtractor = SelectExtractor(pStream, predictPose);
   if (selectedExtractor && previousPose) {
     extractors.push_back(selectedExtractor);
-    LOG(INFO) << "pose has changed from (" << previousPose->yaw << "," << previousPose->pitch << ") to (" << mPose->yaw
-              << "," << mPose->pitch << ") ! extractor id is: " << selectedExtractor->GetID() << endl;
+    OMAF_LOG(LOG_INFO, "For extractor track %d\n", selectedExtractor->GetID());
+    OMAF_LOG(LOG_INFO, "pose has changed from yaw %f, pitch %f\n", previousPose->yaw, previousPose->pitch);
+    OMAF_LOG(LOG_INFO, "to yaw %f, pitch %f\n", mPose->yaw, mPose->pitch);
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
     // trace

@@ -66,7 +66,7 @@ ODStatus OmafMPDReader::BuildMPD()
         return OD_STATUS_INVALID;
 
     m_mpd = new MPDElement();
-    CheckNullPtr_PrintLog_ReturnStatus(m_mpd, "Failed to create MPD element.", ERROR, OD_STATUS_OPERATION_FAILED);
+    CheckNullPtr_PrintLog_ReturnStatus(m_mpd, "Failed to create MPD element.\n", LOG_ERROR, OD_STATUS_OPERATION_FAILED);
 
     // read MPD attributes in XML
     m_mpd->SetXmlnsOmaf(m_rootXMLElement->GetAttributeVal(OMAF_XMLNS));
@@ -87,13 +87,13 @@ ODStatus OmafMPDReader::BuildMPD()
     map<string, string> attributes = m_rootXMLElement->GetAttributes();
     m_mpd->AddOriginalAttributes(attributes);
 
-    CheckNullPtr_PrintLog_ReturnStatus(m_rootXMLElement, "Failed to create MPD node.", ERROR, OD_STATUS_OPERATION_FAILED);
+    CheckNullPtr_PrintLog_ReturnStatus(m_rootXMLElement, "Failed to create MPD node.\n", LOG_ERROR, OD_STATUS_OPERATION_FAILED);
     vector<OmafXMLElement*> childElement = m_rootXMLElement->GetChildElements();
     for(auto child : childElement)
     {
         if(!child)
         {
-            LOG(WARNING)<<"Faild to load sub element in MPD Element."<<endl;
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in MPD Element.\n");
             continue;
         }
         if(child->GetName() == "EssentialProperty")
@@ -103,7 +103,7 @@ ODStatus OmafMPDReader::BuildMPD()
             if(essentialProperty)
                 m_mpd->AddEssentialProperty(essentialProperty);
             else
-                LOG(WARNING)<<"Faild to set EssentialProperty."<<endl;
+                OMAF_LOG(LOG_WARNING,"Faild to set EssentialProperty.\n");
         }
         else if(child->GetName() == "BaseURL")
         {
@@ -112,7 +112,7 @@ ODStatus OmafMPDReader::BuildMPD()
             if(baseURL)
                 m_mpd->AddBaseUrl(baseURL);
             else
-                LOG(WARNING)<<"Faild to add baseURL."<<endl;
+                OMAF_LOG(LOG_WARNING,"Faild to add baseURL.\n");
         }
         else if(child->GetName() == "Period")
         {
@@ -121,11 +121,11 @@ ODStatus OmafMPDReader::BuildMPD()
             if(period)
                 m_mpd->AddPeriod(period);
             else
-                LOG(WARNING)<<"Faild to add period."<<endl;
+                OMAF_LOG(LOG_WARNING,"Faild to add period.\n");
         }
         else
         {
-            LOG(INFO)<<"Can't parse element in BuildMPD."<<endl;
+            OMAF_LOG(LOG_INFO,"Can't parse element in BuildMPD.\n");
         }
         m_mpd->AddChildElement(child);
     }
@@ -137,9 +137,9 @@ ODStatus OmafMPDReader::BuildMPD()
 
 BaseUrlElement* OmafMPDReader::BuildBaseURL(OmafXMLElement* xmlBaseURL)
 {
-    CheckNullPtr_PrintLog_ReturnNullPtr(xmlBaseURL, "Failed to read baseURL element.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlBaseURL, "Failed to read baseURL element.\n", LOG_ERROR);
     BaseUrlElement* baseURL = new BaseUrlElement();
-    CheckNullPtr_PrintLog_ReturnNullPtr(baseURL, "Failed to create baseURL node.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(baseURL, "Failed to create baseURL node.\n", LOG_ERROR);
 
     auto path = xmlBaseURL->GetPath();
     baseURL->SetPath(path);
@@ -152,9 +152,9 @@ BaseUrlElement* OmafMPDReader::BuildBaseURL(OmafXMLElement* xmlBaseURL)
 
 PeriodElement* OmafMPDReader::BuildPeriod(OmafXMLElement* xmlPeriod)
 {
-    CheckNullPtr_PrintLog_ReturnNullPtr(xmlPeriod, "Failed to read period element.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlPeriod, "Failed to read period element.\n", LOG_ERROR);
     PeriodElement* period = new PeriodElement();
-    CheckNullPtr_PrintLog_ReturnNullPtr(period, "Failed to create period node.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(period, "Failed to create period node.\n", LOG_ERROR);
     period->SetStart(xmlPeriod->GetAttributeVal(START));
     period->SetId(xmlPeriod->GetAttributeVal(INDEX));
 
@@ -166,7 +166,7 @@ PeriodElement* OmafMPDReader::BuildPeriod(OmafXMLElement* xmlPeriod)
     {
         if(!child)
         {
-            LOG(WARNING)<<"Faild to load sub element in Period Element."<<endl;
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in Period Element.\n");
             continue;
         }
 
@@ -177,11 +177,11 @@ PeriodElement* OmafMPDReader::BuildPeriod(OmafXMLElement* xmlPeriod)
             if(adaptationSet)
                 period->AddAdaptationSet(adaptationSet);
             else
-                LOG(WARNING)<<"Fail to add adaptionSet."<<endl;
+                OMAF_LOG(LOG_WARNING,"Fail to add adaptionSet.\n");
         }
         else
         {
-            LOG(INFO)<<"Can't parse element in BuildPeriod."<<endl;
+            OMAF_LOG(LOG_INFO,"Can't parse element in BuildPeriod.\n");
         }
         period->AddChildElement(child);
     }
@@ -191,9 +191,9 @@ PeriodElement* OmafMPDReader::BuildPeriod(OmafXMLElement* xmlPeriod)
 
 AdaptationSetElement* OmafMPDReader::BuildAdaptationSet(OmafXMLElement* xml)
 {
-    CheckNullPtr_PrintLog_ReturnNullPtr(xml, "Failed to read adaptionSet element.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(xml, "Failed to read adaptionSet element.\n", LOG_ERROR);
     AdaptationSetElement* adaptionSet = new AdaptationSetElement();
-    CheckNullPtr_PrintLog_ReturnNullPtr(adaptionSet, "Failed to create adaptionSet node.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(adaptionSet, "Failed to create adaptionSet node.\n", LOG_ERROR);
     adaptionSet->SetId(xml->GetAttributeVal(INDEX));
     adaptionSet->SetMimeType(xml->GetAttributeVal(MIMETYPE));
     adaptionSet->SetCodecs(xml->GetAttributeVal(CODECS));
@@ -211,7 +211,7 @@ AdaptationSetElement* OmafMPDReader::BuildAdaptationSet(OmafXMLElement* xml)
     {
         if(!child)
         {
-            LOG(WARNING)<<"Faild to load sub element in  Element."<<endl;
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in  Element.\n");
             continue;
         }
 
@@ -222,7 +222,7 @@ AdaptationSetElement* OmafMPDReader::BuildAdaptationSet(OmafXMLElement* xml)
             if(representation)
                 adaptionSet->AddRepresentation(representation);
             else
-                LOG(WARNING)<<"Fail to add representation."<<endl;
+                OMAF_LOG(LOG_WARNING,"Fail to add representation.\n");
         }
         else if(child->GetName() == "Viewport")
         {
@@ -231,7 +231,7 @@ AdaptationSetElement* OmafMPDReader::BuildAdaptationSet(OmafXMLElement* xml)
             if(viewport)
                 adaptionSet->AddViewport(viewport);
             else
-                LOG(WARNING)<<"Fail to add Viewport."<<endl;
+                OMAF_LOG(LOG_WARNING,"Fail to add Viewport.\n");
         }
         else if(child->GetName() == "EssentialProperty")
         {
@@ -240,7 +240,7 @@ AdaptationSetElement* OmafMPDReader::BuildAdaptationSet(OmafXMLElement* xml)
             if(essentialProperty)
                 adaptionSet->AddEssentialProperty(essentialProperty);
             else
-                LOG(WARNING)<<"Fail to add essentialProperty."<<endl;
+                OMAF_LOG(LOG_WARNING,"Fail to add essentialProperty.\n");
         }
         else if(child->GetName() == "SupplementalProperty")
         {
@@ -249,11 +249,11 @@ AdaptationSetElement* OmafMPDReader::BuildAdaptationSet(OmafXMLElement* xml)
             if(supplementalProperty)
                 adaptionSet->AddSupplementalProperty(supplementalProperty);
             else
-                LOG(WARNING)<<"Fail to add supplementalProperty."<<endl;
+                OMAF_LOG(LOG_WARNING,"Fail to add supplementalProperty.\n");
         }
         else
         {
-            LOG(INFO)<<"Can't parse element in Build."<<endl;
+            OMAF_LOG(LOG_INFO,"Can't parse element in Build.\n");
         }
         adaptionSet->AddChildElement(child);
     }
@@ -263,9 +263,9 @@ AdaptationSetElement* OmafMPDReader::BuildAdaptationSet(OmafXMLElement* xml)
 
 ViewportElement* OmafMPDReader::BuildViewport(OmafXMLElement* xmlViewport)
 {
-    CheckNullPtr_PrintLog_ReturnNullPtr(xmlViewport, "Failed to read viewport element.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlViewport, "Failed to read viewport element.\n", LOG_ERROR);
     ViewportElement* viewport = new ViewportElement();
-    CheckNullPtr_PrintLog_ReturnNullPtr(viewport, "Failed to create viewport node.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(viewport, "Failed to create viewport node.\n", LOG_ERROR);
     viewport->SetSchemeIdUri(xmlViewport->GetAttributeVal(SCHEMEIDURI));
     viewport->SetValue(xmlViewport->GetAttributeVal(VALUE));
 
@@ -279,7 +279,7 @@ ViewportElement* OmafMPDReader::BuildViewport(OmafXMLElement* xmlViewport)
     {
         if(!child)
         {
-            LOG(WARNING)<<"Faild to load sub element in Viewport Element."<<endl;
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in Viewport Element.\n");
             continue;
         }
 
@@ -291,10 +291,10 @@ ViewportElement* OmafMPDReader::BuildViewport(OmafXMLElement* xmlViewport)
 
 EssentialPropertyElement* OmafMPDReader::BuildEssentialProperty(OmafXMLElement* xmlEssentialProperty)
 {
-    CheckNullPtr_PrintLog_ReturnNullPtr(xmlEssentialProperty, "Failed to read essentialProperty element.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlEssentialProperty, "Failed to read essentialProperty element.\n", LOG_ERROR);
 
     EssentialPropertyElement* essentialProperty = new EssentialPropertyElement();
-    CheckNullPtr_PrintLog_ReturnNullPtr(essentialProperty, "Failed to create essentialProperty node.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(essentialProperty, "Failed to create essentialProperty node.\n", LOG_ERROR);
 
     essentialProperty->SetSchemeIdUri(xmlEssentialProperty->GetAttributeVal(SCHEMEIDURI));
     essentialProperty->SetValue(xmlEssentialProperty->GetAttributeVal(VALUE));
@@ -312,7 +312,7 @@ EssentialPropertyElement* OmafMPDReader::BuildEssentialProperty(OmafXMLElement* 
     {
         if(!child)
         {
-            LOG(WARNING)<<"Faild to load sub element in EssentialProperty Element."<<endl;
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in EssentialProperty Element.\n");
             continue;
         }
 
@@ -324,9 +324,9 @@ EssentialPropertyElement* OmafMPDReader::BuildEssentialProperty(OmafXMLElement* 
 
 RepresentationElement* OmafMPDReader::BuildRepresentation(OmafXMLElement* xmlRepresentation)
 {
-    CheckNullPtr_PrintLog_ReturnNullPtr(xmlRepresentation, "Failed to read representation element.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlRepresentation, "Failed to read representation element.\n", LOG_ERROR);
     RepresentationElement* representation = new RepresentationElement();
-    CheckNullPtr_PrintLog_ReturnNullPtr(representation, "Failed to create representation node.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(representation, "Failed to create representation node.\n", LOG_ERROR);
     representation->SetId(xmlRepresentation->GetAttributeVal(INDEX));
     representation->SetCodecs(xmlRepresentation->GetAttributeVal(CODECS));
     representation->SetMimeType(xmlRepresentation->GetAttributeVal(MIMETYPE));
@@ -347,7 +347,7 @@ RepresentationElement* OmafMPDReader::BuildRepresentation(OmafXMLElement* xmlRep
     {
         if(!child)
         {
-            LOG(WARNING)<<"Faild to load sub element in Representation Element."<<endl;
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in Representation Element.\n");
             continue;
         }
 
@@ -358,11 +358,11 @@ RepresentationElement* OmafMPDReader::BuildRepresentation(OmafXMLElement* xmlRep
             if(segment)
                 representation->SetSegment(segment);
             else
-                LOG(WARNING)<<"Fail to add segment."<<endl;
+                OMAF_LOG(LOG_WARNING,"Fail to add segment.\n");
         }
         else
         {
-            LOG(INFO)<<"Can't parse element in BuildRepresentation."<<endl;
+            OMAF_LOG(LOG_INFO,"Can't parse element in BuildRepresentation.\n");
         }
         representation->AddChildElement(child);
     }
@@ -372,10 +372,10 @@ RepresentationElement* OmafMPDReader::BuildRepresentation(OmafXMLElement* xmlRep
 
 SegmentElement* OmafMPDReader::BuildSegment(OmafXMLElement* xmlSegment)
 {
-    CheckNullPtr_PrintLog_ReturnNullPtr(xmlSegment, "Failed to read segment element.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlSegment, "Failed to read segment element.\n", LOG_ERROR);
 
     SegmentElement* segment = new SegmentElement();
-    CheckNullPtr_PrintLog_ReturnNullPtr(segment, "Failed to create segment node.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(segment, "Failed to create segment node.\n", LOG_ERROR);
 
     segment->SetMedia(xmlSegment->GetAttributeVal(MEDIA));
     segment->SetInitialization(xmlSegment->GetAttributeVal(INITIALIZATION));
@@ -391,7 +391,7 @@ SegmentElement* OmafMPDReader::BuildSegment(OmafXMLElement* xmlSegment)
     {
         if(!child)
         {
-            LOG(WARNING)<<"Faild to load sub element in Segment Element."<<endl;
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in Segment Element.\n");
             continue;
         }
 
@@ -403,10 +403,10 @@ SegmentElement* OmafMPDReader::BuildSegment(OmafXMLElement* xmlSegment)
 
 SupplementalPropertyElement* OmafMPDReader::BuildSupplementalProperty(OmafXMLElement* xmlSupplementalProperty)
 {
-    CheckNullPtr_PrintLog_ReturnNullPtr(xmlSupplementalProperty, "Failed to read Supplemental Property element.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlSupplementalProperty, "Failed to read Supplemental Property element.\n", LOG_ERROR);
 
     SupplementalPropertyElement* supplementalProperty = new SupplementalPropertyElement();
-    CheckNullPtr_PrintLog_ReturnNullPtr(supplementalProperty, "Failed to create Supplemental Property node.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(supplementalProperty, "Failed to create Supplemental Property node.\n", LOG_ERROR);
 
     supplementalProperty->SetSchemeIdUri(xmlSupplementalProperty->GetAttributeVal(SCHEMEIDURI));
     supplementalProperty->SetValue(xmlSupplementalProperty->GetAttributeVal(VALUE));
@@ -421,7 +421,7 @@ SupplementalPropertyElement* OmafMPDReader::BuildSupplementalProperty(OmafXMLEle
     {
         if(!child)
         {
-            LOG(WARNING)<<"Faild to load sub element in supplementalProperty Element."<<endl;
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in supplementalProperty Element.\n");
             continue;
         }
 
@@ -438,10 +438,10 @@ SupplementalPropertyElement* OmafMPDReader::BuildSupplementalProperty(OmafXMLEle
 
 SphRegionQualityElement* OmafMPDReader::BuildSphRegionQuality(OmafXMLElement* xmlSphRegionQuality)
 {
-    CheckNullPtr_PrintLog_ReturnNullPtr(xmlSphRegionQuality, "Failed to read sphere Region Quality element.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlSphRegionQuality, "Failed to read sphere Region Quality element.\n", LOG_ERROR);
 
     SphRegionQualityElement* sphRegionQuality = new SphRegionQualityElement();
-    CheckNullPtr_PrintLog_ReturnNullPtr(sphRegionQuality, "Failed to create sphere Region Quality node.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(sphRegionQuality, "Failed to create sphere Region Quality node.\n", LOG_ERROR);
 
     sphRegionQuality->SetShapeType(StringToInt(xmlSphRegionQuality->GetAttributeVal(SHAPE_TYPE)));
     sphRegionQuality->SetRemainingAreaFlag((xmlSphRegionQuality->GetAttributeVal(REMAINING_AREA_FLAG) == "true"));
@@ -456,7 +456,7 @@ SphRegionQualityElement* OmafMPDReader::BuildSphRegionQuality(OmafXMLElement* xm
     {
         if(!child)
         {
-            LOG(WARNING)<<"Faild to load sub element in sphRegionQuality Element."<<endl;
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in sphRegionQuality Element.\n");
             continue;
         }
 
@@ -472,10 +472,10 @@ SphRegionQualityElement* OmafMPDReader::BuildSphRegionQuality(OmafXMLElement* xm
 
 QualityInfoElement* OmafMPDReader::BuildQualityInfo(OmafXMLElement* xmlQualityInfo)
 {
-    CheckNullPtr_PrintLog_ReturnNullPtr(xmlQualityInfo, "Failed to read Quality Info element.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlQualityInfo, "Failed to read Quality Info element.\n", LOG_ERROR);
 
     QualityInfoElement* qualityInfo = new QualityInfoElement();
-    CheckNullPtr_PrintLog_ReturnNullPtr(qualityInfo, "Failed to create Quality Info node.", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(qualityInfo, "Failed to create Quality Info node.\n", LOG_ERROR);
 
     qualityInfo->SetAzimuthRange(StringToInt(xmlQualityInfo->GetAttributeVal(AZIMUTH_RANGE)));
     qualityInfo->SetCentreAzimuth(StringToInt(xmlQualityInfo->GetAttributeVal(CENTRE_AZIMUTH)));
@@ -494,7 +494,7 @@ QualityInfoElement* OmafMPDReader::BuildQualityInfo(OmafXMLElement* xmlQualityIn
     {
         if(!child)
         {
-            LOG(WARNING)<<"Faild to load sub element in qualityInfo Element."<<endl;
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in qualityInfo Element.\n");
             continue;
         }
 

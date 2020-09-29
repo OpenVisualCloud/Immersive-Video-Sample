@@ -106,13 +106,17 @@ typedef enum {
  * source_type : the structure of videos in the mpd to be processed
  * cache_path : the directory to store cached downloaded files; a default path
  *              will be used if it is ""
+ * enable_extractor: whether to enable extractor track mode for packed sub-picture
+ * log_callback: external logging callback function pointer. Glog will be used
+ *               if it is NULL
  */
 typedef struct DASHSTREAMINGCLIENT {
-  SourceType source_type;
-  OmafParams omaf_params;
+  SourceType  source_type;
+  OmafParams  omaf_params;
   const char* media_url;
   const char* cache_path;
-  bool enable_extractor;
+  bool        enable_extractor;
+  void*       log_callback;
 } DashStreamingClient;
 
 /*

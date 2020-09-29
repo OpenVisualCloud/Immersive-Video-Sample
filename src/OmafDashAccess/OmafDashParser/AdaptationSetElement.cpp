@@ -86,7 +86,7 @@ void AdaptationSetElement::AddViewport(ViewportElement* viewport)
 {
     if(!viewport)
     {
-        LOG(ERROR)<<"Fail to add viewport in Element."<<endl;
+        OMAF_LOG(LOG_ERROR,"Fail to add viewport in Element.\n");
         return;
     }
     m_viewport.push_back(viewport);
@@ -96,7 +96,7 @@ void AdaptationSetElement::AddEssentialProperty(EssentialPropertyElement* essent
 {
     if(!essentialProperty)
     {
-        LOG(ERROR)<<"Fail to add essentialProperty in Element."<<endl;
+        OMAF_LOG(LOG_ERROR,"Fail to add essentialProperty in Element.\n");
         return;
     }
     m_essentialProperties.push_back(essentialProperty);
@@ -106,7 +106,7 @@ void AdaptationSetElement::AddSupplementalProperty(SupplementalPropertyElement* 
 {
     if(!supplementalProperty)
     {
-        LOG(ERROR)<<"Fail to add supplementalProperty in Element."<<endl;
+        OMAF_LOG(LOG_ERROR,"Fail to add supplementalProperty in Element.\n");
         return;
     }
     m_supplementalProperties.push_back(supplementalProperty);
@@ -116,7 +116,7 @@ void AdaptationSetElement::AddRepresentation(RepresentationElement* representati
 {
     if(!representation)
     {
-        LOG(ERROR)<<"Fail to add representation in Element."<<endl;
+        OMAF_LOG(LOG_ERROR,"Fail to add representation in Element.\n");
         return;
     }
     m_representations.push_back(representation);

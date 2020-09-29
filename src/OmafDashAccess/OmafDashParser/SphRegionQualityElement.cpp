@@ -67,7 +67,7 @@ SphRegionQualityElement::~SphRegionQualityElement()
 
 ODStatus SphRegionQualityElement::AddQualityInfo(QualityInfoElement* qualityInfo)
 {
-    CheckNullPtr_PrintLog_ReturnStatus(qualityInfo, "The input qualityInfo is null.", ERROR, OD_STATUS_INVALID);
+    CheckNullPtr_PrintLog_ReturnStatus(qualityInfo, "The input qualityInfo is null.\n", LOG_ERROR, OD_STATUS_INVALID);
 
     m_qualityInfo.push_back(qualityInfo);
 
@@ -98,7 +98,7 @@ ContentCoverage* SphRegionQualityElement::GetContentCoverage()
         return m_contentCoverage;
 
     m_contentCoverage = new ContentCoverage();
-    CheckNullPtr_PrintLog_ReturnNullPtr(m_contentCoverage, "Failed to create content coverage for SphRegionQualityElement", ERROR);
+    CheckNullPtr_PrintLog_ReturnNullPtr(m_contentCoverage, "Failed to create content coverage for SphRegionQualityElement\n", LOG_ERROR);
 
     m_contentCoverage->shape_type = m_shape_type;
     m_contentCoverage->view_idc_presence = m_viewIdcPresence;
