@@ -177,7 +177,9 @@ void MediaInformationAtom::FromStream(Stream& str)
         }
         else
         {
-            LOG(WARNING) << "Skipping an unsupported Atom '" << AtomType << "' inside MediaInformationAtom." << std::endl;
+			char type[4];
+            AtomType.GetString().copy(type, 4, 0);
+            ISO_LOG(LOG_WARNING, "Skipping an unsupported Atom '%s' inside MediaInformationAtom.\n", type);
         }
     }
 }

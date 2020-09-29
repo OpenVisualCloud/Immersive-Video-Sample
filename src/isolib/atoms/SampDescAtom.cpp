@@ -63,7 +63,7 @@ void SampleDescriptionAtom::ToStream(Stream& str)
     {
         if (!entry)
         {
-            LOG(ERROR)<<"ToStreamAtom can not write file"<<std::endl;
+            ISO_LOG(LOG_ERROR, "ToStreamAtom can not write file\n");
             throw Exception();
         }
         Stream entryBitStr;
@@ -149,7 +149,7 @@ void SampleDescriptionAtom::FromStream(Stream& str)
 
             if (rinfAtomSubBitstream.GetSize() == 0)
             {
-                LOG(ERROR)<<"There must be rinf Atom inside resv"<<std::endl;
+                ISO_LOG(LOG_ERROR, "There must be rinf Atom inside resv\n");
                 throw Exception();
             }
 
@@ -159,7 +159,7 @@ void SampleDescriptionAtom::FromStream(Stream& str)
             // rewind & rewrite the sample entry Atom type
             if (entrysResvAtom->GetOriginalFormat() == "resv")
             {
-                LOG(ERROR)<<"OriginalFormat cannot be resv"<<std::endl;
+                ISO_LOG(LOG_ERROR, "OriginalFormat cannot be resv\n");
                 throw Exception();
             }
 
@@ -175,7 +175,9 @@ void SampleDescriptionAtom::FromStream(Stream& str)
         }
         else
         {
-            LOG(WARNING) << "Skipping unknown SampleDescriptionAtom entry of type '" << AtomType << "'" << std::endl;
+            char type[4];
+            AtomType.GetString().copy(type, 4, 0);
+			ISO_LOG(LOG_WARNING, "Skipping unsupported SampleDescriptionAtom entry of type '%s'\n", type);
             // Push nullptr to keep indexing correct, in case it will still be possible to operate with the file.
             m_index.push_back(nullptr);
         }

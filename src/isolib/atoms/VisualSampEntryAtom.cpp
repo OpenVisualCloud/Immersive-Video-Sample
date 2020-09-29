@@ -144,7 +144,7 @@ void VisualSampleEntryAtom::FromStream(Stream& str)
     const uint8_t compressorNameLength = str.Read8();
     if (compressorNameLength > COMPRESSORNAME_STRING_LENGTH)
     {
-        LOG(ERROR)<<"Too long compressorname string length read from VisualSampleEntry (>31 bytes)."<<std::endl;
+        ISO_LOG(LOG_ERROR, "Too long compressorname string length read from VisualSampleEntry (>31 bytes).\n");
         throw Exception();
     }
     std::string codecName;

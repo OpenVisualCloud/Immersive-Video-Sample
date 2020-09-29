@@ -92,7 +92,7 @@ FrameBuf AcquireTrackData::Acquirer::GetFramePackedData(size_t aFrameIndex) cons
 {
     if (aFrameIndex >= frameBlock.size())
     {
-        LOG(ERROR) << "Frame index exceeds size !" << endl;
+        ISO_LOG(LOG_ERROR, "Frame index exceeds size !\n");
         throw exception();
     }
     const auto storage = mp4.GetData(frameBlock.at(aFrameIndex));
@@ -104,7 +104,7 @@ size_t AcquireTrackData::Acquirer::GetFramePackedSize(size_t aFrameIndex) const
 {
     if (aFrameIndex >= frameBlock.size())
     {
-        LOG(ERROR) << "Frame index exceeds size !" << endl;
+        ISO_LOG(LOG_ERROR, "Frame index exceeds size !\n");
         throw exception();
     }
     size_t packedSize = frameBlock.at(aFrameIndex).size;
@@ -190,18 +190,18 @@ AcquireTrackData::AcquireTrackData(
         }
         if (cts.size() != 1)
         {
-            LOG(ERROR) << "Invalid CTS size !" << endl;
+            ISO_LOG(LOG_ERROR, "Invalid CTS size !\n");
             throw exception();
         }
         if (!sampleToChunkBox.GetSampleChunkIndex(sampleIndex, chunkIndex))
         {
-            LOG(ERROR) << "Failed to get sample chunk index !" << endl;
+            ISO_LOG(LOG_ERROR, "Failed to get sample chunk index !\n");
             throw exception();
         }
         auto followingCts = timeToSample.find(*cts.begin());
         if (followingCts == timeToSample.end())
         {
-            LOG(ERROR) << "Failed to find the beginning CTS !" << endl;
+            ISO_LOG(LOG_ERROR, "Failed to find the beginning CTS !\n");
             throw exception();
         }
         ++followingCts;

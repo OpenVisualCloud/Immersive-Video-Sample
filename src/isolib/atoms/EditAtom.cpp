@@ -91,7 +91,7 @@ void EditListAtom::AddEntry(const EntryVersion0& entry)
 {
     if (m_entryVersion1.size() != 0 || GetVersion() != 0)
     {
-        LOG(ERROR)<<"Invalid attempt to add version0 EditListAtom entries."<<std::endl;
+        ISO_LOG(LOG_ERROR, "Invalid attempt to add version0 EditListAtom entries.\n");
         throw Exception();
     }
     m_entryVersion0.push_back(entry);
@@ -101,7 +101,7 @@ void EditListAtom::AddEntry(const EntryVersion1& entry)
 {
     if (m_entryVersion0.size() != 0 || GetVersion() != 1)
     {
-        LOG(ERROR)<<"Invalid attempt to add version1 EditListAtom entries."<<std::endl;
+        ISO_LOG(LOG_ERROR, "Invalid attempt to add version1 EditListAtom entries.\n");
         throw Exception();
     }
     m_entryVersion1.push_back(entry);
@@ -119,7 +119,7 @@ std::uint32_t EditListAtom::numEntry() const
         size = m_entryVersion1.size();
         break;
     default:
-        LOG(ERROR)<<"Not supported EditListAtom entry version (only 0 and 1 are supported)."<<std::endl;
+        ISO_LOG(LOG_ERROR, "Not supported EditListAtom entry version (only 0 and 1 are supported).\n");
         throw Exception();
     }
     return static_cast<std::uint32_t>(size);

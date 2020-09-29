@@ -180,7 +180,7 @@ void ItemReferenceAtom::AddItems(FourCCInt type, const std::uint32_t fromId, con
     if (((fromId > std::numeric_limits<std::uint16_t>::max()) || (toId > std::numeric_limits<std::uint16_t>::max())) &&
         !largeIds)
     {
-        LOG(ERROR)<<"ItemReferenceAtom::Add can not add large item IDs to Atom version 0"<<std::endl;
+        ISO_LOG(LOG_ERROR, "ItemReferenceAtom::Add can not add large item IDs to Atom version 0\n");
         throw Exception();
     }
 

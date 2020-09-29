@@ -101,7 +101,7 @@ void WriteMoof(ostream& outStr,
     {
         if (moofInfos.find(trackId) == moofInfos.end())
         {
-            LOG(ERROR) << "Failed to find moof info for designated track !" << std::endl;
+            ISO_LOG(LOG_ERROR, "Failed to find moof info for designated track !\n");
             throw exception();
         }
         const auto& segmentMoofInfo = moofInfos.find(trackId)->second;
@@ -127,7 +127,7 @@ void WriteMoof(ostream& outStr,
 
         if (framesMap.find(trackId) == framesMap.end())
         {
-            LOG(ERROR) << "Can't find frame with designated trackId !" << std::endl;
+            ISO_LOG(LOG_ERROR, "Can't find frame with designated trackId !\n");
             throw exception();
         }
 
@@ -327,7 +327,7 @@ void WriteSampleData(ostream& outStr, const Segment& oneSeg)
         segMoofInfos[*iter2] = move(moofInfo);
         if (frameMap.find(*iter2) == frameMap.end())
         {
-            LOG(ERROR) << "Failed to find frame with designated track Id !" << std::endl;
+            ISO_LOG(LOG_ERROR, "Failed to find frame with designated track Id !\n");
             throw exception();
         }
         for (const auto& frame : frameMap.find(*iter2)->second)
@@ -640,7 +640,7 @@ FrameBuf HevcExtractor::GenFrameData() const
 
     if (!sampleConstructor && !inlineConstructor)
     {
-        LOG(ERROR) << "Both of sample constructor and inline constructor are NULL !" << endl;
+        ISO_LOG(LOG_ERROR, "Both of sample constructor and inline constructor are NULL !\n");
         throw exception();
     }
     if (!!inlineConstructor)
@@ -1179,7 +1179,7 @@ SegmentWriter::Action SegmentWriter::FeedOneFrame(TrackId trackIndex, FrameWrapp
 
     if (!m_impl->m_trackSte.count(trackIndex))
     {
-        LOG(ERROR) << "Track is not correct !" << endl;
+        ISO_LOG(LOG_ERROR, "Track is not correct !\n");
         throw exception();
     }
 
@@ -1243,7 +1243,7 @@ list<SegmentList> SegmentWriter::ExtractSubSegments()
                 }
                 if (iter3 == subSegGroup.end())
                 {
-                    LOG(ERROR) << "Failed to get sub segment group !" << std::endl;
+                    ISO_LOG(LOG_ERROR, "Failed to get sub segment group !\n");
                     throw exception();
                 }
                 TrackOfSegment& trackOfSegment = (*iter3).tracks[trackId];

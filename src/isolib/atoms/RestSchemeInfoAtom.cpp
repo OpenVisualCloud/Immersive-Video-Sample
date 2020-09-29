@@ -155,7 +155,7 @@ void ProjectedOmniVideoAtom::FromStream(Stream& str)
     m_projectionFormatAtom.FromStream(str);
     if (m_projectionFormatAtom.GetType() != "prfr")
     {
-        LOG(ERROR)<<"POVD Atom must start with prfr Atom"<<std::endl;
+        ISO_LOG(LOG_ERROR, "POVD Atom must start with prfr Atom\n");
         throw Exception();
     }
 
@@ -182,16 +182,17 @@ void ProjectedOmniVideoAtom::FromStream(Stream& str)
         }
         else
         {
-            LOG(WARNING) << "Ignoring unknown AtomType found from povd Atom: " << AtomType << std::endl;
+			char type[4];
+            AtomType.GetString().copy(type, 4, 0);
+            ISO_LOG(LOG_WARNING, "Ignoring unknown AtomType found from povd Atom: %s\n", type);
         }
     }
 }
 
 void ProjectedOmniVideoAtom::dump() const
 {
-    LOG(INFO) << "---------------------------------- POVD ------------------------------" << std::endl
-              << "m_projectionFormatAtom.GetProjectFormat: " << (std::uint32_t) m_projectionFormatAtom.GetProjectFormat()
-              << std::endl;
+    ISO_LOG(LOG_INFO, "---------------------------------- POVD ------------------------------\n");
+    ISO_LOG(LOG_INFO, "m_projectionFormatAtom.GetProjectFormat: %d\n", (std::uint32_t) m_projectionFormatAtom.GetProjectFormat());
 
     if (m_regionWisePackingAtom)
     {
@@ -205,10 +206,10 @@ void ProjectedOmniVideoAtom::dump() const
 
     if (m_rotationAtom)
     {
-        LOG(INFO) << "Also rotation Atom is present" << std::endl;
+        ISO_LOG(LOG_INFO, "Also rotation Atom is present\n");
     }
 
-    LOG(INFO) << "-============================ End Of POVD ===========================-" << std::endl;
+    ISO_LOG(LOG_INFO, "-============================ End Of POVD ===========================-\n");
 }
 
 SchemeTypeAtom::SchemeTypeAtom()
@@ -366,7 +367,7 @@ void RestrictedSchemeInfoAtom::FromStream(Stream& str)
         {
             if (!m_schemeTypeAtom)
             {
-                LOG(ERROR)<<"Scheme type Atom was not found, before scheme info Atom"<<std::endl;
+                ISO_LOG(LOG_ERROR, "Scheme type Atom was not found, before scheme info Atom\n");
                 throw Exception();
             }
 
@@ -400,14 +401,16 @@ void RestrictedSchemeInfoAtom::FromStream(Stream& str)
                 }
                 else
                 {
-                    LOG(WARNING) << "Skipping unsupported scheme type '" << schemeType << std::endl;
+                    ISO_LOG(LOG_WARNING, "Skipping unsupported scheme type '%s'\n", schemeType);
                     break;
                 }
             }
         }
         else
         {
-            LOG(WARNING) << "Skipping unknown Atom in rinf'" << AtomType << "'" << std::endl;
+			char type[4];
+            AtomType.GetString().copy(type, 4, 0);
+            ISO_LOG(LOG_WARNING, "Skipping unsupported Atom in rinf '%s'\n", type);
         }
     }
 }
@@ -416,7 +419,7 @@ FourCCInt RestrictedSchemeInfoAtom::GetOriginalFormat() const
 {
     if (!m_originalFormatAtom)
     {
-        LOG(ERROR)<<"Frma Atom was not found"<<std::endl;
+        ISO_LOG(LOG_ERROR, "Frma Atom was not found\n");
         throw Exception();
     }
     FourCCInt ret = m_originalFormatAtom->GetOriginalFormat();
@@ -437,7 +440,7 @@ FourCCInt RestrictedSchemeInfoAtom::GetSchemeType() const
 {
     if (!m_schemeTypeAtom)
     {
-        LOG(ERROR)<<"Schm Atom was not found"<<std::endl;
+        ISO_LOG(LOG_ERROR, "Schm Atom was not found\n");
         throw Exception();
     }
     FourCCInt ret = m_schemeTypeAtom->GetSchemeType();
@@ -463,7 +466,7 @@ ProjectedOmniVideoAtom& RestrictedSchemeInfoAtom::GetProjectedOmniVideoAtom() co
 {
     if (!m_projectedOmniVideoAtom)
     {
-        LOG(ERROR)<<"POVD Atom was not found"<<std::endl;
+        ISO_LOG(LOG_ERROR, "POVD Atom was not found\n");
         throw Exception();
     }
     return *m_projectedOmniVideoAtom;
@@ -478,7 +481,7 @@ StereoVideoAtom& RestrictedSchemeInfoAtom::GetStereoVideoAtom() const
 {
     if (!m_stereoVideoAtom)
     {
-        LOG(ERROR)<<"Stvi Atom was not found"<<std::endl;
+        ISO_LOG(LOG_ERROR, "Stvi Atom was not found\n");
         throw Exception();
     }
     return *m_stereoVideoAtom;
@@ -557,9 +560,8 @@ void StereoVideoAtom::FromStream(Stream& str)
     auto checkLen = [&](uint32_t len) {
         if (pLength != len)
         {
-            LOG(INFO) << "Invalid length (" << pLength
-                      << ") for stvi stereo_indication_type data. For scheme_type " << (uint32_t) m_stereoScheme
-                      << " expected length is " << len << std::endl;
+            ISO_LOG(LOG_INFO, "Invalid length ( %d, ) for stvi stereo_indication_type data.\n", pLength);
+            ISO_LOG(LOG_INFO, "For scheme_type %d, expected length is %d\n", (uint32_t) m_stereoScheme, len);
         }
     };
 

@@ -86,7 +86,7 @@ void MediaDataAtom::UpdateSize(Stream& str)
 
     if ((AtomSize > std::numeric_limits<std::uint32_t>::max()) && (GetLargeSize() == false))
     {
-        LOG(ERROR)<<"Atom::UpdateSize(): Atom size exceeds 4GB but large size for 64-bit size field was not set."<<std::endl;
+        ISO_LOG(LOG_ERROR, "Atom::UpdateSize(): Atom size exceeds 4GB but large size for 64-bit size field was not set.\n");
         throw Exception();
     }
 

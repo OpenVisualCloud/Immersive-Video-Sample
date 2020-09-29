@@ -80,7 +80,7 @@ void SyncSampleAtom::FromStream(Stream& str)
 
     if (m_sampleNumMax != -1 && (entryCount > m_sampleNumMax))
     {
-        LOG(ERROR)<<"FromStreamAtom entryCount is larger than total number of samples"<<std::endl;
+        ISO_LOG(LOG_ERROR, "FromStreamAtom entryCount is larger than total number of samples\n");
         throw Exception();
     }
 

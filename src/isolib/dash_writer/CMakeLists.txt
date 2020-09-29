@@ -7,7 +7,8 @@ option(USE_ANDROID_NDK
 
 PROJECT(dashwriter)
 
-AUX_SOURCE_DIRECTORY(../atoms DIR_DASHWRITER_SRCS)
+AUX_SOURCE_DIRECTORY(../atoms DIR_ATOMS_SRCS)
+AUX_SOURCE_DIRECTORY(../common DIR_COMMON_SRCS)
 AUX_SOURCE_DIRECTORY(. DIR_DASHWRITER_SRCS)
 
 if(NOT USE_ANDROID_NDK)
@@ -21,9 +22,15 @@ ADD_DEFINITIONS("-g -c -fPIC -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0
                    -Wformat-security -Wall")
 endif()
 
-INCLUDE_DIRECTORIES(/usr/local/include ../include ../atoms)
+INCLUDE_DIRECTORIES(/usr/local/include ../include ../atoms ../common)
 
-LINK_DIRECTORIES(/usr/local/lib ../atoms)
+LINK_DIRECTORIES(/usr/local/lib ../atoms ../common)
+
+set(DIR_DASHWRITER_SRCS
+    ${DIR_DASHWRITER_SRCS}
+    ${DIR_ATOMS_SRCS}
+    ${DIR_COMMON_SRCS}
+   )
 
 ADD_LIBRARY(dashwriter STATIC ${DIR_DASHWRITER_SRCS})
 

@@ -92,7 +92,7 @@ void ItemLocationAtom::AddExtent(const std::uint32_t itemId, const ExtentParams&
     const auto iter = findItem(itemId);
     if (iter == m_itemLocations.end())
     {
-        LOG(ERROR)<<"ItemLocationAtom::AddExtent() invalid item id"<<std::endl;
+        ISO_LOG(LOG_ERROR, "ItemLocationAtom::AddExtent() invalid item id\n");
         throw Exception();
     }
 
@@ -253,7 +253,7 @@ const ItemLocation& ItemLocationAtom::GetItemLocationForID(const unsigned int it
     {
         return *iter;
     }
-    LOG(ERROR)<<"ItemLocationAtom::GetItemLocationForID: invalid item ID"<<std::endl;
+    ISO_LOG(LOG_ERROR, "ItemLocationAtom::GetItemLocationForID: invalid item ID\n");
     throw Exception();
 }
 
@@ -261,7 +261,7 @@ const ExtentParams& ItemLocation::GetExtent(const unsigned int i) const
 {
     if (i >= m_extentList.size())
     {
-        LOG(ERROR)<<"ItemLocationAtom::GetExtent: invalid extent ID"<<std::endl;
+        ISO_LOG(LOG_ERROR, "ItemLocationAtom::GetExtent: invalid extent ID\n");
         throw Exception();
     }
     else

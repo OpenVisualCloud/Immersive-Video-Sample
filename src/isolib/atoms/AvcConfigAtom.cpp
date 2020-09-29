@@ -121,7 +121,7 @@ void AvcDecoderConfigurationRecord::AddNalUnit(const std::vector<uint8_t>& nalUn
         if (static_cast<uint8_t>(nalUnitType) == static_cast<uint8_t>(i.nalUnitType))
         {
             nals = &i;
-            LOG(INFO)<<"find nal array existed!"<<std::endl;
+            ISO_LOG(LOG_INFO, "find nal array existed!\n");
             break;
         }
     }
@@ -158,7 +158,7 @@ void AvcDecoderConfigurationRecord::WriteDecConfigRec(Stream& str) const
 
     if (!(cnt < (1 << 6)))
     {
-        LOG(ERROR)<<"count invalid"<<std::endl;
+        ISO_LOG(LOG_ERROR, "count invalid\n");
         return;
     }
     str.Write1(cnt, 5);
@@ -178,7 +178,7 @@ void AvcDecoderConfigurationRecord::WriteDecConfigRec(Stream& str) const
 
     if (!(cnt < (1 << 9)))
     {
-        LOG(ERROR)<<"count invalid"<<std::endl;
+        ISO_LOG(LOG_ERROR, "count invalid\n");
         return;
     }
     str.Write1(cnt, 8);
@@ -207,7 +207,7 @@ void AvcDecoderConfigurationRecord::WriteDecConfigRec(Stream& str) const
 
         if (!(cnt < (1 << 9)))
         {
-            LOG(ERROR)<<"count invalid"<<std::endl;
+            ISO_LOG(LOG_ERROR, "count invalid\n");
             return;
         }
         str.Write1(cnt, 8);
@@ -262,7 +262,7 @@ void AvcDecoderConfigurationRecord::ParseConfig(Stream& str)
 
     if (str.GetSize() == str.GetPos())
     {
-        LOG(INFO)<<"Stop reading if there is no more data"<<std::endl;
+        ISO_LOG(LOG_INFO, "Stop reading if there is no more data\n");
         return;
     }
 

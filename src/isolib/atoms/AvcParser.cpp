@@ -163,7 +163,7 @@ bool parseSPS(Stream& str, SPSCfgs& retSps)
         params.seqScalingMatrixPresentFlag      = static_cast<uint8_t>(str.Read1(1));  // 0 u(1)
         if (params.seqScalingMatrixPresentFlag)
         {
-            LOG(ERROR)<<"seq scale matrix is not supported!!"<<std::endl;
+            ISO_LOG(LOG_ERROR, "seq scale matrix is not supported!!\n");
             return false;
         }
     }
@@ -209,7 +209,7 @@ bool parseSPS(Stream& str, SPSCfgs& retSps)
     params.vuiParametersPresentFlag = static_cast<uint8_t>(str.Read1(1));  // 0 u(1)
     if (params.vuiParametersPresentFlag)
     {
-        LOG(ERROR)<<"the feather doesn't work!!"<<std::endl;
+        ISO_LOG(LOG_ERROR, "the feather doesn't work!!\n");
     }
     retSps = params;
     return true;

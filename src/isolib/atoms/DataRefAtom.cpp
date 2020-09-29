@@ -158,7 +158,7 @@ void DataReferenceAtom::FromStream(Stream& str)
             dataEntryAtom = MakeShared<DataEntryUrnAtom>();
             if (!dataEntryAtom)
             {
-                LOG(ERROR) << "NULL pointer !" << std::endl;
+                ISO_LOG(LOG_ERROR, "NULL pointer !\n");
                 throw Exception();
             }
             dataEntryAtom->FromStream(subStream);
@@ -168,14 +168,14 @@ void DataReferenceAtom::FromStream(Stream& str)
             dataEntryAtom = MakeShared<DataEntryUrlAtom>();
             if (!dataEntryAtom)
             {
-                LOG(ERROR) << "NULL pointer !" << std::endl;
+                ISO_LOG(LOG_ERROR, "NULL pointer !\n");
                 throw Exception();
             }
             dataEntryAtom->FromStream(subStream);
         }
         else
         {
-            LOG(ERROR)<<"An unknown Atom inside dref"<<std::endl;
+            ISO_LOG(LOG_ERROR, "An unknown Atom inside dref\n");
             throw Exception();
         }
         m_dataEntries.push_back(dataEntryAtom);

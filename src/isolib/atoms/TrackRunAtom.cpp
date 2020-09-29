@@ -60,7 +60,7 @@ int32_t TrackRunAtom::GetDataOffset() const
     }
     else
     {
-        LOG(ERROR)<<"GetDataOffset() according to flags pDataOffset not present."<<std::endl;
+        ISO_LOG(LOG_ERROR, "GetDataOffset() according to flags pDataOffset not present.\n");
         throw Exception();
     }
 }
@@ -79,7 +79,7 @@ SampleFlags TrackRunAtom::GetFirstSampleFlags() const
     }
     else
     {
-        LOG(ERROR)<<"GetFirstSampleFlags() according to flags pFirstSampleFlags not present"<<std::endl;
+        ISO_LOG(LOG_ERROR, "GetFirstSampleFlags() according to flags pFirstSampleFlags not present\n");
         throw Exception();
     }
 }
@@ -152,7 +152,7 @@ void TrackRunAtom::FromStream(Stream& str)
     m_sampleNum = str.Read32();
     if (m_sampleNum > ABMAX_SAMP_CNT)
     {
-        LOG(ERROR)<<"Over max sample counts from TrackRunAtom::FromStreamAtom"<<std::endl;
+        ISO_LOG(LOG_ERROR, "Over max sample counts from TrackRunAtom::FromStreamAtom\n");
         throw Exception();
     }
     if ((GetFlags() & TrackRunFlags::pDataOffset) != 0)

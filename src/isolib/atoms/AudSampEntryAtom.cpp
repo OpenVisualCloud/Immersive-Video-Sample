@@ -73,7 +73,7 @@ void AudioSampleEntryAtom::SetVersion(std::uint16_t version)
     }
     else
     {
-        LOG(ERROR)<<"AudioSampleEntryAtom::SetVersion Error: trying to set value other than 0 or 1"<< std::endl;
+        ISO_LOG(LOG_ERROR, "AudioSampleEntryAtom::SetVersion Error: trying to set value other than 0 or 1\n");
         throw Exception();
     }
 }
@@ -136,7 +136,7 @@ SamplingRateAtom& AudioSampleEntryAtom::GetSamplingRateAtom()
     }
     else
     {
-        LOG(ERROR)<<"AudioSampleEntryAtom::GetSamplingRateAtom Error: trying to GetSamplingRateAtom from version other than 1"<< std::endl;
+        ISO_LOG(LOG_ERROR, "AudioSampleEntryAtom::GetSamplingRateAtom Error: trying to GetSamplingRateAtom from version other than 1\n");
         throw Exception();
     }
 }
@@ -191,7 +191,7 @@ void AudioSampleEntryAtom::FromStream(Stream& str)
     m_version = str.Read16();  // in case of v0 Atom this is first half of 32bit reserved = 0
     if (m_version != 1 && m_version != 0)
     {
-        LOG(ERROR)<<"AudioSampleEntryV1Atom::FromStreamAtom Error: trying to read version other than 0 or 1"<< std::endl;
+        ISO_LOG(LOG_ERROR, "AudioSampleEntryV1Atom::FromStreamAtom Error: trying to read version other than 0 or 1\n");
         throw Exception();
     }
 
@@ -241,13 +241,13 @@ AudioSampleEntryAtom* AudioSampleEntryAtom::Clone() const
 
 const Atom* AudioSampleEntryAtom::GetConfigurationAtom() const
 {
-    LOG(ERROR) << "AudioSampleEntryAtom::GetConfigurationAtom() not impelmented " << std::endl;
+    ISO_LOG(LOG_ERROR, "AudioSampleEntryAtom::GetConfigurationAtom() not impelmented \n");
     return nullptr;
 }
 
 const DecoderConfigurationRecord* AudioSampleEntryAtom::GetConfigurationRecord() const
 {
-    LOG(ERROR) << "AudioSampleEntryAtom::GetConfigurationRecord() not impelmented" << std::endl;
+    ISO_LOG(LOG_ERROR, "AudioSampleEntryAtom::GetConfigurationRecord() not impelmented \n");
     return nullptr;
 }
 

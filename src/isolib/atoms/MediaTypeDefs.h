@@ -78,12 +78,12 @@ namespace MediaTypeTool
 
             if (pType.empty())
             {
-                LOG(ERROR)<<"Failed to define media type, code_type not set" + fileInfo <<std::endl;
+                ISO_LOG(LOG_ERROR, "Failed to define media type, code_type not set %s\n", fileInfo);
                 throw Exception();
             }
             else
             {
-                LOG(ERROR)<<"Failed to define media type for unsupported code_type '" + pType + "'" + fileInfo <<std::endl;
+                ISO_LOG(LOG_ERROR, "Failed to define media type for unsupported code_type '%s', %s\n", pType, fileInfo);
                 throw Exception();
             }
         }

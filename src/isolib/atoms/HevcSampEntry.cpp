@@ -103,6 +103,7 @@ void HevcSampleEntry::ToStream(Stream& str)
 
 void HevcSampleEntry::FromStream(Stream& str)
 {
+
     VisualSampleEntryAtom::FromStream(str);
 
     while (str.BytesRemain() > 0)
@@ -128,7 +129,9 @@ void HevcSampleEntry::FromStream(Stream& str)
         }
         else
         {
-            LOG(WARNING) << "Skipping unknown Atom of type '" << AtomType << "' inside HevcSampleEntry" << std::endl;
+			char type[4];
+			AtomType.GetString().copy(type, 4, 0);
+            ISO_LOG(LOG_WARNING, "Skipping unknown Atom of type '%s' inside HevcSampleEntry\n", type);
         }
     }
 }

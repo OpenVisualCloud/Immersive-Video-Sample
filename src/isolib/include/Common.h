@@ -35,6 +35,7 @@
 #include "../../utils/ns_def.h"
 #include "../../utils/error.h"
 #include "../../utils/GlogWrapper.h"
+#include "../common/ISOLog.h"
 
 #include <stdint.h>
 #include <string.h>

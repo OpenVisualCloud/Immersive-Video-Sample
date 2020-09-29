@@ -66,7 +66,7 @@ void MovieExtendsHeaderAtom::ToStream(Stream& str)
     }
     else
     {
-        LOG(ERROR)<<"ToStream() supports only 'mehd' version 0 or 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "ToStream() supports only 'mehd' version 0 or 1\n");
         throw Exception();
     }
     UpdateSize(str);
@@ -85,7 +85,7 @@ void MovieExtendsHeaderAtom::FromStream(Stream& str)
     }
     else
     {
-        LOG(ERROR)<<"FromStream() supports only 'mehd' version 0 or 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "FromStream() supports only 'mehd' version 0 or 1\n");
         throw Exception();
     }
 }
@@ -166,13 +166,15 @@ void MovieExtendsAtom::FromStream(Stream& str)
         }
         else
         {
-            LOG(WARNING) << "Skipping an unsupported Atom '" << AtomType << "' inside MovieExtendsAtom." << std::endl;
+			char type[4];
+            AtomType.GetString().copy(type, 4, 0);
+            ISO_LOG(LOG_WARNING, "Skipping an unsupported Atom '%s' inside MovieExtendsAtom.\n", type);
         }
     }
 
     if (!foundTrex)
     {
-        LOG(ERROR)<<"FromStreamAtom cannot find mandatory TrackExtendsAtom Atom"<<std::endl;
+        ISO_LOG(LOG_ERROR, "FromStreamAtom cannot find mandatory TrackExtendsAtom Atom\n");
         throw Exception();
     }
 }
@@ -300,7 +302,9 @@ void MovieAtom::FromStream(Stream& str)
         }
         else
         {
-            LOG(WARNING) << "Skipping an unsupported Atom '" << AtomType << "' inside movie Atom." << std::endl;
+			char type[4];
+            AtomType.GetString().copy(type, 4, 0);
+            ISO_LOG(LOG_WARNING, "Skipping an unsupported Atom '%s' inside movie Atom.\n", type);
         }
     }
 }

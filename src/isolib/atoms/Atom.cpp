@@ -89,7 +89,7 @@ void Atom::UpdateSize(Stream& str) const
 
     if ((m_size > std::numeric_limits<std::uint32_t>::max()) && (m_largeSize == false))
     {
-        LOG(ERROR)<<"Atom::UpdateSize(): Atom size exceeds 4GB but large size for 64-bit size field was not set."<< std::endl;
+        ISO_LOG(LOG_ERROR, "Atom::UpdateSize(): Atom size exceeds 4GB but large size for 64-bit size field was not set.\n");
         throw Exception();
     }
 

@@ -107,7 +107,7 @@ void SampleToChunkAtom::FromStream(Stream& str)
 
         if (m_maxSampleNum != -1 && (chunkEntry.oneChunkSamples > m_maxSampleNum))
         {
-            LOG(ERROR)<<"SampleToChunkAtom::FromStreamAtom sampChunk is larger than total number of samples"<<std::endl;
+            ISO_LOG(LOG_ERROR, "SampleToChunkAtom::FromStreamAtom sampChunk is larger than total number of samples\n");
             throw Exception();
         }
 
@@ -128,7 +128,7 @@ uint32_t SampleToChunkAtom::GetSampleNumLowerBound(uint32_t pCount) const
 
     if (m_runOfChunks.at(0).firstChunk != 1)
     {
-        LOG(ERROR)<<"SampleToChunkAtom first entry first_chunk != 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "SampleToChunkAtom first entry first_chunk != 1\n");
         throw Exception();
     }
 
@@ -142,7 +142,7 @@ uint32_t SampleToChunkAtom::GetSampleNumLowerBound(uint32_t pCount) const
         {
             if (m_runOfChunks.at(pIndex + 1).firstChunk <= firstChunk)
             {
-                LOG(ERROR)<<"Invalid first_chunk value in SampleToChunkAtom entry. Must be greater than previous"<<std::endl;
+                ISO_LOG(LOG_ERROR, "Invalid first_chunk value in SampleToChunkAtom entry. Must be greater than previous\n");
                 throw Exception();
             }
 
@@ -163,7 +163,7 @@ uint32_t SampleToChunkAtom::GetSampleNumLowerBound(uint32_t pCount) const
     }
     else
     {
-        LOG(ERROR)<<"SampleToChunkAtom has >= 2^32 samples"<<std::endl;
+        ISO_LOG(LOG_ERROR, "SampleToChunkAtom has >= 2^32 samples\n");
         throw Exception();
     }
 }
@@ -180,7 +180,7 @@ void SampleToChunkAtom::DecodeEntries(std::uint32_t pCount)
 
     if (m_runOfChunks.at(0).firstChunk != 1)
     {
-        LOG(ERROR)<<"SampleToChunkAtom first entry first_chunk != 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "SampleToChunkAtom first entry first_chunk != 1\n");
         throw Exception();
     }
 
@@ -195,7 +195,7 @@ void SampleToChunkAtom::DecodeEntries(std::uint32_t pCount)
         {
             if (m_runOfChunks.at(pIndex + 1).firstChunk <= firstChunk)
             {
-                LOG(ERROR)<<"Invalid first_chunk value in SampleToChunkAtom entry. Must be greater than previous"<<std::endl;
+                ISO_LOG(LOG_ERROR, "Invalid first_chunk value in SampleToChunkAtom entry. Must be greater than previous\n");
                 throw Exception();
             }
 
@@ -209,7 +209,7 @@ void SampleToChunkAtom::DecodeEntries(std::uint32_t pCount)
 
         if (m_maxSampleNum != -1 && std::uint64_t(sampChunk) * pChunkRep > std::uint64_t(m_maxSampleNum))
         {
-            LOG(ERROR)<<"SampleToChunkAtom::FromStreamAtom sampChunk is larger than total number of samples"<<std::endl;
+            ISO_LOG(LOG_ERROR, "SampleToChunkAtom::FromStreamAtom sampChunk is larger than total number of samples\n");
             throw Exception();
         }
 

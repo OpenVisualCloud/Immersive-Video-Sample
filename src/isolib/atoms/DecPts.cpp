@@ -350,7 +350,7 @@ DecodePts::PMap DecodePts::GetTime(const std::uint32_t ts) const
 {
     if (ts == 0)
     {
-        LOG(ERROR)<<"timeScale == 0"<<std::endl;
+        ISO_LOG(LOG_ERROR, "timeScale == 0\n");
         throw Exception();
     }
     PMap pMap;
@@ -375,11 +375,6 @@ DecodePts::PMapTS DecodePts::GetTimeTS() const
 
 void DecodePts::GetTimeTrackRun(const std::uint32_t ts, PMap& oldPMap) const
 {
-    //if (timer_settime == 0)
-    //{
-    //    LOG(ERROR)<<"timeScale == 0"<<std::endl;
-    //    throw Exception();
-    //}
     std::uint64_t idx = 0;
     if (oldPMap.size())
     {

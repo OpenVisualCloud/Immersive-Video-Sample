@@ -69,7 +69,7 @@ void MovieHeaderAtom::ToStream(Stream& str)
     }
     else
     {
-        LOG(ERROR)<<"ToStream() supports only 'mvhd' version 0 and version 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "ToStream() supports only 'mvhd' version 0 and version 1\n");
         throw Exception();
     }
     str.Write32(0x00010000);  // Rate
@@ -101,7 +101,7 @@ void MovieHeaderAtom::FromStream(Stream& str)
     ParseFullAtomHeader(str);
     if ((GetVersion() != 0) && (GetVersion() != 1))
     {
-        LOG(ERROR)<<"FromStream() supports only 'mvhd' version 0 and version 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "FromStream() supports only 'mvhd' version 0 and version 1\n");
         throw Exception();
     }
 

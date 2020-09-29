@@ -61,7 +61,7 @@ uint64_t TrackFragmentHeaderAtom::GetBaseDataOffset() const
     }
     else
     {
-        LOG(ERROR)<<"TrackFragmentHeaderAtom::GetBaseDataOffset() according to flags pDataOffset not present."<<std::endl;
+        ISO_LOG(LOG_ERROR, "TrackFragmentHeaderAtom::GetBaseDataOffset() according to flags pDataOffset not present.\n");
         throw Exception();
     }
 }
@@ -80,7 +80,7 @@ uint32_t TrackFragmentHeaderAtom::GetDefaultSampleDuration() const
     }
     else
     {
-        LOG(ERROR)<<"TrackFragmentHeaderAtom::GetDefaultSampleDuration() according to flags pSampleDuration"<<std::endl;
+        ISO_LOG(LOG_ERROR, "TrackFragmentHeaderAtom::GetDefaultSampleDuration() according to flags pSampleDuration\n");
         throw Exception();
     }
 }
@@ -99,7 +99,7 @@ uint32_t TrackFragmentHeaderAtom::GetDefaultSampleSize() const
     }
     else
     {
-        LOG(ERROR)<<"TrackFragmentHeaderAtom::GetDefaultSampleSize() according to flags pSampleSize not present."<<std::endl;
+        ISO_LOG(LOG_ERROR, "TrackFragmentHeaderAtom::GetDefaultSampleSize() according to flags pSampleSize not present.\n");
         throw Exception();
     }
 }
@@ -118,7 +118,7 @@ SampleFlags TrackFragmentHeaderAtom::GetDefaultSampleFlags() const
     }
     else
     {
-        LOG(ERROR)<<"TrackFragmentHeaderAtom::SetDefaultSampleFlags() according to flags pSampleFlags"<<std::endl;
+        ISO_LOG(LOG_ERROR, "TrackFragmentHeaderAtom::SetDefaultSampleFlags() according to flags pSampleFlags\n");
         throw Exception();
     }
 }
@@ -208,7 +208,7 @@ void TrackFragmentBaseMediaDecodeTimeAtom::ToStream(Stream& str)
     }
     else
     {
-        LOG(ERROR)<<"ToStream() supports only 'tfdt' version 0 or 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "ToStream() supports only 'tfdt' version 0 or 1\n");
         throw Exception();
     }
     UpdateSize(str);
@@ -227,7 +227,7 @@ void TrackFragmentBaseMediaDecodeTimeAtom::FromStream(Stream& str)
     }
     else
     {
-        LOG(ERROR)<<"FromStream() supports only 'tfdt' version 0 or 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "FromStream() supports only 'tfdt' version 0 or 1\n");
         throw Exception();
     }
 }
@@ -303,7 +303,7 @@ void TrackFragmentAtom::FromStream(Stream& str)
         {
             if (foundTfhd)
             {
-                LOG(ERROR)<<"TrackFragmentAtom: exactly one tfhd expected!"<<std::endl;
+                ISO_LOG(LOG_ERROR, "TrackFragmentAtom: exactly one tfhd expected!\n");
                 throw Exception();
             }
 
@@ -322,7 +322,7 @@ void TrackFragmentAtom::FromStream(Stream& str)
             }
             if (!foundDefault)
             {
-                LOG(ERROR)<<"default sample description index not found"<<std::endl;
+                ISO_LOG(LOG_ERROR, "default sample description index not found\n");
                 throw Exception();
             }
 
@@ -378,12 +378,14 @@ void TrackFragmentAtom::FromStream(Stream& str)
         }
         else
         {
-            LOG(WARNING) << "Skipping an unsupported Atom '" << AtomType << "' inside TrackFragmentAtom." << std::endl;
+            char type[4];
+            AtomType.GetString().copy(type, 4, 0);
+			ISO_LOG(LOG_WARNING, "Skipping an unsupported Atom '%s' inside TrackFragmentAtom.\n", type);
         }
     }
     if (!foundTfhd)
     {
-        LOG(ERROR)<<"tfhd Atom missing (mandatory)"<<std::endl;
+        ISO_LOG(LOG_ERROR, "tfhd Atom missing (mandatory)\n");
         throw Exception();
     }
 }

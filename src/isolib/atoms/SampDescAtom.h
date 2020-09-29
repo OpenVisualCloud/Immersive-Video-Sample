@@ -131,7 +131,7 @@ T* SampleDescriptionAtom::GetSampleEntry(const unsigned int index) const
 {
     if (m_index.size() < index || index == 0)
     {
-        LOG(ERROR)<<"SampleDescriptionAtom::GetSampleEntry invalid sample entry index."<<std::endl;
+        ISO_LOG(LOG_ERROR, "SampleDescriptionAtom::GetSampleEntry invalid sample entry index.\n");
         throw Exception();
     }
 
