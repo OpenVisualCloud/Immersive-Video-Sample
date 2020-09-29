@@ -351,7 +351,7 @@ int32_t ExtractorTrackGenerator::CalculateViewportNum()
     }
 
     m_360scvpParam->usedType = E_VIEWPORT_ONLY;
-
+    m_360scvpParam->logFunction = (void*)logCallBack;
     if (m_initInfo->projType == E_SVIDEO_EQUIRECT) {
         m_360scvpParam->paramViewPort.viewportWidth = (m_initInfo->viewportInfo)->viewportWidth;
         m_360scvpParam->paramViewPort.viewportHeight = (m_initInfo->viewportInfo)->viewportHeight;
@@ -694,14 +694,14 @@ int32_t ExtractorTrackGenerator::Initialize()
             ret = rwpkGen->Initialize(
                  m_initInfo->pluginPath, m_initInfo->pluginName,
                  m_streams, m_videoIdxInMedia,
-                 selectedNum, maxSelectedNum);
+                 selectedNum, maxSelectedNum, logCallBack);
         }
         else
         {
             ret = rwpkGen->Initialize(
                  m_initInfo->pluginPath, m_initInfo->pluginName,
                  m_streams, m_videoIdxInMedia,
-                 selectedNum, selectedNum);
+                 selectedNum, selectedNum, logCallBack);
         }
 
         if (ret)
