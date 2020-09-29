@@ -111,8 +111,7 @@ void SphericalVideoV1Atom::ReadTag(const std::string& tag, bool& data)
                 }
                 else
                 {
-                    LOG(WARNING) << "Parsing Error in SphericalVideoV1Atom/" << tag << " data " << valueStr
-                                 << std::endl;
+                    ISO_LOG(LOG_WARNING, "Parsing Error in SphericalVideoV1Atom/%s data %s\n", tag, valueStr);
                 }
             }
         }
@@ -282,7 +281,7 @@ void SphericalVideoV1Atom::FromStream(Stream& str)
     }
     else
     {
-        LOG(WARNING) << "Parsing Error in SphericalVideoV1Atom/" << tag << " data " << projection << std::endl;
+        ISO_LOG(LOG_WARNING, "Parsing Error in SphericalVideoV1Atom/%s data %s\n", tag, projection);
     }
 
     tag = "GSpherical:StereoMode";

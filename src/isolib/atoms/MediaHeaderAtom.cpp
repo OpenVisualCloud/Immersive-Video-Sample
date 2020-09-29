@@ -67,7 +67,7 @@ void MediaHeaderAtom::ToStream(Stream& str)
     }
     else
     {
-        LOG(ERROR)<<"MediaHeaderAtom::ToStream() supports only 'mdhd' version 0 and version 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "MediaHeaderAtom::ToStream() supports only 'mdhd' version 0 and version 1\n");
         throw Exception();
     }
 
@@ -86,7 +86,7 @@ void MediaHeaderAtom::FromStream(Stream& str)
     ParseFullAtomHeader(str);
     if ((GetVersion() != 0) && (GetVersion() != 1))
     {
-        LOG(ERROR)<<"MediaHeaderAtom::FromStream() supports only 'mdhd' version 0 and version 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "MediaHeaderAtom::FromStream() supports only 'mdhd' version 0 and version 1\n");
         throw Exception();
     }
     uint8_t pVersion = GetVersion();

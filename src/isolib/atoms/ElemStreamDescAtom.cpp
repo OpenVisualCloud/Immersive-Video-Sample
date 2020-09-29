@@ -197,7 +197,7 @@ void ElementaryStreamDescriptorAtom::FromStream(Stream& str)
     m_ES_Params.descrFlag = str.Read8();
     if (m_ES_Params.descrFlag != 3)  // descrFlag
     {
-        LOG(ERROR)<<"ElementaryStreamDescritorAtom ES_Params.descrFlag not valid"<<std::endl;
+        ISO_LOG(LOG_ERROR, "ElementaryStreamDescritorAtom ES_Params.descrFlag not valid\n");
         throw Exception();
     }
     std::uint8_t readByte = 0;
@@ -235,7 +235,7 @@ void ElementaryStreamDescriptorAtom::FromStream(Stream& str)
     m_ES_Params.decConfig.flag = str.Read8();
     if (m_ES_Params.decConfig.flag != 4)  // flag
     {
-        LOG(ERROR)<<"ElementaryStreamDescritorAtom DecoderConfig.flag not valid"<<std::endl;
+        ISO_LOG(LOG_ERROR, "ElementaryStreamDescritorAtom DecoderConfig.flag not valid\n");
         throw Exception();
     }
 

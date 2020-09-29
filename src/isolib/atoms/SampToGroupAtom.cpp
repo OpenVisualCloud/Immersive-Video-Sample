@@ -81,7 +81,7 @@ std::uint32_t SampleToGroupAtom::GetSampleId(std::uint32_t groupDescriptionIndex
             return i;
         }
     }
-    LOG(ERROR)<<"SampleToGroupAtom::GetSampleId: no entry for requested sample id"<<std::endl;
+    ISO_LOG(LOG_ERROR, "SampleToGroupAtom::GetSampleId: no entry for requested sample id\n");
     throw Exception();
 }
 
@@ -104,7 +104,7 @@ void SampleToGroupAtom::ToStream(Stream& str)
 {
     if (m_runOfSamples.size() == 0)
     {
-        LOG(ERROR)<<"SampleToGroupAtom::ToStreamAtom: not writing an invalid Atom without entries"<<std::endl;
+        ISO_LOG(LOG_ERROR, "SampleToGroupAtom::ToStreamAtom: not writing an invalid Atom without entries\n");
         throw Exception();
     }
 
@@ -144,7 +144,7 @@ void SampleToGroupAtom::FromStream(Stream& str)
     m_entryCount = str.Read32();
     if (m_entryCount == 0)
     {
-        LOG(ERROR)<<"Read an empty SampleToGroupAtom without entries."<<std::endl;
+        ISO_LOG(LOG_ERROR, "Read an empty SampleToGroupAtom without entries.\n");
         throw Exception();
     }
 
@@ -156,7 +156,7 @@ void SampleToGroupAtom::FromStream(Stream& str)
         sampleNum += sampleRun.sampleNum;
         if (sampleNum > std::numeric_limits<std::uint32_t>::max())
         {
-            LOG(ERROR)<<"SampleToGroupAtom  sampleNum >= 2^32"<<std::endl;
+            ISO_LOG(LOG_ERROR, "SampleToGroupAtom  sampleNum >= 2^32\n");
             throw Exception();
         }
         sampleRun.groupDescriptionIndex = str.Read32();

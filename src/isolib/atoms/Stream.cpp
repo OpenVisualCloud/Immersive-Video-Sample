@@ -159,7 +159,7 @@ void Stream::Extract(const std::uint64_t begin, const std::uint64_t end, Stream&
     }
     else
     {
-        LOG(ERROR)<<"ReadSubAtomStream trying to Read 0 size Atom"<<std::endl;
+        ISO_LOG(LOG_ERROR, "ReadSubAtomStream trying to Read 0 size Atom\n");
         throw Exception();
     }
 }
@@ -226,7 +226,7 @@ void Stream::Write1(std::uint64_t bits, std::uint32_t len)
 {
     if (len == 0)
     {
-        LOG(WARNING) << "Stream::Write1 called for zero-length bit sequence." << std::endl;
+        ISO_LOG(LOG_WARNING, "Stream::Write1 called for zero-length bit sequence.\n");
     }
     else
     {
@@ -260,7 +260,7 @@ void Stream::WriteString(const std::string& srcString)
 {
     if (srcString.length() == 0)
     {
-        LOG(WARNING) << "Stream::WriteString called for zero-length string." << std::endl;
+        ISO_LOG(LOG_WARNING, "Stream::WriteString called for zero-length string.\n");
     }
 
     for (const auto character : srcString)
@@ -376,7 +376,7 @@ void Stream::ReadArray(std::vector<std::uint8_t>& bits, const std::uint64_t len)
     }
     else
     {
-        LOG(ERROR)<<"ReadArray trying to Read outside of m_storage"<<std::endl;
+        ISO_LOG(LOG_ERROR, "ReadArray trying to Read outside of m_storage\n");
         throw Exception();
     }
 }
@@ -390,7 +390,7 @@ void Stream::ReadByteArrayToBuffer(char* buffer, const std::uint64_t len)
     }
     else
     {
-        LOG(ERROR)<<"ReadArray trying to Read outside of m_storage"<<std::endl;
+        ISO_LOG(LOG_ERROR, "ReadArray trying to Read outside of m_storage\n");
         throw Exception();
     }
 }
@@ -533,7 +533,7 @@ Stream Stream::ReadSubAtomStream(FourCCInt& pType)
 
     if (pSize < minAtomSize)
     {
-        LOG(ERROR)<<"Stream::ReadSubAtomStream trying to Read too small Atom"<<std::endl;
+        ISO_LOG(LOG_ERROR, "Stream::ReadSubAtomStream trying to Read too small Atom\n");
         throw Exception();
     }
 

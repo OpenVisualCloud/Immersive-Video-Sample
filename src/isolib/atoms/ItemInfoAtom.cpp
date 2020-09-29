@@ -82,7 +82,7 @@ ItemInfoEntry ItemInfoAtom::GetItemById(const uint32_t itemId) const
             return item;
         }
     }
-    LOG(ERROR)<<"Requested ItemInfoEntry not found."<<std::endl;
+    ISO_LOG(LOG_ERROR, "Requested ItemInfoEntry not found.\n");
     throw Exception();
 }
 

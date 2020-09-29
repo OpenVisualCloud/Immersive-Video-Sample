@@ -159,7 +159,7 @@ const SampleGroupDescriptionAtom* SampleTableAtom::GetSampleGroupDescriptionAtom
             return m_sampGroupDescrAtom.get();
         }
     }
-    LOG(ERROR)<<"SampleGroupDescriptionAtom NOT found!"<<std::endl;
+    ISO_LOG(LOG_ERROR, "SampleGroupDescriptionAtom NOT found!\n");
     throw Exception();
 }
 
@@ -263,14 +263,14 @@ void SampleTableAtom::FromStream(Stream& str)
             {
                 if (pSampNum > pMaxAbNum)
                 {
-                    LOG(ERROR)<<"Over max sample counts from stsz to rest of sample table"<<std::endl;
+                    ISO_LOG(LOG_ERROR, "Over max sample counts from stsz to rest of sample table\n");
                     throw Exception();
                 }
                 pMaxNum = static_cast<int64_t>(pSampNum);
             }
             else if (pSampNum != pMaxNum)
             {
-                LOG(ERROR)<<"Non-matching sample counts from stsz to rest of sample table"<<std::endl;
+                ISO_LOG(LOG_ERROR, "Non-matching sample counts from stsz to rest of sample table\n");
                 throw Exception();
             }
         }
@@ -282,14 +282,14 @@ void SampleTableAtom::FromStream(Stream& str)
             {
                 if (pSampNum > pMaxAbNum)
                 {
-                    LOG(ERROR)<<"Over max sample counts from stts to rest of sample table"<<std::endl;
+                    ISO_LOG(LOG_ERROR, "Over max sample counts from stts to rest of sample table\n");
                     throw Exception();
                 }
                 pMaxNum = static_cast<int64_t>(pSampNum);
             }
             else if (pSampNum != pMaxNum)
             {
-                LOG(ERROR)<<"Non-matching sample counts from stts to rest of sample table"<<std::endl;
+                ISO_LOG(LOG_ERROR, "Non-matching sample counts from stts to rest of sample table\n");
                 throw Exception();
             }
         }
@@ -326,14 +326,14 @@ void SampleTableAtom::FromStream(Stream& str)
             {
                 if (pSampNum > pMaxAbNum)
                 {
-                    LOG(ERROR)<<"Over max sample counts from sbgp to rest of sample table"<<std::endl;
+                    ISO_LOG(LOG_ERROR, "Over max sample counts from sbgp to rest of sample table\n");
                     throw Exception();
                 }
                 // we can't update pMaxNum here as sbgp can have less samples than total.
             }
             else if (pSampNum > pMaxNum)
             {
-                LOG(ERROR)<<"Non-matching sample counts from sbgp to rest of sample table"<<std::endl;
+                ISO_LOG(LOG_ERROR, "Non-matching sample counts from sbgp to rest of sample table\n");
                 throw Exception();
             }
             m_sampToGroupAtom.push_back(move(sampleToGroupAtom));
@@ -352,26 +352,28 @@ void SampleTableAtom::FromStream(Stream& str)
             {
                 if (pSampNum > pMaxAbNum)
                 {
-                    LOG(ERROR)<<"Over max sample counts from ctts to rest of sample table"<<std::endl;
+                    ISO_LOG(LOG_ERROR, "Over max sample counts from ctts to rest of sample table\n");
                     throw Exception();
                 }
                 pMaxNum = static_cast<int64_t>(pSampNum);
             }
             else if (pSampNum != pMaxNum)
             {
-                LOG(ERROR)<<"Non-matching sample counts from ctts to rest of sample table"<<std::endl;
+                ISO_LOG(LOG_ERROR, "Non-matching sample counts from ctts to rest of sample table\n");
                 throw Exception();
             }
         }
         else
         {
-            LOG(WARNING) << "Skipping unknown Atom of type '" << pAtomType << "' inside SampleTableAtom" << std::endl;
+			char type[4];
+            pAtomType.GetString().copy(type, 4, 0);
+            ISO_LOG(LOG_WARNING, "Skipping an unsupported Atom '%s' inside SampleTableAtom.\n", type);
         }
     }
 
     if (pMaxNum == -1)
     {
-        LOG(ERROR)<<"SampleToTableAtom does not determine number of samples"<<std::endl;
+        ISO_LOG(LOG_ERROR, "SampleToTableAtom does not determine number of samples\n");
         throw Exception();
     }
     else
@@ -386,7 +388,7 @@ void SampleTableAtom::FromStream(Stream& str)
         {
             if (sizes[c] != referenceSize || sizes[c] < lowerBound)
             {
-                LOG(ERROR)<<"SampleToTableAtom contains Atoms with mismatching sample counts"<<std::endl;
+                ISO_LOG(LOG_ERROR, "SampleToTableAtom contains Atoms with mismatching sample counts\n");
                 throw Exception();
             }
         }

@@ -25,45 +25,26 @@
  */
 
 //!
-//! \file:   MetaDataSampEntryAtom.cpp
-//! \brief:  MetaDataSampEntryAtom class implementation
+//! \file:   ISOLog.h
+//! \brief:  Include the log function declaration
 //!
-//! Created on October 15, 2019, 13:39 PM
+//! Created on April 30, 2019, 6:04 AM
 //!
 
-#include "MetaDataSampEntryAtom.h"
+#ifndef _ISOLOG_H_
+#define _ISOLOG_H_
 
+#include "../../utils/Log.h"
 
-VCD_MP4_BEGIN
+//global logging callback function
+extern LogFunction logCallBack;
 
-MetaDataSampleEntryAtom::MetaDataSampleEntryAtom(FourCCInt codingname)
-    : SampleEntryAtom(codingname)
-{
-}
+#define FILE_NAME(x) (strrchr(x, '/') ? strrchr(x, '/')+1:x)
 
-void MetaDataSampleEntryAtom::ToStream(Stream& str)
-{
-    SampleEntryAtom::ToStream(str);
+#define PRINT_LOG(logLevel, source, line, fmt, args...)   \
+    logCallBack(logLevel, source, line, fmt, ##args);    \
 
-    // Update the size of the movie Atom
-    UpdateSize(str);
-}
+#define ISO_LOG(logLevel, fmt, args...)                             \
+    PRINT_LOG(logLevel, FILE_NAME(__FILE__), __LINE__, fmt, ##args)  \
 
-void MetaDataSampleEntryAtom::FromStream(Stream& str)
-{
-    SampleEntryAtom::FromStream(str);
-}
-
-const Atom* MetaDataSampleEntryAtom::GetConfigurationAtom() const
-{
-    ISO_LOG(LOG_ERROR, "MetaDataSampleEntryAtom::GetConfigurationAtom() not impelmented \n");
-    return nullptr;
-}
-
-const DecoderConfigurationRecord* MetaDataSampleEntryAtom::GetConfigurationRecord() const
-{
-    ISO_LOG(LOG_ERROR, "MetaDataSampleEntryAtom::GetConfigurationRecord() not impelmented \n");
-    return nullptr;
-}
-
-VCD_MP4_END
+#endif /* _ISOLOG_H_ */

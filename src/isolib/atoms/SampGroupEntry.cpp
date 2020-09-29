@@ -46,7 +46,7 @@ void DirectReferenceSampleListEntry::SetDirectRefSampleIds(const std::vector<std
 {
     if (referenceSampleIds.size() > 255)
     {
-        LOG(ERROR)<<"Too many entries in referenceSampleIds"<<std::endl;
+        ISO_LOG(LOG_ERROR, "Too many entries in referenceSampleIds\n");
         throw Exception();
     }
 

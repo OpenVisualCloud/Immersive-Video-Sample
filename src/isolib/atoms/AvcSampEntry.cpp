@@ -127,7 +127,9 @@ void AvcSampleEntry::FromStream(Stream& str)
         }
         else
         {
-            LOG(WARNING) << "Skipping unknown Atom of type '" << AtomType << "' inside AvcSampleEntry" << std::endl;
+			char type[4];
+			AtomType.GetString().copy(type, 4, 0);
+            ISO_LOG(LOG_WARNING, "Skipping unknown Atom of type '%s' inside AvcSampleEntry\n", type);
         }
     }
 

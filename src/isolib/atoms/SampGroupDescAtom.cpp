@@ -70,7 +70,7 @@ std::uint32_t SampleGroupDescriptionAtom::GetEntryIndexOfSampleId(const std::uin
         }
         ++index;
     }
-    LOG(ERROR)<<"SampleGroupDescriptionAtom::GetEntryIndexOfSampleId: no entry for sampleId found."<<std::endl;
+    ISO_LOG(LOG_ERROR, "SampleGroupDescriptionAtom::GetEntryIndexOfSampleId: no entry for sampleId found.\n");
     throw Exception();
 }
 
@@ -78,7 +78,7 @@ void SampleGroupDescriptionAtom::ToStream(Stream& str)
 {
     if (m_sampleGroupEntry.size() == 0)
     {
-        LOG(ERROR)<<"SampleGroupDescriptionAtom::ToStreamAtom: not writing an invalid Atom without entries"<<std::endl;
+        ISO_LOG(LOG_ERROR, "SampleGroupDescriptionAtom::ToStreamAtom: not writing an invalid Atom without entries\n");
         throw Exception();
     }
 
@@ -142,8 +142,7 @@ void SampleGroupDescriptionAtom::FromStream(Stream& str)
         }
         else
         {
-            LOG(WARNING) << "Skipping an entry of SampleGroupDescriptionAtom of an unknown grouping type '"
-                         << m_groupType.GetString() << "'.";
+            ISO_LOG(LOG_WARNING, "Skipping an entry of SampleGroupDescriptionAtom of an unknown grouping type '%s'\n", m_groupType.GetString());
         }
     }
 }

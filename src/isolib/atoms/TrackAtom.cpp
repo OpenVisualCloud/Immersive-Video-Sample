@@ -236,12 +236,14 @@ void TrackAtom::FromStream(Stream& str)
             }
             else
             {
-                LOG(WARNING) << "Skipping an unsupported UUID Atom inside TrackAtom." << std::endl;
+                ISO_LOG(LOG_WARNING, "Skipping an unsupported UUID Atom inside TrackAtom.\n");
             }
         }
         else
         {
-            LOG(WARNING) << "Skipping an unsupported Atom '" << AtomType << "' inside TrackAtom." << std::endl;
+			char type[4];
+            AtomType.GetString().copy(type, 4, 0);
+            ISO_LOG(LOG_WARNING, "Skipping an unsupported Atom '%s' inside TrackAtom.\n", type);
         }
     }
 }

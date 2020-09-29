@@ -89,7 +89,7 @@ std::uint32_t TimeToSampleAtom::GetSampleNum() const
             sampleNum += entry.m_sampleNum;
             if (sampleNum > std::numeric_limits<std::uint32_t>::max())
             {
-                LOG(ERROR)<<"TimeToSampleAtom::sampleNum >= 2^32"<<std::endl;
+                ISO_LOG(LOG_ERROR, "TimeToSampleAtom::sampleNum >= 2^32\n");
                 throw Exception();
             }
         }

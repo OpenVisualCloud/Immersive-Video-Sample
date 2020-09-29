@@ -178,28 +178,27 @@ void CoverageInformationAtom::FromStream(Stream& str)
 
 void CoverageInformationAtom::Dump() const
 {
-    LOG(INFO) << "---------------------------------- COVI ------------------------------" << std::endl
-              << "m_coverageShapeMode: " << (std::uint32_t) m_coverageShapeMode << std::endl
-              << "m_viewIdcPresenceFlag: " << (std::uint32_t) m_viewIdcPresenceFlag << std::endl
-              << "m_defaultViewIdc: " << (std::uint32_t) m_defaultViewIdc << std::endl
-              << "m_numRegions: " << (std::uint32_t) m_sphereRegions.size() << std::endl;
+    ISO_LOG(LOG_INFO, "---------------------------------- COVI ------------------------------\n");
+    ISO_LOG(LOG_INFO, "m_coverageShapeMode: %d\n", (std::uint32_t) m_coverageShapeMode);
+    ISO_LOG(LOG_INFO, "m_viewIdcPresenceFlag: %d\n", (std::uint32_t) m_viewIdcPresenceFlag);
+    ISO_LOG(LOG_INFO, "m_defaultViewIdc: %d\n", (std::uint32_t) m_defaultViewIdc);
+    ISO_LOG(LOG_INFO, "m_numRegions: %d\n",(std::uint32_t) m_sphereRegions.size());
 
     int pCnt = 0;
     for (auto& pReg : m_sphereRegions)
     {
         pCnt++;
 
-        LOG(INFO) << "---------- Region - " << pCnt << std::endl
-                  << "viewIdc: " << (std::uint32_t) pReg->viewIdc << std::endl
-                  << "centreAzimuth: " << pReg->region.centreAzimuth << std::endl
-                  << "centreElevation: " << pReg->region.centreElevation << std::endl
-                  << "centreTilt: " << pReg->region.centreTilt << std::endl
-                  << "azimuthRange: " << pReg->region.azimuthRange << std::endl
-                  << "elevationRange: " << pReg->region.elevationRange << std::endl
-                  << "interpolate: " << pReg->region.interpolate << std::endl;
+        ISO_LOG(LOG_INFO, "---------- Region - %d\n", pCnt);
+        ISO_LOG(LOG_INFO, "viewIdc: %d\n", (std::uint32_t) pReg->viewIdc);
+        ISO_LOG(LOG_INFO, "centreAzimuth: %d\n", pReg->region.centreAzimuth);
+        ISO_LOG(LOG_INFO, "centreElevation: %d\n", pReg->region.centreElevation);
+        ISO_LOG(LOG_INFO, "centreTilt: %d\n", pReg->region.centreTilt);
+        ISO_LOG(LOG_INFO, "azimuthRange: %d\n", pReg->region.azimuthRange);
+        ISO_LOG(LOG_INFO, "elevationRange: %d\n", pReg->region.elevationRange);
+        ISO_LOG(LOG_INFO, "interpolate: %d\n", pReg->region.interpolate);
     }
-
-    LOG(INFO) << "-============================ End Of COVI ===========================-" << std::endl;
+    ISO_LOG(LOG_INFO, "-============================ End Of COVI ===========================-\n");
 }
 
 RegionWisePackingAtom::RegionWisePackingAtom()
@@ -353,50 +352,49 @@ void RegionWisePackingAtom::FromStream(Stream& str)
 
 void RegionWisePackingAtom::Dump() const
 {
-    LOG(INFO) << "---------------------------------- RWPK ------------------------------" << std::endl
-              << "ConstituentPictureMatchingFlag is : " << (std::uint32_t) m_constituentPictureMatchingFlag << std::endl
-              << "Projection Picture Width is : " << (std::uint32_t) m_projPictureWidth << std::endl
-              << "Projection Picture Height is : " << (std::uint32_t) m_projPictureHeight << std::endl
-              << "Packed Picture Width is : " << (std::uint32_t) m_packedPictureWidth << std::endl
-              << "Packed Picture Height is : " << (std::uint32_t) m_packedPictureHeight << std::endl
-              << "Num of Regions is : " << (std::uint32_t) m_regions.size() << std::endl;
-
+    ISO_LOG(LOG_INFO, "---------------------------------- RWPK ------------------------------\n");
+    ISO_LOG(LOG_INFO, "ConstituentPictureMatchingFlag is : %d\n", (std::uint32_t) m_constituentPictureMatchingFlag);
+    ISO_LOG(LOG_INFO, "Projection Picture Width is : %d\n", (std::uint32_t) m_projPictureWidth);
+    ISO_LOG(LOG_INFO, "Projection Picture Height is : %d\n", (std::uint32_t) m_projPictureHeight);
+    ISO_LOG(LOG_INFO, "Packed Picture Width is : %d\n", (std::uint32_t) m_packedPictureWidth);
+    ISO_LOG(LOG_INFO, "Packed Picture Height is : %d\n", (std::uint32_t) m_packedPictureHeight);
+    ISO_LOG(LOG_INFO, "Num of Regions is : %d\n", (std::uint32_t) m_regions.size());
     int pCnt = 0;
     for (auto& pReg : m_regions)
     {
         pCnt++;
 
-        LOG(INFO) << "- Region - " << pCnt << std::endl
-                  << "GuarBandFlag is : " << (std::uint32_t) pReg->guardBandFlag << std::endl
-                  << "PackingType is : " << (std::uint32_t) pReg->packingType << std::endl;
+        ISO_LOG(LOG_INFO, "- Region - %d\n", pCnt);
+        ISO_LOG(LOG_INFO, "GuarBandFlag is : %d\n", (std::uint32_t) pReg->guardBandFlag);
+        ISO_LOG(LOG_INFO, "PackingType is : %d\n", (std::uint32_t) pReg->packingType);
 
         if (pReg->packingType == PackingType::RECTANGULAR)
         {
-            LOG(INFO) << "transformType is : " << (std::uint32_t) pReg->rectangularPacking->transformType << std::endl
-                      << "projection Region Width is: " << (std::uint32_t) pReg->rectangularPacking->projRegWidth << std::endl
-                      << "projection Region Height is : " << (std::uint32_t) pReg->rectangularPacking->projRegHeight << std::endl
-                      << "projection Region Top is : " << (std::uint32_t) pReg->rectangularPacking->projRegTop << std::endl
-                      << "projection Region Left is : " << (std::uint32_t) pReg->rectangularPacking->projRegLeft << std::endl
-                      << "packed Region Width is : " << (std::uint32_t) pReg->rectangularPacking->packedRegWidth << std::endl
-                      << "packed Region Height is : " << (std::uint32_t) pReg->rectangularPacking->packedRegHeight << std::endl
-                      << "packed Region Top is : " << (std::uint32_t) pReg->rectangularPacking->packedRegTop << std::endl
-                      << "packed Region Left is : " << (std::uint32_t) pReg->rectangularPacking->packedRegLeft << std::endl;
+            ISO_LOG(LOG_INFO, "transformType is : %d\n", (std::uint32_t) pReg->rectangularPacking->transformType);
+            ISO_LOG(LOG_INFO, "projection Region Width is: %d\n", (std::uint32_t) pReg->rectangularPacking->projRegWidth);
+            ISO_LOG(LOG_INFO, "projection Region Height is : %d\n", (std::uint32_t) pReg->rectangularPacking->projRegHeight);
+            ISO_LOG(LOG_INFO, "projection Region Top is : %d\n", (std::uint32_t) pReg->rectangularPacking->projRegTop);
+            ISO_LOG(LOG_INFO, "projection Region Left is : %d\n", (std::uint32_t) pReg->rectangularPacking->projRegLeft);
+            ISO_LOG(LOG_INFO, "packed Region Width is : %d\n", (std::uint32_t) pReg->rectangularPacking->packedRegWidth);
+            ISO_LOG(LOG_INFO, "packed Region Height is : %d\n", (std::uint32_t) pReg->rectangularPacking->packedRegHeight);
+            ISO_LOG(LOG_INFO, "packed Region Top is : %d\n", (std::uint32_t) pReg->rectangularPacking->packedRegTop);
+            ISO_LOG(LOG_INFO, "packed Region Left is : %d\n", (std::uint32_t) pReg->rectangularPacking->packedRegLeft);
 
             if (!pReg->guardBandFlag)
             {
-                LOG(INFO)<< "No guard band flag !!" << std::endl;
+                ISO_LOG(LOG_INFO, "No guard band flag !!\n");
             }
             else
             {
-                LOG(INFO) << "left Gb Width is : " << (std::uint32_t) pReg->rectangularPacking->leftGbWidth << std::endl
-                          << "right Gb Width is : " << (std::uint32_t) pReg->rectangularPacking->rightGbWidth << std::endl
-                          << "top Gb Height is : " << (std::uint32_t) pReg->rectangularPacking->topGbHeight << std::endl
-                          << "bottom Gb Height is : " << (std::uint32_t) pReg->rectangularPacking->bottomGbHeight << std::endl
-                          << "gbNotUsedForPredFlag is : " << (std::uint32_t) pReg->rectangularPacking->gbNotUsedForPredFlag << std::endl
-                          << "gbType0 is : " << (std::uint32_t) pReg->rectangularPacking->gbType0 << std::endl
-                          << "gbType1 is : " << (std::uint32_t) pReg->rectangularPacking->gbType1 << std::endl
-                          << "gbType2 is : " << (std::uint32_t) pReg->rectangularPacking->gbType2 << std::endl
-                          << "gbType3 is : " << (std::uint32_t) pReg->rectangularPacking->gbType3 << std::endl;
+                ISO_LOG(LOG_INFO, "left Gb Width is : %d\n", (std::uint32_t) pReg->rectangularPacking->leftGbWidth);
+                ISO_LOG(LOG_INFO, "right Gb Width is : %d\n", (std::uint32_t) pReg->rectangularPacking->rightGbWidth);
+                ISO_LOG(LOG_INFO, "top Gb Height is : %d\n", (std::uint32_t) pReg->rectangularPacking->topGbHeight);
+                ISO_LOG(LOG_INFO, "bottom Gb Height is : %d\n", (std::uint32_t) pReg->rectangularPacking->bottomGbHeight);
+                ISO_LOG(LOG_INFO, "gbNotUsedForPredFlag is : %d\n", (std::uint32_t) pReg->rectangularPacking->gbNotUsedForPredFlag);
+                ISO_LOG(LOG_INFO, "gbType0 is : %d\n", (std::uint32_t) pReg->rectangularPacking->gbType0);
+                ISO_LOG(LOG_INFO, "gbType1 is : %d\n", (std::uint32_t) pReg->rectangularPacking->gbType1);
+                ISO_LOG(LOG_INFO, "gbType2 is : %d\n", (std::uint32_t) pReg->rectangularPacking->gbType2);
+                ISO_LOG(LOG_INFO, "gbType3 is : %d\n", (std::uint32_t) pReg->rectangularPacking->gbType3);
             }
         }
     }

@@ -132,7 +132,7 @@ void ChannelLayoutAtom::ToStream(Stream& str)
         {
             if (m_channelLayouts.size() != m_channelNumber)
             {
-                LOG(ERROR)<<"Size doesn't match in ChannelLayoutAtom"<<std::endl;
+                ISO_LOG(LOG_ERROR, "Size doesn't match in ChannelLayoutAtom\n");
                 throw Exception();
             }
 

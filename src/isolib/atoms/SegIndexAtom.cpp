@@ -85,7 +85,7 @@ void SegmentIndexAtom::ToStream(Stream& str)
     }
     else
     {
-        LOG(ERROR)<<"SegmentIndexAtom::ToStream() supports only 'sidx' version 0 or 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "SegmentIndexAtom::ToStream() supports only 'sidx' version 0 or 1\n");
         throw Exception();
     }
     str.Write16(0);                                          // reserved = 0
@@ -135,7 +135,7 @@ void SegmentIndexAtom::FromStream(Stream& str)
     }
     else
     {
-        LOG(ERROR)<<"SegmentIndexAtom::FromStream() supports only 'sidx' version 0 or 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "SegmentIndexAtom::FromStream() supports only 'sidx' version 0 or 1\n");
         throw Exception();
     }
 

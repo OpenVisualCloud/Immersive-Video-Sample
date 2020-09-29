@@ -63,7 +63,7 @@ Stream DataBlock::GetStream(istream& aStream) const
     aStream.read(reinterpret_cast<char*>(&buffer[0]), streamsize(size));
     if (!aStream)
     {
-        LOG(ERROR) << "Unexpected EOS !" << endl;
+        ISO_LOG(LOG_ERROR, "Unexpected EOS !\n");
         throw exception();
     }
     return Stream(buffer);
@@ -88,7 +88,7 @@ uint32_t ReadU32(istream& aStream)
     }
     if (!aStream.good())
     {
-        LOG(ERROR) << "Unexpected EOS !" << endl;
+        ISO_LOG(LOG_ERROR, "Unexpected EOS !\n");
         throw exception();
     }
     return v;
@@ -152,14 +152,14 @@ BoxBlock BoxBlockAccess::GetBoxBlock(FourCCInt aFourcc) const
     map<FourCCInt, list<BoxBlock>>::const_iterator iter = m_index.find(aFourcc);
     if (iter == m_index.end())
     {
-        LOG(ERROR) << "Couldn't find Boxes List!" << endl;
+        ISO_LOG(LOG_ERROR, "Couldn't find Boxes List!\n");
         throw exception();
     }
 
     list<BoxBlock> boxList = iter->second;
     if (boxList.size() == 0)
     {
-        LOG(ERROR) << "Couldn't find Box !" << endl;
+        ISO_LOG(LOG_ERROR, "Couldn't find Box !\n");
         throw exception();
     }
 

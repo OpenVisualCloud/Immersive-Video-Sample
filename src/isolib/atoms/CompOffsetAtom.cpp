@@ -47,7 +47,7 @@ void CompositionOffsetAtom::AddEntryVersion0(const EntryVersion0& entry)
 {
     if (m_entryVersion1.size() != 0 || GetVersion() != 0)
     {
-        LOG(ERROR)<<"Invalid attempt to add version0 CompositionOffsetAtom entries.""Invalid attempt to add version0 CompositionOffsetAtom entries."<<std::endl;
+        ISO_LOG(LOG_ERROR, "Invalid attempt to add version0 CompositionOffsetAtom entries.""Invalid attempt to add version0 CompositionOffsetAtom entries.\n");
         throw Exception();
     }
     m_entryVersion0.push_back(entry);
@@ -57,7 +57,7 @@ void CompositionOffsetAtom::AddEntryVersion1(const EntryVersion1& entry)
 {
     if (m_entryVersion0.size() != 0 || GetVersion() != 1)
     {
-        LOG(ERROR)<<"Invalid attempt to add version1 CompositionOffsetAtom entries.""Invalid attempt to add version0 CompositionOffsetAtom entries."<<std::endl;
+        ISO_LOG(LOG_ERROR, "Invalid attempt to add version1 CompositionOffsetAtom entries.""Invalid attempt to add version0 CompositionOffsetAtom entries.\n");
         throw Exception();
     }
     m_entryVersion1.push_back(entry);
@@ -73,7 +73,7 @@ uint32_t CompositionOffsetAtom::GetSampleNum()
             sampleNum += static_cast<uint64_t>(entry.m_sampleNum);
             if (sampleNum > std::numeric_limits<std::uint32_t>::max())
             {
-                LOG(ERROR)<<"CompositionOffsetAtom::GetSampleNum >= 2^32"<<std::endl;
+                ISO_LOG(LOG_ERROR, "CompositionOffsetAtom::GetSampleNum >= 2^32\n");
                 throw Exception();
             }
         }
@@ -85,7 +85,7 @@ uint32_t CompositionOffsetAtom::GetSampleNum()
             sampleNum += static_cast<uint64_t>(entry.m_sampleNum);
             if (sampleNum > std::numeric_limits<std::uint32_t>::max())
             {
-                LOG(ERROR)<<"CompositionOffsetAtom::GetSampleNum >= 2^32"<<std::endl;
+                ISO_LOG(LOG_ERROR, "CompositionOffsetAtom::GetSampleNum >= 2^32\n");
                 throw Exception();
             }
         }
@@ -145,7 +145,7 @@ void CompositionOffsetAtom::ToStream(Stream& str)
     }
     else
     {
-        LOG(ERROR)<<"Can not write an empty CompositionOffsetAtom."<<std::endl;
+        ISO_LOG(LOG_ERROR, "Can not write an empty CompositionOffsetAtom.\n");
         throw Exception();
     }
 

@@ -67,7 +67,7 @@ void DataInformationAtom::FromStream(Stream& str)
     }
     else
     {
-        LOG(ERROR) << "Read an empty dinf Atom." << std::endl;
+        ISO_LOG(LOG_ERROR, "Read an empty dinf Atom.\n");
     }
 }
 

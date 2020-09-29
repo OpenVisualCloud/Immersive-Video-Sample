@@ -184,7 +184,7 @@ void UriMetaSampleEntryAtom::FromStream(Stream& str)
     }
     if (!uriFound)
     {
-        LOG(ERROR)<<"UriMetaSampleEntryAtom couldn't found URI Atom"<<std::endl;
+        ISO_LOG(LOG_ERROR, "UriMetaSampleEntryAtom couldn't found URI Atom\n");
         throw Exception();
     }
 }
@@ -207,13 +207,13 @@ UriMetaSampleEntryAtom* UriMetaSampleEntryAtom::Clone() const
 
 const Atom* UriMetaSampleEntryAtom::GetConfigurationAtom() const
 {
-    LOG(ERROR) << "UriMetaSampleEntryAtom::GetConfigurationAtom() not impelmented " << std::endl;
+    ISO_LOG(LOG_ERROR, "UriMetaSampleEntryAtom::GetConfigurationAtom() not impelmented \n");
     return nullptr;
 }
 
 const DecoderConfigurationRecord* UriMetaSampleEntryAtom::GetConfigurationRecord() const
 {
-    LOG(ERROR) << "UriMetaSampleEntryAtom::GetConfigurationRecord() not impelmented" << std::endl;
+    ISO_LOG(LOG_ERROR, "UriMetaSampleEntryAtom::GetConfigurationRecord() not impelmented\n");
     return nullptr;
 }
 

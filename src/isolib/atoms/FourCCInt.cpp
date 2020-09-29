@@ -39,7 +39,7 @@ FourCCInt::FourCCInt(const std::string& str)
 {
     if (str.size() != 4)
     {
-        LOG(ERROR)<<"FourCCInt given an std::string argument not exactly 4 characters long"<<std::endl;
+        ISO_LOG(LOG_ERROR, "FourCCInt given an std::string argument not exactly 4 characters long\n");
         throw Exception();
     }
     m_value = 0 | (std::uint32_t(str[0]) << 24) | (std::uint32_t(str[1]) << 16) | (std::uint32_t(str[2]) << 8) |

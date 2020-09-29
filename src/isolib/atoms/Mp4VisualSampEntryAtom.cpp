@@ -125,8 +125,9 @@ void MP4VisualSampleEntryAtom::FromStream(Stream& str)
         }
         else
         {
-            LOG(WARNING) << "Skipping unknown Atom of type '" << AtomType << "' inside MP4VisualSampleEntryAtom"
-                         << std::endl;
+			char type[4];
+            AtomType.GetString().copy(type, 4, 0);
+            ISO_LOG(LOG_WARNING, "Skipping an unsupported Atom '%s' inside MP4VisualSampleEntryAtom.\n", type);
         }
     }
 }
@@ -138,13 +139,13 @@ MP4VisualSampleEntryAtom* MP4VisualSampleEntryAtom::Clone() const
 
 const Atom* MP4VisualSampleEntryAtom::GetConfigurationAtom() const
 {
-    LOG(ERROR) << "MP4VisualSampleEntryAtom::GetConfigurationAtom() not impelmented " << std::endl;
+    ISO_LOG(LOG_ERROR, "MP4VisualSampleEntryAtom::GetConfigurationAtom() not impelmented \n");
     return nullptr;
 }
 
 const DecoderConfigurationRecord* MP4VisualSampleEntryAtom::GetConfigurationRecord() const
 {
-    LOG(ERROR) << "MP4VisualSampleEntryAtom::GetConfigurationRecord() not impelmented" << std::endl;
+    ISO_LOG(LOG_ERROR, "MP4VisualSampleEntryAtom::GetConfigurationRecord() not impelmented \n");
     return nullptr;
 }
 

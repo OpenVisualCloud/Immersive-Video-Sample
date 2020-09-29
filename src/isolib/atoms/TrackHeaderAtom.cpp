@@ -73,7 +73,7 @@ void TrackHeaderAtom::ToStream(Stream& str)
     }
     else
     {
-        LOG(ERROR)<<"ToStream() supports only 'tkhd' version 0 and version 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "ToStream() supports only 'tkhd' version 0 and version 1\n");
         throw Exception();
     }
 
@@ -102,7 +102,7 @@ void TrackHeaderAtom::FromStream(Stream& str)
     ParseFullAtomHeader(str);
     if ((GetVersion() != 0) && (GetVersion() != 1))
     {
-        LOG(ERROR)<<"FromStream() supports only 'tkhd' version 0 and version 1"<<std::endl;
+        ISO_LOG(LOG_ERROR, "FromStream() supports only 'tkhd' version 0 and version 1\n");
         throw Exception();
     }
 
