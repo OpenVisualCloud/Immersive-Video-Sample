@@ -66,34 +66,34 @@ int ViewportPredictPlugin::LoadPlugin(const char* lib_path)
     m_libHandler = dlopen(lib_path, RTLD_LAZY);
     if (!m_libHandler)
     {
-        LOG(ERROR)<<"failed to open predict library path!"<<endl;
+        OMAF_LOG(LOG_ERROR,"failed to open predict library path!\n");
         return ERROR_NULL_PTR;
     }
     m_initFunc = (INIT_FUNC)dlsym(m_libHandler, "ViewportPredict_Init");
     if (dlerror() != NULL)
     {
-        LOG(ERROR)<<"failed to load ViewportPredict_Init func!"<<endl;
+        OMAF_LOG(LOG_ERROR,"failed to load ViewportPredict_Init func!\n");
         dlclose(m_libHandler);
         return ERROR_INVALID;
     }
     m_setViewportFunc = (SETVIEWPORT_FUNC)dlsym(m_libHandler, "ViewportPredict_SetViewport");
     if (dlerror() != NULL)
     {
-        LOG(ERROR)<<"failed to load ViewportPredict_SetViewport func!"<<endl;
+        OMAF_LOG(LOG_ERROR,"failed to load ViewportPredict_SetViewport func!\n");
         dlclose(m_libHandler);
         return ERROR_INVALID;
     }
     m_predictFunc = (PREDICTPOSE_FUNC)dlsym(m_libHandler, "ViewportPredict_PredictPose");
     if (dlerror() != NULL)
     {
-        LOG(ERROR)<<"failed to load ViewportPredict_PredictPose func!"<<endl;
+        OMAF_LOG(LOG_ERROR,"failed to load ViewportPredict_PredictPose func!\n");
         dlclose(m_libHandler);
         return ERROR_INVALID;
     }
     m_destroyFunc = (DESTROY_FUNC)dlsym(m_libHandler, "ViewportPredict_unInit");
     if (dlerror() != NULL)
     {
-        LOG(ERROR)<<"failed to load ViewportPredict_unInit func!"<<endl;
+        OMAF_LOG(LOG_ERROR,"failed to load ViewportPredict_unInit func!\n");
         dlclose(m_libHandler);
         return ERROR_INVALID;
     }
@@ -105,7 +105,7 @@ int ViewportPredictPlugin::Intialize(PredictOption option)
     Handler predict_handler = m_initFunc(option);
     if (NULL == predict_handler)
     {
-        LOG(ERROR)<<"handler init failed!"<<std::endl;
+        OMAF_LOG(LOG_ERROR,"handler init failed!\n");
         return ERROR_NULL_PTR;
     }
     m_predictHandler = predict_handler;
@@ -116,7 +116,7 @@ int ViewportPredictPlugin::SetViewport(ViewportAngle *angle)
 {
     if (angle == nullptr)
     {
-        LOG(ERROR) << " Viewport angle is null! " << endl;
+        OMAF_LOG(LOG_ERROR, " Viewport angle is null!\n");
         return ERROR_NULL_PTR;
     }
     return m_setViewportFunc(m_predictHandler, angle);

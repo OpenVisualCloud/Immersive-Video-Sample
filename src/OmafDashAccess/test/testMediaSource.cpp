@@ -116,7 +116,7 @@ TEST_F(MediaSourceTest, OpenMedia_static) {
   int ret = dashSource->SetupHeadSetInfo(clientInfo);
   EXPECT_TRUE(ret == ERROR_NONE);
 
-  ret = dashSource->OpenMedia(url_static, cache, true, false, "", "");
+  ret = dashSource->OpenMedia(url_static, cache, NULL, true, false, "", "");
   EXPECT_TRUE(ret == ERROR_NONE);
 
   sleep(5);
@@ -139,7 +139,7 @@ TEST_F(MediaSourceTest, OpenMedia_live) {
   int ret = dashSource->SetupHeadSetInfo(clientInfo);
   EXPECT_TRUE(ret == ERROR_NONE);
 
-  ret = dashSource->OpenMedia(url_live, cache, true, false, "", "");
+  ret = dashSource->OpenMedia(url_live, cache, NULL, true, false, "", "");
   EXPECT_TRUE(ret == ERROR_NONE);
 
   sleep(5);
@@ -163,7 +163,7 @@ TEST_F(MediaSourceTest, OpenMedia_static_withPredictor) {
   int ret = dashSource->SetupHeadSetInfo(clientInfo);
   EXPECT_TRUE(ret == ERROR_NONE);
 
-  ret = dashSource->OpenMedia(url_static, cache, true, true, pluginName, libPath);
+  ret = dashSource->OpenMedia(url_static, cache, NULL, true, true, pluginName, libPath);
   EXPECT_TRUE(ret == ERROR_NONE);
 
   sleep(15);
@@ -187,7 +187,7 @@ TEST_F(MediaSourceTest, OpenMedia_live_withPredictor) {
   int ret = dashSource->SetupHeadSetInfo(clientInfo);
   EXPECT_TRUE(ret == ERROR_NONE);
 
-  ret = dashSource->OpenMedia(url_live, cache, true, true, pluginName, libPath);
+  ret = dashSource->OpenMedia(url_live, cache, NULL, true, true, pluginName, libPath);
   EXPECT_TRUE(ret == ERROR_NONE);
 
   sleep(15);
@@ -211,7 +211,7 @@ TEST_F(MediaSourceTest, OpenMedia_static_changeViewport) {
   int ret = dashSource->SetupHeadSetInfo(clientInfo);
   EXPECT_TRUE(ret == ERROR_NONE);
 
-  ret = dashSource->OpenMedia(url_static, cache, true, false, "", "");
+  ret = dashSource->OpenMedia(url_static, cache, NULL, true, false, "", "");
   EXPECT_TRUE(ret == ERROR_NONE);
 
   int16_t vpcnt = 200;
@@ -245,7 +245,7 @@ TEST_F(MediaSourceTest, OpenMedia_live_changeViewport) {
   int ret = dashSource->SetupHeadSetInfo(clientInfo);
   EXPECT_TRUE(ret == ERROR_NONE);
 
-  ret = dashSource->OpenMedia(url_live, cache, true, false, "", "");
+  ret = dashSource->OpenMedia(url_live, cache, NULL, true, false, "", "");
   EXPECT_TRUE(ret == ERROR_NONE);
 
   sleep(1);

@@ -91,6 +91,7 @@ int OmafTracksSelector::SetInitialViewport(std::vector<Viewport *> &pView, HeadS
 
   mParamViewport = new param_360SCVP;
   mParamViewport->usedType = E_VIEWPORT_ONLY;
+  mParamViewport->logFunction = (void*)logCallBack;
   if (mProjFmt == ProjectionFormat::PF_ERP) {
     mParamViewport->paramViewPort.viewportWidth = headSetInfo->viewPort_Width;
     mParamViewport->paramViewPort.viewportHeight = headSetInfo->viewPort_Height;
@@ -193,7 +194,7 @@ int OmafTracksSelector::EnablePosePrediction(std::string predictPluginName, std:
   int ret = InitializePredictPlugins();
   if (ret != ERROR_NONE)
   {
-    LOG(ERROR) << "Failed in loading predict plugin" << endl;
+    OMAF_LOG(LOG_ERROR, "Failed in loading predict plugin\n");
     return ret;
   }
   // 2. initial plugin
@@ -209,7 +210,7 @@ int OmafTracksSelector::EnablePosePrediction(std::string predictPluginName, std:
   ret = plugin->Intialize(option);
   if (ret != ERROR_NONE)
   {
-    LOG(ERROR) << "Failed in initializing predict plugin" << endl;
+    OMAF_LOG(LOG_ERROR, "Failed in initializing predict plugin\n");
     return ret;
   }
   return ERROR_NONE;
@@ -217,7 +218,7 @@ int OmafTracksSelector::EnablePosePrediction(std::string predictPluginName, std:
 
 int OmafTracksSelector::InitializePredictPlugins() {
   if (mLibPath.empty() || mPredictPluginName.empty()) {
-    LOG(ERROR) << "Viewport predict plugin path OR name is invalid!" << endl;
+    OMAF_LOG(LOG_ERROR, "Viewport predict plugin path OR name is invalid!\n");
     return ERROR_INVALID;
   }
   ViewportPredictPlugin *plugin = new ViewportPredictPlugin();
@@ -226,7 +227,7 @@ int OmafTracksSelector::InitializePredictPlugins() {
   std::string pluginPath = mLibPath + mPredictPluginName;
   int ret = plugin->LoadPlugin(pluginPath.c_str());
   if (ret != ERROR_NONE) {
-    LOG(ERROR) << "Load plugin failed!" << endl;
+    OMAF_LOG(LOG_ERROR, "Load plugin failed!\n");
     SAFE_DELETE(plugin);
     return ret;
   }

@@ -107,7 +107,7 @@ uint64_t net_parse_date(const char *val)
         seconds  = (float) curr_sec;
     }
     else {
-        LOG(ERROR) << "[Core] Cannot parse date string" <<  val;
+        OMAF_LOG(LOG_ERROR, "[Core] Cannot parse date string %s\n", val);
         return 0;
     }
     if (curr_month <= 12 && curr_month >= 0) {
@@ -174,7 +174,7 @@ uint64_t net_parse_date(const char *val)
     }
     else
     {
-        LOG(ERROR) << " invalid ms input! " << std::endl;
+        OMAF_LOG(LOG_ERROR, "invalid ms input!\n");
         return 0;
     }
     uint64_t ret_time = current_time + ms;
@@ -303,7 +303,7 @@ uint64_t parse_duration(const char * const duration)
     double s;
     const char *startT;
     if (!duration) {
-        LOG(ERROR) << "[MPD] Error parsing duration: no value indicated\n";
+        OMAF_LOG(LOG_ERROR, "[MPD] Error parsing duration: no value indicated\n");
         return ERROR_PARSE;
     }
     i = 0;
@@ -315,18 +315,18 @@ uint64_t parse_duration(const char * const duration)
         }
     }
     if (duration[i] != 'P') {
-        LOG(ERROR) << "[MPD] Error parsing duration: no value indicated\n";
+        OMAF_LOG(LOG_ERROR, "[MPD] Error parsing duration: no value indicated\n");
         return ERROR_PARSE;
     }
     startT = strchr(duration+1, 'T');
 
     if (duration[i+1] == 0) {
-        LOG(ERROR) << "[MPD] Error parsing duration: no value indicated\n";
+        OMAF_LOG(LOG_ERROR, "[MPD] Error parsing duration: no value indicated\n");
         return ERROR_PARSE;
     }
 
     if (! startT) {
-        LOG(ERROR) << "[MPD] Error parsing duration: no Time section found\n";
+        OMAF_LOG(LOG_ERROR, "[MPD] Error parsing duration: no Time section found\n");
         return ERROR_PARSE;
     }
 
@@ -366,7 +366,7 @@ uint64_t parse_duration(const char * const duration)
     }
     else
     {
-        LOG(ERROR) << "[MPD] Error parsing duration: time overflow\n";
+        OMAF_LOG(LOG_ERROR, "[MPD] Error parsing duration: time overflow\n");
         return ERROR_PARSE;
     }
     return 0;
@@ -378,7 +378,7 @@ uint32_t mpd_parse_duration_u32(const char* const duration)
     if (dur <= UINT_MAX) {
         return (uint32_t)dur;
     } else {
-        LOG(ERROR) << "[MPD] Parsed duration" << dur << "doesn't fit on 32 bits! Setting to the 32 bits max.\n";
+        OMAF_LOG(LOG_ERROR, "[MPD] Parsed duration %ld doesn't fit on 32 bits! Setting to the 32 bits max.\n", dur);
         return UINT_MAX;
     }
 }

@@ -46,6 +46,7 @@
 #include "../utils/data_type.h"
 #include "../utils/Threadable.h"
 #include "../utils/Singleton.h"
+#include "OmafDashAccessLog.h"
 #include "glog/logging.h"
 #include "OmafStructure.h"
 

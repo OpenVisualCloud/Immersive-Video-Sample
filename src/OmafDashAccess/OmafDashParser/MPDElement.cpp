@@ -80,7 +80,7 @@ void MPDElement::AddEssentialProperty(EssentialPropertyElement* essentialPropert
 {
     if(!essentialProperty)
     {
-        LOG(ERROR)<<"Fail to add essentialProperty in MPDElement."<<endl;
+        OMAF_LOG(LOG_ERROR,"Fail to add essentialProperty in MPDElement.\n");
         return;
     }
     m_essentialProperties.push_back(essentialProperty);
@@ -90,7 +90,7 @@ void MPDElement::AddBaseUrl(BaseUrlElement* baseUrl)
 {
     if(!baseUrl)
     {
-        LOG(ERROR)<<"Fail to add baseUrl in MPDElement."<<endl;
+        OMAF_LOG(LOG_ERROR,"Fail to add baseUrl in MPDElement.\n");
         return;
     }
     m_baseUrls.push_back(baseUrl);
@@ -100,7 +100,7 @@ void MPDElement::AddPeriod(PeriodElement* period)
 {
     if(!period)
     {
-        LOG(ERROR)<<"Fail to add period in MPDElement."<<endl;
+        OMAF_LOG(LOG_ERROR,"Fail to add period in MPDElement.\n");
         return;
     }
     m_periods.push_back(period);

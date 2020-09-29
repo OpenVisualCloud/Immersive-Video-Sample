@@ -69,8 +69,7 @@ DownloadManager::~DownloadManager() { }
 
 int DownloadManager::DeleteCacheFile(std::string url) {
   if (remove(url.c_str())) {
-    LOG(WARNING) << "Failed to delete file in cache  for url: " << url
-                 << "! Be cautious cache may exceed the storage limitation!" << endl;
+    OMAF_LOG(LOG_WARNING, "Failed to delete file in cache for url: %s ! Be cautious cache may exceed the storage limitation!\n", url.c_str());
     return ERROR_INVALID;
   }
   return ERROR_NONE;
@@ -112,7 +111,7 @@ void DownloadManager::DeleteCacheByTime(uint64_t interval) {
     auto cachePath = GetCacheFolder();
     DIR *dir = opendir(cachePath.c_str());
     if (!dir) {
-      LOG(WARNING) << "Failed to open cache folder! Be cautious cache may exceed the storage limitation!" << endl;
+      OMAF_LOG(LOG_WARNING, "Failed to open cache folder! Be cautious cache may exceed the storage limitation!\n");
       mCacheMtx.unlock();
       return;
     }
@@ -122,15 +121,13 @@ void DownloadManager::DeleteCacheByTime(uint64_t interval) {
     while (ent && ((uint32_t)removeCnt) < out_size / 2) {
       struct stat st;
       if (stat(ent->d_name, &st)) {
-        LOG(WARNING) << "Failed to get cache file time info! Be cautious cache may exceed the storage limitation!"
-                     << endl;
+        OMAF_LOG(LOG_WARNING, "Failed to get cache file time info! Be cautious cache may exceed the storage limitation!\n");
         mCacheMtx.unlock();
         return;
       }
       if ((uint64_t)(st.st_mtim.tv_nsec) < GetStartTime() + interval) {
         if (remove(ent->d_name))
-          LOG(WARNING) << "Failed to delete file in cache ! Be cautious cache may exceed the storage limitation!"
-                       << endl;
+          OMAF_LOG(LOG_WARNING, "Failed to delete file in cache ! Be cautious cache may exceed the storage limitation!\n");
       }
 
       ent = readdir(dir);

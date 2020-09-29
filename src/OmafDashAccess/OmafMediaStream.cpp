@@ -169,7 +169,7 @@ int OmafMediaStream::InitStream(std::string type) {
   if (!m_enabledExtractor) {
     int32_t ret = StartTilesStitching();
     if (ret) {
-      LOG(ERROR) << "Failed to start tiles stitching !" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to start tiles stitching !\n");
       return ret;
     }
   }
@@ -328,7 +328,7 @@ OMAF_STATUS OmafMediaStream::UpdateStreamInfo() {
         OmafSrd* srd = adaptationSet->GetSRD();
         TileDef* oneTile = adaptationSet->GetTileInfo();
         if (!oneTile) {
-          LOG(ERROR) << "Un-matched projection format !" << std::endl;
+          OMAF_LOG(LOG_ERROR, "Un-matched projection format !\n");
           return OMAF_ERROR_INVALID_PROJECTIONTYPE;
         }
         int32_t globalX = oneTile->x;
@@ -389,13 +389,13 @@ void OmafMediaStream::SetupExtratorDependency() {
 
 int OmafMediaStream::SetupSegmentSyncer(const OmafDashParams& params) {
   OmafDashRangeSync::Ptr syncer;
-  LOG(INFO) << "Setup segment window syncer!" << std::endl;
+  OMAF_LOG(LOG_INFO, "Setup segment window syncer!\n");
   auto as = mMediaAdaptationSet.begin();
   if (as != mMediaAdaptationSet.end()) {
-    LOG(INFO) << "Create one dash window syncer!" << std::endl;
+    OMAF_LOG(LOG_INFO, "Create one dash window syncer!\n");
     syncer = make_omaf_syncer(*as->second, [this](SegmentSyncNode node) {
       std::lock_guard<std::mutex> lock(this->mMutex);
-      VLOG(VLOG_TRACE) << "Syncer segment number to value=" << node.segment_value.number_ << std::endl;
+      OMAF_LOG(LOG_INFO, "Syncer segment number to value=%lld\n", node.segment_value.number_);
       for (auto it = this->mMediaAdaptationSet.begin(); it != this->mMediaAdaptationSet.end(); it++) {
         OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
         pAS->UpdateSegmentNumber(node.segment_value.number_);
@@ -567,7 +567,7 @@ int OmafMediaStream::GetTrackCount() {
 int32_t OmafMediaStream::StartTilesStitching() {
   int32_t ret = pthread_create(&m_stitchThread, NULL, TilesStitchingThread, this);
   if (ret) {
-    LOG(ERROR) << "Failed to create tiles stitching thread !" << std::endl;
+    OMAF_LOG(LOG_ERROR, "Failed to create tiles stitching thread !\n");
     return OMAF_ERROR_CREATE_THREAD;
   }
 
@@ -612,7 +612,7 @@ static bool IsSelectionChanged(TracksMap selection1, TracksMap selection2) {
 
 int32_t OmafMediaStream::TilesStitching() {
   if (!m_stitch) {
-    LOG(ERROR) << "Tiles stitching handle hasn't been created !" << std::endl;
+    OMAF_LOG(LOG_ERROR, "Tiles stitching handle hasn't been created !\n");
     return OMAF_ERROR_NULL_PTR;
   }
   int ret = ERROR_NONE;
@@ -629,7 +629,7 @@ int32_t OmafMediaStream::TilesStitching() {
     current_wait_time++;
     if (current_wait_time > wait_time)
     {
-      LOG(ERROR) << "Time out for tile track select!" << endl;
+      OMAF_LOG(LOG_ERROR, "Time out for tile track select!\n");
       return ERROR_INVALID;
     }
   }while (!selectedFlag);
@@ -690,7 +690,7 @@ int32_t OmafMediaStream::TilesStitching() {
                   pts = omaf_reader_mgr_->GetOldestPacketPTSForTrack(trackID);
                   if (pts != currFramePTS)
                   {
-                      LOG(INFO) << "After waiting for a while, pts  " << pts << " still diff from current PTS   " << currFramePTS << std::endl;
+                      OMAF_LOG(LOG_INFO, "After waiting for a while, pts %lld still diff from current PTS %lld\n", pts, currFramePTS);
                       hasPktOutdated = true;
                       break;
                   }
@@ -700,7 +700,7 @@ int32_t OmafMediaStream::TilesStitching() {
               pts = omaf_reader_mgr_->GetOldestPacketPTSForTrack(trackID);
               if (pts != currFramePTS)
               {
-                  LOG(INFO) << "Still can't get tile for PTS  " << currFramePTS << " while gotten PTS is  " << pts << std::endl;
+                  OMAF_LOG(LOG_INFO, "Still can't get tile for PTS %lld while gotten PTS is %lld\n", currFramePTS, pts);
                   hasPktOutdated = true;
                   break;
               }
@@ -756,7 +756,7 @@ int32_t OmafMediaStream::TilesStitching() {
 
       if (ret == ERROR_NONE) {
         if (onePacket->GetEOS()) {
-          LOG(INFO) << "EOS has been gotten !" << std::endl;
+          OMAF_LOG(LOG_INFO, "EOS has been gotten !\n");
           isEOS = true;
           selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
           break;
@@ -789,7 +789,7 @@ int32_t OmafMediaStream::TilesStitching() {
 
       continue;
     }
-    LOG(INFO) << "Start to stitch packets! and pts is " << currFramePTS << endl;
+    OMAF_LOG(LOG_INFO, "Start to stitch packets! and pts is %lld\n", currFramePTS);
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
         // trace
@@ -797,7 +797,7 @@ int32_t OmafMediaStream::TilesStitching() {
 #endif
 #endif
     if (!isEOS && (selectedPackets.size() != mapSelectedAS.size()) && (currWaitTimes >= waitTimes)) {
-      LOG(INFO) << "Incorrect selected tile tracks packets number for tiles stitching !" << std::endl;
+      OMAF_LOG(LOG_INFO, "Incorrect selected tile tracks packets number for tiles stitching !\n");
 
       for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end();) {
         MediaPacket* pkt = it1->second;
@@ -824,7 +824,7 @@ int32_t OmafMediaStream::TilesStitching() {
       ret = m_stitch->Initialize(selectedPackets, m_needParams,
                                  (VCD::OMAF::ProjectionFormat)(m_pStreamInfo->mProjFormat));
       if (ret) {
-        LOG(ERROR) << "Failed to initialize stitch class !" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Failed to initialize stitch class !\n");
         for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end();) {
           MediaPacket* pkt = it1->second;
           SAFE_DELETE(pkt);
@@ -837,7 +837,7 @@ int32_t OmafMediaStream::TilesStitching() {
       if (!isEOS && m_status != STATUS_STOPPED) {
         ret = m_stitch->UpdateSelectedTiles(selectedPackets, m_needParams);
         if (ret) {
-          LOG(ERROR) << "Failed to update media packets for tiles merge !" << std::endl;
+          OMAF_LOG(LOG_ERROR, "Failed to update media packets for tiles merge !\n");
           for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end();) {
             MediaPacket* pkt = it1->second;
             SAFE_DELETE(pkt);
@@ -884,7 +884,8 @@ int32_t OmafMediaStream::TilesStitching() {
     tracepoint(mthq_tp_provider, T7_stitch_end_time, one->GetSegID(), currFramePTS, mergedPackets.size());
 #endif
 #endif
-    LOG(INFO) << " Finish to stitch packets! and packet segment id is " << one->GetSegID() << " packet pts is : " << one->GetPTS() << " and video number is " << mergedPackets.size() << endl;
+    OMAF_LOG(LOG_INFO, "Finish to stitch packets for packet segment id %d\n", one->GetSegID());
+    OMAF_LOG(LOG_INFO, "packet pts is %lld and video number is %lld\n", one->GetPTS(), mergedPackets.size());
     selectedPackets.clear();
     prevPoseChanged = false;
     prevSelectedAS = mapSelectedAS;

@@ -149,16 +149,9 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
         {
             m_currentTracks.clear();
         }
-        //LOG(INFO)<<"************Will update tile tracks selection *****"<<endl;
         m_currentTracks = selectedTracks;
     }
     selectedTracks.clear();
-
-    // add implementation later for not used packet remove
-    //std::list<TracksMap> enabledTracks;
-    //enabledTracks.push_front(m_currentTracks);
-
-    //if (isPoseChanged || enabledTracks.size() > 1)
 
     int ret = pStream->UpdateEnabledTileTracks(m_currentTracks);
     return ret;
@@ -169,7 +162,7 @@ bool IsPoseChanged(HeadPose* pose1, HeadPose* pose2)
     // return false if two pose is same
     if(abs(pose1->yaw - pose2->yaw)<1e-3 && abs(pose1->pitch - pose2->pitch)<1e-3)
     {
-        LOG(INFO)<<"pose has not changed!"<<std::endl;
+        OMAF_LOG(LOG_INFO,"pose has not changed!\n");
         return false;
     }
     return true;
@@ -204,7 +197,7 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
     // won't get viewport if pose hasn't changed
     if( previousPose && mPose && !IsPoseChanged( previousPose, mPose ) && historySize > 1 && !mUsePrediction)
     {
-        LOG(INFO)<<"pose hasn't changed!"<<endl;
+        OMAF_LOG(LOG_INFO,"pose hasn't changed!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
         //trace
@@ -215,7 +208,7 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
     }
 
     // to select tile tracks;
-    LOG(INFO) << "Start to select tile tracks!" << endl;
+    OMAF_LOG(LOG_INFO, "Start to select tile tracks!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
         // trace
@@ -225,7 +218,9 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
     selectedTracks = SelectTileTracks(pStream, mPose);
     if (selectedTracks.size() && previousPose)
     {
-        LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") !"<<endl;
+        printf("%f, %f\n", previousPose->yaw, previousPose->pitch);
+        OMAF_LOG(LOG_INFO,"pose has changed from yaw %f, pitch %f\n", previousPose->yaw, previousPose->pitch);
+        OMAF_LOG(LOG_INFO,"to yaw %f, pitch %f\n", mPose->yaw, mPose->pitch);
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
         // trace
@@ -263,7 +258,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
             tilesInViewport, &paramViewportOutput, m360ViewPortHandle);
     if (selectedTilesNum <= 0 || selectedTilesNum > 1024)
     {
-        LOG(ERROR) << "Failed to get tiles information in viewport !" << endl;
+        OMAF_LOG(LOG_ERROR, "Failed to get tiles information in viewport !\n");
         DELETE_ARRAY(tilesInViewport);
         return selectedTracks;
     }
@@ -277,7 +272,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     bool needAddtionalTile = false;
     if (sqrtedSize == 1) // selectedTilesNum is prime number
     {
-        LOG(INFO) <<"need additional tile is true! original selected tile num of high quality is " << selectedTilesNum << endl;
+        OMAF_LOG(LOG_INFO,"need additional tile is true! original selected tile num of high quality is %d\n", selectedTilesNum);
         needAddtionalTile = true;
     }
     if (mProjFmt == ProjectionFormat::PF_ERP)
@@ -324,7 +319,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
                     TileDef *tileInfo = adaptationSet->GetTileInfo();
                     if (!tileInfo)
                     {
-                        LOG(ERROR) << "NULL tile information for Cubemap !" << std::endl;
+                        OMAF_LOG(LOG_ERROR, "NULL tile information for Cubemap !\n");
                         DELETE_ARRAY(tilesInViewport);
                         return selectedTracks;
                     }
@@ -401,7 +396,7 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
     // won't get viewport if pose hasn't changed
     if( previousPose && mPose && !IsPoseChanged( previousPose, mPose ) && historySize > 1)
     {
-        LOG(INFO)<<"pose hasn't changed!"<<endl;
+        OMAF_LOG(LOG_INFO,"pose hasn't changed!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
         //trace
@@ -414,7 +409,7 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
     // if viewport changed, then predict viewport using pose history.
     if (mPredictPluginMap.size() == 0)
     {
-        LOG(ERROR)<<"predict plugin map is empty!"<<endl;
+        OMAF_LOG(LOG_ERROR,"predict plugin map is empty!\n");
         return predictedTracks;
     }
     // 1. figure out the pts of predicted angle
@@ -428,11 +423,11 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
     // 2. predict process
     ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);
     std::map<uint64_t, ViewportAngle*> predict_angles;
-    LOG(INFO) << "first_predict_pts " << first_predict_pts << endl;
+    OMAF_LOG(LOG_INFO, "first_predict_pts %ld\n", first_predict_pts);
     plugin->Predict(first_predict_pts, predict_angles);
     if (predict_angles.empty())
     {
-        LOG(INFO)<<"predictPose_func return an invalid value!"<<endl;
+        OMAF_LOG(LOG_INFO,"predictPose_func return an invalid value!\n");
         return predictedTracks;
     }
     // candicate nums to select tile tracks
@@ -444,7 +439,7 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
     {
         predictPose[i].yaw = predict_angles[ptsInterval[i] + first_predict_pts]->yaw;
         predictPose[i].pitch = predict_angles[ptsInterval[i] + first_predict_pts]->pitch;
-        LOG(INFO) << "Start to select tile tracks!" << endl;
+        OMAF_LOG(LOG_INFO, "Start to select tile tracks!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
         // trace
@@ -455,7 +450,8 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
         if (selectedTracks.size() && previousPose)
         {
             predictedTracks.push_back(make_pair(predict_angles[ptsInterval[i] + first_predict_pts]->priority, selectedTracks));
-            LOG(INFO)<<"pose has changed from ("<<previousPose->yaw<<","<<previousPose->pitch<<") to ("<<mPose->yaw<<","<<mPose->pitch<<") !"<<endl;
+            OMAF_LOG(LOG_INFO,"pose has changed from yaw %f, pitch %f\n", previousPose->yaw, previousPose->pitch);
+            OMAF_LOG(LOG_INFO,"to yaw %f, pitch %f\n", mPose->yaw, mPose->pitch);
 
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_

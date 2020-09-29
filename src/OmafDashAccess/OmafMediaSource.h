@@ -82,7 +82,7 @@ class OmafMediaSource {
   //! \return
   //!         ERROR_NONE if success, else fail reason
   //!
-  virtual int OpenMedia(std::string url, std::string cacheDir, bool enableExtractor, bool enablePredictor = false,
+  virtual int OpenMedia(std::string url, std::string cacheDir, void* externalLog, bool enableExtractor, bool enablePredictor = false,
                         std::string predictPluginName = "", std::string dllPath = "") = 0;
 
   //!

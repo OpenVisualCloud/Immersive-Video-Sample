@@ -65,27 +65,27 @@ std::string OmafXMLParser::DownloadXMLFile(string url, string cache_dir) {
   OmafCurlEasyDownloader downloader(OmafCurlEasyDownloader::CurlWorkMode::EASY_MODE);
   int ret = downloader.init(m_curl_params);
   if (ret == ERROR_NONE) {
-    LOG(INFO) << "To download the xml mpd with url: " << url << std::endl;
-    LOG(INFO) << "Save the xml mpd file to path: " << fileName << std::endl;
+    OMAF_LOG(LOG_INFO, "To download the xml mpd with url: %s\n", url.c_str());
+    OMAF_LOG(LOG_INFO, "Save the xml mpd file to path: %s\n", fileName.c_str());
     ret = downloader.open(url);
     if (ret == ERROR_NONE) {
       ret = downloader.start(
           0, 0,
           [&mpd_file, fileName](std::unique_ptr<StreamBlock> sb) {
-            VLOG(VLOG_TRACE) << "Receive the stream block, size=" << sb->size() << std::endl;
+            OMAF_LOG(LOG_INFO, "Receive the stream block, size=%lld\n", sb->size());
             if (mpd_file.is_open()) {
               mpd_file.write(sb->cbuf(), sb->size());
             } else {
-              LOG(ERROR) << "The file is not in open state, file: " << fileName << std::endl;
+              OMAF_LOG(LOG_ERROR, "The file is not in open state, file: %s\n", fileName.c_str());
             }
           },
           [url](OmafCurlEasyDownloader::State s) {
-            LOG(INFO) << "Download state: " << static_cast<int>(s) << " for url: " << url << std::endl;
+            OMAF_LOG(LOG_INFO, "Download state: %d for url: %s\n", static_cast<int>(s), url.c_str());
           });
       if (ret == ERROR_NONE) {
-        LOG(INFO) << "Success to start the mpd downloader!" << std::endl;
+        OMAF_LOG(LOG_INFO, "Success to start the mpd downloader!\n");
       } else {
-        LOG(ERROR) << "Failed to start the mpd downloader, err=" << ret << std::endl;
+        OMAF_LOG(LOG_ERROR, "Failed to start the mpd downloader, err=%d\n", ret);
       }
 
       if (mpd_file.is_open()) {
@@ -94,7 +94,7 @@ std::string OmafXMLParser::DownloadXMLFile(string url, string cache_dir) {
       return fileName;
     }
   }
-  LOG(ERROR) << "Failed to download the mpd file, whose url:" << url << std::endl;
+  OMAF_LOG(LOG_ERROR, "Failed to download the mpd file, whose url:%s\n", url.c_str());
   return std::string();
 }
 
@@ -111,43 +111,43 @@ ODStatus OmafXMLParser::Generate(string url, string cacheDir) {
   if (!fileName.length()) return OD_STATUS_INVALID;
 
   m_xmlDoc = new XMLDocument();
-  CheckNullPtr_PrintLog_ReturnStatus(m_xmlDoc, "Failed to create XMLDocument with tinyXML.", ERROR,
+  CheckNullPtr_PrintLog_ReturnStatus(m_xmlDoc, "Failed to create XMLDocument with tinyXML.\n", LOG_ERROR,
                                      OD_STATUS_OPERATION_FAILED);
-  LOG(INFO) << "To parse the mpd file: " << fileName << std::endl;
+  OMAF_LOG(LOG_INFO, "To parse the mpd file: %s\n", fileName.c_str());
   XMLError result = m_xmlDoc->LoadFile(fileName.c_str());
   if (result != XML_SUCCESS) return OD_STATUS_OPERATION_FAILED;
 
   XMLElement* elmt = m_xmlDoc->FirstChildElement();
-  CheckNullPtr_PrintLog_ReturnStatus(elmt, "Failed to get element from XML Doc.", ERROR, OD_STATUS_OPERATION_FAILED);
+  CheckNullPtr_PrintLog_ReturnStatus(elmt, "Failed to get element from XML Doc.\n", LOG_ERROR, OD_STATUS_OPERATION_FAILED);
 
   OmafXMLElement* root = BuildXMLElementTree(elmt);
   if (!root) {
-    LOG(ERROR) << "Build XML elements tree failed!" << endl;
+    OMAF_LOG(LOG_ERROR, "Build XML elements tree failed!\n");
     return OD_STATUS_OPERATION_FAILED;
   }
 
   ret = BuildMPDwithXMLElements(root);
   if (ret != OD_STATUS_SUCCESS) {
-    LOG(ERROR) << "Build MPD tree failed!" << endl;
+    OMAF_LOG(LOG_ERROR, "Build MPD tree failed!\n");
     return OD_STATUS_OPERATION_FAILED;
   }
 
   // delete the downloaded mpd file after it's parsed.
   // if (!local && 0 != remove(fileName.c_str())) {
-  //  LOG(WARNING) << "Failed to delete the downloaded MPD file: " << fileName << std::endl;
+  //  LOG(WARNING) << "Failed to delete the downloaded MPD file: " << fileName);
   //}
 
   return ret;
 }
 
 OmafXMLElement* OmafXMLParser::BuildXMLElementTree(XMLElement* elmt) {
-  CheckNullPtr_PrintLog_ReturnNullPtr(elmt, "Failed to get element from XML Doc.", WARNING);
+  CheckNullPtr_PrintLog_ReturnNullPtr(elmt, "Failed to get element from XML Doc.\n", LOG_WARNING);
 
   const char* name = elmt->Value();
   if (!name) return nullptr;
 
   OmafXMLElement* element = new OmafXMLElement();
-  CheckNullPtr_PrintLog_ReturnNullPtr(element, "Failed to create element.", WARNING);
+  CheckNullPtr_PrintLog_ReturnNullPtr(element, "Failed to create element.\n", LOG_WARNING);
 
   element->SetName(name);
   element->SetPath(m_path);
@@ -199,7 +199,7 @@ void OmafXMLParser::ReadAttributes(OmafXMLElement* element, XMLElement* orgEleme
 
 MPDElement* OmafXMLParser::GetGeneratedMPD() {
   if (!m_mpdReader) {
-    LOG(ERROR) << "please generate MPD tree firstly." << endl;
+    OMAF_LOG(LOG_ERROR, "please generate MPD tree firstly.\n");
     return nullptr;
   }
 

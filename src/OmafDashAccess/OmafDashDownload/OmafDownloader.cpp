@@ -161,14 +161,14 @@ OmafDashSegmentHttpClient::Ptr OmafDashSegmentHttpClient::create(long max_parall
   try {
     return std::make_shared<OmafDashSegmentHttpClientImpl>(max_parallel_transfers);
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when create the dash segment http source, ex:" << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when create the dash segment http source, ex:%s\n", ex.what());
     return nullptr;
   }
 }
 
 OMAF_STATUS OmafDashSegmentHttpClientImpl::start() noexcept {
   try {
-    LOG(INFO) << "Start the dash source http client!" << std::endl;
+    OMAF_LOG(LOG_INFO, "Start the dash source http client!\n");
     curl_global_init(CURL_GLOBAL_ALL);
 
     // 1. create the multi downloader
@@ -176,25 +176,25 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::start() noexcept {
     if (tmpMultiDownloader_ == NULL) return ERROR_INVALID;
     segment_downloader_.reset(tmpMultiDownloader_);
     if (segment_downloader_.get() == nullptr) {
-      LOG(ERROR) << "Failed to create the curl multi downloader!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to create the curl multi downloader!\n");
       return ERROR_INVALID;
     }
     OMAF_STATUS ret = segment_downloader_->init(
         curl_params_, [this](OmafDownloadTask::Ptr task) { this->processDoneTask(std::move(task)); });
     if (ERROR_NONE != ret) {
-      LOG(ERROR) << "Failed to init the multi downloader!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to init the multi downloader!\n");
       return ERROR_INVALID;
     }
 
     // 2. create the checker
     url_checker_ = std::make_shared<OmafCurlChecker>();
     if (url_checker_ == nullptr) {
-      LOG(ERROR) << "Failed to create the curl checker downloader!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to create the curl checker downloader!\n");
       return ERROR_NULL_PTR;
     }
     ret = url_checker_->init(curl_params_);
     if (ERROR_NONE != ret) {
-      LOG(ERROR) << "Failed to init the curl easy downloader!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to init the curl easy downloader!\n");
       return ERROR_INVALID;
     }
 
@@ -203,14 +203,14 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::start() noexcept {
     download_worker_ = std::thread(&OmafDashSegmentHttpClientImpl::threadRunner, this);
     return ERROR_NONE;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when start the dash source, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when start the dash source, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
 
 OMAF_STATUS OmafDashSegmentHttpClientImpl::stop() noexcept {
   try {
-    LOG(INFO) << "Stop the dash source http client!" << std::endl;
+    OMAF_LOG(LOG_INFO, "Stop the dash source http client!\n");
     bworking_ = false;
     if (segment_downloader_.get() != nullptr) {
       segment_downloader_->close();
@@ -238,10 +238,10 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::stop() noexcept {
 
     curl_global_cleanup();
     tmpMultiDownloader_ = nullptr;
-    LOG(INFO) << "Success to stop the dash client!" << std::endl;
+    OMAF_LOG(LOG_INFO, "Success to stop the dash client!\n");
     return ERROR_NONE;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when Stop the dash source, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when Stop the dash source, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
@@ -250,7 +250,7 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::open(const SourceParams &ds_params, O
   try {
     OmafDownloadTask::Ptr task = OmafDownloadTask::createTask(ds_params.dash_url_, dcb, scb);
     if (task.get() == nullptr) {
-      LOG(ERROR) << "Failed to create the task" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to create the task\n");
       return ERROR_INVALID;
     }
     if (perf_stats_.get() != nullptr) {
@@ -258,7 +258,7 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::open(const SourceParams &ds_params, O
       task->perfCounter(std::move(t_perf));
     }
 
-    VLOG(VLOG_TRACE) << "Open the task count=" << task.use_count() << ". " << task->to_string() << std::endl;
+    OMAF_LOG(LOG_INFO, "Open the task count=%d. %s\n", task.use_count(), task->to_string().c_str());
     bool new_timeline = true;
 
     std::lock_guard<std::mutex> lock(task_queue_mutex_);
@@ -275,7 +275,7 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::open(const SourceParams &ds_params, O
     if (new_timeline) {
       TaskList::Ptr tl = std::make_shared<TaskList>();
       if (tl.get() == nullptr) {
-        LOG(ERROR) << "Task list create failed!" << std::endl;
+        OMAF_LOG(LOG_ERROR, "Task list create failed!\n");
         return ERROR_NULL_PTR;
       }
       tl->timeline_point_ = ds_params.timeline_point_;
@@ -284,15 +284,14 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::open(const SourceParams &ds_params, O
         tl->tasks_[priority].push_back(task);
       }else
       {
-        LOG(ERROR) << "Priority " << priority << " is invalid, the max task size is " << PRIORITYTASKSIZE << std::endl;
+        OMAF_LOG(LOG_ERROR, "Priority %d is invalid, the max task size is %d\n", priority, PRIORITYTASKSIZE);
         return ERROR_INVALID;
       }
 
       if (!task_queue_.empty()) {
         auto &tail_tasks = task_queue_.back();
         if (tail_tasks->timeline_point_ >= ds_params.timeline_point_) {
-          LOG(FATAL) << "Invalid timeline point happen! <" << tail_tasks->timeline_point_ << ", "
-                     << ds_params.timeline_point_ << ">" << std::endl;
+          OMAF_LOG(LOG_FATAL, "Invalid timeline point happen! < %ld, %ld>\n", tail_tasks->timeline_point_, ds_params.timeline_point_);
         }
       }
 
@@ -301,7 +300,7 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::open(const SourceParams &ds_params, O
     task_queue_cv_.notify_all();
     return ERROR_NONE;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when open the dash source, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when open the dash source, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
@@ -349,13 +348,13 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::remove(const SourceParams &ds_params)
     }
 
     if (to_remove_task.get() == nullptr) {
-      LOG(ERROR) << "Failed to remove the task for the dash: " << ds_params.dash_url_ << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to remove the task for the dash: %s\n", ds_params.dash_url_.c_str());
       return ERROR_INVALID;
     }
 
     return ERROR_NONE;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when Stop the dash source, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when Stop the dash source, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
@@ -363,7 +362,7 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::check(const SourceParams &ds_params) 
   try {
     return url_checker_->check(ds_params.dash_url_);
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when check the dash source, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when check the dash source, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
@@ -388,7 +387,7 @@ void OmafDashSegmentHttpClientImpl::threadRunner(void) noexcept {
       // 1.1. check
       // too many task in dash downloader
       if (segment_downloader_->size() > max_queue_size) {
-        VLOG(VLOG_TRACE) << "The size of downloading is: " << segment_downloader_->size() << std::endl;
+        OMAF_LOG(LOG_INFO, "The size of downloading is: %lld\n", segment_downloader_->size());
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         continue;
       }
@@ -397,7 +396,7 @@ void OmafDashSegmentHttpClientImpl::threadRunner(void) noexcept {
       OmafDownloadTask::Ptr task = fetchReadyTask();
       if (task.get() != nullptr) {
         // 2.1 add to downloader
-        VLOG(VLOG_TRACE) << "downloader-0-task id" << task->id() << ", task count=" << task.use_count() << std::endl;
+        OMAF_LOG(LOG_INFO, "downloader-0-task id %lld, task count=%d\n", task->id(), task.use_count());
         segment_downloader_->addTask(task);
         {
           // 2.1.2 cache in the downloading list to support remove
@@ -405,11 +404,11 @@ void OmafDashSegmentHttpClientImpl::threadRunner(void) noexcept {
           std::lock_guard<std::mutex> lock(downloading_task_mutex_);
           downloading_tasks_[task->url()] = task;
         }
-        LOG(INFO) << "Start download for task count=" << task.use_count() << ". " << task->to_string() << std::endl;
+        OMAF_LOG(LOG_INFO, "Start download for task count=%d. %s\n", task.use_count(), task->to_string().c_str());
       }
     }
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception in the dash source thread runner, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception in the dash source thread runner, ex: %s\n", ex.what());
   }
 }
 
@@ -437,7 +436,7 @@ OmafDownloadTask::Ptr OmafDashSegmentHttpClientImpl::fetchReadyTask(void) noexce
 
     return nullptr;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when fetch the avaiable task, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when fetch the avaiable task, ex: %s\n", ex.what());
     return nullptr;
   }
 }
@@ -456,7 +455,7 @@ void OmafDashSegmentHttpClientImpl::processDoneTask(OmafDownloadTask::Ptr task) 
       auto it = downloading_tasks_.find(task->url());
       if (it != downloading_tasks_.end()) {
         downloading_tasks_.erase(it);
-        VLOG(VLOG_TRACE) << "Done the task count=" << task.use_count() << ". " << task->to_string() << std::endl;
+        OMAF_LOG(LOG_INFO, "Done the task count=%d. %s\n", task.use_count(), task->to_string().c_str());
       }
     }
 
@@ -468,7 +467,7 @@ void OmafDashSegmentHttpClientImpl::processDoneTask(OmafDownloadTask::Ptr task) 
       perf_stats_->add(state, duration, transfer_size, download_time, network_speed);
     }
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when process the done task, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when process the done task, ex: %s\n", ex.what());
   }
 }
 
@@ -557,7 +556,7 @@ void OmafDashSegmentHttpClientPerf::setStatisticsWindows(int32_t time_window) no
     timeout_task_transfer_counter_.setWindow(time_window);
     failure_task_transfer_counter_.setWindow(time_window);
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when set time window, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when set time window, ex: %s\n", ex.what());
   }
 }
 

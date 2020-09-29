@@ -125,7 +125,7 @@ int32_t OmafMP4VRReader::initialize(OmafSegment* pSeg) {
 
 void OmafMP4VRReader::close() {
   if (nullptr == mMP4ReaderImpl) {
-    LOG(ERROR) << "OmafMP4VRReader::close nullptr != mMP4ReaderImpl" << endl;
+    OMAF_LOG(LOG_ERROR, "OmafMP4VRReader::close nullptr != mMP4ReaderImpl\n");
     return;
   }
   VCD::MP4::Mp4Reader* pReader = (VCD::MP4::Mp4Reader*)mMP4ReaderImpl;

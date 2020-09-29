@@ -33,7 +33,7 @@
 
 #include <sstream>
 
-#include "../../utils/GlogWrapper.h"  // GLOG
+//#include "../../utils/GlogWrapper.h"  // GLOG
 
 namespace VCD {
 namespace OMAF {
@@ -58,7 +58,7 @@ HttpHeader OmafCurlEasyHelper::header(CURL *easy_curl) noexcept {
     }
     return header;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when set params for curl easy handler, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when set params for curl easy handler, ex: %s\n", ex.what());
     return HttpHeader();
   }
 }
@@ -77,7 +77,7 @@ double OmafCurlEasyHelper::speed(CURL *easy_curl) noexcept {
     }
 
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when get speed for curl easy handler, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when get speed for curl easy handler, ex: %s\n", ex.what());
     return 0.0f;
   }
 }
@@ -121,7 +121,7 @@ OMAF_STATUS OmafCurlEasyHelper::setParams(CURL *easy_curl, CurlParams params) no
     }
     return ERROR_NONE;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when set params for curl easy handler, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when set params for curl easy handler, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
@@ -182,20 +182,20 @@ OMAF_STATUS OmafCurlEasyDownloader::init(const CurlParams &params) noexcept {
     if (easy_curl_) {
       ret = close();
       if (ret != ERROR_NONE) {
-        LOG(ERROR) << "Failed to clean older easy handle! err=" << ret << std::endl;
+        OMAF_LOG(LOG_ERROR, "Failed to clean older easy handle! err=%d\n", ret);
         return ret;
       }
     }
 
     easy_curl_ = curl_easy_init();
     if (easy_curl_ == nullptr) {
-      LOG(ERROR) << "Failed to create the curl easy handler!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to create the curl easy handler!\n");
       return ERROR_NULL_PTR;
     }
     curl_params_ = params;
     return ERROR_NONE;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when create the curl easy hanlder, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when create the curl easy hanlder, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
@@ -204,16 +204,16 @@ OMAF_STATUS OmafCurlEasyDownloader::open(const std::string &url) noexcept {
   try {
     std::lock_guard<std::mutex> lock(easy_curl_mutex_);
     url_ = url;
-    VLOG(VLOG_TRACE) << "To open the url: " << url << std::endl;
+    OMAF_LOG(LOG_INFO, "To open the url: %s\n", url.c_str());
     if (easy_curl_ == nullptr) {
-      LOG(ERROR) << "curl easy handler is invalid!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "curl easy handler is invalid!\n");
       return ERROR_NULL_PTR;
     }
 
     curl_easy_reset(easy_curl_);
     OMAF_STATUS ret = OmafCurlEasyHelper::setParams(easy_curl_, curl_params_);
     if (ERROR_NONE != ret) {
-      LOG(ERROR) << "Failed to set params for easy curl handler!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to set params for easy curl handler!\n");
       return ret;
     }
 
@@ -224,7 +224,7 @@ OMAF_STATUS OmafCurlEasyDownloader::open(const std::string &url) noexcept {
 
     return ERROR_NONE;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when set options for curl easy hanlder, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when set options for curl easy hanlder, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
@@ -241,7 +241,7 @@ OMAF_STATUS OmafCurlEasyDownloader::start(int64_t offset, int64_t size, onData d
       if (size > 0) {
         ss << size;
       }
-      LOG(INFO) << "To download the range: " << ss.str() << std::endl;
+      OMAF_LOG(LOG_INFO, "To download the range: %s\n", ss.str());
       curl_easy_setopt(easy_curl_, CURLOPT_RANGE, ss.str().c_str());
     }
     dcb_ = dcb;
@@ -252,7 +252,7 @@ OMAF_STATUS OmafCurlEasyDownloader::start(int64_t offset, int64_t size, onData d
       CURLcode res = curl_easy_perform(easy_curl_);
 
       if (res != CURLE_OK) {
-        LOG(ERROR) << "Failed to download the url: " << url_ << std::endl;
+        OMAF_LOG(LOG_ERROR, "Failed to download the url: %s\n", url_.c_str());
         if (scb_) {
           scb_(OmafCurlEasyDownloader::State::FAILED);
         }
@@ -267,7 +267,7 @@ OMAF_STATUS OmafCurlEasyDownloader::start(int64_t offset, int64_t size, onData d
 
     return ERROR_NONE;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when start curl easy hanlder, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when start curl easy hanlder, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
@@ -294,7 +294,7 @@ OMAF_STATUS OmafCurlEasyDownloader::close() noexcept {
     }
     return ERROR_NONE;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when close curl easy hanlder, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when close curl easy hanlder, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
@@ -304,7 +304,7 @@ HttpHeader OmafCurlEasyDownloader::header() noexcept {
     std::lock_guard<std::mutex> lock(easy_curl_mutex_);
     return OmafCurlEasyHelper::header(this->easy_curl_);
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when read header, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when read header, ex: %s\n", ex.what());
     return HttpHeader();
   }
 }
@@ -314,7 +314,7 @@ double OmafCurlEasyDownloader::speed() noexcept {
     std::lock_guard<std::mutex> lock(easy_curl_mutex_);
     return OmafCurlEasyHelper::speed(this->easy_curl_);
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when read average speed, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when read average speed, ex: %s\n", ex.what());
     return 0.0f;
   }
 }
@@ -329,7 +329,7 @@ void OmafCurlEasyDownloader::receiveSB(std::unique_ptr<StreamBlock> sb) noexcept
     }
 
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when process stream block! ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when process stream block! ex: %s\n", ex.what());
   }
 }
 
@@ -337,19 +337,19 @@ size_t OmafCurlEasyDownloader::curlBodyCallback(char *ptr, size_t size, size_t n
   size_t bsize = size * nmemb;
 
   try {
-    VLOG(VLOG_TRACE) << "Receive bytes size= " << bsize << std::endl;
+    OMAF_LOG(LOG_INFO, "Receive bytes size= %lld\n", bsize);
     if (ptr == nullptr || bsize <= 0) {
-      LOG(ERROR) << "The buffer from curl handler is empty!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "The buffer from curl handler is empty!\n");
       return bsize;
     }
     OmafCurlEasyDownloader *phandler = reinterpret_cast<OmafCurlEasyDownloader *>(userdata);
     if (phandler == nullptr) {
-      LOG(ERROR) << "The OmafCurlEasyDownloader invalid handler!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "The OmafCurlEasyDownloader invalid handler!\n");
       return bsize;
     }
     std::unique_ptr<StreamBlock> sb = make_unique_vcd<StreamBlock>();
     if (!sb->resize(bsize)) {
-      LOG(ERROR) << "Failed to allocate the target buffer for curl download data!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to allocate the target buffer for curl download data!\n");
       return bsize;
     }
     // FIXME, use security memcpy_s
@@ -359,7 +359,7 @@ size_t OmafCurlEasyDownloader::curlBodyCallback(char *ptr, size_t size, size_t n
     phandler->receiveSB(std::move(sb));
     return bsize;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when receive data from curl easy hanlder, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when receive data from curl easy hanlder, ex: %s\n", ex.what());
     return bsize;
   }
 }
@@ -372,7 +372,7 @@ OmafCurlEasyDownloaderPool::~OmafCurlEasyDownloaderPool() {
       easy_downloader_pool_.pop();
     }
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when release all easy downloader! ex=" << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when release all easy downloader! ex=%s\n", ex.what());
   }
 }
 
@@ -398,7 +398,7 @@ OmafCurlEasyDownloader::Ptr OmafCurlEasyDownloaderPool::pop() noexcept {
     }
     return nullptr;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when request one easy downloader! ex=" << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when request one easy downloader! ex=%s\n", ex.what());
     return nullptr;
   }
 }
@@ -408,7 +408,7 @@ void OmafCurlEasyDownloaderPool::push(OmafCurlEasyDownloader::Ptr downloader) no
     downloader->stop();
     easy_downloader_pool_.push(downloader);
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when return one easy downloader! ex=" << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when return one easy downloader! ex=%s\n", ex.what());
   }
 }
 
@@ -418,25 +418,25 @@ OMAF_STATUS OmafCurlChecker::init(const CurlParams &params) noexcept {
   try {
     easy_curl_ = curl_easy_init();
     if (easy_curl_ == nullptr) {
-      LOG(ERROR) << "Failed to create the curl easy handler!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to create the curl easy handler!\n");
       return ERROR_NULL_PTR;
     }
     OMAF_STATUS ret = OmafCurlEasyHelper::setParams(easy_curl_, params);
     if (ERROR_NONE != ret) {
-      LOG(ERROR) << "Failed to set params for easy curl handler!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to set params for easy curl handler!\n");
       return ret;
     }
     curl_easy_setopt(easy_curl_, CURLOPT_NOBODY, 1L);
     return ERROR_NONE;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when create the curl easy hanlder, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when create the curl easy hanlder, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
 OMAF_STATUS OmafCurlChecker::check(const std::string &url) noexcept {
   try {
     if (easy_curl_ == nullptr) {
-      LOG(ERROR) << "curl easy handler is invalid!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "curl easy handler is invalid!\n");
       return ERROR_INVALID;
     }
 
@@ -450,20 +450,20 @@ OMAF_STATUS OmafCurlChecker::check(const std::string &url) noexcept {
     }
     return ERROR_INVALID;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when call curl easy handler, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when call curl easy handler, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
 OMAF_STATUS OmafCurlChecker::close() noexcept {
   try {
-    LOG(INFO) << "To close the curl checker!" << std::endl;
+    OMAF_LOG(LOG_INFO, "To close the curl checker!\n");
     if (easy_curl_) {
       curl_easy_cleanup(easy_curl_);
       easy_curl_ = nullptr;
     }
     return ERROR_NONE;
   } catch (const std::exception &ex) {
-    LOG(ERROR) << "Exception when close curl easy hanlder, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when close curl easy hanlder, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }

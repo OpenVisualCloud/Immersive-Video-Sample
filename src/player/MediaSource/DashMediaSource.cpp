@@ -96,6 +96,7 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   pCtxDashStreaming->cache_path = renderConfig.cachePath.c_str();
   pCtxDashStreaming->source_type = MultiResSource;
   pCtxDashStreaming->enable_extractor = renderConfig.enableExtractor;
+  pCtxDashStreaming->log_callback = NULL;
 
   // init the omaf params
   memset(&pCtxDashStreaming->omaf_params, 0, sizeof(pCtxDashStreaming->omaf_params));

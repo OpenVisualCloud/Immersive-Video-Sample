@@ -33,7 +33,7 @@
 
 #include <cstdlib>
 
-#include "../utils/GlogWrapper.h"
+//#include "../utils/GlogWrapper.h"
 #include "OmafDashAccessApi.h"
 #include "OmafDashSource.h"
 #include "OmafMediaSource.h"
@@ -118,7 +118,7 @@ Handler OmafAccess_Init(DashStreamingClient *pCtx) {
   if (omaf_params.max_decode_height > 0) {
     omaf_dash_params.max_decode_height_ = omaf_params.max_decode_height;
   }
-  LOG(INFO) << omaf_dash_params.to_string() << std::endl;
+  OMAF_LOG(LOG_INFO,"Dash parameter %s\n", omaf_dash_params.to_string().c_str());
   pSource->SetOmafDashParams(omaf_dash_params);
 
   return (Handler)((long)pSource);
@@ -132,7 +132,7 @@ int OmafAccess_OpenMedia(Handler hdl, DashStreamingClient *pCtx, bool enablePred
   OmafMediaSource *pSource = (OmafMediaSource *)hdl;
   pSource->SetLoop(false);
 
-  return pSource->OpenMedia(pCtx->media_url, pCtx->cache_path, pCtx->enable_extractor, enablePredictor,
+  return pSource->OpenMedia(pCtx->media_url, pCtx->cache_path, pCtx->log_callback, pCtx->enable_extractor, enablePredictor,
                             predictPluginName, libPath);
 }
 

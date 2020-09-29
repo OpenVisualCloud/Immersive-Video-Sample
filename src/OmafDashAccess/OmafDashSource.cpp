@@ -76,12 +76,12 @@ int OmafDashSource::SyncTime(std::string url) {
   std::size_t posf = url.find(":");
   std::size_t poss = url.find(":", posf + 1);
   if (poss == string::npos) {
-    LOG(ERROR) << "Failed to find IP port in baseURL!" << endl;
+    OMAF_LOG(LOG_ERROR, "Failed to find IP port in baseURL!\n");
     return ERROR_INVALID;
   }
   std::size_t pos = url.find("/", poss + 1);
   if (pos == string::npos) {
-    LOG(ERROR) << "Failed to find file prefix in baseURL!" << endl;
+    OMAF_LOG(LOG_ERROR, "Failed to find file prefix in baseURL!\n");
     return ERROR_INVALID;
   }
 
@@ -93,21 +93,26 @@ int OmafDashSource::SyncTime(std::string url) {
   string cmd = "sudo date --set=\"$(curl " + curlOption + " --head " + addr +
                " | grep \"Date:\" |sed 's/Date: [A-Z][a-z][a-z], //g'| sed 's/\r//')\"";
   int ret = system(cmd.c_str());
-  if (ret) LOG(WARNING) << "Please run as root user!" << endl;
+  if (ret) OMAF_LOG(LOG_WARNING, "Please run as root user!\n");
 
   return ret;
 }
 
-int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enableExtractor, bool enablePredictor,
-                              std::string predictPluginName, std::string libPath) {
+int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* externalLog, bool enableExtractor,
+                              bool enablePredictor, std::string predictPluginName, std::string libPath) {
+  if (externalLog)
+    logCallBack = (LogFunction)externalLog;
+  else
+    logCallBack = GlogFunction;
+
   DIR* dir = opendir(cacheDir.c_str());
   if (dir) {
     closedir(dir);
   } else {
-    LOG(INFO) << "Failed to open the cache path: " << cacheDir << " , create a folder with this path!" << endl;
+    OMAF_LOG(LOG_INFO, "Failed to open the cache path: %s, create a folder with this path!\n", cacheDir.c_str());
     int checkdir = mkdir(cacheDir.c_str(), 0777);
     if (checkdir) {
-      LOG(ERROR) << "Uable to create cache path: " << cacheDir << endl;
+      OMAF_LOG(LOG_ERROR, "Uable to create cache path: %s\n", cacheDir.c_str());
       return ERROR_INVALID;
     }
   }
@@ -115,7 +120,7 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enable
   if (cacheDir.size() && cacheDir[cacheDir.size() - 1] == '/') {
     cacheDir = cacheDir.substr(0, cacheDir.size() - 1);
   }
-
+  OMAF_LOG(LOG_INFO, "Now open media !\n");
   const char* strHTTP = "http://";
   const char* strHTTPS = "https://";
   uint32_t httpLen = strlen(strHTTP);
@@ -148,12 +153,12 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enable
     }
     else
     {
-      LOG(ERROR) << "http source failed to create!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "http source failed to create!\n");
       return ERROR_NULL_PTR;
     }
     ret = http_source->start();
     if (ERROR_NONE != ret) {
-      LOG(ERROR) << "Failed to start the client for omaf dash segment http source, err=" << ret << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to start the client for omaf dash segment http source, err=%d\n", ret);
       return ret;
     }
 
@@ -183,21 +188,21 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enable
   } else if (projFmt == ProjectionFormat::PF_CUBEMAP) {
     projStr = "CubeMap";
   } else {
-    LOG(ERROR) << "Invalid projection format !" << std::endl;
+    OMAF_LOG(LOG_ERROR, "Invalid projection format !\n");
     return OMAF_ERROR_INVALID_PROJECTIONTYPE;
   }
-  LOG(INFO) << "The DASH Source is from  " << projStr.c_str() << " projection !" << std::endl;
+  OMAF_LOG(LOG_INFO, "The DASH Source is from %s projection !\n", projStr.c_str());
   if (!isLocalMedia) {
     // base URL should be "http://IP:port/FilePrefix/"
     std::size_t pos = mMPDinfo->baseURL[0].find(":");
     pos = mMPDinfo->baseURL[0].find(":", pos + 1);
     if (pos == string::npos) {
-      LOG(ERROR) << "Failed to find IP port in baseURL!" << endl;
+      OMAF_LOG(LOG_ERROR, "Failed to find IP port in baseURL!\n");
       return ERROR_INVALID;
     }
     pos = mMPDinfo->baseURL[0].find("/", pos + 1);
     if (pos == string::npos) {
-      LOG(ERROR) << "Failed to find file prefix in baseURL!" << endl;
+      OMAF_LOG(LOG_ERROR, "Failed to find file prefix in baseURL!\n");
       return ERROR_INVALID;
     }
 
@@ -227,14 +232,14 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enable
       params.mode_ = OmafDashMode::LATER_BINDING;
     }
 
-    LOG(INFO) << "media stream type=" << mMPDinfo->type << std::endl;
-    LOG(INFO) << "media stream duration=" << mMPDinfo->media_presentation_duration << std::endl;
-    LOG(INFO) << "media stream extractor=" << enableExtractor << std::endl;
+    OMAF_LOG(LOG_INFO, "media stream type=%s\n", mMPDinfo->type.c_str());
+    OMAF_LOG(LOG_INFO, "media stream duration=%lld\n", mMPDinfo->media_presentation_duration);
+    OMAF_LOG(LOG_INFO, "media stream extractor=%d\n", enableExtractor);
 
     OmafReaderManager::Ptr omaf_reader_mgr = std::make_shared<OmafReaderManager>(dash_client_, params);
     ret = omaf_reader_mgr->Initialize(this);
     if (ERROR_NONE != ret) {
-      LOG(ERROR) << "Failed to start the omaf reader manager, err=" << ret << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to start the omaf reader manager, err=%d\n", ret);
       return ret;
     }
     omaf_reader_mgr_ = std::move(omaf_reader_mgr);
@@ -254,13 +259,13 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, bool enable
   if (enableExtractor) {
     m_selector = new OmafExtractorTracksSelector();
     if (!m_selector) {
-      LOG(ERROR) << "Failed to create extractor tracks selector !" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to create extractor tracks selector !\n");
       return ERROR_NULL_PTR;
     }
   } else {
     m_selector = new OmafTileTracksSelector();
     if (!m_selector) {
-      LOG(ERROR) << "Failed to create tile tracks selector !" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to create tile tracks selector !\n");
       return ERROR_NULL_PTR;
     }
   }
@@ -344,8 +349,7 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
           if (remainSize > 0)  // if there exit remaining data in previous Extractor, then need to pop up them all.
           {
             trackNumber = mPreExtractorID;
-            LOG(INFO) << "Remaining data in previous track id have to be got! remainSize is " << remainSize
-                      << std::endl;
+            OMAF_LOG(LOG_INFO, "Remaining data in previous track id have to be got! remainSize is %lld\n", remainSize);
           } else  // if there is no data in previous track, then fetch data in current track.
           {
             mPreExtractorID = currentExtractorID;
@@ -361,7 +365,7 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
     std::map<int, OmafAdaptationSet*> mapAS = pStream->GetMediaAdaptationSet();
     // std::map<int, OmafAdaptationSet*> mapSelectedAS = pStream->GetSelectedTileTracks();
     if (mapAS.size() == 1) {
-      LOG(INFO) << "There is only one tile for the video stream !" << endl;
+      OMAF_LOG(LOG_INFO, "There is only one tile for the video stream !\n");
       for (auto as_it = mapAS.begin(); as_it != mapAS.end(); as_it++) {
         OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
         // int ret = READERMANAGER::GetInstance()->GetNextFrame(pAS->GetTrackNumber(), pkt, needParams);
@@ -372,7 +376,7 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
       std::list<MediaPacket*> mergedPackets;
       pStream->SetNeedVideoParams(needParams);
       mergedPackets = pStream->GetOutTilesMergedPackets();
-      // LOG(INFO) << " merged packets has the size of " << mergedPackets.size() << std::endl;
+      // OMAF_LOG(LOG_INFO, " merged packets has the size of %lld\n", mergedPackets.size());
       std::list<MediaPacket*>::iterator itPacket;
       for (itPacket = mergedPackets.begin(); itPacket != mergedPackets.end(); itPacket++) {
         MediaPacket* onePacket = *itPacket;
@@ -484,12 +488,12 @@ int OmafDashSource::TimedDownloadSegment(bool bFirst) {
     }
     pStream->DownloadSegments();
   }
-  LOG(INFO) << "Start to download segments and id is "<< dcount++ << endl;
+  OMAF_LOG(LOG_INFO, "Start to download segments and id is %d\n", dcount++);
 
 #if 0
   std::unique_ptr<OmafDashSegmentClient::PerfStatistics> perf = dash_client_->statistics();
   if (perf) {
-    LOG(INFO) << perf->to_string() << std::endl;
+    OMAF_LOG(LOG_INFO, perf->to_string());
   }
 #endif
   return ERROR_NONE;
@@ -632,7 +636,7 @@ void OmafDashSource::thread_dynamic() {
     if (current_wait_time > wait_time)
     {
       SetStatus(STATUS_STOPPED);
-      LOG(ERROR) << " Time out for waiting init segment parse! " << endl;
+      OMAF_LOG(LOG_ERROR, " Time out for waiting init segment parse!\n");
       return;
     }
     isInitSegParsed = omaf_reader_mgr_->IsInitSegmentsParsed();
@@ -712,7 +716,7 @@ void OmafDashSource::thread_static() {
     if (current_wait_time > wait_time)
     {
       SetStatus(STATUS_STOPPED);
-      LOG(ERROR) << " Time out for waiting init segment parse! " << endl;
+      OMAF_LOG(LOG_ERROR, " Time out for waiting init segment parse!\n");
       return;
     }
     isInitSegParsed = omaf_reader_mgr_->IsInitSegmentsParsed();

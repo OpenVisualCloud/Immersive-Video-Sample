@@ -118,7 +118,7 @@ int OmafAdaptationSet::Initialize(AdaptationSetElement* pAdaptationSet) {
             return OMAF_ERROR_NULL_PTR;
         if (NULL == mSRD)
         {
-          LOG(ERROR) << " SRD information is invalid! " << std::endl;
+          OMAF_LOG(LOG_ERROR, " SRD information is invalid!\n");
           return OMAF_ERROR_NULL_PTR;
         }
         mTileInfo->x = mSRD->get_X();
@@ -195,7 +195,7 @@ int OmafAdaptationSet::LoadLocalInitSegment() {
 
   SegmentElement* seg = mRepresentation->GetSegment();
   if (nullptr == seg) {
-    LOG(ERROR) << "Create Initial SegmentElement for AdaptationSet:" << this->mID << " failed" << endl;
+    OMAF_LOG(LOG_ERROR, "Create Initial SegmentElement for AdaptationSet: %d failed\n", this->mID);
     return ERROR_NULL_PTR;
   }
 
@@ -210,11 +210,11 @@ int OmafAdaptationSet::LoadLocalInitSegment() {
   mInitSegment = std::make_shared<OmafSegment>(params, mSegNum, true);
 #endif
   if (nullptr == mInitSegment) {
-    LOG(ERROR) << "New Initial OmafSegment for AdaptationSet:" << this->mID << " failed" << endl;
+    OMAF_LOG(LOG_ERROR, "New Initial OmafSegment for AdaptationSet: %d failed\n", this->mID);
     return ERROR_NULL_PTR;
   }
 
-  LOG(INFO) << "Load Initial OmafSegment for AdaptationSet " << this->mID << endl;
+  OMAF_LOG(LOG_INFO, "Load Initial OmafSegment for AdaptationSet %d\n", this->mID );
 
   return ret;
 }
@@ -231,7 +231,7 @@ int OmafAdaptationSet::LoadLocalSegment() {
   SegmentElement* seg = mRepresentation->GetSegment();
 
   if (nullptr == seg) {
-    LOG(ERROR) << "Create Initial SegmentElement for AdaptationSet:" << this->mID << " failed" << endl;
+    OMAF_LOG(LOG_ERROR, "Create Initial SegmentElement for AdaptationSet: %d failed\n", this->mID);
     return ERROR_NULL_PTR;
   }
 
@@ -262,7 +262,7 @@ int OmafAdaptationSet::LoadLocalSegment() {
     srdInfo.height = mSRD->get_H();
     pSegment->SetSRDInfo(srdInfo);
   }
-  LOG(INFO) << "Load OmafSegment for AdaptationSet " << this->mID << endl;
+  OMAF_LOG(LOG_INFO, "Load OmafSegment for AdaptationSet %d\n", this->mID );
 
   mSegments.push_back(std::move(pSegment));
 
@@ -271,8 +271,7 @@ int OmafAdaptationSet::LoadLocalSegment() {
   return ret;
   }
   else {
-    LOG(ERROR) << "Create OmafSegment for AdaptationSet: " << this->mID << " Number: " << mActiveSegNum << " failed"
-               << endl;
+    OMAF_LOG(LOG_ERROR, "Create OmafSegment for AdaptationSet: %d Number: %d failed\n", this->mID, mActiveSegNum);
 
     return ERROR_NULL_PTR;
   }
@@ -286,7 +285,7 @@ int OmafAdaptationSet::LoadAssignedInitSegment(std::string assignedSegment) {
 
   OmafSegment::Ptr initSeg = GetInitSegment();
   if (!initSeg) {
-    LOG(ERROR) << "Failed to get local init segment" << endl;
+    OMAF_LOG(LOG_ERROR, "Failed to get local init segment\n");
     return ERROR_NOT_FOUND;
   }
 
@@ -300,19 +299,19 @@ OmafSegment::Ptr OmafAdaptationSet::LoadAssignedSegment(std::string assignedSegm
   int ret = ERROR_NONE;
   ret = LoadLocalSegment();
   if (ret) {
-    LOG(ERROR) << "Failed to load local segment " << endl;
+    OMAF_LOG(LOG_ERROR, "Failed to load local segment\n");
     return nullptr;
   }
 
   OmafSegment::Ptr newSeg = GetLocalNextSegment();
   if (!newSeg) {
-    LOG(ERROR) << "Failed to get local segment" << endl;
+    OMAF_LOG(LOG_ERROR, "Failed to get local segment\n");
     return nullptr;
   }
 
   OmafSegment::Ptr initSeg = GetInitSegment();
   if (!initSeg) {
-    LOG(ERROR) << "Failed to get local init segment" << endl;
+    OMAF_LOG(LOG_ERROR, "Failed to get local init segment\n");
     return nullptr;
   }
 
@@ -328,13 +327,13 @@ int OmafAdaptationSet::DownloadInitializeSegment() {
   int ret = ERROR_NONE;
 
   if (omaf_reader_mgr_ == nullptr) {
-    LOG(ERROR) << "The omaf reader manager is empty!" << std::endl;
+    OMAF_LOG(LOG_ERROR, "The omaf reader manager is empty!\n");
     return ERROR_NULL_PTR;
   }
 
   SegmentElement* seg = mRepresentation->GetSegment();
   if (nullptr == seg) {
-    LOG(ERROR) << "Create Initial SegmentElement for AdaptationSet:" << this->mID << " failed" << endl;
+    OMAF_LOG(LOG_ERROR, "Create Initial SegmentElement for AdaptationSet: %d failed\n", this->mID);
     return ERROR_NULL_PTR;
   }
 
@@ -344,8 +343,7 @@ int OmafAdaptationSet::DownloadInitializeSegment() {
 
     if( ERROR_NONE != ret ){
         SAFE_DELETE(seg);
-        LOG(ERROR) << "Fail to Init OmafSegment Download for AdaptationSet:" << this->mID
-                   << endl;
+        OMAF_LOG(LOG_ERROR, "Fail to Init OmafSegment Download for AdaptationSet: %d\n", this->mID);
     }
     mInitSegment = new OmafSegment(seg, mSegNum, true);
 #else
@@ -360,7 +358,7 @@ int OmafAdaptationSet::DownloadInitializeSegment() {
 #endif
 
   if (nullptr == mInitSegment) {
-    LOG(ERROR) << "Failed to create Initial OmafSegment for AdaptationSet:" << this->mID << endl;
+    OMAF_LOG(LOG_ERROR, "Failed to create Initial OmafSegment for AdaptationSet: %d\n", this->mID);
     return ERROR_NULL_PTR;
   }
 
@@ -368,10 +366,10 @@ int OmafAdaptationSet::DownloadInitializeSegment() {
 
   if (ERROR_NONE != ret) {
     mInitSegment.reset();
-    LOG(ERROR) << "Fail to Download Initial OmafSegment for AdaptationSet:" << this->mID << endl;
+    OMAF_LOG(LOG_ERROR, "Fail to Download Initial OmafSegment for AdaptationSet: %d\n", this->mID);
   }
 
-  VLOG(VLOG_TRACE) << "Download Initial OmafSegment for AdaptationSet " << this->mID << endl;
+  OMAF_LOG(LOG_INFO, "Download Initial OmafSegment for AdaptationSet %d\n", this->mID);
 
   return ret;
 }
@@ -384,17 +382,17 @@ int OmafAdaptationSet::DownloadSegment() {
     mSegNum++;
     return ret;
   }
-  VLOG(VLOG_TRACE) << "Download OmafSegment for AdaptationSet: " << this->mID << endl;
+  OMAF_LOG(LOG_INFO, "Download OmafSegment for AdaptationSet: %d\n", this->mID);
 
   if (omaf_reader_mgr_ == nullptr) {
-    LOG(ERROR) << "The omaf reader manager is empty!" << std::endl;
+    OMAF_LOG(LOG_ERROR, "The omaf reader manager is empty!\n");
     return ERROR_NULL_PTR;
   }
 
   SegmentElement* seg = mRepresentation->GetSegment();
 
   if (nullptr == seg) {
-    LOG(ERROR) << "Create Initial SegmentElement for AdaptationSet:" << this->mID << " failed" << endl;
+    OMAF_LOG(LOG_ERROR, "Create Initial SegmentElement for AdaptationSet: %d failed\n", this->mID);
     return ERROR_NULL_PTR;
   }
 
@@ -404,8 +402,7 @@ int OmafAdaptationSet::DownloadSegment() {
 
   if (ERROR_NONE != ret) {
     SAFE_DELETE(seg);
-    LOG(ERROR) << "Fail to Init OmafSegment Download for AdaptationSet:"
-               << this->mID << endl;
+    OMAF_LOG(LOG_ERROR, "Fail to Init OmafSegment Download for AdaptationSet: %d\n", this->mID);
   }
 
   OmafSegment* pSegment = new OmafSegment(seg, mSegNum, false, mReEnable);
@@ -440,7 +437,7 @@ int OmafAdaptationSet::DownloadSegment() {
   ret = omaf_reader_mgr_->OpenSegment(std::move(pSegment), IsExtractor());
 
   if (ERROR_NONE != ret) {
-    LOG(ERROR) << "Fail to Download OmafSegment for AdaptationSet:" << this->mID << endl;
+    OMAF_LOG(LOG_ERROR, "Fail to Download OmafSegment for AdaptationSet: %d\n", this->mID);
   }
 
   //  pthread_mutex_lock(&mMutex);
@@ -456,8 +453,7 @@ int OmafAdaptationSet::DownloadSegment() {
   return ret;
   }
   else {
-    LOG(ERROR) << "Create OmafSegment for AdaptationSet: " << this->mID << " Number: " << mActiveSegNum << " failed"
-               << endl;
+    OMAF_LOG(LOG_ERROR, "Create OmafSegment for AdaptationSet: %d Number: %d failed\n", this->mID, mActiveSegNum);
 
     return ERROR_NULL_PTR;
   }
@@ -467,7 +463,7 @@ std::string OmafAdaptationSet::GetUrl(const SegmentSyncNode& node) const {
   SegmentElement* seg = mRepresentation->GetSegment();
 
   if (nullptr == seg) {
-    LOG(ERROR) << "Create Initial SegmentElement for AdaptationSet:" << this->mID << " failed" << endl;
+    OMAF_LOG(LOG_ERROR, "Create Initial SegmentElement for AdaptationSet: %d failed\n", this->mID);
     return std::string();
   }
 
@@ -493,15 +489,13 @@ int OmafAdaptationSet::UpdateStartNumberByTime(uint64_t nAvailableStartTime) {
   current *= 1000;
 
   if (current < nAvailableStartTime) {
-    LOG(ERROR) << "Unreasonable current time " << current << "which is earlier than available time "
-               << nAvailableStartTime;
+    OMAF_LOG(LOG_ERROR, "Unreasonable current time %lld which is earlier than available time %lld\n", current, nAvailableStartTime);
 
     return -1;
   }
   mActiveSegNum = (current - nAvailableStartTime) / (mSegmentDuration * 1000) + mStartNumber;
 
-  LOG(INFO) << "Current time=" << current << " and available time=" << nAvailableStartTime
-            << ". Set start segment index=" << mActiveSegNum << endl;
+  OMAF_LOG(LOG_INFO, "Current time= %lld and available time= %lld. Set start segment index= %d\n", current, nAvailableStartTime, mActiveSegNum);
   return mActiveSegNum;
 }
 

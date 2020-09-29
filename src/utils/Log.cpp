@@ -123,7 +123,7 @@ void GlogSupport2Params(LogLevel logLevel, const char* sourceFile, uint64_t line
     {
         param0.int64Param = va_arg(params, int64_t);
     }
-    else if (strncmp(type0, "double", 5) == 0)
+    else if (strncmp(type0, "double", 6) == 0)
     {
         param0.doubleParam = va_arg(params, double);
     }
@@ -152,7 +152,7 @@ void GlogSupport2Params(LogLevel logLevel, const char* sourceFile, uint64_t line
     {
         param1.int64Param = va_arg(params, int64_t);
     }
-    else if (strncmp(type1, "double", 5) == 0)
+    else if (strncmp(type1, "double", 6) == 0)
     {
         param1.doubleParam = va_arg(params, double);
     }
@@ -721,7 +721,7 @@ void GlogFunction(LogLevel logLevel, const char* sourceFile, uint64_t line, cons
         }
         default:
         {
-            LOG(ERROR) << "Invalid log message format !" << std::endl;
+            LOG(ERROR) << "Invalid log message format " << fmt << "!" << std::endl;
         }
     }
 

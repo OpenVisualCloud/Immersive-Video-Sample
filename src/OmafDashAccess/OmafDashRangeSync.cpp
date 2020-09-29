@@ -74,16 +74,14 @@ int64_t OmafDashRangeSyncImpl::getStartSegment() {
 void OmafDashRangeSyncImpl::notifyRangeChange(SyncRange range) {
   int64_t number = adaptation_set_.GetSegmentNumber();
   if (number < range.left_) {
-    LOG(INFO) << "slower than server, reset segment number to left range [" << range.left_ << ", " << range.right_
-              << "], segment number=" << number << std::endl;
+    OMAF_LOG(LOG_INFO, "slower than server, reset segment number to left range [%ld, %ld], segment number=%ld\n", range.left_, range.right_,  number);
     if (sync_cb_) {
       SegmentSyncNode node;
       node.segment_value.number_ = range.left_;
       sync_cb_(node);
     }
   } else if (number > range.right_) {
-    LOG(INFO) << "faster than server, reset segment number to right range [" << range.left_ << ", " << range.right_
-              << "], segment number=" << number << std::endl;
+    OMAF_LOG(LOG_INFO, "faster than server, reset segment number to right range [%ld, %ld], segment number=%ld\n", range.left_, range.right_, number);
     if (sync_cb_) {
       SegmentSyncNode node;
       node.segment_value.number_ = range.right_;
@@ -99,7 +97,7 @@ int OmafDashSourceSyncHelper::start(CurlParams params) noexcept {
 
     ret = checker_->init(params);
     if (ERROR_NONE != ret) {
-      LOG(ERROR) << "Failed to init the curl checker with error: " << ret << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to init the curl checker with error: %d\n", ret);
       return ret;
     }
     bsyncing_ = true;
@@ -107,7 +105,7 @@ int OmafDashSourceSyncHelper::start(CurlParams params) noexcept {
 
     return ERROR_NONE;
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Exception when start the dash source sync, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when start the dash source sync, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
@@ -121,7 +119,7 @@ int OmafDashSourceSyncHelper::stop() noexcept {
     }
     return ERROR_NONE;
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Exception when stop the dash source sync, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception when stop the dash source sync, ex: %s\n", ex.what());
     return ERROR_INVALID;
   }
 }
@@ -147,12 +145,12 @@ void OmafDashSourceSyncHelper::threadRunner() noexcept {
         if (range.get() == nullptr) {
           range.reset(new SyncRange());
           if (!initRange(syncer, range)) {
-            LOG(ERROR) << "Failed to initialize the sync range!" << std::endl;
+            OMAF_LOG(LOG_ERROR, "Failed to initialize the sync range!\n" );
             range.reset();
           }
         } else {
           if (!updateRange(syncer, range)) {
-            LOG(ERROR) << "Failed to update the sync range!" << std::endl;
+            OMAF_LOG(LOG_ERROR, "Failed to update the sync range!\n");
             range.reset();
           }
         }
@@ -172,14 +170,14 @@ void OmafDashSourceSyncHelper::threadRunner() noexcept {
       }
     }  // end thread while(bsyncing_)
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Exception in the dash source sync runner, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception in the dash source sync runner, ex: %s\n", ex.what());
   }
 }
 
 bool OmafDashSourceSyncHelper::initRange(OmafDashRangeSync::Ptr syncer, std::shared_ptr<SyncRange> range) noexcept {
   try {
     SegmentSyncNode syncnode = syncer->getSegmentNode();
-    LOG(INFO) << "Calling initRange from start point:" << syncnode.segment_value.number_ << std::endl;
+    OMAF_LOG(LOG_INFO, "Calling initRange from start point: %ld\n", syncnode.segment_value.number_);
     int64_t left_check_start = syncnode.segment_value.number_;
     int64_t right_check_start = syncnode.segment_value.number_;
     int32_t check_times = 0;
@@ -214,7 +212,7 @@ bool OmafDashSourceSyncHelper::initRange(OmafDashRangeSync::Ptr syncer, std::sha
 
     return bfind;
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Exception create the range, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception create the range, ex: %s\n", ex.what());
     return false;
   }
 }
@@ -234,7 +232,7 @@ bool OmafDashSourceSyncHelper::findRange(OmafDashRangeSync::Ptr syncer, int64_t 
         }
       }
       std::string url = syncer->getUrl(syncnode);
-      LOG(INFO) << "To check the url:" << url << std::endl;
+      OMAF_LOG(LOG_INFO, "To check the url: %s\n", url.c_str());
       if (checker_->check(url)) {
         point = syncnode.segment_value.number_;
         return true;
@@ -243,7 +241,7 @@ bool OmafDashSourceSyncHelper::findRange(OmafDashRangeSync::Ptr syncer, int64_t 
     }
     return false;
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Exception create the range, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception create the range, ex: %s\n", ex.what());
     return false;
   }
 }
@@ -267,7 +265,7 @@ bool OmafDashSourceSyncHelper::findRangeEdge(OmafDashRangeSync::Ptr syncer, int6
       index++;
     }
     if (!pre_valid) {
-      LOG(ERROR) << "Failed to find the range right edge!" << std::endl;
+      OMAF_LOG(LOG_ERROR, "Failed to find the range right edge!\n");
       return false;
     }
 
@@ -288,7 +286,7 @@ bool OmafDashSourceSyncHelper::findRangeEdge(OmafDashRangeSync::Ptr syncer, int6
     range->left_ = point + index;
     return true;
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Exception create the range, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception create the range, ex: %s\n", ex.what());
     return false;
   }
 }
@@ -323,7 +321,7 @@ bool OmafDashSourceSyncHelper::updateRange(OmafDashRangeSync::Ptr syncer, std::s
     range->right_ = range->right_ + index - 1;
     return true;
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Exception create the range, ex: " << ex.what() << std::endl;
+    OMAF_LOG(LOG_ERROR, "Exception create the range, ex: %s\n", ex.what());
     return false;
   }
 }

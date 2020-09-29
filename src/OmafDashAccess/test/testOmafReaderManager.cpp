@@ -66,7 +66,7 @@ class OmafReaderManagerTest : public testing::Test {
 
     std::string mpdUrl = "./segs_for_readertest/Test.mpd";
 
-    ret = m_source->OpenMedia(mpdUrl, "./cache", true, false);
+    ret = m_source->OpenMedia(mpdUrl, "./cache", NULL, true, false);
     if (ret) {
       printf("Failed to open media \n");
       return;
@@ -153,7 +153,7 @@ TEST_F(OmafReaderManagerTest, ReaderTrackSegments) {
       EXPECT_TRUE(initSeg != NULL);
 
       initSeg->SetSegSize(segSize);
-      LOG(INFO) << "To open local OpenLocalInitSegment--1!" << std::endl;
+      OMAF_LOG(LOG_INFO, "To open local OpenLocalInitSegment--1!\n");
       ret = m_readerMgr->OpenLocalInitSegment(initSeg);
       EXPECT_TRUE(ret == ERROR_NONE);
     }
@@ -187,7 +187,7 @@ TEST_F(OmafReaderManagerTest, ReaderTrackSegments) {
 
       initSeg->SetSegSize(segSize);
 
-      LOG(INFO) << "To open local OpenLocalInitSegment--2!" << std::endl;
+      OMAF_LOG(LOG_INFO, "To open local OpenLocalInitSegment--2!\n");
       ret = m_readerMgr->OpenLocalInitSegment(initSeg);
       EXPECT_TRUE(ret == ERROR_NONE);
     }
@@ -228,7 +228,7 @@ TEST_F(OmafReaderManagerTest, ReaderTrackSegments) {
         if (!newSeg) break;
 
         newSeg->SetSegSize(segSize);
-        LOG(INFO) << "To open local segment--1!" << std::endl;
+        OMAF_LOG(LOG_INFO, "To open local segment--1!\n");
         ret = m_readerMgr->OpenLocalSegment(newSeg, pAS->IsExtractor());
         EXPECT_TRUE(ret == ERROR_NONE);
       }
@@ -265,7 +265,7 @@ TEST_F(OmafReaderManagerTest, ReaderTrackSegments) {
         if (!newSeg) break;
 
         newSeg->SetSegSize(segSize);
-        LOG(INFO) << "To open local segment--2!" << std::endl;
+        OMAF_LOG(LOG_INFO, "To open local segment--2!\n");
         ret = m_readerMgr->OpenLocalSegment(newSeg, extractor->IsExtractor());
         EXPECT_TRUE(ret == ERROR_NONE);
       }
@@ -291,7 +291,7 @@ TEST_F(OmafReaderManagerTest, ReaderTrackSegments) {
       }
     }
 
-    LOG(INFO) << "Packet size=" << pkts.size() << std::endl;
+    OMAF_LOG(LOG_INFO, "Packet size=%lld\n", pkts.size());
     EXPECT_TRUE(pkts.size() == 100);
 
     for (auto itPacket = pkts.begin(); itPacket != pkts.end(); itPacket++) {

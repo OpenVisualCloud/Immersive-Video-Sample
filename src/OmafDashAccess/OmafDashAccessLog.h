@@ -22,33 +22,29 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
-
  */
 
 //!
-//! \file:   ViewportElement.cpp
-//! \brief:  Viewport element class
+//! \file:   OmafDashAccessLog.h
+//! \brief:  Include the log function declaration
+//!
+//! Created on April 30, 2019, 6:04 AM
 //!
 
-#include "ViewportElement.h"
+#ifndef _DASHACCESSLOG_H_
+#define _DASHACCESSLOG_H_
 
-VCD_OMAF_BEGIN
+#include "../utils/Log.h"
 
-ViewportElement::~ViewportElement()
-{
-}
+//global logging callback function
+extern LogFunction logCallBack;
 
-ODStatus ViewportElement::ParseSchemeIdUriAndValue()
-{
-    if(GetSchemeIdUri() == SCHEMEIDURI_VIEWPORT)
-    {
-        if(0 == GetValue().length())
-            OMAF_LOG(LOG_WARNING, "SRD doesn't have value.\n");
+#define FILE_NAME(x) (strrchr(x, '/') ? strrchr(x, '/')+1:x)
 
-        //TBD
-    }
+#define PRINT_LOG(logLevel, source, line, fmt, args...)   \
+    logCallBack(logLevel, source, line, fmt, ##args);    \
 
-    return OD_STATUS_SUCCESS;
-}
+#define OMAF_LOG(logLevel, fmt, args...)                             \
+    PRINT_LOG(logLevel, FILE_NAME(__FILE__), __LINE__, fmt, ##args)  \
 
-VCD_OMAF_END;
+#endif /* _DASHACCESSLOG_H_ */
