@@ -354,6 +354,7 @@ int32_t WebRTCMediaSource::RenderFrame(AVFrame *avFrame, RegionWisePacking *rwpk
 WebRTCMediaSource::WebRTCMediaSource()
     : m_yaw(0)
     , m_pitch(0)
+    , m_rtcp_feedback(nullptr)
     , m_ready(false)
 {
     LOG(INFO) << __FUNCTION__ << std::endl;
@@ -449,6 +450,7 @@ RenderStatus WebRTCMediaSource::Initialize(struct RenderConfig renderConfig, Ren
 
     owt::base::GlobalConfiguration::SetEncodedVideoFrameEnabled(true);
     unique_ptr<owt::base::VideoDecoderInterface> decoder(new WebRTCFFmpegVideoDecoder(this));
+    m_rtcp_feedback = decoder.get();
     owt::base::GlobalConfiguration::SetCustomizedVideoDecoderEnabled(std::move(decoder));
 
     owt::conference::ConferenceClientConfiguration configuration;
@@ -542,7 +544,9 @@ RenderStatus WebRTCMediaSource::ChangeViewport(float yaw, float pitch)
     m_pitch = pitch;
 
     int yawValue = m_yaw + 180;
-    int pitchValue = m_pitch;
+    int pitchValue = m_pitch + 90;
+
+#if 0 // http feedback
     int value = (pitchValue << 16) | (yawValue & 0xffff);
 
     std::string path = "/media/video/fov";
@@ -550,6 +554,11 @@ RenderStatus WebRTCMediaSource::ChangeViewport(float yaw, float pitch)
     std::string content = "[{\"op\":\"replace\",\"path\":\"" + path + "\",\"value\":" + to_string(value) + "}]";
 
     std::string response = CHttp::http_patch(url.c_str(), content);
+#endif
+
+    if (m_rtcp_feedback) {
+      m_rtcp_feedback->SendFOVFeedback(yawValue, pitchValue);
+    }
 
     return RENDER_STATUS_OK;
 }
@@ -609,6 +618,7 @@ WebRTCFFmpegVideoDecoder::WebRTCFFmpegVideoDecoder(WebRTCVideoRenderer *renderer
     , m_renderer(renderer)
     , m_statistics_frames(0)
     , m_statistics_last_timestamp(0)
+    , m_ref_count(0)
 {
     LOG(INFO) << "avcodec version: "
         << ((avcodec_version() >> 16) & 0xff) << "."
@@ -622,8 +632,9 @@ WebRTCFFmpegVideoDecoder::WebRTCFFmpegVideoDecoder(WebRTCVideoRenderer *renderer
 
 owt::base::VideoDecoderInterface* WebRTCFFmpegVideoDecoder::Copy()
 {
-    WebRTCFFmpegVideoDecoder* decoder = new WebRTCFFmpegVideoDecoder(m_renderer);
-    return decoder;
+    assert(m_ref_count == 0);
+    m_ref_count++;
+    return this;
 }
 
 WebRTCFFmpegVideoDecoder::~WebRTCFFmpegVideoDecoder()
@@ -649,6 +660,8 @@ bool WebRTCFFmpegVideoDecoder::InitDecodeContext(owt::base::VideoCodec video_cod
 bool WebRTCFFmpegVideoDecoder::Release()
 {
     LOG(INFO) << __FUNCTION__ << std::endl;
+
+    m_ref_count--;
     return true;
 }
 

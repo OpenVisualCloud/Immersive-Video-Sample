@@ -259,6 +259,7 @@ RUN git clone -b ${OWT_BRANCH} ${OWTSERVER_REPO} && \
     git clone -b 59-server ${WEBRTC_REPO} src && cd src && \
     git reset --hard ${WEBRTC_COMMIT} && \
     ./tools-woogeen/install.sh && \
+    patch -p1 < ${SERVER_PATH}/scripts/patches/0001-Implement-RtcpFOVObserver.patch && \
     ./tools-woogeen/build.sh && \
 
     # Get js client sdk for owt
