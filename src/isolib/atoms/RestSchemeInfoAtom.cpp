@@ -401,7 +401,7 @@ void RestrictedSchemeInfoAtom::FromStream(Stream& str)
                 }
                 else
                 {
-                    ISO_LOG(LOG_WARNING, "Skipping unsupported scheme type '%s'\n", schemeType);
+                    ISO_LOG(LOG_WARNING, "Skipping unsupported scheme type '%s'\n", schemeType.c_str());
                     break;
                 }
             }

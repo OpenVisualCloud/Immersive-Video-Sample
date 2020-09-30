@@ -474,7 +474,7 @@ int32_t Mp4Reader::ParseInitSeg(StreamIO* strIO, uint32_t initSegId)
                 }
                 else
                 {
-                    ISO_LOG(LOG_WARNING, "Skipping root level box of unknown type '%s'\n", boxType);
+                    ISO_LOG(LOG_WARNING, "Skipping root level box of unknown type '%s'\n", boxType.c_str());
 					error = SkipAtom(io);
                 }
             }
@@ -674,7 +674,7 @@ int32_t Mp4Reader::ParseSeg(StreamIO* strIO,
                 }
                 else
                 {
-                    ISO_LOG(LOG_WARNING, "Skipping root level box of unknown type '%s'\n", boxType);
+                    ISO_LOG(LOG_WARNING, "Skipping root level box of unknown type '%s'\n", boxType.c_str());
 					error = SkipAtom(io);
                 }
             }
@@ -807,7 +807,7 @@ int32_t Mp4Reader::ParseSegIndex(StreamIO* strIO,
                 }
                 else
                 {
-                    ISO_LOG(LOG_WARNING, "Skipping root level box of unknown type '%s\n'", boxType);
+                    ISO_LOG(LOG_WARNING, "Skipping root level box of unknown type '%s\n'", boxType.c_str());
 					error = SkipAtom(io);
                 }
             }
@@ -1020,7 +1020,7 @@ int32_t Mp4Reader::ReadStream(InitSegmentId initSegId, SegmentId segIndex)
             }
             else
             {
-				ISO_LOG(LOG_WARNING, "Skipping root level box of unknown type '%s'\n", boxType);
+				ISO_LOG(LOG_WARNING, "Skipping root level box of unknown type '%s'\n", boxType.c_str());
                 error = SkipAtom(io);
             }
         }

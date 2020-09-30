@@ -142,7 +142,7 @@ void SampleGroupDescriptionAtom::FromStream(Stream& str)
         }
         else
         {
-            ISO_LOG(LOG_WARNING, "Skipping an entry of SampleGroupDescriptionAtom of an unknown grouping type '%s'\n", m_groupType.GetString());
+            ISO_LOG(LOG_WARNING, "Skipping an entry of SampleGroupDescriptionAtom of an unknown grouping type '%s'\n", m_groupType.GetString().c_str());
         }
     }
 }

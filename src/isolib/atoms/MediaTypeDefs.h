@@ -78,12 +78,12 @@ namespace MediaTypeTool
 
             if (pType.empty())
             {
-                ISO_LOG(LOG_ERROR, "Failed to define media type, code_type not set %s\n", fileInfo);
+                ISO_LOG(LOG_ERROR, "Failed to define media type, code_type not set %s\n", fileInfo.c_str());
                 throw Exception();
             }
             else
             {
-                ISO_LOG(LOG_ERROR, "Failed to define media type for unsupported code_type '%s', %s\n", pType, fileInfo);
+                ISO_LOG(LOG_ERROR, "Failed to define media type for unsupported code_type '%s', %s\n", pType.c_str(), fileInfo.c_str());
                 throw Exception();
             }
         }
