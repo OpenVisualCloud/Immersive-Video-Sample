@@ -188,6 +188,8 @@ private:
     std::deque<std::shared_ptr<WebRTCVideoFrame>> m_webrtc_render_frame_queue;
     std::deque<std::shared_ptr<WebRTCVideoFrame>> m_free_queue;
 
+    owt::base::VideoDecoderInterface *m_rtcp_feedback;
+
     bool m_ready;
     static uint32_t fullwidth,fullheight;
     uint32_t lowwidth,lowheight,packedwidth,packedheight,frameRate,frameNum;
@@ -246,6 +248,8 @@ private:
 
     uint32_t m_statistics_frames;
     uint64_t m_statistics_last_timestamp;
+
+    int32_t m_ref_count;
 };
 
 VCD_NS_END;
