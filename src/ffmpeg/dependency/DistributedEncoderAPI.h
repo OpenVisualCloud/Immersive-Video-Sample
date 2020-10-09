@@ -266,7 +266,8 @@ typedef struct DISTRIBUTEDENCODERPARAM{
     DispatchType                type;               //!< task dispatch type
     SupplementalEnhancementInfo suppleEnhanceInfo;  //!< Supplemental Enhancement Information
     CodecAppOption              codecOption;        //!< decoder/encoder choice and the settings
-    bool                        glog_initialized;   //!< whether glog has been initialized
+    bool                        glogInitialized;    //!< whether glog has been initialized
+    void                        *logFunction;       //external log callback function pointer, NULL if external log is not used
 }DistributedEncoderParam;
 
 #ifdef __cplusplus
@@ -360,6 +361,19 @@ DEStatus DistributedEncoder_SetParam(DEHandle handle, uint32_t type, uint64_t pa
 //!         DE_STATUS_SUCCESS if success, else fail reason
 //!
 DEStatus DistributedEncoder_GetParam(DEHandle handle, ParamType type, void** param);
+
+//!
+//! \brief  Set the logcallback funciton
+//!
+//! \param  [in] deHandle
+//!         Distributed encoder library handle
+//! \param  [in] externalLog
+//!         The customized logging callback function pointer
+//!
+//! \return DEStatus
+//!         DE_STATUS_SUCCESS if success, else fail reason
+//!
+DEStatus DistributedEncoder_SetLogCallBack(void* deHandle, void* externalLog);
 
 //!
 //! \brief  Close all the connections and clean all resources
