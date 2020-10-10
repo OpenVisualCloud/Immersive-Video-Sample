@@ -1,6 +1,7 @@
 
 FROM centos:7.6.1810 AS build
 WORKDIR /home
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # COMMON BUILD TOOLS
 RUN yum install -y -q bzip2 make autoconf libtool git wget ca-certificates pkg-config gcc gcc-c++ bison flex patch epel-release yum-devel libcurl-devel zlib-devel;
@@ -19,7 +20,7 @@ ARG AUTOMAKE_VER=1.14
 ARG AUTOMAKE_REPO=https://ftp.gnu.org/pub/gnu/automake/automake-${AUTOMAKE_VER}.tar.xz
 RUN wget -O - ${AUTOMAKE_REPO} | tar xJ && \
     cd automake-${AUTOMAKE_VER} && \
-    ./configure --prefix=/usr --libdir=/usr/local/lib64 --disable-doc && \
+    ./configure --prefix=/usr --libdir=/usr/local/lib64 --disable-doc && \ 
     make -j8 && \
     make install
 
@@ -44,13 +45,35 @@ RUN  wget -O - ${YASM_REPO} | tar xz && \
      make -j8 && \
      make install
 
+# Build libnice
+ARG NICE_VER="0.1.4"
+ARG NICE_REPO=http://nice.freedesktop.org/releases/libnice-${NICE_VER}.tar.gz
+ARG LIBNICE_PATCH_VER="4.3.1"
+ARG LIBNICE_PATCH_REPO=https://github.com/open-webrtc-toolkit/owt-server/archive/v${LIBNICE_PATCH_VER}.tar.gz
+
+RUN yum install -y -q glib2-devel
+
+RUN wget -O - ${NICE_REPO} | tar xz && \
+    cd libnice-${NICE_VER} && \
+    wget -O - ${LIBNICE_PATCH_REPO} | tar xz  && \
+    patch -p1 < owt-server-${LIBNICE_PATCH_VER}/scripts/patches/libnice014-agentlock.patch && \
+    patch -p1 < owt-server-${LIBNICE_PATCH_VER}/scripts/patches/libnice014-agentlock-plus.patch && \
+    patch -p1 < owt-server-${LIBNICE_PATCH_VER}/scripts/patches/libnice014-removecandidate.patch && \
+    patch -p1 < owt-server-${LIBNICE_PATCH_VER}/scripts/patches/libnice014-keepalive.patch && \
+    patch -p1 < owt-server-${LIBNICE_PATCH_VER}/scripts/patches/libnice014-startcheck.patch && \
+    patch -p1 < owt-server-${LIBNICE_PATCH_VER}/scripts/patches/libnice014-closelock.patch && \
+    ./configure --prefix="/usr/local" --libdir=/usr/local/lib64 && \
+    make -s V= && \
+    make install
+
+
 # Build open ssl
-ARG OPENSSL_MAJOR_VER="1.0.2"
-ARG OPENSSL_MINOR_VER="t"
-ARG OPENSSL_REPO=http://www.openssl.org/source/old/${OPENSSL_MAJOR_VER}/openssl-${OPENSSL_MAJOR_VER}${OPENSSL_MINOR_VER}.tar.gz
+ARG OPENSSL_BASE_VER="1.0.2"
+ARG OPENSSL_VER="1.0.2t"
+ARG OPENSSL_REPO=http://www.openssl.org/source/old/${OPENSSL_BASE_VER}/openssl-${OPENSSL_VER}.tar.gz
 
 RUN wget -O - ${OPENSSL_REPO} | tar xz && \
-    cd openssl-${OPENSSL_MAJOR_VER}${OPENSSL_MINOR_VER} && \
+    cd openssl-${OPENSSL_VER} && \
     ./config no-ssl3 --prefix="/usr/local" -fPIC && \
     make depend && \
     make -s V=0  && \
@@ -126,11 +149,13 @@ RUN wget -O - ${FFMPEG_PATCHES_RELEASE_URL} | tar xz
 RUN yum install -y -q libass-devel freetype-devel zlib-devel openssl-devel
 
 RUN wget -O - ${FFMPEG_REPO} | tar xz && mv FFmpeg-${FFMPEG_VER} FFmpeg && \
-    cd FFmpeg  ;
+    cd FFmpeg ;
+
 # Compile FFmpeg
 RUN cd /home/FFmpeg && \
     export PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig" && \
     ./configure --prefix="/usr/local" --libdir=/usr/local/lib64 --enable-shared --disable-static --disable-libvpx --disable-vaapi --enable-libfreetype --enable-libfdk-aac  --enable-nonfree && \
+
     make -j8 && \
     make install && make install DESTDIR="/home/build"
 
@@ -143,7 +168,8 @@ RUN yum install -y -q ca-certificates wget xz-utils
 
 RUN wget ${NODE_REPO} && \
     tar xf node-${NODE_VER}-linux-x64.tar.xz && \
-    cp node-*/* /usr/local -rf && rm -rf node-*
+    cp node-*/* /usr/local -rf && \
+    rm -rf node-*
 
 # Fetch SVT-HEVC
 ARG SVT_HEVC_VER=v1.4.3
@@ -152,6 +178,7 @@ ARG SVT_HEVC_REPO=https://github.com/intel/SVT-HEVC
 RUN yum install -y -q patch centos-release-scl && \
     yum install -y -q devtoolset-7
 
+# hadolint ignore=SC1091
 RUN git clone ${SVT_HEVC_REPO} && \
     cd SVT-HEVC/Build/linux && \
     export PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig" && \
@@ -177,10 +204,8 @@ ARG OPENH264_BINARY=https://github.com/cisco/openh264/releases/download/v${OPENH
 ARG LICODE_COMMIT="8b4692c88f1fc24dedad66b4f40b1f3d804b50ca"
 ARG LICODE_REPO=https://github.com/lynckia/licode.git
 ARG LICODE_PATCH_REPO=https://github.com/open-webrtc-toolkit/owt-server/tree/master/scripts/patches/licode/
-ARG NICE_VER="0.1.4"
-ARG NICE_REPO=http://nice.freedesktop.org/releases/libnice-${NICE_VER}.tar.gz
-ARG SCVP_VER="v1.0.0"
-ARG SCVP_REPO=https://github.com/OpenVisualCloud/Immersive-Video-Sample.git
+ARG SCVP_VER="1.0.0"
+ARG SCVP_REPO=https://github.com/OpenVisualCloud/Immersive-Video-Sample/archive/v${SCVP_VER}.tar.gz
 ARG WEBRTC_REPO=https://github.com/open-webrtc-toolkit/owt-deps-webrtc.git
 ARG SERVER_PATH=/home/owt-server
 ARG OWT_SDK_REPO=https://github.com/open-webrtc-toolkit/owt-client-javascript.git
@@ -192,12 +217,12 @@ ARG WEBRTC_COMMIT="c2aa290cfe4f63d5bfbb6540122a5e6bf2783187"
 ARG FDKAAC_LIB=/home/build/usr/local/lib64
 RUN yum install -y -q python-devel glib2-devel boost-devel log4cxx-devel
 RUN yum install -y -q patch centos-release-scl devtoolset-7
-
+ENV PYTHONIOENCODING=UTF-8
 # Install 360scvp
+# hadolint ignore=SC1091
 RUN cd /home && \
-    git clone ${SCVP_REPO} && \
+    wget -O - ${SCVP_REPO} | tar xz && mv Immersive-Video-Sample-${SCVP_VER} Immersive-Video-Sample && \
     cd Immersive-Video-Sample/src/360SCVP && \
-    git checkout ${SCVP_VER} && \
     mkdir build && \
     cd build && \
     source /opt/rh/devtoolset-7/enable && \
@@ -209,13 +234,15 @@ RUN cd /home && \
 # 1. Clone OWT server source code
 # 2. Clone licode source code and patch
 # 3. Clone webrtc source code and patch
+
+# hadolint ignore=SC1091
 RUN git clone -b ${OWT_BRANCH} ${OWTSERVER_REPO} && \
     source /opt/rh/devtoolset-7/enable && \
 
     # Install node modules for owt
     npm config set proxy=${http_proxy} && \
     npm config set https-proxy=${http_proxy} && \
-    npm install -g --loglevel error node-gyp@6.1.0 grunt-cli underscore jsdoc && \
+    npm install -g --loglevel error node-gyp@v6.1.0 grunt-cli underscore jsdoc && \
     cd ${SERVER_PATH} && npm install nan && \
 
     # Get openh264 for owt
@@ -239,19 +266,6 @@ RUN git clone -b ${OWT_BRANCH} ${OWTSERVER_REPO} && \
     git apply ${SERVER_PATH}/scripts/patches/licode/*.patch && \
     mkdir -p ${SERVER_PATH}/build/libdeps/build/include && \
     cp erizoAPI/lib/json.hpp ${SERVER_PATH}/build/libdeps/build/include && \
-
-    # Install libnice for owt
-    cd ${SERVER_PATH}/third_party && \
-    wget -O - ${NICE_REPO} | tar xz && \
-    cd libnice-${NICE_VER} && \
-    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-agentlock.patch && \
-    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-agentlock-plus.patch && \
-    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-removecandidate.patch && \
-    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-keepalive.patch && \
-    patch -p1 < ${SERVER_PATH}/scripts/patches/libnice014-startcheck.patch && \
-    ./configure --prefix="/usr/local" --libdir=/usr/local/lib64 && \
-    make -s V= && \
-    make install && \
 
     # Install webrtc for owt
     cd ${SERVER_PATH}/third_party && mkdir webrtc  && cd webrtc &&\
@@ -283,7 +297,8 @@ RUN yum install -y -q ca-certificates wget xz-utils
 
 RUN wget ${NODE_REPO} && \
     tar xf node-${NODE_VER}-linux-x64.tar.xz && \
-    cp node-*/* /usr/local -rf && rm -rf node-*
+    cp node-*/* /usr/local -rf && \
+    rm -rf node-*
 
 COPY --from=build /home/owt-server/dist /home/owt
 COPY --from=build /home/build /
