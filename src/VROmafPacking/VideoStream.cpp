@@ -321,8 +321,58 @@ int32_t VideoStream::FillRegionWisePackingForCubeMap()
         rectRwpk->projRegHeight = tileInfo->tileHeight;
         rectRwpk->projRegLeft   = (regIdInDefaultLayout % m_tileInRow) * (tileInfo->tileWidth); //projected region left is calculated according to default Cube-3x2 layout
         rectRwpk->projRegTop    = (regIdInDefaultLayout / m_tileInRow) * (tileInfo->tileHeight);
+
         tileInfo->defaultHorPos = rectRwpk->projRegLeft;
         tileInfo->defaultVerPos = rectRwpk->projRegTop;
+        tileInfo->tileIdxInProjPic = regionIdx;
+        uint32_t faceWidth  = m_width / 3;
+        uint32_t faceHeight = m_height / 2;
+        uint32_t faceColId  = tileInfo->defaultHorPos / faceWidth;
+        uint32_t faceRowId  = tileInfo->defaultVerPos / faceHeight;
+        uint16_t localX     = tileInfo->defaultHorPos % faceWidth;
+        uint16_t localY     = tileInfo->defaultVerPos % faceHeight;
+        if (faceRowId == 0)
+        {
+            if (faceColId == 0) //face PY in OMAF spec for Cube-3x2
+            {
+                tileInfo->corresFaceIdTo360SCVP = FACE_PY_IN_360SCVP; //convert face PY into number used in 360SCVP library
+                tileInfo->corresHorPosTo360SCVP = localX;
+                tileInfo->corresVerPosTo360SCVP = localY;
+            }
+            else if (faceColId == 1) //face PX in OMAF spec for Cube-3x2
+            {
+                tileInfo->corresFaceIdTo360SCVP = FACE_PX_IN_360SCVP;
+                tileInfo->corresHorPosTo360SCVP = localX;
+                tileInfo->corresVerPosTo360SCVP = localY;
+            }
+            else if (faceColId == 2) //face NY in OMAF spec for Cube-3x2
+            {
+                tileInfo->corresFaceIdTo360SCVP = FACE_NY_IN_360SCVP;
+                tileInfo->corresHorPosTo360SCVP = localX;
+                tileInfo->corresVerPosTo360SCVP = localY;
+            }
+        }
+        else if (faceRowId == 1)
+        {
+            if (faceColId == 0) //face NZ in OMAF spec for Cube-3x2
+            {
+                tileInfo->corresFaceIdTo360SCVP = FACE_NZ_IN_360SCVP;
+                tileInfo->corresVerPosTo360SCVP = localX;
+                tileInfo->corresHorPosTo360SCVP = faceHeight - tileInfo->tileHeight - localY;
+            }
+            else if (faceColId == 1) //face NX in OMAF spec for Cube-3x2
+            {
+                tileInfo->corresFaceIdTo360SCVP = FACE_NX_IN_360SCVP;
+                tileInfo->corresHorPosTo360SCVP = localX;
+                tileInfo->corresVerPosTo360SCVP = localY;
+            }
+            else if (faceColId == 2) //face PZ in OMAF spec for Cube-3x2
+            {
+                tileInfo->corresFaceIdTo360SCVP = FACE_PZ_IN_360SCVP;
+                tileInfo->corresVerPosTo360SCVP = faceWidth - tileInfo->tileWidth - localX;
+                tileInfo->corresHorPosTo360SCVP = localY;
+            }
+        }
 
         rectRwpk->packedRegWidth  = tileInfo->tileWidth;
         rectRwpk->packedRegHeight = tileInfo->tileHeight;
@@ -398,10 +448,6 @@ int32_t VideoStream::Initialize(
     m_srcRwpk = new RegionWisePacking;
     if (!m_srcRwpk)
         return OMAF_ERROR_NULL_PTR;
-
-    //m_srcCovi = new ContentCoverage;
-    //if (!m_srcCovi)
-    //    return OMAF_ERROR_NULL_PTR;
 
     m_streamIdx = streamIdx;
 

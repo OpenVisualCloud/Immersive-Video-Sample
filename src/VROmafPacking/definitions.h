@@ -38,6 +38,13 @@
 #include <stdint.h>
 #include "360SCVPAPI.h"
 
+#define FACE_PX_IN_360SCVP 0
+#define FACE_NX_IN_360SCVP 1
+#define FACE_PY_IN_360SCVP 2
+#define FACE_NY_IN_360SCVP 3
+#define FACE_PZ_IN_360SCVP 4
+#define FACE_NZ_IN_360SCVP 5
+
 struct PicResolution
 {
     uint16_t width;
@@ -65,6 +72,18 @@ struct TileInfo
     //this value denotes the tile vertical position in
     //default Cube-3x2 defined in OMAF spec
     uint16_t defaultVerPos;
+
+    //this value denotes the corresponding horizontal position
+    //of the tile used in 360SCVP library for tiles selection
+    int32_t  corresHorPosTo360SCVP;
+    //this value denotes the corresponding vertical position
+    //of the tile used in 360SCVP library for tiles selection
+    int32_t  corresVerPosTo360SCVP;
+    //this value denotes the corresponding face index of the
+    //tile used in 360SCVP library for tiles selection
+    uint8_t  corresFaceIdTo360SCVP;
+
+    uint8_t  tileIdxInProjPic;
 };
 
 //!

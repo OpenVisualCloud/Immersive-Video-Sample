@@ -91,7 +91,7 @@ public:
     //! \return std::map<uint8_t, ExtractorTrack*>*
     //!         the pointer to the extractor tracks map
     //!
-    std::map<uint8_t, ExtractorTrack*>* GetAllExtractorTracks()
+    std::map<uint16_t, ExtractorTrack*>* GetAllExtractorTracks()
     {
         return &m_extractorTracks;
     }
@@ -105,7 +105,7 @@ private:
     int32_t AddExtractorTracks();
 private:
     std::map<uint8_t, MediaStream*>    *m_streams;            //!< media streams map set up in OmafPackage
-    std::map<uint8_t, ExtractorTrack*> m_extractorTracks;     //!< extractor tracks map
+    std::map<uint16_t, ExtractorTrack*> m_extractorTracks;     //!< extractor tracks map
     ExtractorTrackGenerator            *m_extractorTrackGen;  //!< extractor track generator to generate all extractor tracks
     InitialInfo                        *m_initInfo;           //!< the initial information input by library interface
 };

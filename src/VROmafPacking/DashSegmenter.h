@@ -372,7 +372,7 @@ struct TrackSegmentCtx
     TileInfo          *tileInfo;
     uint16_t          tileIdx;
 
-    uint8_t           extractorTrackIdx;
+    uint16_t          extractorTrackIdx;
     std::map<uint8_t, Extractor*>* extractors;
     Nalu              extractorTrackNalu;
     std::list<VCD::MP4::TrackId> refTrackIdxs;

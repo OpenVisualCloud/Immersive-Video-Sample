@@ -433,10 +433,10 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
 
 int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
 {
-    std::map<uint8_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
+    std::map<uint16_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
     if (extractorTracks->size())
     {
-        std::map<uint8_t, ExtractorTrack*>::iterator it1;
+        std::map<uint16_t, ExtractorTrack*>::iterator it1;
         for (it1 = extractorTracks->begin(); it1 != extractorTracks->end(); it1++)
         {
             ExtractorTrack *extractorTrack = it1->second;
@@ -830,8 +830,8 @@ int32_t DefaultSegmentation::ExtractorTrackSegmentation()
     while(1)
     {
 
-        std::map<uint8_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
-        std::map<uint8_t, ExtractorTrack*>::iterator itExtractorTrack;
+        std::map<uint16_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
+        std::map<uint16_t, ExtractorTrack*>::iterator itExtractorTrack;
 
         //pthread_t threadId = pthread_self();
         //ExtractorTrack *extractorTrack = m_extractorThreadIds[threadId];
@@ -927,8 +927,8 @@ int32_t DefaultSegmentation::LastExtractorTrackSegmentation()
 
     while(1)
     {
-        std::map<uint8_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
-        std::map<uint8_t, ExtractorTrack*>::iterator itExtractorTrack;
+        std::map<uint16_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
+        std::map<uint16_t, ExtractorTrack*>::iterator itExtractorTrack;
 
         //pthread_t threadId = pthread_self();
         //ExtractorTrack *extractorTrack = m_extractorThreadIds[threadId];
@@ -1198,10 +1198,10 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
         m_currSegedFrmNum++;
 
-        std::map<uint8_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
+        std::map<uint16_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
         if (extractorTracks->size())
         {
-            std::map<uint8_t, ExtractorTrack*>::iterator itExtractorTrack = extractorTracks->begin();
+            std::map<uint16_t, ExtractorTrack*>::iterator itExtractorTrack = extractorTracks->begin();
             for ( ; itExtractorTrack != extractorTracks->end(); /*itExtractorTrack++*/)
             {
                 ExtractorTrack *extractorTrack = itExtractorTrack->second;
