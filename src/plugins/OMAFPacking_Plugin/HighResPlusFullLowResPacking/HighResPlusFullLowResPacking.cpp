@@ -188,10 +188,19 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateMergedTilesArrange(Ti
     {
         for (uint16_t suppleIdx = 0; suppleIdx < (m_maxSelectedTilesNum - m_selectedTilesNum); suppleIdx++)
         {
-            tilesInViewport[m_selectedTilesNum + suppleIdx].x = tilesInViewport[suppleIdx+1].x;//tilesInViewport[0] maybe have been repetitive before when selected tiles num is prime number
-            tilesInViewport[m_selectedTilesNum + suppleIdx].y = tilesInViewport[suppleIdx+1].y;
-            tilesInViewport[m_selectedTilesNum + suppleIdx].idx = tilesInViewport[suppleIdx+1].idx;
-            tilesInViewport[m_selectedTilesNum + suppleIdx].faceId = tilesInViewport[suppleIdx+1].faceId;
+            uint16_t repeatedIdx = 0;
+            if ((m_selectedTilesNum - suppleIdx - 2) >= 0)
+            {
+                repeatedIdx = m_selectedTilesNum - suppleIdx - 2;
+            }
+            else
+            {
+                repeatedIdx = suppleIdx - (m_selectedTilesNum - 2);
+            }
+            tilesInViewport[m_selectedTilesNum + suppleIdx].x = tilesInViewport[repeatedIdx].x;//tilesInViewport[0] maybe have been repetitive before when selected tiles num is prime number
+            tilesInViewport[m_selectedTilesNum + suppleIdx].y = tilesInViewport[repeatedIdx].y;
+            tilesInViewport[m_selectedTilesNum + suppleIdx].idx = tilesInViewport[repeatedIdx].idx;
+            tilesInViewport[m_selectedTilesNum + suppleIdx].faceId = tilesInViewport[repeatedIdx].faceId;
         }
     }
 
@@ -438,11 +447,12 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateDstRwpk(
     {
         RectangularRegionWisePacking *rwpk = &(dstRwpk->rectRegionPacking[regionIdx]);
         memset(rwpk, 0, sizeof(RectangularRegionWisePacking));
-        rwpk->transformType = 0;
+        //rwpk->transformType = 0;
         rwpk->guardBandFlag = false;
         if (regionIdx < highTilesNum)
         {
             RectangularRegionWisePacking *rectRwpkHigh = &(rwpkHighRes->rectRegionPacking[tilesInViewport[regionIdx].idx]);
+            rwpk->transformType = rectRwpkHigh->transformType;
             rwpk->projRegWidth  = rectRwpkHigh->projRegWidth;
             rwpk->projRegHeight = rectRwpkHigh->projRegHeight;
             rwpk->projRegTop    = rectRwpkHigh->projRegTop;
@@ -467,6 +477,7 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateDstRwpk(
         {
             RectangularRegionWisePacking *rectRwpkLow = &(rwpkLowRes->rectRegionPacking[tilesInViewport[regionIdx].idx]);
 
+            rwpk->transformType   = rectRwpkLow->transformType;
             rwpk->packedRegWidth  = rectRwpkLow->projRegWidth;
             rwpk->packedRegHeight = rectRwpkLow->projRegHeight;;
 

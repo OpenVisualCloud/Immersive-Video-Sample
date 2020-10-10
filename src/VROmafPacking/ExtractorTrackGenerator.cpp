@@ -65,6 +65,19 @@ ExtractorTrackGenerator::~ExtractorTrackGenerator()
         m_tilesSelection.clear();
     }
 
+    if (m_middleSelection.size())
+    {
+        std::map<uint16_t, std::map<uint16_t, TileDef*>>::iterator it;
+        for (it = m_middleSelection.begin(); it != m_middleSelection.end(); )
+        {
+            std::map<uint16_t, TileDef*> oneLayout = it->second;
+            oneLayout.clear();
+            m_middleSelection.erase(it++);
+        }
+
+        m_middleSelection.clear();
+    }
+
     if (m_viewportCCInfo.size())
     {
         std::map<uint16_t, CCDef*>::iterator it;
@@ -76,6 +89,8 @@ ExtractorTrackGenerator::~ExtractorTrackGenerator()
         }
         m_viewportCCInfo.clear();
     }
+
+    m_middleCCInfo.clear();
 
     if (m_rwpkGenMap.size())
     {
@@ -260,14 +275,14 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
     }
 
     std::map<uint16_t, std::map<uint16_t, TileDef*>>::iterator it;
-    it = m_tilesSelection.find((uint16_t)selectedTilesNum);
-    if (it == m_tilesSelection.end())
+    it = m_middleSelection.find((uint16_t)selectedTilesNum);
+    if (it == m_middleSelection.end())
     {
         std::map<uint16_t, TileDef*> oneLayout;
-        oneLayout.insert(std::make_pair(m_viewportNum, tilesInView));
-        m_tilesSelection.insert(std::make_pair((uint16_t)selectedTilesNum, oneLayout));
-        m_viewportCCInfo.insert(std::make_pair(m_viewportNum, outCC));
-        m_viewportNum++;
+        oneLayout.insert(std::make_pair(m_middleViewNum, tilesInView));
+        m_middleSelection.insert(std::make_pair((uint16_t)selectedTilesNum, oneLayout));
+        m_middleCCInfo.insert(std::make_pair(m_middleViewNum, outCC));
+        m_middleViewNum++;
     }
     else
     {
@@ -313,9 +328,9 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
         }
         if (diffNum == oneLayout->size())
         {
-            oneLayout->insert(std::make_pair(m_viewportNum, tilesInView));
-            m_viewportCCInfo.insert(std::make_pair(m_viewportNum, outCC));
-            m_viewportNum++;
+            oneLayout->insert(std::make_pair(m_middleViewNum, tilesInView));
+            m_middleCCInfo.insert(std::make_pair(m_middleViewNum, outCC));
+            m_middleViewNum++;
         }
         else
         {
@@ -323,6 +338,177 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
             DELETE_MEMORY(outCC);
         }
     }
+
+    return ERROR_NONE;
+}
+
+static bool IsIncluded(int32_t *firstIds, uint16_t idsNum1, int32_t *secondIds, uint16_t idsNum2)
+{
+    bool included = false;
+    if (idsNum1 > idsNum2)
+    {
+        included = false;
+    }
+    else
+    {
+        uint16_t includedNum = 0;
+        for (uint16_t i = 0; i < idsNum1; i++)
+        {
+            int32_t id1 = firstIds[i];
+            for (uint16_t j = 0; j < idsNum2; j++)
+            {
+                int32_t id2 = secondIds[j];
+                if (id2 == id1)
+                {
+                    includedNum++;
+                    break;
+                }
+            }
+        }
+        if (includedNum == idsNum1)
+        {
+            included = true;
+        }
+        else
+        {
+            included = false;
+        }
+    }
+
+    return included;
+}
+
+int32_t ExtractorTrackGenerator::RefineTilesSelection()
+{
+    std::set<uint16_t> allSelectedNums;
+    std::map<uint16_t, std::map<uint16_t, TileDef*>>::iterator itSelection;
+    for (itSelection = m_middleSelection.begin(); itSelection != m_middleSelection.end(); itSelection++)
+    {
+        uint16_t selectedNum = itSelection->first;
+        allSelectedNums.insert(selectedNum);
+    }
+
+    std::map<uint16_t, std::map<uint16_t, int32_t*>> selectedTilesIds;
+    std::set<uint16_t>::iterator numIter = allSelectedNums.begin();
+    for ( ; numIter != allSelectedNums.end(); numIter++)
+    {
+        std::map<uint16_t, int32_t*> idsMap;
+        uint16_t currNum = *numIter;
+        std::map<uint16_t, TileDef*> currGroup = m_middleSelection[currNum];
+        std::map<uint16_t, TileDef*>::iterator it1;
+        for (it1 = currGroup.begin(); it1 != currGroup.end(); it1++)
+        {
+            TileDef *tiles = it1->second;
+            int32_t *idsGroup = new int32_t[currNum];
+            memset_s(idsGroup, currNum * sizeof(int32_t), 0);
+            for (uint16_t selIdx = 0; selIdx < currNum; selIdx++)
+            {
+                idsGroup[selIdx] = tiles[selIdx].idx;
+            }
+            idsMap.insert(std::make_pair(it1->first, idsGroup));
+        }
+        selectedTilesIds.insert(std::make_pair(currNum, idsMap));
+    }
+
+    std::map<uint16_t, bool> refinedSelection;
+    for (numIter = allSelectedNums.begin() ; numIter != allSelectedNums.end(); numIter++)
+    {
+        uint16_t currNum = *numIter;
+        std::map<uint16_t, int32_t*> currGroup = selectedTilesIds[currNum];
+        std::map<uint16_t, int32_t*>::iterator it1;
+        for (it1 = currGroup.begin(); it1 != currGroup.end(); it1++)
+        {
+            int32_t *tiles = it1->second;
+            bool needReserved = true;
+
+            std::set<uint16_t>::iterator largerIter = numIter;
+            largerIter++;
+            for ( ; largerIter != allSelectedNums.end(); largerIter++)
+            {
+                uint16_t largerNum = *largerIter;
+                std::map<uint16_t, int32_t*> largerGroup = selectedTilesIds[largerNum];
+                std::map<uint16_t, int32_t*>::iterator it2;
+                for (it2 = largerGroup.begin(); it2 != largerGroup.end(); it2++)
+                {
+                    int32_t *largerTiles = it2->second;
+
+                    bool included = IsIncluded(tiles, currNum, largerTiles, largerNum);
+                    needReserved = !included;
+                    if (!needReserved)
+                        break;
+                }
+                if (!needReserved)
+                    break;
+            }
+            refinedSelection.insert(std::make_pair(it1->first, needReserved));
+        }
+    }
+
+    std::map<uint16_t, std::map<uint16_t, TileDef*>>::iterator it3;
+    for (it3 = m_middleSelection.begin(); it3 != m_middleSelection.end(); it3++)
+    {
+        uint16_t selectedTilesNum = it3->first;
+        std::map<uint16_t, TileDef*> existedSelection = it3->second;
+        std::map<uint16_t, TileDef*>::iterator it5;
+        for (it5 = existedSelection.begin(); it5 != existedSelection.end(); it5++)
+        {
+            std::map<uint16_t, std::map<uint16_t, TileDef*>>::iterator it4;
+            it4 = m_tilesSelection.find(selectedTilesNum);
+
+            if (it4 == m_tilesSelection.end())
+            {
+                std::map<uint16_t, TileDef*> oneSelection;
+                uint16_t viewIdx = it5->first;
+                bool reserved = refinedSelection[viewIdx];
+                if (reserved)
+                {
+                    oneSelection.insert(std::make_pair(m_viewportNum, it5->second));
+                    m_tilesSelection.insert(std::make_pair(selectedTilesNum, oneSelection));
+                    m_viewportCCInfo.insert(std::make_pair(m_viewportNum, m_middleCCInfo[viewIdx]));
+                    m_viewportNum++;
+                }
+                else
+                {
+                    DELETE_ARRAY(it5->second);
+                    DELETE_MEMORY(m_middleCCInfo[viewIdx]);
+                }
+            }
+            else
+            {
+                std::map<uint16_t, TileDef*>* oneSelection = &(it4->second);
+
+                uint16_t viewIdx = it5->first;
+                bool reserved = refinedSelection[viewIdx];
+                if (reserved)
+                {
+                    oneSelection->insert(std::make_pair(m_viewportNum, it5->second));
+                    m_viewportCCInfo.insert(std::make_pair(m_viewportNum, m_middleCCInfo[viewIdx]));
+                    m_viewportNum++;
+                }
+                else
+                {
+                    DELETE_ARRAY(it5->second);
+                    DELETE_MEMORY(m_middleCCInfo[viewIdx]);
+                }
+            }
+        }
+    }
+
+    std::map<uint16_t, std::map<uint16_t, int32_t*>>::iterator idsIter;
+    for (idsIter = selectedTilesIds.begin(); idsIter != selectedTilesIds.end(); )
+    {
+        std::map<uint16_t, int32_t*> oneIds = idsIter->second;
+        std::map<uint16_t, int32_t*>::iterator tileIdIter;
+        for (tileIdIter = oneIds.begin(); tileIdIter != oneIds.end(); )
+        {
+            int32_t *idsGroup = tileIdIter->second;
+            DELETE_ARRAY(idsGroup);
+            oneIds.erase(tileIdIter++);
+        }
+        oneIds.clear();
+        selectedTilesIds.erase(idsIter++);
+    }
+    selectedTilesIds.clear();
 
     return ERROR_NONE;
 }
@@ -422,6 +608,18 @@ int32_t ExtractorTrackGenerator::CalculateViewportNum()
         }
 
         one_yaw += YAW_STEP;
+    }
+
+    if (m_middleViewNum > 100)
+    {
+        OMAF_LOG(LOG_INFO, "Too many extractor tracks, now need to refine tiles selection!\n");
+        RefineTilesSelection();
+    }
+    else
+    {
+        m_tilesSelection = m_middleSelection;
+        m_viewportNum = m_middleViewNum;
+        m_viewportCCInfo = m_middleCCInfo;
     }
 
     DELETE_MEMORY(m_360scvpParam);
@@ -716,8 +914,35 @@ int32_t ExtractorTrackGenerator::Initialize()
     return ERROR_NONE;
 }
 
+int32_t ExtractorTrackGenerator::ConvertTilesIdx(
+    uint16_t tilesNum,
+    TileDef *tilesInViewport)
+{
+    if (!tilesInViewport)
+        return OMAF_ERROR_NULL_PTR;
+
+    for (uint16_t idx = 0; idx < tilesNum; idx++)
+    {
+        TileDef *oneTile = &(tilesInViewport[idx]);
+
+        for (uint8_t regIdx = 0; regIdx < (m_origTileInRow * m_origTileInCol); regIdx++)
+        {
+            TileInfo *tileInfo = &(m_tilesInfo[regIdx]);
+            if ((tileInfo->corresHorPosTo360SCVP == oneTile->x) &&
+                (tileInfo->corresVerPosTo360SCVP == oneTile->y) &&
+                (tileInfo->corresFaceIdTo360SCVP == oneTile->faceId))
+            {
+                oneTile->idx = tileInfo->tileIdxInProjPic;
+                break;
+            }
+        }
+    }
+
+    return ERROR_NONE;
+}
+
 int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
-    std::map<uint8_t, ExtractorTrack*>& extractorTrackMap,
+    std::map<uint16_t, ExtractorTrack*>& extractorTrackMap,
     std::map<uint8_t, MediaStream*> *streams)
 {
     if (!streams)
@@ -757,11 +982,16 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
             if (!tilesInView)
                 return OMAF_ERROR_NULL_PTR;
 
+            if (m_projType == VCD::OMAF::ProjectionFormat::PF_CUBEMAP)
+            {
+                ConvertTilesIdx(selectedNum, tilesInView);
+            }
+
             ExtractorTrack *extractorTrack = new ExtractorTrack(viewportIdx, streams, (m_initInfo->viewportInfo)->inGeoType);
 
             if (!extractorTrack)
             {
-                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                std::map<uint16_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
                 for ( ; itET != extractorTrackMap.end(); )
                 {
                     ExtractorTrack *extractorTrack1 = itET->second;
@@ -777,7 +1007,7 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
             {
                 OMAF_LOG(LOG_ERROR, "Failed to initialize extractor track !\n");
 
-                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                std::map<uint16_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
                 for ( ; itET != extractorTrackMap.end(); )
                 {
                     ExtractorTrack *extractorTrack1 = itET->second;
@@ -792,7 +1022,7 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
             ret = rwpkGen->GenerateMergedTilesArrange(tilesInView);
             if (ret)
             {
-                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                std::map<uint16_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
                 for ( ; itET != extractorTrackMap.end(); )
                 {
                     ExtractorTrack *extractorTrack1 = itET->second;
@@ -807,7 +1037,7 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
             ret = FillDstRegionWisePacking(rwpkGen, tilesInView, extractorTrack->GetRwpk());
             if (ret)
             {
-                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                std::map<uint16_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
                 for ( ; itET != extractorTrackMap.end(); )
                 {
                     ExtractorTrack *extractorTrack1 = itET->second;
@@ -822,7 +1052,7 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
             ret = FillTilesMergeDirection(rwpkGen, tilesInView, extractorTrack->GetTilesMergeDir());
             if (ret)
             {
-                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                std::map<uint16_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
                 for ( ; itET != extractorTrackMap.end(); )
                 {
                     ExtractorTrack *extractorTrack1 = itET->second;
@@ -837,7 +1067,7 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
             ret = FillDstContentCoverage(viewportIdx, extractorTrack->GetCovi());
             if (ret)
             {
-                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                std::map<uint16_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
                 for ( ; itET != extractorTrackMap.end(); )
                 {
                     ExtractorTrack *extractorTrack1 = itET->second;
@@ -852,7 +1082,7 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
             ret = GenerateNewSPS();
             if (ret)
             {
-                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                std::map<uint16_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
                 for ( ; itET != extractorTrackMap.end(); )
                 {
                     ExtractorTrack *extractorTrack1 = itET->second;
@@ -867,7 +1097,7 @@ int32_t ExtractorTrackGenerator::GenerateExtractorTracks(
             ret = GenerateNewPPS(rwpkGen);
             if (ret)
             {
-                std::map<uint8_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
+                std::map<uint16_t, ExtractorTrack*>::iterator itET = extractorTrackMap.begin();
                 for ( ; itET != extractorTrackMap.end(); )
                 {
                     ExtractorTrack *extractorTrack1 = itET->second;

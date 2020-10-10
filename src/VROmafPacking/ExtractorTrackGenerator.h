@@ -64,6 +64,7 @@ public:
     {
         m_initInfo = NULL;
         m_streams  = NULL;
+        m_middleViewNum = 0;
         m_viewportNum = 0;
         m_fixedPackedPicRes = false;
         m_newSPSNalu  = NULL;
@@ -99,6 +100,7 @@ public:
         m_initInfo = initInfo;
         m_streams  = streams;
         m_fixedPackedPicRes = false;
+        m_middleViewNum = 0;
         m_viewportNum = 0;
         m_newSPSNalu  = NULL;
         m_newPPSNalu  = NULL;
@@ -125,6 +127,7 @@ public:
         m_initInfo = src.m_initInfo;
         m_streams  = src.m_streams;
         m_fixedPackedPicRes = src.m_fixedPackedPicRes;
+        m_middleViewNum = src.m_middleViewNum;
         m_viewportNum = src.m_viewportNum;
         m_newSPSNalu  = std::move(src.m_newSPSNalu);
         m_newPPSNalu  = std::move(src.m_newPPSNalu);
@@ -151,6 +154,7 @@ public:
         m_initInfo = other.m_initInfo;
         m_streams  = other.m_streams;
         m_fixedPackedPicRes = other.m_fixedPackedPicRes;
+        m_middleViewNum = other.m_middleViewNum;
         m_viewportNum = other.m_viewportNum;
         m_newSPSNalu  = NULL;
         m_newPPSNalu  = NULL;
@@ -188,6 +192,10 @@ public:
     //!
     int32_t Initialize();
 
+    int32_t ConvertTilesIdx(
+        uint16_t tilesNum,
+        TileDef *tilesInViewport);
+
     //!
     //! \brief  Generate all extractor tracks
     //!
@@ -201,7 +209,7 @@ public:
     //!         ERROR_NONE if success, else failed reason
     //!
     int32_t GenerateExtractorTracks(
-        std::map<uint8_t, ExtractorTrack*>& extractorTrackMap,
+        std::map<uint16_t, ExtractorTrack*>& extractorTrackMap,
         std::map<uint8_t, MediaStream*> *streams);
 
     //!
@@ -235,6 +243,7 @@ private:
     //!
     int32_t CalculateViewportNum();
 
+    int32_t RefineTilesSelection();
     //!
     //! \brief  Fill the region wise packing information
     //!         for the specified viewport
@@ -324,8 +333,11 @@ private:
 private:
     InitialInfo                     *m_initInfo;   //!< initial information input by library interface
     std::map<uint8_t, MediaStream*> *m_streams;    //!< media streams map set up in OmafPackage
+    uint16_t                        m_middleViewNum;
     uint16_t                        m_viewportNum; //!< viewport number calculated according to initial information
+    std::map<uint16_t, std::map<uint16_t, TileDef*>> m_middleSelection;
     std::map<uint16_t, std::map<uint16_t, TileDef*>> m_tilesSelection; //!< all tiles selection results for all viewports (yaw from -180 to 180 and pitch from -90 to 90), that is std::map<selected_tiles_num, std::map<viewport_idx, TileDef*>>
+    std::map<uint16_t, CCDef*>      m_middleCCInfo;
     std::map<uint16_t, CCDef*>      m_viewportCCInfo;
     std::map<uint16_t, RegionWisePackingGenerator*>  m_rwpkGenMap;     //!< all RWPK generators according to different tiles selection layout, that is std::map<selected_tiles_num, RegionWisePackingGenerator*>
     bool                            m_fixedPackedPicRes;  //!< whether extractor track packed sub-picture needs the fixed resolution

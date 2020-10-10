@@ -69,7 +69,7 @@ ExtractorTrackManager::~ExtractorTrackManager()
 {
     DELETE_MEMORY(m_extractorTrackGen);
 
-    std::map<uint8_t, ExtractorTrack*>::iterator it;
+    std::map<uint16_t, ExtractorTrack*>::iterator it;
     for (it = m_extractorTracks.begin(); it != m_extractorTracks.end();)
     {
         DELETE_MEMORY(it->second);
@@ -98,27 +98,21 @@ int32_t ExtractorTrackManager::Initialize(std::map<uint8_t, MediaStream*> *media
     if (m_initInfo->pluginName)
     {
         OMAF_LOG(LOG_INFO, "Appoint plugin %s for extractor track generation !\n", (m_initInfo->pluginName));
-        if (m_initInfo->projType == E_SVIDEO_EQUIRECT)
-        {
-            m_extractorTrackGen = new ExtractorTrackGenerator(m_initInfo, m_streams);
-            if (!m_extractorTrackGen)
-            {
-                OMAF_LOG(LOG_ERROR, "Failed to create extractor track generator !\n");
-                return OMAF_ERROR_NULL_PTR;
-            }
 
-            int32_t ret = m_extractorTrackGen->Initialize();
-            if (ret)
-                return ret;
-
-            ret = AddExtractorTracks();
-            if (ret)
-                return ret;
-        }
-        else if (m_initInfo->projType == E_SVIDEO_CUBEMAP)
+        m_extractorTrackGen = new ExtractorTrackGenerator(m_initInfo, m_streams);
+        if (!m_extractorTrackGen)
         {
-            OMAF_LOG(LOG_INFO, "But at present, extractor track is not supported for CubeMap, so extractor track will not be generated as well !\n");
+            OMAF_LOG(LOG_ERROR, "Failed to create extractor track generator !\n");
+            return OMAF_ERROR_NULL_PTR;
         }
+
+        int32_t ret = m_extractorTrackGen->Initialize();
+        if (ret)
+            return ret;
+
+        ret = AddExtractorTracks();
+        if (ret)
+            return ret;
     }
     else
     {

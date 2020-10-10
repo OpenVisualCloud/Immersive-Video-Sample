@@ -415,12 +415,12 @@ TEST_F(ExtractorTrackTest, AllProcess)
         ret = vsHigh->UpdateTilesNalu();
         EXPECT_TRUE(ret == ERROR_NONE);
 
-        std::map<uint8_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
+        std::map<uint16_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
         EXPECT_TRUE(extractorTracks != NULL);
-        std::map<uint8_t, ExtractorTrack*>::iterator it;
+        std::map<uint16_t, ExtractorTrack*>::iterator it;
         for (it = extractorTracks->begin(); it != extractorTracks->end(); it++)
         {
-            uint8_t viewportIdx = it->first;
+            uint16_t viewportIdx = it->first;
             ExtractorTrack *extractorTrack = it->second;
             Nalu *vpsNalu = extractorTrack->GetVPS();
             Nalu *spsNalu = extractorTrack->GetSPS();
