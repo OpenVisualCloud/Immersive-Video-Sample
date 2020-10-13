@@ -113,10 +113,10 @@ RUN git clone https://github.com/OpenVisualCloud/SVT-HEVC.git && \
 RUN git clone https://github.com/google/glog.git && \
     cd glog && \
     source /opt/rh/devtoolset-7/enable && \
-    ./autogen.sh && \
-    ./configure && \
-    make -j8 && \
-    make install && \
+    sed -i '23s/OFF/ON/' CMakeLists.txt && \
+    cmake -H. -Bbuild -G "Unix Makefiles" && \
+    cmake --build build && \
+    cmake --build build --target install && \
     cd ${WORKDIR} && rm -rf ./glog
 
 # Install lttng
@@ -157,13 +157,12 @@ RUN wget -O - ${THRIFT_REPO} | tar xz && \
     cd ${WORKDIR} && rm -rf ./thrift-${THRIFT_VER}*
 
 # Install Server FFmpeg Dependency
-RUN git clone https://github.com/FFmpeg/FFmpeg.git && \
-    cd FFmpeg && \
+RUN wget http://ffmpeg.org/releases/ffmpeg-4.3.1.tar.xz && \
+    tar xf ffmpeg-4.3.1.tar.xz && \
+    mv ffmpeg-4.3.1 FFmpeg && cd FFmpeg  && \
     source /opt/rh/devtoolset-7/enable && \
-    git checkout release/4.1 && \
-    git checkout c2ac3b8e6a040e33d53fa13548848c8ba981a8e4 && \
-    cd - && patch -p1 < ffmpeg/patches/FFmpeg_OMAF.patch && \
-    mkdir -p external/FFmpeg && cd external/FFmpeg && \
+    patch -p1 < ../ffmpeg/patches/FFmpeg_OMAF.patch && \
+    cd - && mkdir -p external/FFmpeg && cd external/FFmpeg && \
     ../../FFmpeg/configure --prefix=/usr --libdir=/usr/local/lib --enable-static --enable-shared --enable-gpl --enable-nonfree --disable-optimizations --disable-vaapi && \
     make -j `nproc` && \
     make install && \
