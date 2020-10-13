@@ -159,7 +159,7 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
 
 OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pStream, HeadPose* pose) {
   // to select extractor;
-  int ret = I360SCVP_setViewPort(m360ViewPortHandle, pose->yaw, pose->pitch);
+  int ret = I360SCVP_setViewPort(m360ViewPortHandle, (float)(round(pose->yaw)), (float)(round(pose->pitch)));
   if (ret != 0) return NULL;
   ret = I360SCVP_process(mParamViewport, m360ViewPortHandle);
   if (ret != 0) return NULL;
@@ -175,7 +175,6 @@ OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pSt
 
   // get the extractor with largest intersection
   OmafExtractor* selectedExtractor = GetNearestExtractor(pStream, outCC);
-
   SAFE_DELETE(outCC);
 
   return selectedExtractor;

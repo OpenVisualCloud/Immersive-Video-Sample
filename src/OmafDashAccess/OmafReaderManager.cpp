@@ -92,10 +92,11 @@ class OmafSegmentNode : public VCD::NonCopyable {
   using WPtr = std::weak_ptr<OmafSegmentNode>;
 
  public:
-  OmafSegmentNode(std::shared_ptr<OmafReaderManager> mgr, OmafDashMode mode, std::shared_ptr<OmafReader> reader,
+  OmafSegmentNode(std::shared_ptr<OmafReaderManager> mgr, OmafDashMode mode, ProjectionFormat projFmt, std::shared_ptr<OmafReader> reader,
                   std::shared_ptr<OmafSegment> segment, size_t depends_size = 0, bool isExtractor = false)
       : omaf_reader_mgr_(mgr),
         mode_(mode),
+        projection_fmt_(projFmt),
         reader_(reader),
         segment_(segment),
         depends_size_(depends_size),
@@ -235,6 +236,8 @@ class OmafSegmentNode : public VCD::NonCopyable {
 
   // dash mode
   OmafDashMode mode_ = OmafDashMode::EXTRACTOR;
+
+  ProjectionFormat projection_fmt_ = ProjectionFormat::PF_ERP;
 
   // omaf reader
   std::weak_ptr<OmafReader> reader_;
@@ -382,7 +385,7 @@ OMAF_STATUS OmafReaderManager::OpenSegment(std::shared_ptr<OmafSegment> pSeg, bo
       this->normalSegmentStateChange(std::move(segment), state);
     });
 
-    OmafSegmentNode::Ptr new_node = std::make_shared<OmafSegmentNode>(shared_from_this(), work_params_.mode_, reader_,
+    OmafSegmentNode::Ptr new_node = std::make_shared<OmafSegmentNode>(shared_from_this(), work_params_.mode_, work_params_.proj_fmt_, reader_,
                                                                       std::move(pSeg), depends_size, isExtracotr);
     {
       std::unique_lock<std::mutex> lock(segment_opening_mutex_);
@@ -425,7 +428,7 @@ OMAF_STATUS OmafReaderManager::OpenLocalSegment(std::shared_ptr<OmafSegment> seg
       depends_size = d_it->second.size();
     }
 
-    OmafSegmentNode::Ptr new_node = std::make_shared<OmafSegmentNode>(shared_from_this(), work_params_.mode_, reader_,
+    OmafSegmentNode::Ptr new_node = std::make_shared<OmafSegmentNode>(shared_from_this(), work_params_.mode_, work_params_.proj_fmt_, reader_,
                                                                       segment, depends_size, isExtractor);
     {
       std::unique_lock<std::mutex> lock(segment_opening_mutex_);
@@ -1486,15 +1489,45 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
         const RegionWisePacking &rwpk = packet->GetRwpk();
         packet->SetVideoWidth(rwpk.packedPicWidth);
         packet->SetVideoHeight(rwpk.packedPicHeight);
-        for (int j = rwpk.numRegions - 1; j >= 0; j--) {
-          if (rwpk.rectRegionPacking[j].projRegLeft == 0 && rwpk.rectRegionPacking[j].projRegTop == 0 &&
-              (rwpk.rectRegionPacking[j].packedRegLeft != 0) &&
-              (rwpk.rectRegionPacking[j].packedRegTop == 0)) {
-            boundLeft.push_back(rwpk.rectRegionPacking[j].packedRegLeft);
-            boundTop.push_back(rwpk.rectRegionPacking[j].packedRegTop);
-            break;
-          }
+        if (projection_fmt_ == ProjectionFormat::PF_ERP)
+        {
+            for (int j = rwpk.numRegions - 1; j >= 0; j--) {
+              if (rwpk.rectRegionPacking[j].projRegLeft == 0 && rwpk.rectRegionPacking[j].projRegTop == 0 &&
+                  (rwpk.rectRegionPacking[j].packedRegLeft != 0) &&
+                  (rwpk.rectRegionPacking[j].packedRegTop == 0)) {
+                boundLeft.push_back(rwpk.rectRegionPacking[j].packedRegLeft);
+                boundTop.push_back(rwpk.rectRegionPacking[j].packedRegTop);
+                break;
+              }
+            }
         }
+        else if (projection_fmt_ == ProjectionFormat::PF_CUBEMAP)
+        {
+            uint32_t lowTileW = 0;
+            uint32_t lowTileH = 0;
+            int j = 0;
+            for (j = rwpk.numRegions - 1; j >= 0; j--) {
+              if (rwpk.rectRegionPacking[j].projRegLeft == 0 && rwpk.rectRegionPacking[j].projRegTop == 0)
+              {
+                  lowTileW = rwpk.rectRegionPacking[j].projRegWidth;
+                  lowTileH = rwpk.rectRegionPacking[j].projRegHeight;
+                  break;
+              }
+            }
+
+            for ( ; j >= 0; j--) {
+              if ((rwpk.rectRegionPacking[j].projRegWidth == lowTileW) &&
+                  (rwpk.rectRegionPacking[j].projRegHeight == lowTileH) &&
+                  (rwpk.rectRegionPacking[j].packedRegLeft != 0) &&
+                  (rwpk.rectRegionPacking[j].packedRegTop == 0))
+              {
+                  boundLeft.push_back(rwpk.rectRegionPacking[j].packedRegLeft);
+                  boundTop.push_back(rwpk.rectRegionPacking[j].packedRegTop);
+                  break;
+              }
+            }
+        }
+
         for (int idx = 0; idx < packet->GetQualityNum(); idx++) {
           SourceResolution srcRes;
           srcRes.qualityRanking = static_cast<QualityRank>(idx + 1);
@@ -1507,8 +1540,6 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
             srcRes.width = rwpk.packedPicWidth - boundLeft[idx];
           }
           packet->SetSourceResolution(idx, srcRes);
-          // cout<<"sourceRes:"<<srcRes.qualityRanking<<" "<<srcRes.top<<" "<<srcRes.left<<" "<<srcRes.width<<"
-          // "<<srcRes.height<<endl;
         }
       } else {
         packet->SetSRDInfo(segment_->GetSRDInfo());

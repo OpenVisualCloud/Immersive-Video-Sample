@@ -65,7 +65,8 @@ OmafAdaptationSet::OmafAdaptationSet() {
   mType = MediaType_NONE;
   mFpt = FP_UNKNOWN;
   mRwpkType = RWPK_UNKNOWN;
-  mTileInfo          = NULL;
+  mTileInfo = NULL;
+  mIsExtractorTrack = false;
   memset(&mVideoInfo, 0, sizeof(VideoInfo));
   memset(&mAudioInfo, 0, sizeof(AudioInfo));
 }
@@ -80,9 +81,10 @@ OmafAdaptationSet::~OmafAdaptationSet() {
   }
 }
 
-OmafAdaptationSet::OmafAdaptationSet( AdaptationSetElement* pAdaptationSet, ProjectionFormat pf ):OmafAdaptationSet()
+OmafAdaptationSet::OmafAdaptationSet( AdaptationSetElement* pAdaptationSet, ProjectionFormat pf, bool isExtractorTrack ):OmafAdaptationSet()
 {
     mPF = pf;
+    mIsExtractorTrack = isExtractorTrack;
     Initialize(pAdaptationSet);
 }
 
@@ -107,23 +109,22 @@ int OmafAdaptationSet::Initialize(AdaptationSetElement* pAdaptationSet) {
   mSRD = mAdaptationSet->GetSRD();
   mPreselID = mAdaptationSet->GetPreselection();
   mRwpkType = mAdaptationSet->GetRwpkType();
-  //mPF = mAdaptationSet->GetProjectionFormat();
   mCC = mAdaptationSet->GetContentCoverage();
   mID = stoi(mAdaptationSet->GetId());
 
-    if (mPF == ProjectionFormat::PF_CUBEMAP)
-    {
-        mTileInfo = new TileDef;
-        if (!mTileInfo)
-            return OMAF_ERROR_NULL_PTR;
-        if (NULL == mSRD)
-        {
-          OMAF_LOG(LOG_ERROR, " SRD information is invalid!\n");
+  if ((mPF == ProjectionFormat::PF_CUBEMAP) && !IsExtractor())
+  {
+      mTileInfo = new TileDef;
+      if (!mTileInfo)
           return OMAF_ERROR_NULL_PTR;
-        }
-        mTileInfo->x = mSRD->get_X();
-        mTileInfo->y = mSRD->get_Y();
-    }
+      if (NULL == mSRD)
+      {
+        OMAF_LOG(LOG_ERROR, "SRD information is invalid for track %d!\n", mID);
+        return OMAF_ERROR_NULL_PTR;
+      }
+      mTileInfo->x = mSRD->get_X();
+      mTileInfo->y = mSRD->get_Y();
+  }
 
   for (auto it = mRepresentation->GetDependencyIDs().begin(); it != mRepresentation->GetDependencyIDs().end(); it++) {
     std::string id = *it;

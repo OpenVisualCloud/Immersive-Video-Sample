@@ -173,6 +173,7 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
   OMAFSTREAMS listStream;
   mMPDParser->SetCacheDir(cacheDir);
   ret = mMPDParser->ParseMPD(url, listStream);
+
   if (ret == OMAF_INVALID_EXTRACTOR_ENABLEMENT) {
     enableExtractor = false;  //! enableExtractor;
     mMPDParser->SetExtractorEnabled(enableExtractor);
@@ -231,6 +232,7 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
     } else {
       params.mode_ = OmafDashMode::LATER_BINDING;
     }
+    params.proj_fmt_ = projFmt;
 
     OMAF_LOG(LOG_INFO, "media stream type=%s\n", mMPDinfo->type.c_str());
     OMAF_LOG(LOG_INFO, "media stream duration=%lld\n", mMPDinfo->media_presentation_duration);
@@ -252,7 +254,9 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
     // stream->SetEnabledExtractor(enableExtractor);
     stream->SetOmafReaderMgr(omaf_reader_mgr_);
     if (!enableExtractor)
+    {
       stream->SetMaxStitchResolution(omaf_dash_params_.max_decode_width_, omaf_dash_params_.max_decode_height_);
+    }
     id++;
   }
 

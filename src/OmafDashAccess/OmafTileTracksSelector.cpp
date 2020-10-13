@@ -218,7 +218,6 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
     selectedTracks = SelectTileTracks(pStream, mPose);
     if (selectedTracks.size() && previousPose)
     {
-        printf("%f, %f\n", previousPose->yaw, previousPose->pitch);
         OMAF_LOG(LOG_INFO,"pose has changed from yaw %f, pitch %f\n", previousPose->yaw, previousPose->pitch);
         OMAF_LOG(LOG_INFO,"to yaw %f, pitch %f\n", mPose->yaw, mPose->pitch);
 #ifndef _ANDROID_NDK_OPTION_
