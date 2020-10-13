@@ -95,14 +95,14 @@ install_tools() {
 install_dependencies() {
     cd ${EX_PATH}
     if [ ${TARGET} == "server" ] ; then
-        ./build_glog.sh
+        ./install_glog.sh
         ./install_safestringlib.sh
         ./install_openHEVC.sh
         ./install_SVT.sh
         ./install_thrift.sh
         ./install_FFmpeg.sh server
     elif [ ${TARGET} == "client" ] ; then
-        ./build_glog.sh
+        ./install_glog.sh
         ./install_safestringlib.sh
         ./prebuild_player.sh
         ./install_FFmpeg.sh client
