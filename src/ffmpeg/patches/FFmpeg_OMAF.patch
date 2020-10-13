@@ -5396,7 +5396,7 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_dash_dec.c
 --- FFmpeg/libavformat/tiled_dash_dec.c	1970-01-01 08:00:00.000000000 +0800
 +++ FFmpeg-patched/libavformat/tiled_dash_dec.c	2020-09-27 13:35:13.559526536 +0800
-@@ -0,0 +1,344 @@
+@@ -0,0 +1,362 @@
 +/*
 + * Intel tile Dash Demuxer
 + *
@@ -5434,6 +5434,8 @@ diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_d
 +#include "internal.h"
 +#include "avio_internal.h"
 +#include "tiled_dash_dec.h"
++
++uint64_t frameCnt = 0;
 +
 +int tiled_dash_ViewPort_update(AVFormatContext *s, bool isVertical, double move)
 +{
@@ -5480,6 +5482,7 @@ diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_d
 +    TiledDASHDecContext *c = s->priv_data;
 +    // TODO: read packet for one stream once??
 +    int streamId = 0;
++    frameCnt++;
 +
 +    DashStreamInfo stInfo = c->mInfo.stream_info[streamId];
 +
@@ -5491,6 +5494,18 @@ diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_d
 +    if(ret != ERROR_NONE){
 +        //av_log(s, AV_LOG_ERROR, "OmafAccess_GetPacket get null packet\    n" );
 +        //av_packet_unref(pkt);
++    }
++
++    if ((frameCnt % 50) == 0)
++    {
++        HeadPose newPose;
++        newPose.yaw = 45;
++        newPose.pitch = 90;
++        OmafAccess_ChangeViewport(c->hdl, &newPose);
++    }
++    else if ((frameCnt % 75) == 0)
++    {
++        OmafAccess_ChangeViewport(c->hdl, &(c->pose));
 +    }
 +
 +    if(dashPktNum && dashPkt[0].buf && dashPkt[0].size)
@@ -5579,8 +5594,11 @@ diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_d
 +    c->mClearBuf = false;
 +    c->needHeaders = true;
 +    c->client = (DashStreamingClient *)malloc(sizeof(DashStreamingClient));
++    memset(c->client, 0, sizeof(DashStreamingClient));
 +    memset(&c->client->omaf_params.proxy, 0, sizeof(OmafHttpProxy));
 +    memset(&c->client->omaf_params.predictor_params, 0, sizeof(OmafPredictorParams));
++    c->client->omaf_params.max_decode_width = 2560;
++    c->client->omaf_params.max_decode_height = 2560;
 +    c->client->source_type = MultiResSource;//DefaultSource;
 +    c->client->media_url = s->filename;
 +    c->client->enable_extractor = c->enable_extractor;
