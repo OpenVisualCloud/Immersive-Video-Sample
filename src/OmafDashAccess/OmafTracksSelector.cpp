@@ -88,7 +88,6 @@ int OmafTracksSelector::SetInitialViewport(std::vector<Viewport *> &pView, HeadS
       !headSetInfo->viewPort_Height) {
     return ERROR_INVALID;
   }
-
   mParamViewport = new param_360SCVP;
   mParamViewport->usedType = E_VIEWPORT_ONLY;
   mParamViewport->logFunction = (void*)logCallBack;

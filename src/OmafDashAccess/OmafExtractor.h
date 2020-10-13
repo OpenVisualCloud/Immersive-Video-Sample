@@ -55,7 +55,7 @@ class OmafExtractor : public OmafAdaptationSet {
   //!
   //! \brief  construct from AdaptationSetElement
   //!
-  OmafExtractor(AdaptationSetElement* pAdaptationSet, ProjectionFormat pf);
+  OmafExtractor(AdaptationSetElement* pAdaptationSet, ProjectionFormat pf, bool isExtractorTrack);
 
   //!
   //! \brief  de-construct
@@ -87,7 +87,7 @@ class OmafExtractor : public OmafAdaptationSet {
   //!
   std::list<int> GetDependTrackID();
 
-  bool IsExtractor() override { return true; }
+  //bool IsExtractor() override { return true; }
 
  private:
   std::map<int, OmafAdaptationSet*> mAdaptationSets;  //<! the Adapation lists the extractor depends

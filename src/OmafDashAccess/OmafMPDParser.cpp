@@ -192,7 +192,6 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
   for (auto it = mapAdaptationSets.begin(); it != mapAdaptationSets.end(); it++) {
     OMAFADAPTATIONSETS ASs = it->second;
     std::string type = it->first;
-
     mTmpStream = new OmafMediaStream();
     if (mTmpStream == NULL) return ERROR_INVALID;
     auto mainASit = ASs.begin();
@@ -247,14 +246,15 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
 
 OmafAdaptationSet* OmafMPDParser::CreateAdaptationSet(AdaptationSetElement* pAS, ProjectionFormat pf) {
   if (ExtractorJudgement(pAS)) {
-    return new OmafExtractor(pAS, pf);
+    return new OmafExtractor(pAS, pf, true);
   }
-  return new OmafAdaptationSet(pAS, pf);
+  return new OmafAdaptationSet(pAS, pf, false);
 }
 
 bool OmafMPDParser::ExtractorJudgement(AdaptationSetElement* pAS) {
   PreselValue* sel = pAS->GetPreselection();
   if (sel) return true;
+
 
   /// FIXME, if @DependencyID has multiple dependency ID, then set it as extractor.
   std::vector<std::string> depIDs = pAS->GetRepresentations()[0]->GetDependencyIDs();

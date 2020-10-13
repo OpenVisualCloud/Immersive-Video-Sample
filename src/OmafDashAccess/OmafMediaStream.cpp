@@ -156,7 +156,6 @@ int OmafMediaStream::InitStream(std::string type) {
   } else {
     return ERROR_INVALID;
   }
-
   if (!m_enabledExtractor && !m_stitch) {
     m_stitch = new OmafTilesStitch();
     if (!m_stitch) return OMAF_ERROR_NULL_PTR;

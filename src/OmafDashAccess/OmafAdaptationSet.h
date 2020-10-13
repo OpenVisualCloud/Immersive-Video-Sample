@@ -74,7 +74,7 @@ class OmafAdaptationSet {
   //!
   //! \brief  construct from AdaptationSetElement
   //!
-  OmafAdaptationSet( AdaptationSetElement* pAdaptationSet, ProjectionFormat pf );
+  OmafAdaptationSet( AdaptationSetElement* pAdaptationSet, ProjectionFormat pf, bool isExtractorTrack );
 
   //!
   //! \brief  de-construct
@@ -197,7 +197,7 @@ class OmafAdaptationSet {
 
   virtual OmafAdaptationSet* GetClassType() { return this; };
   TileDef*                   GetTileInfo()                               { return mTileInfo;            };
-  virtual bool IsExtractor() { return false; }
+  virtual bool IsExtractor() { return mIsExtractorTrack; }
 
  private:
   //!
@@ -252,6 +252,7 @@ class OmafAdaptationSet {
   std::list<bool> mEnableRecord;    //<! record the last 3 enable changes
 
   std::shared_ptr<OmafReaderManager> omaf_reader_mgr_;
+  bool mIsExtractorTrack;
 };
 
 }  // namespace OMAF

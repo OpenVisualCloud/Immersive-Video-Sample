@@ -76,6 +76,7 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
     DashStreamType stream_type_ = DASH_STREAM_DYNMIC;
     size_t duration_ = 0;
     int32_t segment_timeout_ms_ = 3000;  // ms
+    ProjectionFormat proj_fmt_  = ProjectionFormat::PF_ERP;
   };
 
   using OmafReaderParams = struct _params;

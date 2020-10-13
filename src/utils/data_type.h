@@ -161,17 +161,17 @@ typedef struct DASHPACKET {
   bool bEOS;
 } DashPacket;
 
-enum class ViewportPriority {
+typedef enum {
   HIGH = 0,
   LOW = 1,
   END = 2,
-};
+}ViewportPriority;
 
-enum class PredictionMode {
+typedef enum {
   SingleViewpoint = 0,
   MultiViewpoints = 1,
   UNKNOWN,
-};
+}PredictionMode;
 
 typedef struct PREDICTOPTION {
   PredictionMode mode;

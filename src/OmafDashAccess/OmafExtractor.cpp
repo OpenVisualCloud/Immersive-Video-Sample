@@ -41,8 +41,8 @@ OmafExtractor::OmafExtractor() {}
 
 OmafExtractor::~OmafExtractor() {}
 
-OmafExtractor::OmafExtractor(AdaptationSetElement* pAdaptationSet, ProjectionFormat pf)
-    : OmafAdaptationSet(pAdaptationSet, pf) {}
+OmafExtractor::OmafExtractor(AdaptationSetElement* pAdaptationSet, ProjectionFormat pf, bool isExtractorTrack)
+    : OmafAdaptationSet(pAdaptationSet, pf, isExtractorTrack) {}
 
 void OmafExtractor::AddDependAS(OmafAdaptationSet* as) {
   std::vector<int> vecID;
