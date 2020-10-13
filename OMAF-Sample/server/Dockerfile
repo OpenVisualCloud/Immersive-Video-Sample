@@ -113,10 +113,10 @@ RUN git clone https://github.com/OpenVisualCloud/SVT-HEVC.git && \
 RUN git clone https://github.com/google/glog.git && \
     cd glog && \
     source /opt/rh/devtoolset-7/enable && \
-    ./autogen.sh && \
-    ./configure && \
-    make -j8 && \
-    make install && \
+    sed -i '23s/OFF/ON/' CMakeLists.txt && \
+    cmake -H. -Bbuild -G "Unix Makefiles" && \
+    cmake --build build && \
+    cmake --build build --target install && \
     cd ${WORKDIR} && rm -rf ./glog
 
 # Install lttng
