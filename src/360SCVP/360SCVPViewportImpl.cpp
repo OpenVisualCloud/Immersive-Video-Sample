@@ -577,6 +577,7 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
                         pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
                         pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
                         pOutTileTmp->idx = idx;
+                        SCVP_LOG(LOG_INFO, "final decision is idx %d and face_id %d\n", idx, pOutTileTmp->faceId);
                         pOutTileTmp++;
                         occupancyNum++;
                     }
@@ -599,6 +600,7 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
                         pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
                         pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
                         pOutTileTmp->idx = idx;
+                        SCVP_LOG(LOG_INFO, "final decision is idx %d and face_id %d\n", idx, pOutTileTmp->faceId);
                         pOutTileTmp++;
                         occupancyNum++;
                     }
@@ -1357,6 +1359,11 @@ int32_t TgenViewport::isInsideByAngle()
     topPoint.horzPos = fYaw;
     bottomPoint.horzPos = fYaw;
 
+    for (idx = 0; idx < (int32_t)(FACE_NUMBER*m_tileNumRow*m_tileNumCol); idx++) {
+        m_srd[idx].faceId = -1;
+        m_srd[idx].isOccupy = 0;
+    }
+
     for (face_id = 0; face_id < FACE_NUMBER; face_id++) {
         if ( (face_id == 2) || (face_id == 3) )
             continue;
@@ -1382,6 +1389,7 @@ int32_t TgenViewport::isInsideByAngle()
                         m_srd[idx].isOccupy = 1;
                         m_srd[idx].faceId = face_id;
                         selectedTilesNum++;
+                        SCVP_LOG(LOG_INFO, "Selected tile by angle: idx %d and face_id %d\n", idx, face_id);
                     }
                 }
             }
@@ -1408,7 +1416,6 @@ int32_t TgenViewport::isInsideByAngle()
                 m_srd[idx].faceId = 2;
                 selectedTilesNum++;
             }
-
             /* Bottom Face */
             idx = 3 * m_tileNumRow * m_tileNumCol + i * m_tileNumCol + j;
             tileTopLeftLongi = m_srd[idx].horzPos;
