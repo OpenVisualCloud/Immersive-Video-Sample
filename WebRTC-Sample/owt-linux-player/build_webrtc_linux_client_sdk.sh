@@ -139,6 +139,25 @@ install_ffmpeg(){
   make install
 }
 
+install_safestringlib(){
+  cd ${BUILD}
+
+  rm -fr safestringlib
+  git clone https://github.com/intel/safestringlib.git
+
+  cd safestringlib
+  git checkout 245c4b8cff1d2e7338b7f3a82828fc8e72b29549
+
+  mkdir build
+  cd build
+  cmake ..
+  make -j
+
+  cp -v libsafestring_shared.so ${PREFIX}/lib/
+  mkdir -p ${PREFIX}/include/safestringlib
+  cp -rfv ../include/* ${PREFIX}/include/safestringlib/
+}
+
 install_360scvp(){
   cd ${BUILD}
 
@@ -146,6 +165,10 @@ install_360scvp(){
 
   mkdir 360scvp
   cd 360scvp
+
+  sed -i "s@INCLUDE_DIRECTORIES\(.*\)@INCLUDE_DIRECTORIES\1\nINCLUDE_DIRECTORIES(${PREFIX}/include)@" ${BUILD}/../../../../src/360SCVP/CMakeLists.txt
+  sed -i "s@LINK_DIRECTORIES\(.*\)@LINK_DIRECTORIES\1\nLINK_DIRECTORIES(${PREFIX}/lib)@" ${BUILD}/../../../../src/360SCVP/CMakeLists.txt
+
   cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ${BUILD}/../../../../src/360SCVP/
   make -j
   make install
@@ -162,4 +185,5 @@ install_owt_client_native
 
 # player
 install_ffmpeg
+install_safestringlib
 install_360scvp
