@@ -30,7 +30,8 @@
 //! \file     WebRTCMediaSource.cpp
 //! \brief    Implement class for WebRTCMediaSource.
 //!
-#ifdef _ENABLE_WEBRTC_SOURCE_
+#if 0
+//#ifdef _ENABLE_WEBRTC_SOURCE_
 
 #include "../Common.h"
 #include "WebRTCMediaSource.h"

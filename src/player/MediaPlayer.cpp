@@ -88,7 +88,24 @@ RenderStatus MediaPlayer::Open()
     m_rsFactory = new RenderSourceFactory(window);
 
     //initial MediaSource
-    m_mediaSource = new DashMediaSource();
+    switch (m_renderConfig.sourceType)
+    {
+#ifdef _ENABLE_DASH_SOURCE_
+        case DASH_SOURCE:
+            m_mediaSource = new DashMediaSource();
+            break;
+#endif
+#ifdef _ENABLE_WEBRTC_SOURCE_
+        case WEBRTC_SOURCE:
+            //m_mediaSource = new WebRTCMediaSource();
+            LOG(ERROR)<<"WebRTC media source is not available!"<<std::endl;
+            return RENDER_CREATE_ERROR;
+#endif
+        default:
+            m_mediaSource = NULL;
+            LOG(ERROR)<<"initial media source error!"<<std::endl;
+            return RENDER_CREATE_ERROR;
+    }
 
     //load media source and get type
     RenderStatus loadMediaStatus = m_mediaSource->Initialize(m_renderConfig, m_rsFactory);
