@@ -30,7 +30,7 @@
 //! \file     DashMediaSource.cpp
 //! \brief    Implement class for DashMediaSource.
 //!
-#ifndef _ENABLE_WEBRTC_SOURCE_
+#ifdef _ENABLE_DASH_SOURCE_
 #include "DashMediaSource.h"
 #include <stdio.h>
 #include <sys/timeb.h>
@@ -463,4 +463,4 @@ RenderStatus DashMediaSource::Play() {
 }
 
 VCD_NS_END
-#endif  // LOW_LATENCY_USAGE
+#endif  // _ENABLE_DASH_SOURCE_

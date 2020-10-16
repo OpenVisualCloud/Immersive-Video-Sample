@@ -30,7 +30,8 @@
 //! \file     WebRTCMediaSource.h
 //! \brief    Defines class for WebRTCMediaSource.
 //!
-#ifdef _ENABLE_WEBRTC_SOURCE_
+#if 0
+//#ifdef _ENABLE_WEBRTC_SOURCE_
 
 #ifndef _WebRTCMediaSource_H_
 #define _WebRTCMediaSource_H_

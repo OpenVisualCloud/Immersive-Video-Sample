@@ -196,14 +196,7 @@ enum ThreadStatus {
   STATUS_CLOSED,
   STATUS_UNKNOWN,
 };
-#ifdef LOW_LATENCY_USAGE
-enum ProjectType {
-  PT_UNKNOWN = -1,
-  PT_ERP = 0,
-  PT_CUBEMAP = 1,
-  PT_RESERVED,
-};
-#endif
+
 struct SphereRegion {
   uint8_t viewIdc;  // corresponding to view_idc[i] when view_idc_presence_flag is equal to 1
   int32_t centreAzimuth;
