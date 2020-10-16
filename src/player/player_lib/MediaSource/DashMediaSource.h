@@ -30,7 +30,7 @@
 //! \file     DashMediaSource.h
 //! \brief    Defines class for DashMediaSource.
 //!
-#ifndef _ENABLE_WEBRTC_SOURCE_
+#ifdef _ENABLE_DASH_SOURCE_
 
 #ifndef _DASHMEDIASOURCE_H_
 #define _DASHMEDIASOURCE_H_
@@ -169,4 +169,4 @@ private:
 VCD_NS_END
 #endif /* _DASHMEDIASOURCE_H_ */
 
-#endif /* _NON_ENABLE_WEBRTC_SOURCE_ */
+#endif  // _ENABLE_DASH_SOURCE_

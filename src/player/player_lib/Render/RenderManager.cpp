@@ -171,12 +171,8 @@ RenderStatus RenderManager::Initialize(MediaSource *source, RenderSourceFactory 
 
 RenderStatus RenderManager::CreateRenderTarget(int32_t projFormat) {
   switch (projFormat) {
-#ifndef LOW_LATENCY_USAGE
     case VCD::OMAF::PF_ERP:
     case VCD::OMAF::PF_PLANAR:
-#else
-    case PT_ERP:
-#endif
     {
 #ifdef _ANDROID_OS_
       m_renderTarget = new ERPRenderTarget_hw();
@@ -190,11 +186,7 @@ RenderStatus RenderManager::CreateRenderTarget(int32_t projFormat) {
       }
       break;
     }
-#ifndef LOW_LATENCY_USAGE
     case VCD::OMAF::PF_CUBEMAP:
-#else
-    case PT_CUBEMAP:
-#endif
     {
 #ifdef _ANDROID_OS_
       m_renderTarget = new CubeMapRenderTarget_android();
@@ -219,11 +211,7 @@ RenderStatus RenderManager::CreateRenderTarget(int32_t projFormat) {
 RenderStatus RenderManager::CreateRender(int32_t projFormat) {
 #ifdef _LINUX_OS_
   switch (projFormat) {
-#ifndef LOW_LATENCY_USAGE
     case VCD::OMAF::PF_ERP:
-#else
-    case PT_ERP:
-#endif
     {
       m_surfaceRender = new ERPRender();
       if (nullptr == m_surfaceRender) {
@@ -232,11 +220,7 @@ RenderStatus RenderManager::CreateRender(int32_t projFormat) {
       }
       break;
     }
-#ifndef LOW_LATENCY_USAGE
     case VCD::OMAF::PF_CUBEMAP:
-#else
-    case PT_CUBEMAP:
-#endif
     {
       m_surfaceRender = new CubeMapRender();
       if (nullptr == m_surfaceRender) {

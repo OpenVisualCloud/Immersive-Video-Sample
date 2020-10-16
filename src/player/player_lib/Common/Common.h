@@ -39,13 +39,11 @@
 
 #include "../../../utils/ns_def.h"
 #include "RenderType.h"
-#ifndef LOW_LATENCY_USAGE
 #include "data_type.h"
 extern "C"
 {
 #include "safestringlib/safe_mem_lib.h"
 }
-#endif
 #include "../../../utils/OmafStructure.h"
 #include "../../../utils/GlogWrapper.h"
 
