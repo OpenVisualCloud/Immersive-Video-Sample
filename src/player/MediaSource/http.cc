@@ -1,4 +1,4 @@
-#ifdef LOW_LATENCY_USAGE
+#ifdef _ENABLE_WEBRTC_SOURCE_
 #include "http.h"
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -345,4 +345,4 @@ string CHttp::getToken(const string &addr, const string &room)
     string url = addr + "/createToken";
     return http_post(url, content);
 }
-#endif /* LOW_LATENCY_USAGE */
+#endif /* _ENABLE_WEBRTC_SOURCE_ */
