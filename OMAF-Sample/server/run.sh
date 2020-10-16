@@ -1,17 +1,19 @@
 #!/bin/bash -x
 
-RES=$1
-TYPE=$2
+RES=${1:-"4K"}
+TYPE=${2:-"LIVE"}
+PROTOCOL=${3:-"HTTP"}
 IP=$(cat /etc/hosts | tail -n 1 | awk '{print $1}')
 
 parameters_usage(){
     echo 'Usage: 1. <resolution>:          [ 4K , 8K ]'
     echo '       2. <type>:                [ LIVE , VOD ]'
+    echo '       3. <protocol>:            [ HTTP , HTTPS ]'
 }
 
 pkill -f WorkerServer
 
-if [ "${RES}" = "-h" ] || [ $# != 2 ] ; then
+if [ "${RES}" = "-h" ] ; then
     parameters_usage
     exit 0
 fi
@@ -22,6 +24,12 @@ fi
 if [ "${TYPE}" != "LIVE" ] && [ "${TYPE}" != "VOD" ] ; then
     parameters_usage
     exit 0
+fi
+
+if [ "${PROTOCOL}" = "HTTPS" ] ; then
+    URLBASE="https://$2:443/LIVE4K"
+elif [ "${PROTOCOL}" = "HTTP" ] ; then
+    URLBASE="http://$2:8080/LIVE4K"
 fi
 
 ffmpeg_4K_LIVE(){
@@ -42,7 +50,7 @@ ffmpeg_4K_LIVE(){
         -f omaf_packing \
         -is_live 1 -split_tile 1 -seg_duration 1 \
         -window_size 20 -extra_window_size 30 \
-        -base_url https://$2:443/LIVE4K/ \
+        -base_url ${URLBASE}/LIVE4K/ \
         -out_name Test /usr/local/nginx/html/LIVE4K/
 }
 
@@ -63,7 +71,7 @@ ffmpeg_4K_VOD(){
         -b:1 2M -map 0:v -vframes 500 \
         -f omaf_packing \
         -is_live 0 -split_tile 1 -seg_duration 1 \
-        -base_url https://$2:443/VOD4K/ \
+        -base_url ${URLBASE}/LIVE4K/ \
         -out_name Test /usr/local/nginx/html/VOD4K/
 }
 
@@ -85,7 +93,7 @@ ffmpeg_8K_LIVE(){
         -f omaf_packing \
         -is_live 1 -split_tile 1 -seg_duration 1 \
         -extractors_per_thread 4 \
-        -base_url https://$2:443/LIVE8K/ \
+        -base_url ${URLBASE}/LIVE4K/ \
         -out_name Test /usr/local/nginx/html/LIVE8K/
 }
 
@@ -106,7 +114,7 @@ ffmpeg_8K_VOD(){
         -b:1 2M -map 0:v -vframes 500 \
         -f omaf_packing \
         -is_live 0 -split_tile 1 -seg_duration 1 \
-        -base_url https://$2:443/VOD8K/ \
+        -base_url ${URLBASE}/LIVE4K/ \
         -out_name Test /usr/local/nginx/html/VOD8K/
 }
 

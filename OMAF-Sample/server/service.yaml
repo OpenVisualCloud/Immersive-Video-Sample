@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: immersive-service
+  labels:
+    app: immersive-server
+spec:
+  type: NodePort
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 443
+    nodePort: 30001
+    name: https
+  - port: 8080
+    targetPort: 8080
+    nodePort: 30002
+    name: http
+  externalIPs:
+    - NODEIP
+  selector:
+    app: immersive-server

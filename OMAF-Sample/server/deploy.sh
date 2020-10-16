@@ -1,35 +1,40 @@
 #!/bin/bash -ex
 
-PROXY=$1
-
 parameters_usage(){
-    echo 'Usage: 1. <proxy>:  proxy setting. [optional]'
+    echo 'Usage: 1. <path>:   original file path'
+    echo '       2. <proxy>:  proxy setting. [optional]'
 }
 
-mkdir -p src
-cd ../..
-cp -r src/360SCVP OMAF-Sample/server/src
-cp -r src/external OMAF-Sample/server/src
-cp -r src/ffmpeg OMAF-Sample/server/src
-cp -r src/player OMAF-Sample/server/src
-cp -r src/utils OMAF-Sample/server/src
-cp -r src/isolib OMAF-Sample/server/src
-cp -r src/trace OMAF-Sample/server/src
-cp -r src/plugins OMAF-Sample/server/src
-cp -r src/VROmafPacking OMAF-Sample/server/src
-cp -r src/OmafDashAccess OMAF-Sample/server/src
-cp -r src/CMakeLists.txt OMAF-Sample/server/src
-cp -r Sample-Videos OMAF-Sample/server/src
+REPOPATH=`echo $1 | awk -F "OMAF-Sample" '{print $1}'`
+SRCPATH="${REPOPATH}src/"
+DSTPATH="${REPOPATH}OMAF-Sample/server/src/"
 
-cd OMAF-Sample/server
-if [ $# = 0 ] ; then
-    docker build -t immersive_server:v1 .
-elif [ $# = 1 ] ; then
+mkdir -p ${DSTPATH}
+cd ${DSTPATH}..
+
+cp -r ${SRCPATH}360SCVP ${DSTPATH}
+cp -r ${SRCPATH}external ${DSTPATH}
+cp -r ${SRCPATH}ffmpeg ${DSTPATH}
+cp -r ${SRCPATH}player ${DSTPATH}
+cp -r ${SRCPATH}utils ${DSTPATH}
+cp -r ${SRCPATH}isolib ${DSTPATH}
+cp -r ${SRCPATH}trace ${DSTPATH}
+cp -r ${SRCPATH}plugins ${DSTPATH}
+cp -r ${SRCPATH}VROmafPacking ${DSTPATH}
+cp -r ${SRCPATH}OmafDashAccess ${DSTPATH}
+cp -r ${SRCPATH}CMakeLists.txt ${DSTPATH}
+cp -r ${REPOPATH}Sample-Videos ${DSTPATH}
+
+if [ $# = 1 ] ; then
+    docker build -t immersive_server:v1.2 .
+elif [ $# = 2 ] ; then
     if [ "$1" = "-h" ] ; then
         parameters_usage
     else
-        PROXY=$1
-        docker build -t immersive_server:v1.2 --build-arg http_proxy=${PROXY} --build-arg https_proxy=${PROXY} .
+        PROXY=$2
+        docker build -t immersive_server:v1.2 \
+            --build-arg http_proxy=${PROXY} \
+            --build-arg https_proxy=${PROXY} .
         echo "PROXY:${PROXY}"
     fi
 else
@@ -37,4 +42,4 @@ else
     exit 0
 fi
 
-rm -rf src
+rm -rf ${DSTPATH}
