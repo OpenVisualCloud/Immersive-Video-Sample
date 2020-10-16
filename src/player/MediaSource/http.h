@@ -1,7 +1,7 @@
 // Copyright (C) <2019> Intel Corporation
 //
 // SPDX-License-Identifier: Apache-2.0
-#ifdef LOW_LATENCY_USAGE
+#ifdef _ENABLE_WEBRTC_SOURCE_
 #pragma once
 #include <string>
 
@@ -26,4 +26,4 @@ private:
     static int http_tcpclient_send(int socket, char *buff, int size);
     static string http_parse_result(const char *lpbuf);
 };
-#endif /* LOW_LATENCY_USAGE */
+#endif /* _ENABLE_WEBRTC_SOURCE_ */
