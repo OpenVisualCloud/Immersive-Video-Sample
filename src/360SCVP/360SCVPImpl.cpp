@@ -875,6 +875,24 @@ TileDef* TstitchStream::getSelectedTile()
 {
     return m_pOutTile;
 }
+
+int32_t TstitchStream::getTilesByLegacyWay(TileDef* pOutTile)
+{
+    if (!m_pViewport) {
+        LOG(WARNING) << "Viewport is not allocated";
+        return -1;
+    }
+    int32_t ret = 0;
+
+    ret = genViewport_process(&m_pViewportParam, m_pViewport);
+    if (ret == -1) {
+        LOG(WARNING) << "Error returned when using the traditional way to calculate tiles!";
+        return ret;
+    }
+    ret = genViewport_getTilesInViewportByLegacyWay(m_pViewport, pOutTile);
+    return ret;
+}
+
 int32_t TstitchStream::setViewPort(float yaw, float pitch)
 {
     return genViewport_setViewPort(m_pViewport, yaw, pitch);

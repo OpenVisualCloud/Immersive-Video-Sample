@@ -44,11 +44,6 @@
 #endif
 
 using namespace std;
-#define LOW_PITCH_BOUND_IN_NORTH 25
-#define LOW_PITCH_BOUND_IN_SOUTH -25
-
-#define HIGH_PITCH_BOUND_IN_NORTH 50
-#define HIGH_PITCH_BOUND_IN_SOUTH -50
 
 int32_t cubeMapFaceMap[6] = {0, 1, 4, 5, 2, 3};
 void* genViewport_Init(generateViewPortParam* pParamGenViewport)
@@ -474,94 +469,13 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
         return -1;
 
     int32_t tileNum = 0;
-    int32_t additionalTilesNum = 0;
 
-    int32_t fPitch = (int32_t)(cTAppConvCfg->m_codingSVideoInfo.viewPort.fPitch);
     tileNum = cTAppConvCfg->calcTilesInViewport(cTAppConvCfg->m_srd, cTAppConvCfg->m_tileNumCol, cTAppConvCfg->m_tileNumRow);
-    if (cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_EQUIRECT)
-    {
-        int32_t pos = 0;
-        if (fPitch >= LOW_PITCH_BOUND_IN_NORTH || fPitch <= LOW_PITCH_BOUND_IN_SOUTH)
-        {
-            // work around : low pitch area need to cover 2 tiles on both left/right sides separately.
-            additionalTilesNum = 4;
-            if (fPitch >= LOW_PITCH_BOUND_IN_NORTH)
-                pos = 0;
-            else
-                pos = cTAppConvCfg->m_tileNumRow - 1;
-
-            int32_t leftAddition = additionalTilesNum / 2;
-            int32_t rightAddition = additionalTilesNum - leftAddition;
-            uint32_t changedNum = 0;
-            for (uint32_t j = pos * cTAppConvCfg->m_tileNumCol; j < (pos+1) * cTAppConvCfg->m_tileNumCol; j++)
-            {
-                if (cTAppConvCfg->m_srd[j].isOccupy == 0 && cTAppConvCfg->m_srd[(j+1)%cTAppConvCfg->m_tileNumCol + pos * cTAppConvCfg->m_tileNumCol].isOccupy == 1)
-                {
-                    uint32_t acc_idx = (j + cTAppConvCfg->m_tileNumCol) % cTAppConvCfg->m_tileNumCol + pos * cTAppConvCfg->m_tileNumCol;
-                    while (leftAddition-- > 0)
-                    {
-                        cTAppConvCfg->m_srd[acc_idx].isOccupy = 1;
-                        if (pos == 0)
-                        {
-                            acc_idx += cTAppConvCfg->m_tileNumCol;
-                        }else
-                        {
-                            acc_idx -= cTAppConvCfg->m_tileNumCol;
-                        }
-                        changedNum++;
-                    }
-                }
-                if (cTAppConvCfg->m_srd[j].isOccupy == 1 && cTAppConvCfg->m_srd[(j+1)%cTAppConvCfg->m_tileNumCol + pos * cTAppConvCfg->m_tileNumCol].isOccupy == 0)
-                {
-                    uint32_t acc_idx = (j + 1 + cTAppConvCfg->m_tileNumCol) % cTAppConvCfg->m_tileNumCol +  pos * cTAppConvCfg->m_tileNumCol;
-                    while (rightAddition-- > 0)
-                    {
-                        cTAppConvCfg->m_srd[acc_idx].isOccupy = 1;
-                        if (pos == 0)
-                        {
-                            acc_idx += cTAppConvCfg->m_tileNumCol;
-                        }else
-                        {
-                            acc_idx -= cTAppConvCfg->m_tileNumCol;
-                        }
-                        changedNum++;
-                    }
-                }
-            }
-
-            additionalTilesNum = changedNum;
-            // work around : high pitch area need more tiles( 2 rows )
-            if (fPitch >= HIGH_PITCH_BOUND_IN_NORTH)
-            {
-                for (uint32_t i = 0; i < min(cTAppConvCfg->m_tileNumCol * 2, cTAppConvCfg->m_tileNumCol * cTAppConvCfg->m_tileNumRow); i++)
-                {
-                    if (cTAppConvCfg->m_srd[i].isOccupy == 0)
-                        additionalTilesNum++;
-                    cTAppConvCfg->m_srd[i].isOccupy = 1;
-                }
-            }
-            if (fPitch <= HIGH_PITCH_BOUND_IN_SOUTH)
-            {
-                uint32_t startRow = cTAppConvCfg->m_tileNumRow - 2 > 0 ? cTAppConvCfg->m_tileNumRow - 2 : 0;
-                for (uint32_t i = startRow * cTAppConvCfg->m_tileNumCol; i < cTAppConvCfg->m_tileNumCol * cTAppConvCfg->m_tileNumRow; i++)
-                {
-                    if (cTAppConvCfg->m_srd[i].isOccupy == 0)
-                        additionalTilesNum++;
-                    cTAppConvCfg->m_srd[i].isOccupy = 1;
-                }
-            }
-        }
-    }
-    // printf("additionalTilesNum %d \n", additionalTilesNum);
-    //set the occupy tile into the output parameter
     int32_t idx = 0;
     TileDef* pOutTileTmp = pOutTile;
     int32_t faceNum = (cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 2;
     // correct accurate needed tile number in ERP.
-    if (additionalTilesNum > 0 && faceNum == 2)
-        tileNum = tileNum + additionalTilesNum;
 
-    uint32_t occupancyNum = 0;
     if (cTAppConvCfg->m_srd[cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow-1].isOccupy == 1)
     {
         for (int32_t idFace = 0; idFace < faceNum; idFace++)
@@ -579,7 +493,6 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
                         pOutTileTmp->idx = idx;
                         SCVP_LOG(LOG_INFO, "final decision is idx %d and face_id %d\n", idx, pOutTileTmp->faceId);
                         pOutTileTmp++;
-                        occupancyNum++;
                     }
                     idx--;
                 }
@@ -602,7 +515,6 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
                         pOutTileTmp->idx = idx;
                         SCVP_LOG(LOG_INFO, "final decision is idx %d and face_id %d\n", idx, pOutTileTmp->faceId);
                         pOutTileTmp++;
-                        occupancyNum++;
                     }
                     idx++;
                 }
@@ -688,6 +600,81 @@ int32_t genViewport_getViewportTiles(void* pGenHandle, TileDef* pOutTile)
     }
     tileNum = cTAppConvCfg->m_maxTileNum;
     return tileNum;
+}
+
+int32_t genViewport_getTilesInViewportByLegacyWay(void* pGenHandle, TileDef* pOutTile)
+{
+    TgenViewport* cTAppConvCfg = (TgenViewport*)(pGenHandle);
+    if (!cTAppConvCfg || !pOutTile)
+        return -1;
+
+    ITileInfo* pTileInfoTmp = cTAppConvCfg->m_srd;
+    int32_t faceNum = (cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 1;
+    for (int32_t faceid = 0; faceid < faceNum; faceid++)
+    {
+        for (uint32_t row = 0; row < cTAppConvCfg->m_tileNumRow; row++)
+        {
+            for (uint32_t col = 0; col < cTAppConvCfg->m_tileNumCol; col++)
+            {
+                pTileInfoTmp->isOccupy = cTAppConvCfg->isInside(pTileInfoTmp->x, pTileInfoTmp->y, pTileInfoTmp->tilewidth, pTileInfoTmp->tileheight, faceid);
+                pTileInfoTmp++;
+            }
+        }
+    }
+
+    int32_t idx = 0;
+    TileDef* pOutTileTmp = pOutTile;
+    faceNum = (cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 2;
+
+    uint32_t occupancyNum = 0;
+    if (cTAppConvCfg->m_srd[cTAppConvCfg->m_tileNumCol * cTAppConvCfg->m_tileNumRow - 1].isOccupy == 1)
+    {
+        for (int32_t idFace = 0; idFace < faceNum; idFace++)
+        {
+            idx = idFace * cTAppConvCfg->m_tileNumCol * cTAppConvCfg->m_tileNumRow + cTAppConvCfg->m_tileNumCol * cTAppConvCfg->m_tileNumRow - 1;
+            for (uint32_t col = cTAppConvCfg->m_tileNumCol; col > 0; col--)
+            {
+                for (uint32_t row = cTAppConvCfg->m_tileNumRow; row > 0; row--)
+                {
+                    if (cTAppConvCfg->m_srd[idx].isOccupy == 1)
+                    {
+                        pOutTileTmp->faceId = cubeMapFaceMap[cTAppConvCfg->m_srd[idx].faceId];
+                        pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
+                        pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
+                        pOutTileTmp->idx = idx;
+                        SCVP_LOG(LOG_INFO, "final decision is idx %d and face_id %d\n", idx, pOutTileTmp->faceId);
+                        pOutTileTmp++;
+                        occupancyNum++;
+                    }
+                    idx--;
+                }
+            }
+        }
+    }
+    else
+    {
+        for (int32_t idFace = 0; idFace < faceNum; idFace++)
+        {
+            for (uint32_t col = 0; col < cTAppConvCfg->m_tileNumCol; col++)
+            {
+                for (uint32_t row = 0; row < cTAppConvCfg->m_tileNumRow; row++)
+                {
+                    if (cTAppConvCfg->m_srd[idx].isOccupy == 1)
+                    {
+                        pOutTileTmp->faceId = cubeMapFaceMap[cTAppConvCfg->m_srd[idx].faceId];
+                        pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
+                        pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
+                        pOutTileTmp->idx = idx;
+                        SCVP_LOG(LOG_INFO, "final decision is idx %d and face_id %d\n", idx, pOutTileTmp->faceId);
+                        pOutTileTmp++;
+                        occupancyNum++;
+                    }
+                    idx++;
+                }
+            }
+        }
+    }
+    return occupancyNum;
 }
 
 int32_t   genViewport_unInit(void* pGenHandle)
@@ -1048,20 +1035,70 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     int32_t faceNum = (m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 1;
     float fYaw = m_codingSVideoInfo.viewPort.fYaw;
     float fPitch = m_codingSVideoInfo.viewPort.fPitch;
+    float vFOV = m_codingSVideoInfo.viewPort.vFOV;
+    float hFOV = m_codingSVideoInfo.viewPort.hFOV;
+    float maxOffsetAngle;
+    int32_t horzOffsetTileNum;
+    double lattitudeThresh1, lattitudeThresh2;
+
     // starting time
     double dResult;
     clock_t lBefore = clock();
 
+    float cal_yaw = fYaw + ERP_HORZ_ANGLE / 2;
+    float cal_pitch = ERP_VERT_ANGLE / 2 - fPitch;
+    float horzStep = ERP_HORZ_ANGLE / (float)m_tileNumCol;
+    float vertStep = ERP_VERT_ANGLE / (float)m_tileNumRow;
+
+    lattitudeThresh1 = 90 - hFOV / 4 - vFOV / 2;
+    lattitudeThresh2 = 90 - vFOV / 2;
+
+    if (fPitch > 0)
+    {
+        if (fPitch < lattitudeThresh1) {
+            maxOffsetAngle = 2 * RAD2DEG_FACTOR * sasin(ssin((hFOV / 4) * DEG2RAD_FACTOR) / scos((fPitch + vFOV/2)*DEG2RAD_FACTOR)) - hFOV/2;
+            horzOffsetTileNum = maxOffsetAngle / horzStep + 1;
+        }
+        else if (fPitch < lattitudeThresh2) {
+            maxOffsetAngle = 2 * RAD2DEG_FACTOR * sasin(ssin((hFOV / 4) * DEG2RAD_FACTOR) / scos((fPitch) * DEG2RAD_FACTOR)) - hFOV/2;
+            horzOffsetTileNum = maxOffsetAngle / horzStep + 1;
+        }
+        else {
+            maxOffsetAngle = 0;
+            horzOffsetTileNum = 0;
+        }
+    }
+    else if (fPitch < 0) {
+        if (fPitch > -lattitudeThresh1) {
+            maxOffsetAngle = 2 * RAD2DEG_FACTOR * sasin(ssin((hFOV / 4) * DEG2RAD_FACTOR) / scos((fPitch - vFOV/2) * DEG2RAD_FACTOR)) - hFOV/2;
+            horzOffsetTileNum = maxOffsetAngle / horzStep + 1;
+        }
+        else if (fPitch > -lattitudeThresh2) {
+            maxOffsetAngle = 2 * RAD2DEG_FACTOR * sasin(ssin((hFOV/4) * DEG2RAD_FACTOR) / scos((fPitch) * DEG2RAD_FACTOR)) - hFOV/2;
+            horzOffsetTileNum = maxOffsetAngle / horzStep + 1;
+        }
+        else {
+            maxOffsetAngle = 0;
+            horzOffsetTileNum = 0;
+        }
+    }
+    else {
+        maxOffsetAngle = 0;
+        horzOffsetTileNum = 0;
+    }
+
+    // Limit Addtional horizontal tile number to avoid array cross boundary
+    if (horzOffsetTileNum > (int32_t)m_tileNumCol/2) {
+        SCVP_LOG(LOG_WARNING, "Addtional horizontal tile number is %d and bigger than total colomns\n", horzOffsetTileNum);
+    }
+
     // seek the center tile of the FOV
     float leastDistance = FLT_MAX;
     uint32_t opt_idx = m_tileNumRow * m_tileNumCol;
+
     for (int32_t faceid = 0; faceid < faceNum; faceid++)
     {
         // select optimization
-        float cal_yaw = fYaw + ERP_HORZ_ANGLE / 2;
-        float cal_pitch = ERP_VERT_ANGLE / 2 - fPitch;
-        float horzStep = ERP_HORZ_ANGLE / (float)m_tileNumCol;
-        float vertStep = ERP_VERT_ANGLE / (float)m_tileNumRow;
         std::pair<uint32_t, uint32_t> fov_corr((uint32_t)cal_yaw / (uint32_t)horzStep, (uint32_t)cal_pitch / (uint32_t)vertStep);
         if (fov_corr.second == m_tileNumRow){
             fov_corr.second--;
@@ -1129,23 +1166,30 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     pTmpDownRight->x = centerX + halfVPhorz;
     pTmpUpLeft->y = centerY - halfVPvert;
     pTmpDownRight->y = centerY + halfVPvert;
-    if (pTmpUpLeft->y < m_srd[idx].tileheight*(-1))
+
+    if (pTmpUpLeft->y < 0)
     {
         pTmpUpLeft->y = 0;
         pTmpUpLeft->x = 0;
         pTmpDownRight->x = inputWidth;
     }
-    else if(pTmpUpLeft->y < 0)
-        pTmpUpLeft->y = 0;
+    else if (maxOffsetAngle != 0 && fPitch >= 0)
+    {
+        pTmpUpLeft->x -= m_srd[idx].tilewidth * horzOffsetTileNum;
+        pTmpDownRight->x += m_srd[idx].tilewidth* horzOffsetTileNum;
+    }
     // Need to ajust after region select optimization in two pole areas
-    if (pTmpDownRight->y >= inputHeight + m_srd[idx].tileheight)
+    if (pTmpDownRight->y >= inputHeight)
     {
         pTmpUpLeft->x = 0;
         pTmpDownRight->x = inputWidth;
         pTmpDownRight->y = inputHeight;
     }
-    else if (pTmpDownRight->y > inputHeight)
-        pTmpDownRight->y = inputHeight;
+    else if (maxOffsetAngle != 0 && fPitch < 0)
+    {
+        pTmpUpLeft->x -= m_srd[idx].tilewidth* horzOffsetTileNum;
+        pTmpDownRight->x += m_srd[idx].tilewidth* horzOffsetTileNum;
+    }
 
     if (pTmpUpLeft->x < 0)
     {

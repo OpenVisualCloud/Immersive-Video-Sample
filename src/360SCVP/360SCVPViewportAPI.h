@@ -200,6 +200,18 @@ int32_t genViewport_getViewportTiles(void* pGenHandle, TileDef* pOutTile);
 int32_t genViewport_getContentCoverage(void* pGenHandle, CCDef* pOutCC);
 
 //!
+//! \brief    This function output the selected tiles according to the timely changed viewPort information,
+//!           By the legacy tile selection algorithm.
+//!           for cube map source, currently support FOV range 100 ~70 degree
+//!
+//! \param    void*      pGenHandle,     input,  which is created by the genTiledStream_Init function
+//! \param    TileDef*   pOutTile,      output, the list for the tiles inside the viewport
+//!
+//! \return   int32_t, the number of the tiles inside the viewport.
+//!
+int32_t genViewport_getTilesInViewportByLegacyWay(void* pGenHandle, TileDef* pOutTile);
+
+//!
 //! \brief      This function completes the un-initialization, free the memory
 //!
 //! \param      void*   pGenHandle, input, which is created by the genViewport_Init function

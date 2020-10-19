@@ -35,6 +35,8 @@
 #define ERP_VERT_START 90
 #define PI_IN_DEGREE 180
 #define HALF_PI_IN_DEGREE 90
+#define DEG2RAD_FACTOR (S_PI/PI_IN_DEGREE)
+#define RAD2DEG_FACTOR (PI_IN_DEGREE/S_PI)
 
 // ====================================================================================================================
 // Class definition

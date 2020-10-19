@@ -124,6 +124,7 @@ public:
     int32_t  DecRWPKSEI(RegionWisePacking* pRWPK, uint8_t *pRWPKBits, uint32_t RWPKBitsSize);
     int32_t  getContentCoverage(CCDef* pOutCC);
     TileDef* getSelectedTile();
+    int32_t  getTilesByLegacyWay(TileDef* pOutTile);
     int32_t  SetLogCallBack(LogFunction logFunction);
 
 protected:
