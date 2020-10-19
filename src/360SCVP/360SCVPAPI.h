@@ -652,6 +652,17 @@ int32_t I360SCVP_GetParameter(void* p360SCVPHandle, int32_t paramID, void** pVal
 int32_t I360SCVP_SetParameter(void* p360SCVPHandle, int32_t paramID, void* pValue);
 
 //!
+//! \brief    This function can select tiles by legacy algorithm with good accuracy but low performance.
+//!
+//! \param    void*     p360SCVPHandle,  input,     which is created by the I360SVCP_Init function
+//! \param    void*     pOutTile,        output,    the selected tiles
+//!
+//! \return   int32_t, the selected tiles number.
+//!           >0, if succeed
+//!           <0, if fail
+//!
+int32_t I360SCVP_GetTilesByLegacyWay(TileDef* pOutTile, void* p360SCVPHandle);
+
 //! \brief    This function can set the logcallback funciton.
 //!
 //! \param    void*     p360SCVPHandle,  input,     which is created by the I360SVCP_Init function

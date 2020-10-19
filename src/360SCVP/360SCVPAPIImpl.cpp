@@ -324,6 +324,16 @@ int32_t I360SCVP_SetParameter(void* p360SCVPHandle, int32_t paramID, void* pValu
     return ret;
 }
 
+int32_t I360SCVP_GetTilesByLegacyWay(TileDef* pOutTile, void* p360SCVPHandle)
+{
+    int32_t ret = 0;
+    TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
+    if (!pStitch)
+        return -1;
+    ret = pStitch->getTilesByLegacyWay(pOutTile);
+    return ret;
+}
+
 int32_t I360SCVPSetLogCallBack(void* p360SCVPHandle, void* externalLog)
 {
     TstitchStream* pStitch = (TstitchStream*)p360SCVPHandle;

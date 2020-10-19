@@ -1157,4 +1157,53 @@ TEST_F(I360SCVPTest, cubemapGetTilesInViewport)
     EXPECT_TRUE(ret == 0);
 }
 
+TEST_F(I360SCVPTest, ERPSelectViewportTiles)
+{
+    int32_t tileNum_fast, tileNum_legacy;
+    TileDef pOutTile[1024];
+    Param_ViewportOutput paramViewportOutput;
+
+    param.paramViewPort.faceWidth = 7680;
+    param.paramViewPort.faceHeight = 3840;
+    param.paramViewPort.geoTypeInput = EGeometryType(E_SVIDEO_EQUIRECT);
+    param.paramViewPort.viewportHeight = 1024;
+    param.paramViewPort.viewportWidth = 1024;
+    param.paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;
+    param.paramViewPort.tileNumCol = 20;
+    param.paramViewPort.tileNumRow = 10;
+    param.paramViewPort.viewPortYaw = 0;
+    param.paramViewPort.viewPortPitch = 0;
+    param.paramViewPort.viewPortFOVH = 80;
+    param.paramViewPort.viewPortFOVV = 90;
+    param.usedType = E_VIEWPORT_ONLY;
+    param.paramViewPort.paramVideoFP.cols = 1;
+    param.paramViewPort.paramVideoFP.rows = 1;
+    param.paramViewPort.paramVideoFP.faces[0][0].faceWidth = param.paramViewPort.faceWidth;
+    param.paramViewPort.paramVideoFP.faces[0][0].faceHeight = param.paramViewPort.faceHeight;
+    param.paramViewPort.paramVideoFP.faces[0][0].idFace = 1;
+    param.paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
+
+    void* pI360SCVP = I360SCVP_Init(&param);
+    EXPECT_TRUE(pI360SCVP != NULL);
+    if (!pI360SCVP)
+    {
+        I360SCVP_unInit(pI360SCVP);
+        printf( "Init 360SCVP failure: pI360SCVP is NULL!!!\n");
+        return;
+    }
+    float yaw =  param.paramViewPort.viewPortYaw ;
+    float pitch = param.paramViewPort.viewPortPitch;
+
+    tileNum_fast = I360SCVP_getTilesInViewport(pOutTile, &paramViewportOutput, pI360SCVP);
+
+    I360SCVP_process(&param, pI360SCVP);
+    I360SCVP_SetParameter(pI360SCVP, ID_SCVP_PARAM_VIEWPORT, &param.paramViewPort);
+    tileNum_legacy = I360SCVP_GetTilesByLegacyWay(&pOutTile[tileNum_fast], pI360SCVP);
+
+    I360SCVP_unInit(pI360SCVP);
+    EXPECT_TRUE(tileNum_fast >= 0);
+    EXPECT_TRUE(tileNum_legacy >= 0);
+    EXPECT_TRUE(tileNum_fast >= tileNum_legacy);
+}
+
 }
