@@ -157,6 +157,43 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
   return selectedExtractor;
 }
 
+static bool IsIncluded(std::list<int> first, std::list<int> second)
+{
+    bool included = false;
+    if (first.size() > second.size())
+    {
+        included = false;
+    }
+    else
+    {
+        uint64_t includedNum = 0;
+        std::list<int>::iterator it1;
+        for (it1 = first.begin(); it1 != first.end(); it1++)
+        {
+            int id1 = *it1;
+            std::list<int>::iterator it2;
+            for (it2 = second.begin(); it2 != second.end(); it2++)
+            {
+                 int id2 = *it2;
+                 if (id2 == id1)
+                 {
+                     includedNum++;
+                     break;
+                 }
+             }
+         }
+         if (includedNum == first.size())
+         {
+             included = true;
+         }
+         else
+         {
+             included = false;
+         }
+     }
+     return included;
+}
+
 OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pStream, HeadPose* pose) {
   // to select extractor;
   int ret = I360SCVP_setViewPort(m360ViewPortHandle, (float)(round(pose->yaw)), (float)(round(pose->pitch)));
@@ -164,6 +201,73 @@ OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pSt
   ret = I360SCVP_process(mParamViewport, m360ViewPortHandle);
   if (ret != 0) return NULL;
 
+  TileDef *tilesInViewport = new TileDef[1024];
+  Param_ViewportOutput paramViewportOutput;
+  int32_t selectedTilesNum = I360SCVP_getTilesInViewport(
+          tilesInViewport, &paramViewportOutput, m360ViewPortHandle);
+  std::list<int> selectedTracks;
+
+  std::map<int, OmafAdaptationSet*> asMap = pStream->GetMediaAdaptationSet();
+  std::map<int, OmafAdaptationSet*>::iterator itAS;
+
+  if (mProjFmt == ProjectionFormat::PF_ERP)
+  {
+      for (int32_t index = 0; index < selectedTilesNum; index++)
+      {
+          int32_t left = tilesInViewport[index].x;
+          int32_t top  = tilesInViewport[index].y;
+
+          for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+          {
+              OmafAdaptationSet *adaptationSet = itAS->second;
+              OmafSrd *srd = adaptationSet->GetSRD();
+              int32_t tileLeft = srd->get_X();
+              int32_t tileTop  = srd->get_Y();
+              uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
+
+              if ((qualityRanking == HIGHEST_QUALITY_RANKING) && (tileLeft == left) && (tileTop == top))
+              {
+                  int trackID = adaptationSet->GetID();
+                  selectedTracks.push_back(trackID);
+                  break;
+              }
+          }
+      }
+  }
+  else if (mProjFmt == ProjectionFormat::PF_CUBEMAP)
+  {
+      for (int32_t index = 0; index < selectedTilesNum; index++)
+      {
+          int32_t left = tilesInViewport[index].x;
+          int32_t top  = tilesInViewport[index].y;
+          int32_t faceId = tilesInViewport[index].faceId;
+          for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+          {
+              OmafAdaptationSet *adaptationSet = itAS->second;
+              uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
+
+              if (qualityRanking == HIGHEST_QUALITY_RANKING)
+              {
+                  TileDef *tileInfo = adaptationSet->GetTileInfo();
+                  if (!tileInfo)
+                  {
+                      OMAF_LOG(LOG_ERROR, "NULL tile information for Cubemap !\n");
+                      DELETE_ARRAY(tilesInViewport);
+                      return NULL;
+                  }
+                  int32_t tileLeft = tileInfo->x;
+                  int32_t tileTop  = tileInfo->y;
+                  int32_t tileFaceId = tileInfo->faceId;
+                  if ((tileLeft == left) && (tileTop == top) && (tileFaceId == faceId))
+                  {
+                      int trackID = adaptationSet->GetID();
+                      selectedTracks.push_back(trackID);
+                      break;
+                  }
+              }
+          }
+      }
+  }
   // get Content Coverage from 360SCVP library
   CCDef* outCC = new CCDef;
   ret = I360SCVP_getContentCoverage(m360ViewPortHandle, outCC);
@@ -173,9 +277,30 @@ OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pSt
     return NULL;
   }
 
-  // get the extractor with largest intersection
-  OmafExtractor* selectedExtractor = GetNearestExtractor(pStream, outCC);
+  OmafExtractor* selectedExtractor = NULL;
+  bool included = false;
+  std::map<int, OmafExtractor*> extractors = pStream->GetExtractors();
+  std::map<int, OmafExtractor*>::iterator ie;
+  for (ie = extractors.begin(); ie != extractors.end(); ie++)
+  {
+      std::list<int> refTracks = ie->second->GetDependTrackID();
+      included = IsIncluded(selectedTracks, refTracks);
+      if (included)
+          break;
+  }
+  if (ie == extractors.end())
+  {
+      OMAF_LOG(LOG_WARNING, "Couldn't find matched extractor track. There is error in packing !\n");
+      selectedExtractor = GetNearestExtractor(pStream, outCC);
+  }
+  else
+  {
+      selectedExtractor = ie->second;
+  }
+
   SAFE_DELETE(outCC);
+  delete [] tilesInViewport;
+  tilesInViewport = NULL;
 
   return selectedExtractor;
 }

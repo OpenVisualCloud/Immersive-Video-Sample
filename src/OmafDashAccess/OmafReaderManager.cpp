@@ -1515,17 +1515,18 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
               }
             }
 
+            int lowResStartIdx = 0;
             for ( ; j >= 0; j--) {
               if ((rwpk.rectRegionPacking[j].projRegWidth == lowTileW) &&
                   (rwpk.rectRegionPacking[j].projRegHeight == lowTileH) &&
                   (rwpk.rectRegionPacking[j].packedRegLeft != 0) &&
                   (rwpk.rectRegionPacking[j].packedRegTop == 0))
               {
-                  boundLeft.push_back(rwpk.rectRegionPacking[j].packedRegLeft);
-                  boundTop.push_back(rwpk.rectRegionPacking[j].packedRegTop);
-                  break;
+                  lowResStartIdx = j;
               }
             }
+            boundLeft.push_back(rwpk.rectRegionPacking[lowResStartIdx].packedRegLeft);
+            boundTop.push_back(rwpk.rectRegionPacking[lowResStartIdx].packedRegTop);
         }
 
         for (int idx = 0; idx < packet->GetQualityNum(); idx++) {
