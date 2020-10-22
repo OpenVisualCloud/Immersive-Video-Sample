@@ -45,9 +45,6 @@
 
 VCD_NS_BEGIN
 
-#define YAW_STEP   1
-#define PITCH_STEP 1
-
 //!
 //! \class ExtractorTrackGenerator
 //! \brief Define the operation of extractor track generator
@@ -85,6 +82,8 @@ public:
         m_origVPSNalu     = NULL;
         m_origSPSNalu     = NULL;
         m_origPPSNalu     = NULL;
+        m_pitchStep       = 0.00;
+        m_yawStep         = 0.00;
     };
 
     //!
@@ -120,6 +119,8 @@ public:
         m_origVPSNalu     = NULL;
         m_origSPSNalu     = NULL;
         m_origPPSNalu     = NULL;
+        m_pitchStep       = 0.00;
+        m_yawStep         = 0.00;
     };
 
     ExtractorTrackGenerator(const ExtractorTrackGenerator& src)
@@ -147,6 +148,8 @@ public:
         m_origVPSNalu     = std::move(src.m_origVPSNalu);
         m_origSPSNalu     = std::move(src.m_origSPSNalu);
         m_origPPSNalu     = std::move(src.m_origPPSNalu);
+        m_pitchStep       = src.m_pitchStep;
+        m_yawStep         = src.m_yawStep;
     };
 
     ExtractorTrackGenerator& operator=(ExtractorTrackGenerator&& other)
@@ -174,6 +177,8 @@ public:
         m_origVPSNalu     = NULL;
         m_origSPSNalu     = NULL;
         m_origPPSNalu     = NULL;
+        m_pitchStep       = other.m_pitchStep;
+        m_yawStep         = other.m_yawStep;
 
         return *this;
     };
@@ -359,6 +364,8 @@ private:
     Nalu                            *m_origVPSNalu;       //!< the pointer to original VPS nalu of high resolution video stream
     Nalu                            *m_origSPSNalu;       //!< the pointer to original SPS nalu of high resolution video stream
     Nalu                            *m_origPPSNalu;       //!< the pointer to original PPS nalu of high resolution video stream
+    float                           m_pitchStep;          //!< the step of pitch angle when going through all viewports
+    float                           m_yawStep;            //!< the step of yaw angle when going through all viewports
 };
 
 VCD_NS_END;
