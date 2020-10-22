@@ -539,12 +539,15 @@ int32_t ExtractorTrackGenerator::CalculateViewportNum()
     m_360scvpParam->usedType = E_VIEWPORT_ONLY;
     m_360scvpParam->logFunction = (void*)logCallBack;
     if (m_initInfo->projType == E_SVIDEO_EQUIRECT) {
+        m_yawStep = (float)((((origWidth / tileInRow) * 360.00) / origWidth) / 2);
+        m_pitchStep = (float)((((origHeight / tileInCol) * 180.00) / origHeight) / 2);
+
         m_360scvpParam->paramViewPort.viewportWidth = (m_initInfo->viewportInfo)->viewportWidth;
         m_360scvpParam->paramViewPort.viewportHeight = (m_initInfo->viewportInfo)->viewportHeight;
         m_360scvpParam->paramViewPort.viewPortPitch = (m_initInfo->viewportInfo)->viewportPitch;
         m_360scvpParam->paramViewPort.viewPortYaw = (m_initInfo->viewportInfo)->viewportYaw;
-        m_360scvpParam->paramViewPort.viewPortFOVH = (m_initInfo->viewportInfo)->horizontalFOVAngle;
-        m_360scvpParam->paramViewPort.viewPortFOVV = (m_initInfo->viewportInfo)->verticalFOVAngle;
+        m_360scvpParam->paramViewPort.viewPortFOVH = (m_initInfo->viewportInfo)->horizontalFOVAngle + m_yawStep;
+        m_360scvpParam->paramViewPort.viewPortFOVV = (m_initInfo->viewportInfo)->verticalFOVAngle + m_pitchStep;
         m_360scvpParam->paramViewPort.geoTypeInput = (EGeometryType)(m_initInfo->projType);
         m_360scvpParam->paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;
         m_360scvpParam->paramViewPort.tileNumRow = tileInCol;
@@ -557,12 +560,15 @@ int32_t ExtractorTrackGenerator::CalculateViewportNum()
         m_360scvpParam->paramViewPort.paramVideoFP.faces[0][0].idFace = 0;
         m_360scvpParam->paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
     } else if (m_initInfo->projType == E_SVIDEO_CUBEMAP) {
+        m_yawStep = (float)((((origWidth / tileInRow) * 360.00) / ((origWidth / 3) * 4)) / 2);
+        m_pitchStep = (float)((((origHeight / tileInCol) * 180.00) / ((origHeight / 2) * 2)) / 2);
+
         m_360scvpParam->paramViewPort.viewportWidth = (m_initInfo->viewportInfo)->viewportWidth;
         m_360scvpParam->paramViewPort.viewportHeight = (m_initInfo->viewportInfo)->viewportHeight;
         m_360scvpParam->paramViewPort.viewPortPitch = (m_initInfo->viewportInfo)->viewportPitch;
         m_360scvpParam->paramViewPort.viewPortYaw = (m_initInfo->viewportInfo)->viewportYaw;
-        m_360scvpParam->paramViewPort.viewPortFOVH = (m_initInfo->viewportInfo)->horizontalFOVAngle;
-        m_360scvpParam->paramViewPort.viewPortFOVV = (m_initInfo->viewportInfo)->verticalFOVAngle;
+        m_360scvpParam->paramViewPort.viewPortFOVH = (m_initInfo->viewportInfo)->horizontalFOVAngle + m_yawStep* 2;
+        m_360scvpParam->paramViewPort.viewPortFOVV = (m_initInfo->viewportInfo)->verticalFOVAngle + m_pitchStep* 2;
         m_360scvpParam->paramViewPort.geoTypeInput = (EGeometryType)(m_initInfo->projType);
         m_360scvpParam->paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;
         m_360scvpParam->paramViewPort.tileNumRow = tileInCol / 2;
@@ -589,6 +595,8 @@ int32_t ExtractorTrackGenerator::CalculateViewportNum()
         m_360scvpParam->paramViewPort.paramVideoFP.faces[1][2].rotFace = NO_TRANSFORM;
     }
 
+    OMAF_LOG(LOG_INFO, "Yaw and Pitch steps for going through all viewports are %f and %f\n", m_yawStep, m_pitchStep);
+
     m_360scvpHandle = I360SCVP_Init(m_360scvpParam);
     if (!m_360scvpHandle)
     {
@@ -604,10 +612,10 @@ int32_t ExtractorTrackGenerator::CalculateViewportNum()
             if (ret)
                 return ret;
 
-            one_pitch += PITCH_STEP;
+            one_pitch += m_pitchStep;
         }
 
-        one_yaw += YAW_STEP;
+        one_yaw += m_yawStep;
     }
 
     if (m_middleViewNum > 100)

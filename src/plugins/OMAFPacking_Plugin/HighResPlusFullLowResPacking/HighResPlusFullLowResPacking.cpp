@@ -162,12 +162,38 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::ChooseLowResTilesForPacking(
 
     if (supplementaryLRTilesNum)
     {
-        for (uint8_t regIdx = 0; regIdx < supplementaryLRTilesNum; regIdx++)
+        if (supplementaryLRTilesNum <= lowRwpk->numRegions)
         {
-            tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + regIdx].x = lowRwpk->rectRegionPacking[regIdx].projRegLeft;
-            tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + regIdx].y = lowRwpk->rectRegionPacking[regIdx].projRegTop;
-            tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + regIdx].idx = regIdx;
-            tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + regIdx].faceId = 0; //change later
+            for (uint8_t regIdx = 0; regIdx < supplementaryLRTilesNum; regIdx++)
+            {
+                tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + regIdx].x      = lowRwpk->rectRegionPacking[regIdx].projRegLeft;
+                tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + regIdx].y      = lowRwpk->rectRegionPacking[regIdx].projRegTop;
+                tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + regIdx].idx    = regIdx;
+                tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + regIdx].faceId = 0; //change later
+            }
+        }
+        else
+        {
+            uint32_t rounds = supplementaryLRTilesNum / lowRwpk->numRegions;
+            for (uint32_t roundIdx = 0; roundIdx < rounds; roundIdx++)
+            {
+                for (uint8_t regIdx = 0; regIdx < lowRwpk->numRegions; regIdx++)
+                {
+                    tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + lowRwpk->numRegions * roundIdx + regIdx].x = lowRwpk->rectRegionPacking[regIdx].projRegLeft;
+                    tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + lowRwpk->numRegions * roundIdx + regIdx].y = lowRwpk->rectRegionPacking[regIdx].projRegTop;
+                    tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + lowRwpk->numRegions * roundIdx + regIdx].idx = regIdx;
+                    tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + lowRwpk->numRegions * roundIdx + regIdx].faceId = 0; //change later
+                }
+            }
+
+            uint32_t remainder = supplementaryLRTilesNum % lowRwpk->numRegions;
+            for (uint8_t regIdx = 0; regIdx < remainder; regIdx++)
+            {
+                tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + lowRwpk->numRegions * rounds + regIdx].x = lowRwpk->rectRegionPacking[regIdx].projRegLeft;
+                tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + lowRwpk->numRegions * rounds + regIdx].y = lowRwpk->rectRegionPacking[regIdx].projRegTop;
+                tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + lowRwpk->numRegions * rounds + regIdx].idx = regIdx;
+                tilesInViewport[m_hrTilesInRow * m_hrTilesInCol + lowRwpk->numRegions + lowRwpk->numRegions * rounds + regIdx].faceId = 0; //change later
+            }
         }
     }
 
@@ -222,14 +248,22 @@ int32_t HighPlusFullLowRegionWisePackingGenerator::GenerateMergedTilesArrange(Ti
 
     m_lrTilesInCol = packedHeight / m_lowTileHeight;
     uint32_t supplementaryLRTilesNum = 0;
-    if (lowResTilesNum % m_lrTilesInCol)
+    if (m_lrTilesInCol <= lowResTilesNum)
     {
-        supplementaryLRTilesNum = m_lrTilesInCol - (lowResTilesNum % m_lrTilesInCol);
-        m_lrTilesInRow = lowResTilesNum / m_lrTilesInCol + 1;
+        if (lowResTilesNum % m_lrTilesInCol)
+        {
+            supplementaryLRTilesNum = m_lrTilesInCol - (lowResTilesNum % m_lrTilesInCol);
+            m_lrTilesInRow = lowResTilesNum / m_lrTilesInCol + 1;
+        }
+        else
+        {
+            m_lrTilesInRow = lowResTilesNum / m_lrTilesInCol;
+        }
     }
     else
     {
-        m_lrTilesInRow = lowResTilesNum / m_lrTilesInCol;
+        supplementaryLRTilesNum = m_lrTilesInCol - lowResTilesNum;
+        m_lrTilesInRow = 1;
     }
 
     m_tilesNumInPackedPic = m_hrTilesInRow * m_hrTilesInCol + m_lrTilesInRow * m_lrTilesInCol;

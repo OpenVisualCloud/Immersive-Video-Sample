@@ -63,10 +63,12 @@ int32_t ExtractorTrack::Initialize()
     m_dstRwpk = new RegionWisePacking;
     if (!m_dstRwpk)
         return OMAF_ERROR_NULL_PTR;
+    memset_s(m_dstRwpk, sizeof(RegionWisePacking), 0);
 
     m_dstCovi = new ContentCoverage;
     if (!m_dstCovi)
         return OMAF_ERROR_NULL_PTR;
+    memset_s(m_dstCovi, sizeof(ContentCoverage), 0);
 
     m_tilesMergeDir = new TilesMergeDirectionInCol;
     if (!m_tilesMergeDir)
