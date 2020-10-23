@@ -4776,7 +4776,7 @@ diff -urN FFmpeg/libavformat/Makefile FFmpeg-patched/libavformat/Makefile
 diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_packing_enc.c
 --- FFmpeg/libavformat/omaf_packing_enc.c	1970-01-01 08:00:00.000000000 +0800
 +++ FFmpeg-patched/libavformat/omaf_packing_enc.c	2020-09-27 13:35:13.543526537 +0800
-@@ -0,0 +1,616 @@
+@@ -0,0 +1,619 @@
 +/*
 + * Intel tile Dash muxer
 + *
@@ -5076,7 +5076,7 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +        {
 +            av_log(s, AV_LOG_ERROR,
 +                    "face_file should not be null when input source is from Cubemap projection! \n");
-+            return AVERROR(ENOMEM);
++            return AVERROR(EINVAL);
 +        }
 +
 +        initInfo->cubeMapInfo = (InputCubeMapInfo*)malloc(sizeof(InputCubeMapInfo));
@@ -5203,12 +5203,15 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +        int i = pkt->stream_index;
 +        AVStream *st = s->streams[i];
 +
++        if (!(pkt->side_data))
++            return -1;
++
 +        c->initInfo->bsBuffers[i].dataSize = pkt->side_data->size;
 +        c->initInfo->bsBuffers[i].data = (uint8_t*)malloc(c->initInfo->bsBuffers[i].dataSize * sizeof(uint8_t));
 +        if (!(c->initInfo->bsBuffers[i].data))
 +        {
 +            av_log(s, AV_LOG_ERROR, "Failed to malloc memory for holding bitstream header data \n");
-+            return AVERROR(ENOMEM);
++            return -1;
 +        }
 +        memcpy(c->initInfo->bsBuffers[i].data, pkt->side_data->data, c->initInfo->bsBuffers[i].dataSize);
 +
@@ -5248,7 +5251,7 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +        if (!(frameInfo->data))
 +        {
 +            av_log(s, AV_LOG_ERROR, "Failed to malloc memory for buffered frame data \n");
-+            return AVERROR(ENOMEM);
++            return -1;
 +        }
 +        memcpy(frameInfo->data, pkt->data + pkt->side_data->size, frameInfo->dataSize);
 +        frameInfo->isKeyFrame = (pkt->flags & AV_PKT_FLAG_KEY);
@@ -5271,7 +5274,7 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +            if (!(c->handler))
 +            {
 +                av_log(s, AV_LOG_ERROR, "Failed to create VR Omaf Packing handler \n");
-+                return AVERROR(EINVAL);
++                return -1;
 +            }
 +            c->frameNum++;
 +        }
@@ -5347,7 +5350,7 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +    { "viewport_yaw", "set viewport yaw angle, which is the angle around y axis", OFFSET(viewport_yaw), AV_OPT_TYPE_FLOAT, { .dbl = 90 }, 0, 180, E },
 +    { "viewport_pitch", "set viewport pitch angle, which is the angle around x axis", OFFSET(viewport_pitch), AV_OPT_TYPE_FLOAT, { .dbl = 0 }, 0, 100, E },
 +    { "viewport_fov_hor", "set horizontal angle of field of view (FOV)", OFFSET(viewport_fov_hor), AV_OPT_TYPE_FLOAT, { .dbl = 80 }, 0, 180, E },
-+    { "viewport_fov_ver", "set vertical angle of field of view (FOV)", OFFSET(viewport_fov_ver), AV_OPT_TYPE_FLOAT, { .dbl = 90 }, 0, 100, E },
++    { "viewport_fov_ver", "set vertical angle of field of view (FOV)", OFFSET(viewport_fov_ver), AV_OPT_TYPE_FLOAT, { .dbl = 80 }, 0, 100, E },
 +    { "window_size", "number of segments kept in the manifest", OFFSET(window_size), AV_OPT_TYPE_INT, { .i64 = 5 }, 0, INT_MAX, E },
 +    { "extra_window_size", "number of segments kept outside of the manifest before removing from disk", OFFSET(extra_window_size), AV_OPT_TYPE_INT, { .i64 = 15 }, 0, INT_MAX, E },
 +    { "split_tile", "need split the stream to tiles if input is tile-based hevc stream", OFFSET(split_tile), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, 2, E },
