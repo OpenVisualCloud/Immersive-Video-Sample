@@ -496,7 +496,8 @@ int OmafAdaptationSet::UpdateStartNumberByTime(uint64_t nAvailableStartTime) {
   }
   mActiveSegNum = (current - nAvailableStartTime) / (mSegmentDuration * 1000) + mStartNumber;
 
-  OMAF_LOG(LOG_INFO, "Current time= %lld and available time= %lld. Set start segment index= %d\n", current, nAvailableStartTime, mActiveSegNum);
+  OMAF_LOG(LOG_INFO, "Current time= %lld and available time= %lld.\n", current, nAvailableStartTime);
+  OMAF_LOG(LOG_INFO, "Set start segment index= %d\n", mActiveSegNum);
   return mActiveSegNum;
 }
 
