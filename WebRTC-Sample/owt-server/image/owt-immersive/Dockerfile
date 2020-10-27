@@ -193,6 +193,7 @@ RUN git clone ${SVT_HEVC_REPO} && \
 
 # Build OWT specific modules
 
+ARG OWTSERVER_COMMIT=70830f89320e43b55178e70ecdea57887783d81a
 ARG OWTSERVER_REPO=https://github.com/open-webrtc-toolkit/owt-server.git
 ARG OPENH264_MAJOR=1
 ARG OPENH264_MINOR=7
@@ -238,6 +239,8 @@ RUN cd /home && \
 # hadolint ignore=SC1091
 RUN git clone -b ${OWT_BRANCH} ${OWTSERVER_REPO} && \
     source /opt/rh/devtoolset-7/enable && \
+
+    cd ${SERVER_PATH} && git reset --hard ${OWTSERVER_COMMIT} && \
 
     # Install node modules for owt
     npm config set proxy=${http_proxy} && \
