@@ -25,7 +25,7 @@ if [ "${TYPE}" != "LIVE" ] && [ "${TYPE}" != "VOD" ] ; then
 fi
 
 ffmpeg_4K_LIVE(){
-    ./ffmpeg -stream_loop -1 \
+    ./ffmpeg -re -stream_loop -1 \
         -i $1 -input_type 1 -rc 1 \
         -c:v:0 distributed_encoder \
         -s:0 3840x1920 \
@@ -68,7 +68,7 @@ ffmpeg_4K_VOD(){
 }
 
 ffmpeg_8K_LIVE(){
-    numactl -c 1 ./ffmpeg -stream_loop -1 \
+    numactl -c 1 ./ffmpeg -re -stream_loop -1 \
         -i $1 -input_type 1 -rc 1 \
         -c:v:0 distributed_encoder \
         -s:0 7680x3840 \
