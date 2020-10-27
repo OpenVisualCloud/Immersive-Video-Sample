@@ -443,7 +443,7 @@ int32_t OmafTilesStitch::UpdateSelectedTiles(std::map<uint32_t, MediaPacket *> &
   return ERROR_NONE;
 }
 
-vector<pair<uint32_t, uint32_t>> OmafTilesStitch::GenerateMostSquareArr(uint32_t packetsSize, uint32_t splitNum)
+vector<pair<uint32_t, uint32_t>> OmafTilesStitch::GenerateRowAndColArr(uint32_t packetsSize, uint32_t splitNum, uint32_t maxTile_x, uint32_t maxTile_y)
 {
     vector<pair<uint32_t, uint32_t>> arrangementArr;
     if (packetsSize < splitNum || splitNum == 0)
@@ -461,69 +461,38 @@ vector<pair<uint32_t, uint32_t>> OmafTilesStitch::GenerateMostSquareArr(uint32_t
     {
         pair<uint32_t, uint32_t> oneArrangement; // pair < row, col >
         uint32_t size = i < splitNum - 1 ? normalSplitPacketSize : lastSplitPacketSize;
-        uint32_t sqrtedSize = (uint32_t)sqrt(size);
-        while (sqrtedSize && (size % sqrtedSize)) {
-            sqrtedSize--;
-        }
-        if (sqrtedSize == 0)
-        {
-            OMAF_LOG(LOG_ERROR, " square size cannot be zero!\n");
-            return arrangementArr;
-        }
-        if ((size) > 4 && (sqrtedSize == 1))
-        {
-            size++;
-            sqrtedSize = (uint32_t)sqrt(size);
-            while (sqrtedSize && (size % sqrtedSize)) {
-                sqrtedSize--;
-            }
-        }
-        uint32_t dividedSize = size / sqrtedSize;
-
+        // 1. tranverse all the proximate number and find the required split layout
         uint32_t supplementedNum = 0;
-        if (dividedSize > sqrtedSize)
+
+        uint32_t maxDividedSize = 0, maxSqrtedSize = 0;
+        // notice: diviedSize >= sqrtedSize
+        if (maxTile_x > maxTile_y) { maxDividedSize = maxTile_x; maxSqrtedSize = maxTile_y; }
+        else { maxDividedSize = maxTile_y; maxSqrtedSize = maxTile_x; }
+
+        uint32_t sqrtedSize = 0, dividedSize = 0;
+        while (size <= maxDividedSize * maxSqrtedSize)
         {
-            while((dividedSize - sqrtedSize) > 3)
+          sqrtedSize = sqrt(size);
+          while (sqrtedSize > 0)
+          {
+            if (size % sqrtedSize == 0)
             {
-                size++;
-                supplementedNum++;
-                sqrtedSize = (uint32_t)sqrt(size);
-                while (sqrtedSize && (size % sqrtedSize)) {
-                    sqrtedSize--;
-                }
-                if (sqrtedSize == 1)
-                {
-                    size++;
-                    supplementedNum++;
-                    sqrtedSize = (uint32_t)sqrt(size);
-                    while (sqrtedSize && (size % sqrtedSize)) {
-                        sqrtedSize--;
-                    }
-                }
-                dividedSize = size / sqrtedSize;
+              dividedSize = size / sqrtedSize;
+              // 2. find required split layout
+              if (dividedSize <= maxDividedSize && sqrtedSize <= maxSqrtedSize)
+              {
+                break;
+              }
             }
+			      sqrtedSize--;
+          }
+          if (sqrtedSize != 0) break;
+          else { size++; supplementedNum++; } // add tile number to remap
         }
-        if (sqrtedSize > dividedSize)
+        if (size > maxDividedSize * maxSqrtedSize)
         {
-            while((sqrtedSize - dividedSize) > 3)
-            {
-                size++;
-                supplementedNum++;
-                sqrtedSize = (uint32_t)sqrt(size);
-                while (sqrtedSize && (size % sqrtedSize)) {
-                    sqrtedSize--;
-                }
-                if (sqrtedSize == 1)
-                {
-                    size++;
-                    supplementedNum++;
-                    sqrtedSize = (uint32_t)sqrt(size);
-                    while (sqrtedSize && (size % sqrtedSize)) {
-                        sqrtedSize--;
-                    }
-                }
-                dividedSize = size / sqrtedSize;
-            }
+          OMAF_LOG(LOG_ERROR, "Sub-picture width/height for split is failed!\n");
+          return arrangementArr;
         }
         if (supplementedNum > 0)
         {
@@ -531,10 +500,10 @@ vector<pair<uint32_t, uint32_t>> OmafTilesStitch::GenerateMostSquareArr(uint32_t
         }
 
         OMAF_LOG(LOG_INFO, "one arrangement has the tile division of %u x %u\n", sqrtedSize, dividedSize);
-        if (dividedSize > sqrtedSize) {
-        oneArrangement = std::make_pair(sqrtedSize, dividedSize);
+        if (maxTile_x > maxTile_y) {
+          oneArrangement = std::make_pair(sqrtedSize, dividedSize); //height , width
         } else {
-        oneArrangement = std::make_pair(dividedSize, sqrtedSize);
+          oneArrangement = std::make_pair(dividedSize, sqrtedSize);
         }
         arrangementArr.push_back(oneArrangement);
     }
@@ -548,12 +517,8 @@ std::map<QualityRank, std::vector<TilesMergeArrangement *>> OmafTilesStitch::Cal
 
   std::map<QualityRank, std::map<uint32_t, MediaPacket *>>::iterator it;
   for (it = m_selectedTiles.begin(); it != m_selectedTiles.end(); it++) {
-    uint32_t width = 0;
-    uint32_t height = 0;
     int32_t oneTileWidth = 0;
     int32_t oneTileHeight = 0;
-    uint8_t tileRowsNum = 0;
-    uint8_t tileColsNum = 0;
     int32_t mostLeftPos = 0;
     int32_t mostTopPos = 0;
     auto qualityRanking = it->first;
@@ -570,62 +535,27 @@ std::map<QualityRank, std::vector<TilesMergeArrangement *>> OmafTilesStitch::Cal
     SRDInfo srd = onePacket->GetSRDInfo();
     oneTileWidth = srd.width;
     oneTileHeight = srd.height;
+
+    // 1 find the max tile split
+    uint32_t maxTile_x = m_maxStitchWidth / oneTileWidth;
+    uint32_t maxTile_y = m_maxStitchHeight / oneTileHeight;
+
     uint32_t packetsSize = packets.size();
-    uint32_t sqrtedSize = (uint32_t)sqrt(packetsSize);
-    while (sqrtedSize && (packetsSize % sqrtedSize)) {
-      sqrtedSize--;
-    }
-    uint32_t divdedSize = packetsSize / sqrtedSize;
-    OMAF_LOG(LOG_INFO, "sqrtedSize %u and divdedSize %u\n", sqrtedSize, divdedSize);
-    if (divdedSize > sqrtedSize) {
-      tileColsNum = divdedSize;
-      tileRowsNum = sqrtedSize;
-    } else {
-      tileColsNum = sqrtedSize;
-      tileRowsNum = divdedSize;
-    }
 
-    while ((tileColsNum - tileRowsNum) > 3)
-    {
-        packetsSize++;
-        sqrtedSize = (uint32_t)sqrt(packetsSize);
-        while (sqrtedSize && (packetsSize % sqrtedSize)) { sqrtedSize--; }
-        if (sqrtedSize == 1)
-        {
-            packetsSize++;
-            sqrtedSize = (uint32_t)sqrt(packetsSize);
-            while (sqrtedSize && (packetsSize % sqrtedSize)) { sqrtedSize--; }
-        }
-        divdedSize = packetsSize / sqrtedSize;
+    // 2. check if need to split into multiple videos
+    uint32_t splitNum = ceil(float(packetsSize) / (maxTile_x * maxTile_y));
 
-        if (divdedSize > sqrtedSize) {
-          tileColsNum = divdedSize;
-          tileRowsNum = sqrtedSize;
-        } else {
-          tileColsNum = sqrtedSize;
-          tileRowsNum = divdedSize;
-        }
-    }
-
-    width = oneTileWidth * tileColsNum;
-    height = oneTileHeight * tileRowsNum;
-    // check if need to split into multiple videos
-    uint32_t splitNum = 1;
-    uint64_t totalArea = width * height;
-    while (totalArea >= m_maxStitchWidth * m_maxStitchHeight) // need to split
-    {
-      splitNum++;
-      totalArea /= 2; // half area
-    }
-    // LOG(INFO)<<"IN arrangement calculation, width  "<<width<<"  and height  "<<height<<" tileRowsNum"<<tileRowsNum<<"
-    // tileColsNum"<<tileColsNum<<endl;
-    vector<pair<uint32_t, uint32_t>> rowAndColArr = GenerateMostSquareArr(packetsSize, splitNum);
+    // 3. generate row and col arrays according to split num and maxTile_x & maxTile_y
+    vector<pair<uint32_t, uint32_t>> rowAndColArr = GenerateRowAndColArr(packetsSize, splitNum, maxTile_x, maxTile_y);
     vector<TilesMergeArrangement*> mergeArrList;
     for (uint32_t i = 0; i < splitNum; i++)
     {
       TilesMergeArrangement *oneArr = new TilesMergeArrangement;
       if (!oneArr) return tilesMergeArr;
-
+      if (rowAndColArr[i].first > maxTile_y || rowAndColArr[i].second > maxTile_x)
+      {
+        OMAF_LOG(LOG_WARNING, "split limitation broke! tile y %d, tile x %d\n", rowAndColArr[i].first, rowAndColArr[i].second);
+      }
       oneArr->mergedWidth = oneTileWidth * rowAndColArr[i].second;
       oneArr->mergedHeight = oneTileHeight * rowAndColArr[i].first;
       oneArr->mostTopPos = mostTopPos;
