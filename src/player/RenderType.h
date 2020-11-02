@@ -253,6 +253,7 @@ struct BufferInfo {
   PixelFormat::Enum pixelFormat;
   bool bFormatChange;
   VCD::VRVideo::RegionData *regionInfo;
+  uint64_t pts;
 };
 
 struct MultiBufferInfo {
