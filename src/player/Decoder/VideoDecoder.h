@@ -66,6 +66,8 @@ typedef struct FrameData{
      int32_t            numQuality;
      SourceResolution*  qtyResolution;
      bool               bCodecChange;
+     uint32_t           width;
+     uint32_t           height;
 }FrameData;
 
 class DecoderContext
@@ -78,6 +80,8 @@ public:
          decoder        = NULL;
          height         = 0;
          width          = 0;
+         preWidth       = 0;
+         preHeight      = 0;
          numQuality     = 0;
          tileRowNum     = 0;
          tileColNum     = 0;
@@ -225,6 +229,8 @@ public:
      std::list<DecodedFrame*>      listFrame;
      int32_t                       height;
      int32_t                       width;
+     int32_t                       preWidth;
+     int32_t                       preHeight;
      int32_t                       numQuality;
      SourceResolution              qtyResolution[8];
      uint32_t                      tileRowNum;
@@ -285,7 +291,7 @@ private:
      //!
      //! \brief  Decoder one frame
      //!
-     RenderStatus DecodeFrame(AVPacket *pkt, uint32_t video_id);
+     RenderStatus DecodeFrame(AVPacket *pkt, uint32_t video_id, uint64_t pts);
 
      //!
      //! \brief  close decoder

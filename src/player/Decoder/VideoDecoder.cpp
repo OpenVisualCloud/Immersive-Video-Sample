@@ -115,6 +115,7 @@ RenderStatus VideoDecoder::Initialize()
         LOG(ERROR)<<"avcodec open failed!"<<std::endl;
         return RENDER_ERROR;
     }
+    mDecCtx->codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
 
     StartThread();
     mIsFlushed = false;
@@ -211,6 +212,8 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
         data->numQuality = packet->numQuality;
         data->qtyResolution = new SourceResolution[packet->numQuality];
         data->bCodecChange = mPktInfo->bCodecChange;
+        data->width = packet->width;
+        data->height = packet->height;
         for(int i =0; i<data->numQuality; i++){
             data->qtyResolution[i].height = packet->qtyResolution[i].height;
             data->qtyResolution[i].width = packet->qtyResolution[i].width;
@@ -226,7 +229,7 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
     return ret;
 }
 
-RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
+RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id, uint64_t pts)
 {
     std::chrono::high_resolution_clock clock;
     uint64_t start = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
@@ -235,7 +238,9 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
     av_packet_unref(pkt);
     if (ret < 0)
     {
-        LOG(ERROR)<<"send packet failed!"<<endl;
+        FrameData* data = mDecCtx->pop_framedata();//delete invalid data
+        SAFE_DELETE(data);
+        LOG(ERROR)<<"error code " << ret << "stream_index " << pkt->stream_index << " send packet failed! video id " << video_id << " pts is " << pts <<endl;
         return RENDER_DECODE_FAIL;
     }
 
@@ -249,15 +254,18 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
     ret = avcodec_receive_frame(mDecCtx->codec_ctx, av_frame);
     if (ret < 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
     {
-        LOG(WARNING) << "avcodec_receive_frame FAILED video id is " << mVideoId << endl;
+        LOG(WARNING) << "avcodec_receive_frame FAILED video id is " << mVideoId << endl;// decoder at first few frames, need some buffers
         av_frame_free(&av_frame);
         return RENDER_DECODE_FAIL;
     }
-    if (av_frame->linesize[0] == 0)
-    {
-        LOG(INFO)<<"av_frame is null! video_id is "<<video_id<<endl;
-        av_frame_free(&av_frame);
-        return RENDER_DECODER_INVALID_FRAME;
+    int32_t bufferNumber = 3;
+    for (uint32_t i = 0; i < bufferNumber; i++){
+        if (av_frame->linesize[i] == 0)
+        {
+            LOG(ERROR)<<"av_frame is null! video_id is "<<video_id<<endl;
+            av_frame_free(&av_frame);
+            return RENDER_DECODER_INVALID_FRAME;
+        }
     }
     FrameData* data = mDecCtx->pop_framedata();
     if (data == NULL)
@@ -275,6 +283,12 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id)
     frame->qtyResolution = data->qtyResolution;
     frame->video_id = video_id;
     frame->bEOS = false;
+    if (frame->av_frame->width != data->width || frame->av_frame->height != data->height)
+    {
+        frame->av_frame->width = data->width;//correct w/h
+        frame->av_frame->height = data->height;
+        LOG(WARNING) << "PTS : " << data->pts << " frame->av_frame->width " << frame->av_frame->width << " is not equal to " << data->width << " or frame->av_frame->height " << frame->av_frame->height << " is not equal to " << data->height << endl;
+    }
     LOG(INFO)<<"Push one frame at:"<<data->pts<<" video id is:"<<video_id << " and frame fifo size is " << mDecCtx->get_size_of_frame()<<endl;
     mDecCtx->push_frame(frame);
 #ifdef _USE_TRACE_
@@ -444,7 +458,7 @@ void VideoDecoder::Run()
         // }
 
 
-        ret = DecodeFrame(pkt_info->pkt, pkt_info->video_id);
+        ret = DecodeFrame(pkt_info->pkt, pkt_info->video_id, pkt_info->pts);
         if(RENDER_STATUS_OK != ret){
              LOG(INFO)<<"Video "<< mVideoId <<": failed to decoder one frame"<<std::endl;
         }
@@ -541,18 +555,30 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts)
 
     for (uint32_t idx=0;idx<bufferNumber;idx++)
         buf_info->buffer[idx] = frame->av_frame->data[idx];
-    buf_info->bFormatChange = frame->bFmtChange;
-
-
+    // check if the width/height changed
+    if (mDecCtx->preWidth != frame->av_frame->width || mDecCtx->preHeight != frame->av_frame->height)
+    {
+        buf_info->bFormatChange = true;
+        LOG(INFO) << "frame width or height changed at PTS " << frame->pts << "pre w h " << mDecCtx->preWidth << " " << mDecCtx->preHeight << "curr w h " << frame->av_frame->width << " " << frame->av_frame->height <<  endl;
+    }
+    else
+    {
+        buf_info->bFormatChange = false;
+    }
     buf_info->width = frame->av_frame->width;
     buf_info->height = frame->av_frame->height;
+    mDecCtx->preWidth = buf_info->width;
+    mDecCtx->preHeight = buf_info->height;
+
     for (uint32_t i=0;i<bufferNumber;i++)
     {
         buf_info->stride[i] = frame->av_frame->linesize[i];
+        LOG(INFO) << "i " << i << " buf stride is " <<buf_info->stride[i] << " PTS " << frame->pts << " video id " << mVideoId << endl;
     }
 
     buf_info->regionInfo = new RegionData(frame->rwpk, frame->numQuality, frame->qtyResolution);
-
+    buf_info->pts = frame->pts;
+    LOG(INFO) << "buf_info w " << buf_info->width << " h " << buf_info->height << " video id " << mVideoId << " pts " << frame->pts << endl;
     uint64_t end2 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"Transfer frame time is:"<<(end2 - start2)<<endl;
     uint64_t start3 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();

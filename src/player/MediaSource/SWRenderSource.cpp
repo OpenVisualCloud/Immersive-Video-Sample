@@ -271,7 +271,13 @@ RenderStatus SWRenderSource::UpdateR2T(BufferInfo* bufInfo)
         else if (i == 3)
             renderBackend->ActiveTexture(GL_TEXTURE3);
         renderBackend->BindTexture(GL_TEXTURE_2D, sourceTextureHandle[i]);
+        if (bufInfo->stride[i] == 0)
+        {
+            LOG(ERROR) << "i " << i << "buf stride is zero! PTS " << bufInfo->pts << " video id " << m_VideoID << endl;
+            return RENDER_ERROR;
+        }
         renderBackend->PixelStorei(GL_UNPACK_ROW_LENGTH, bufInfo->stride[i]);
+        LOG(INFO) <<" i = " << i << " TexSubImage2D width " << sourceWH->width[i] << " height " << sourceWH->height[i] << " video id " << m_VideoID << " PTS " << bufInfo->pts << endl;
         if (GetSourceTextureNumber() == 1)
             renderBackend->TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sourceWH->width[i], sourceWH->height[i], GL_RGB, GL_UNSIGNED_BYTE, bufInfo->buffer[i]); //use rgb data
         else
@@ -334,7 +340,7 @@ RenderStatus SWRenderSource::process(BufferInfo* bufInfo)
     uint64_t start3 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     if(bufInfo->bFormatChange || !bInited ){
         ret = Initialize(bufInfo->pixelFormat, bufInfo->width, bufInfo->height);
-        LOG(INFO)<<"texture need to resize to "<<bufInfo->width<<" x "<<bufInfo->height<<endl;
+        LOG(INFO)<< "PTS " << bufInfo->pts << "texture need to resize to "<<bufInfo->width<<" x "<<bufInfo->height<<endl;
         if(RENDER_STATUS_OK!=ret){
             LOG(ERROR)<<"Video "<< GetVideoID() <<": Initialize Render source failed"<<std::endl;
             return ret;
