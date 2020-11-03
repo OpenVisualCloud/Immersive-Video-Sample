@@ -322,6 +322,10 @@ class MediaPacket : public VCD::NonCopyable {
 
   uint32_t GetPPSLen() { return m_PPSLen; };
 
+  void     SetSegmentEnded(bool isEnded) { m_segmentEnded = isEnded; };
+
+  bool     GetSegmentEnded() { return m_segmentEnded; };
+
 private:
     MediaPacket& operator=(const MediaPacket& other) { return *this; };
     MediaPacket(const MediaPacket& other) { /* do not create copies */ };
@@ -354,6 +358,7 @@ private:
   uint32_t m_VPSLen = 0;
   uint32_t m_SPSLen = 0;
   uint32_t m_PPSLen = 0;
+  bool     m_segmentEnded = false;
 
   void deleteRwpk() {
     if (m_rwpk) {

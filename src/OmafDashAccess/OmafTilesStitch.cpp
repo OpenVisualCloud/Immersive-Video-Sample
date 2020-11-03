@@ -55,6 +55,7 @@ OmafTilesStitch::OmafTilesStitch() {
 
 OmafTilesStitch::~OmafTilesStitch() {
   if (m_selectedTiles.size()) {
+    std::list<MediaPacket *> allPackets;
     std::map<QualityRank, std::map<uint32_t, MediaPacket *>>::iterator it;
     for (it = m_selectedTiles.begin(); it != m_selectedTiles.end();) {
       std::map<uint32_t, MediaPacket *> packets = it->second;
@@ -62,12 +63,18 @@ OmafTilesStitch::~OmafTilesStitch() {
         std::map<uint32_t, MediaPacket *>::iterator it1;
         for (it1 = packets.begin(); it1 != packets.end();) {
           MediaPacket *onePacket = it1->second;
-          SAFE_DELETE(onePacket);
+          std::list<MediaPacket *>::iterator pktIter;
+          pktIter = std::find(allPackets.begin(), allPackets.end(), onePacket);
+          if (pktIter == allPackets.end())
+          {
+            allPackets.push_back(onePacket);
+            SAFE_DELETE(onePacket);
+          }
           packets.erase(it1++);
         }
         packets.clear();
       }
-
+      allPackets.clear();
       m_selectedTiles.erase(it++);
     }
 
@@ -352,6 +359,7 @@ int32_t OmafTilesStitch::UpdateSelectedTiles(std::map<uint32_t, MediaPacket *> &
   }
 
   if (m_selectedTiles.size()) {
+    std::list<MediaPacket *> allPackets;
     std::map<QualityRank, std::map<uint32_t, MediaPacket *>>::iterator it;
     for (it = m_selectedTiles.begin(); it != m_selectedTiles.end();) {
       std::map<uint32_t, MediaPacket *> packets = it->second;
@@ -359,12 +367,18 @@ int32_t OmafTilesStitch::UpdateSelectedTiles(std::map<uint32_t, MediaPacket *> &
         std::map<uint32_t, MediaPacket *>::iterator it1;
         for (it1 = packets.begin(); it1 != packets.end();) {
           MediaPacket *onePacket = it1->second;
-          SAFE_DELETE(onePacket);
+          std::list<MediaPacket *>::iterator pktIter;
+          pktIter = std::find(allPackets.begin(), allPackets.end(), onePacket);
+          if (pktIter == allPackets.end())
+          {
+            allPackets.push_back(onePacket);
+            SAFE_DELETE(onePacket);
+          }
           packets.erase(it1++);
         }
         packets.clear();
       }
-
+      allPackets.clear();
       m_selectedTiles.erase(it++);
     }
 
@@ -484,7 +498,7 @@ vector<pair<uint32_t, uint32_t>> OmafTilesStitch::GenerateRowAndColArr(uint32_t 
                 break;
               }
             }
-			      sqrtedSize--;
+	    sqrtedSize--;
           }
           if (sqrtedSize != 0) break;
           else { size++; supplementedNum++; } // add tile number to remap
@@ -500,7 +514,7 @@ vector<pair<uint32_t, uint32_t>> OmafTilesStitch::GenerateRowAndColArr(uint32_t 
         }
 
         OMAF_LOG(LOG_INFO, "one arrangement has the tile division of %u x %u\n", sqrtedSize, dividedSize);
-        if (maxTile_x > maxTile_y) {
+        if (dividedSize > sqrtedSize ) {
           oneArrangement = std::make_pair(sqrtedSize, dividedSize); //height , width
         } else {
           oneArrangement = std::make_pair(dividedSize, sqrtedSize);
