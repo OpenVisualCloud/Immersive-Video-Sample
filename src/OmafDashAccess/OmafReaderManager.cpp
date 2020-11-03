@@ -466,7 +466,6 @@ OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPa
 
     bool bpacket_readed = false;
 
-    // while (!bpacket_readed) {
     {
       std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
 
@@ -482,6 +481,7 @@ OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPa
               bpacket_readed = true;
             }
             timeline_point_ = node->getTimelinePoint();
+            OMAF_LOG(LOG_INFO, "timeline_point_ is %ld in GetNextPacket, bpacket_readed %d\n", timeline_point_, bpacket_readed);
             if (0 == node->packetQueueSize()) {
               OMAF_LOG(LOG_INFO, "Node count=%d. %s\n", node.use_count(), node->to_string().c_str());
               nodeset.segment_nodes_.erase(it);
@@ -489,8 +489,12 @@ OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPa
 
             break;
           }
+
           it++;
         }
+        if (bpacket_readed)
+            break;
+
       }
     }
     if (!bpacket_readed) {
@@ -515,6 +519,7 @@ OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPa
     // drop all dashset whose timeline point is less than timeline point
     if (timeline_point_ != -1) {
       OMAF_LOG(LOG_INFO, "To clear the timeline point < %ld\n", timeline_point_);
+      clearOlderSegmentSet(timeline_point_);
       std::lock_guard<std::mutex> lock(segment_parsed_mutex_);
       std::list<OmafSegmentNodeTimedSet>::iterator it = segment_parsed_list_.begin();
       while (it != segment_parsed_list_.end() && it->timeline_point_ < timeline_point_) {
@@ -534,7 +539,6 @@ OMAF_STATUS OmafReaderManager::GetNextPacketWithPTS(uint32_t trackID, uint64_t p
 
     bool bpacket_readed = false;
 
-    // while (!bpacket_readed) {
     {
       std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
 
@@ -591,6 +595,7 @@ OMAF_STATUS OmafReaderManager::GetNextPacketWithPTS(uint32_t trackID, uint64_t p
     // drop all dashset whose timeline point is less than timeline point
     if (timeline_point_ != -1) {
       OMAF_LOG(LOG_INFO, "To clear the timeline point < %ld\n", timeline_point_);
+      clearOlderSegmentSet(timeline_point_);
       std::lock_guard<std::mutex> lock(segment_parsed_mutex_);
       std::list<OmafSegmentNodeTimedSet>::iterator it = segment_parsed_list_.begin();
       while (it != segment_parsed_list_.end() && it->timeline_point_ < timeline_point_) {
@@ -647,7 +652,6 @@ bool OmafReaderManager::checkEOS(int64_t segment_num) noexcept {
         double tmpSegNum = static_cast<double>(work_params_.duration_) / 1000.0 / static_cast<double>(segmentDur);
         int64_t totalSegNum = static_cast<int64_t>(tmpSegNum);
         totalSegNum = abs(tmpSegNum - totalSegNum) < 1e-6 ? totalSegNum : totalSegNum + 1;
-
         if (segment_num < totalSegNum) {
           eos = false;
           break;
@@ -656,20 +660,17 @@ bool OmafReaderManager::checkEOS(int64_t segment_num) noexcept {
     }
     if (eos) {
       if (!isEmpty(segment_opening_mutex_, segment_opening_list_)) {
-        OMAF_LOG(LOG_INFO, "segment opening list is not empty!\n");
-        eos = false;
+        OMAF_LOG(LOG_WARNING, "segment opening list is not empty!\n");
       }
     }
     if (eos) {
       if (!isEmpty(segment_opened_mutex_, segment_opened_list_)) {
-        OMAF_LOG(LOG_INFO, "segment opened list is not empty!\n");
-        eos = false;
+        OMAF_LOG(LOG_WARNING, "segment opened list is not empty!\n");
       }
     }
     if (eos) {
       if (!isEmpty(segment_parsed_mutex_, segment_parsed_list_)) {
-        OMAF_LOG(LOG_INFO, "segment parsed list is not empty!\n");
-        eos = false;
+        OMAF_LOG(LOG_WARNING, "segment parsed list is not empty!\n");
       }
     }
     if (eos) {
@@ -1092,7 +1093,7 @@ void OmafReaderManager::threadRunner() noexcept {
       // 4. clear dash set whose timeline point older than current ready segment/dash_node
       // we use simple logic to main the dash node sets
       // we will remove older dash nodes
-      clearOlderSegmentSet(timeline_point);
+      //clearOlderSegmentSet(timeline_point_);
     }
   } catch (const std::exception &ex) {
     OMAF_LOG(LOG_ERROR, "Exception in reader runner, ex: %s\n", ex.what());
@@ -1131,7 +1132,11 @@ OmafSegmentNode::Ptr OmafReaderManager::findReadySegmentNode() noexcept {
       // 1.1.2 find the ready node, exit and return
       if (ready_dash_node.get() != nullptr) {
         nodeset.segment_nodes_.erase(it);
+        OMAF_LOG(LOG_INFO, "Get ready segment node with timeline %ld\n", nodeset.timeline_point_);
         break;
+      }
+      else {
+        OMAF_LOG(LOG_INFO, "No ready segment node for timeline %ld\n", nodeset.timeline_point_);
       }
 
       // 1.2.1 no ready node found, then check whether timeout
@@ -1280,7 +1285,6 @@ int OmafSegmentNode::parse() noexcept {
       OMAF_LOG(LOG_ERROR, "Failed to read packet from %s. Error code=%d\n", this->to_string().c_str(), ret);
       return ERROR_INVALID;
     }
-
     // 3.1 remove self segment from reader
     ret = removeSegmentStream(reader);
     if (ERROR_NONE != ret) {
@@ -1376,7 +1380,7 @@ int OmafSegmentNode::removeSegmentStream(std::shared_ptr<OmafReader> reader) noe
 int OmafSegmentNode::getPacket(MediaPacket *&pPacket, bool requireParams) noexcept {
   try {
     if (media_packets_.size() <= 0) {
-      OMAF_LOG(LOG_ERROR, "There is no packets\n");
+      OMAF_LOG(LOG_INFO, "There is no packets\n");
       return ERROR_NULL_PACKET;
     }
 
@@ -1478,6 +1482,10 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
       }
       packet->SetRwpk(std::move(pRwpk));
       packet->SetPTS(track_info->sampleProperties.size * (segment_->GetSegID() - 1) + sample_begin + sample);
+      if ((sample + 1) == sample_end)
+      {
+          packet->SetSegmentEnded(true);
+      }
 
       // for later binding
       packet->SetQualityRanking(segment_->GetQualityRanking());
@@ -1563,7 +1571,6 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
 std::shared_ptr<TrackInformation> OmafSegmentNode::findTrackInformation(std::shared_ptr<OmafReader> reader) noexcept {
   try {
     std::vector<TrackInformation *> track_infos;
-
     OMAF_STATUS ret = reader->getTrackInformations(track_infos);
     if (ERROR_NONE != ret) {
       OMAF_LOG(LOG_ERROR, "Failed to get the trackinformation list from reader, code=%d\n", ret);

@@ -168,7 +168,7 @@ class OmafMediaStream {
 
   std::map<int, OmafAdaptationSet*> GetSelectedTileTracks() {
     std::lock_guard<std::mutex> lock(mCurrentMutex);
-    std::map<int, OmafAdaptationSet*> selectedTileTracks = m_selectedTileTracks;
+    std::map<int, OmafAdaptationSet*> selectedTileTracks = m_selectedTileTracks.front();
     return selectedTileTracks;
   }
 
@@ -279,7 +279,7 @@ private:
   //<! flag for enabling/disabling extractor track
   bool m_enabledExtractor;
   //<! map of selected tile tracks based on viewport when disabling extractor track
-  std::map<int, OmafAdaptationSet*> m_selectedTileTracks;
+  std::list<std::map<int, OmafAdaptationSet*>> m_selectedTileTracks;
 
   bool m_hasTileTracksSelected;
   //<! map of video sources for the media stream

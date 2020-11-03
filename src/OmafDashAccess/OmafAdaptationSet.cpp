@@ -383,7 +383,7 @@ int OmafAdaptationSet::DownloadSegment() {
     mSegNum++;
     return ret;
   }
-  OMAF_LOG(LOG_INFO, "Download OmafSegment for AdaptationSet: %d\n", this->mID);
+  OMAF_LOG(LOG_INFO, "Download OmafSegment id %d for AdaptationSet: %d\n", mSegNum, this->mID);
 
   if (omaf_reader_mgr_ == nullptr) {
     OMAF_LOG(LOG_ERROR, "The omaf reader manager is empty!\n");
