@@ -162,13 +162,16 @@ typedef struct ENCODERPARAM{
     uint32_t hierarchical_level;        //!< the hierarchical level for to construct GOP
     uint32_t intra_period;              //!< the distance between two adjacent intra frame
     uint32_t la_depth;                  //!< the number of frames that used for look ahead
-    uint32_t enc_mode;                  //!< the preset for quality and performance balance,[0-12], 0 is best quality, 12 is best performance
+    uint32_t enc_mode;                  //!< the preset for quality and performance balance,
+                                        //!< [0-12], 0 is best quality, 12 is best performance
     uint32_t rc_mode;                   //!< rate control mode, 0 is CQP mode and 1 is VBR mode
     uint32_t qp;                        //!< quantization value under CQP mode
     uint32_t bit_rate;                  //!< bitrate value under VBR mode
     uint32_t scd;                       //!< scene change detection flag
-    uint32_t tune;                      //!< specific encoder tuning, 0 is visually optimized mode, 1 is PSNR/SSIM optimized mode, 2 is VMAF optimized mode
-    uint32_t profile;                   //!< the profile to create bitstream, 1 is Main with 8 bit depth, 2 is Main 10 with 8-10 bit depth
+    uint32_t tune;                      //!< specific encoder tuning, 0 is visually optimized mode,
+                                        //!< 1 is PSNR/SSIM optimized mode, 2 is VMAF optimized mode
+    uint32_t profile;                   //!< the profile to create bitstream, 1 is Main with 8 bit depth,
+                                        //!< 2 is Main 10 with 8-10 bit depth
     uint32_t base_layer_switch_mode;    //!< decide use P or B frame in base layer, 0 is B frame, 1 is P frame
     uint32_t intra_refresh_type;        //!< the type of intra frame refresh, 1 is CRA, 2 is IDR intra refresh type
     uint32_t tier;                      //!< limitation for max bitrate and max buffer size
@@ -254,6 +257,8 @@ typedef struct ENCODEROPTION{
 typedef struct CODECAPPOPTION{
     DecoderOption   decOption;
     EncoderOption   encOption;
+    void            *logFunction;       //!< External log callback function pointer, NULL if external log is not used
+    uint32_t        minLogLevel;        //!< Minimal log level of output
 }CodecAppOption;
 
 //!
@@ -262,12 +267,11 @@ typedef struct CODECAPPOPTION{
 //!
 typedef struct DISTRIBUTEDENCODERPARAM{
     StreamInfo                  streamInfo;         //!< Information of input stream
-    EncoderParam                encoderParams;      //!< parameters for encoding
-    DispatchType                type;               //!< task dispatch type
+    EncoderParam                encoderParams;      //!< Parameters for encoding
+    DispatchType                type;               //!< Task dispatch type
     SupplementalEnhancementInfo suppleEnhanceInfo;  //!< Supplemental Enhancement Information
-    CodecAppOption              codecOption;        //!< decoder/encoder choice and the settings
-    bool                        glogInitialized;    //!< whether glog has been initialized
-    void                        *logFunction;       //external log callback function pointer, NULL if external log is not used
+    CodecAppOption              codecOption;        //!< Choice and the settings of decoder/encoder
+    bool                        glogInitialized;    //!< Whether glog has been initialized
 }DistributedEncoderParam;
 
 #ifdef __cplusplus
@@ -330,7 +334,8 @@ bool DistributedEncoder_NeedMemCpyForInput(DEHandle handle);
 //! \return DEStatus
 //!         DE_STATUS_SUCCESS if success, else fail reason
 //!
-DEStatus DistributedEncoder_GetPacket(DEHandle handle, char** pktData, uint64_t* pktSize, int64_t* pktPTS, int64_t* pktDTS, bool* eos);
+DEStatus DistributedEncoder_GetPacket(DEHandle handle, char** pktData, uint64_t* pktSize,
+                                      int64_t* pktPTS, int64_t* pktDTS, bool* eos);
 
 //!
 //! \brief  Set parameter to distributed encoder
