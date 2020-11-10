@@ -1,0 +1,496 @@
+From 7054a4c28a11a7fdd69ebbd5d25cad28f87805fc Mon Sep 17 00:00:00 2001
+From: "Kang, Xin1" <xin1.kang@intel.com>
+Date: Tue, 10 Nov 2020 14:22:06 +0800
+Subject: [PATCH] Update buffer operation and fix stream loop coredump issue
+
+---
+ libavcodec/decode.c        |  13 ++-
+ libavcodec/internal.h      |   4 +
+ libavcodec/pthread_slice.c |   4 +-
+ libavcodec/utils.c         |  33 ++++++--
+ libavutil/ffversion.h      |   2 +-
+ libopenhevc/openhevc.c     | 198 ++++++++++++++++++++++++++++++++++++++++++++-
+ libopenhevc/openhevc.h     |  15 ++++
+ 7 files changed, 256 insertions(+), 13 deletions(-)
+
+diff --git a/libavcodec/decode.c b/libavcodec/decode.c
+index 052f93d..97eee2e 100644
+--- a/libavcodec/decode.c
++++ b/libavcodec/decode.c
+@@ -139,7 +139,11 @@ static int unrefcount_frame(AVCodecInternal *avci, AVFrame *frame)
+     int ret;
+
+     /* move the original frame to our backup */
++    avci->to_free = avci->to_free_list[avci->to_free_idx];
++    avci->to_free_idx = (avci->to_free_idx + 1) % LIST_SIZE;
+     av_frame_unref(avci->to_free);
++    if(!avci->to_free)
++        return 0;
+     av_frame_move_ref(avci->to_free, frame);
+
+     /* now copy everything except the AVBufferRefs back
+@@ -1825,7 +1829,14 @@ void avcodec_flush_buffers(AVCodecContext *avctx)
+     ff_decode_bsfs_uninit(avctx);
+
+     if (!avctx->refcounted_frames)
+-        av_frame_unref(avctx->internal->to_free);
++    {
++        //av_frame_unref(avctx->internal->to_free);
++        for(int i = 0; i < LIST_SIZE; i++)
++        {
++            av_frame_free(&avctx->internal->to_free_list[i]);
++        }
++        av_freep(&avctx->internal->to_free_list);
++    }
+ }
+
+ void ff_decode_bsfs_uninit(AVCodecContext *avctx)
+diff --git a/libavcodec/internal.h b/libavcodec/internal.h
+index d344277..ce227cb 100644
+--- a/libavcodec/internal.h
++++ b/libavcodec/internal.h
+@@ -33,6 +33,8 @@
+ #include "avcodec.h"
+ #include "config.h"
+
++#define LIST_SIZE 50
++
+ /**
+  * The codec does not modify any global variables in the init function,
+  * allowing to call the init function without locking any global mutexes.
+@@ -148,6 +150,8 @@ typedef struct AVCodecInternal {
+     int last_audio_frame;
+
+     AVFrame *to_free;
++    AVFrame *to_free_list[LIST_SIZE];
++    int     to_free_idx;
+
+     FramePool *pool;
+
+diff --git a/libavcodec/pthread_slice.c b/libavcodec/pthread_slice.c
+index 353b996..d227f53 100644
+--- a/libavcodec/pthread_slice.c
++++ b/libavcodec/pthread_slice.c
+@@ -117,7 +117,6 @@ void ff_slice_thread_free(AVCodecContext *avctx)
+
+     for (i=0; i<avctx->thread_count; i++)
+          pthread_join(c->workers[i], NULL);
+-
+     pthread_mutex_destroy(&c->current_job_lock);
+     pthread_cond_destroy(&c->current_job_cond);
+     pthread_cond_destroy(&c->last_job_cond);
+@@ -269,9 +268,10 @@ int ff_alloc_entries(AVCodecContext *avctx, int count)
+
+     if (avctx->active_thread_type & FF_THREAD_SLICE)  {
+         SliceThreadContext *p = avctx->internal->thread_ctx;
++        if (p->entries)
++            return 0;
+         p->thread_count  = avctx->thread_count;
+         p->entries       = av_mallocz_array(count, sizeof(int));
+-
+         p->progress_mutex = av_malloc_array(p->thread_count, sizeof(pthread_mutex_t));
+         p->progress_cond  = av_malloc_array(p->thread_count, sizeof(pthread_cond_t));
+
+diff --git a/libavcodec/utils.c b/libavcodec/utils.c
+index 1336e92..19febe5 100644
+--- a/libavcodec/utils.c
++++ b/libavcodec/utils.c
+@@ -666,12 +666,23 @@ int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *code
+         ret = AVERROR(ENOMEM);
+         goto free_and_end;
+     }
+-
++#if 0
+     avctx->internal->to_free = av_frame_alloc();
+     if (!avctx->internal->to_free) {
+         ret = AVERROR(ENOMEM);
+         goto free_and_end;
+     }
++#endif
++    avctx->internal->to_free_idx = 0;
++    for(int i = 0; i < LIST_SIZE; i++)
++    {
++        avctx->internal->to_free_list[i] = av_frame_alloc();
++        if (!avctx->internal->to_free_list[i])
++        {
++            ret = AVERROR(ENOMEM);
++            goto free_and_end;
++        }
++    }
+
+     avctx->internal->compat_decode_frame = av_frame_alloc();
+     if (!avctx->internal->compat_decode_frame) {
+@@ -1126,7 +1137,13 @@ FF_ENABLE_DEPRECATION_WARNINGS
+     av_dict_free(&tmp);
+     av_freep(&avctx->priv_data);
+     if (avctx->internal) {
+-        av_frame_free(&avctx->internal->to_free);
++        //av_frame_free(&avctx->internal->to_free);
++        for(int i = 0; i < LIST_SIZE; i++)
++        {
++            av_frame_free(&avctx->internal->to_free_list[i]);
++        }
++        av_freep(&avctx->internal->to_free_list);
++
+         av_frame_free(&avctx->internal->compat_decode_frame);
+         av_frame_free(&avctx->internal->buffer_frame);
+         av_packet_free(&avctx->internal->buffer_pkt);
+@@ -1173,13 +1190,19 @@ av_cold int avcodec_close(AVCodecContext *avctx)
+             avctx->internal->frame_thread_encoder && avctx->thread_count > 1) {
+             ff_frame_thread_encoder_free(avctx);
+         }
+-        if (HAVE_THREADS && avctx->internal->thread_ctx)
++        if (HAVE_THREADS && (avctx->internal->thread_ctx || avctx->internal->thread_ctx_frame))
+             ff_thread_free(avctx);
+         if (avctx->codec && avctx->codec->close)
+             avctx->codec->close(avctx);
+         avctx->internal->byte_buffer_size = 0;
+         av_freep(&avctx->internal->byte_buffer);
+-        av_frame_free(&avctx->internal->to_free);
++        //av_frame_free(&avctx->internal->to_free);
++        for(int i = 0; i < LIST_SIZE; i++)
++        {
++            av_frame_free(&avctx->internal->to_free_list[i]);
++        }
++        av_freep(&avctx->internal->to_free_list);
++
+         av_frame_free(&avctx->internal->compat_decode_frame);
+         av_frame_free(&avctx->internal->buffer_frame);
+         av_packet_free(&avctx->internal->buffer_pkt);
+@@ -1213,13 +1236,13 @@ av_cold int avcodec_close(AVCodecContext *avctx)
+     av_opt_free(avctx);
+     av_freep(&avctx->priv_data);
+     if (av_codec_is_encoder(avctx->codec)) {
+-        av_freep(&avctx->extradata);
+ #if FF_API_CODED_FRAME
+ FF_DISABLE_DEPRECATION_WARNINGS
+         av_frame_free(&avctx->coded_frame);
+ FF_ENABLE_DEPRECATION_WARNINGS
+ #endif
+     }
++    av_freep(&avctx->extradata);
+     avctx->codec = NULL;
+     avctx->active_thread_type = 0;
+
+diff --git a/libavutil/ffversion.h b/libavutil/ffversion.h
+index 7bafd1a..a54948f 100644
+--- a/libavutil/ffversion.h
++++ b/libavutil/ffversion.h
+@@ -1,5 +1,5 @@
+ /* Automatically generated by version.sh, do not manually edit! */
+ #ifndef AVUTIL_FFVERSION_H
+ #define AVUTIL_FFVERSION_H
+-#define FFMPEG_VERSION "openhevc-2.0-181-g5e7d0585"
++#define FFMPEG_VERSION "openhevc-2.0-184-g3dd964d"
+ #endif /* AVUTIL_FFVERSION_H */
+diff --git a/libopenhevc/openhevc.c b/libopenhevc/openhevc.c
+index e544f0e..3d9ec64 100644
+--- a/libopenhevc/openhevc.c
++++ b/libopenhevc/openhevc.c
+@@ -30,12 +30,19 @@
+
+ #define MAX_DECODERS 3
+
++typedef struct DecodePicture {
++    AVFrame * picture;
++    int free;
++} DecodePicture;
+
+ typedef struct OHDecoderCtx {
+     AVCodec        *codec;
+     AVCodecContext *codec_ctx;
+     AVCodecParserContext *parser_ctx;
+     AVFrame *picture;
++    DecodePicture *picture_pool;
++    pthread_mutex_t pool_lock;  ///< mutex to protect the pool
++    int pool_size;
+     AVPacket avpkt;
+ } OHDecoderCtx;
+
+@@ -70,7 +77,7 @@ static void init_oh_threads(OHDecoderCtx *oh_ctx, int nb_pthreads,
+     av_opt_set_int(oh_ctx->codec_ctx, "threads", nb_pthreads, 0);
+ }
+
+-OHHandle oh_init(int nb_pthreads, int thread_type)
++OHHandle oh_init_async(int nb_pthreads, int thread_type, int pool_size)
+ {
+     int i;
+     OHContext        *oh_ctx  = av_mallocz(sizeof(OHContext));
+@@ -102,8 +109,14 @@ OHHandle oh_init(int nb_pthreads, int thread_type)
+
+         oh_decoder_ctx->parser_ctx  = av_parser_init( oh_decoder_ctx->codec->id );
+         oh_decoder_ctx->codec_ctx   = avcodec_alloc_context3(oh_decoder_ctx->codec);
+-        oh_decoder_ctx->picture     = av_frame_alloc();
+-
++        oh_decoder_ctx->picture_pool = av_mallocz_array(pool_size, sizeof(DecodePicture));
++        for (int i = 0; i < pool_size; i++)
++        {
++            oh_decoder_ctx->picture_pool[i].picture = av_frame_alloc();
++            oh_decoder_ctx->picture_pool[i].free = 1;
++        }
++        oh_decoder_ctx->pool_size = pool_size;
++        oh_decoder_ctx->picture = NULL;
+         oh_decoder_ctx->codec_ctx->flags |= AV_CODEC_FLAG_UNALIGNED;
+
+         //FIXME OpenHEVC does not seem to use AV_CODEC_CAP_TRUNCATED
+@@ -111,9 +124,58 @@ OHHandle oh_init(int nb_pthreads, int thread_type)
+             oh_decoder_ctx->codec_ctx->flags |= AV_CODEC_FLAG_TRUNCATED; /* we do not send complete frames */
+
+         init_oh_threads(oh_decoder_ctx, nb_pthreads, thread_type);
++        av_opt_set_int(oh_decoder_ctx->codec_ctx, "refcounted_frames", 1, 0);
++        av_opt_set_int(oh_decoder_ctx->codec_ctx->priv_data, "decoder-id", i, 0);
++        pthread_mutex_init(&oh_decoder_ctx->pool_lock ,NULL);
++    }
++
++    return (OHHandle) oh_ctx;
++}
++
++
++OHHandle oh_init(int nb_pthreads, int thread_type)
++{
++    int i;
++    OHContext        *oh_ctx  = av_mallocz(sizeof(OHContext));
++    OHDecoderCtx     *oh_decoder_ctx;
++
++    av_log(NULL,AV_LOG_DEBUG, "INIT openHEVC context\n");
++
++    avcodec_register_all();
++
++    oh_ctx->nb_decoders          = MAX_DECODERS;
++    oh_ctx->target_active_layer  = MAX_DECODERS-1;
++    oh_ctx->target_display_layer = MAX_DECODERS-1;
++
++    oh_ctx->ctx_list = av_malloc(sizeof(OHDecoderCtx*)*oh_ctx->nb_decoders);
++
++    pthread_mutex_init(&oh_ctx->layer_switch ,NULL);
++
++    for( i = 0; i < oh_ctx->nb_decoders; i++){
++        oh_decoder_ctx = oh_ctx->ctx_list[i] = av_malloc(sizeof(OHDecoderCtx));
++        av_init_packet(&oh_decoder_ctx->avpkt);
++
++        oh_decoder_ctx->codec = avcodec_find_decoder(AV_CODEC_ID_HEVC);
+
++        if (!oh_decoder_ctx->codec) {
++            av_log(NULL, AV_LOG_ERROR,
++                   "OpenHEVC could not find a suitable codec for hevc stream\n");
++            return NULL;
++        }
++
++        oh_decoder_ctx->parser_ctx  = av_parser_init( oh_decoder_ctx->codec->id );
++        oh_decoder_ctx->codec_ctx   = avcodec_alloc_context3(oh_decoder_ctx->codec);
++        oh_decoder_ctx->picture = av_frame_alloc();
++        oh_decoder_ctx->codec_ctx->flags |= AV_CODEC_FLAG_UNALIGNED;
++
++        //FIXME OpenHEVC does not seem to use AV_CODEC_CAP_TRUNCATED
++        if(oh_decoder_ctx->codec->capabilities & AV_CODEC_CAP_TRUNCATED)
++            oh_decoder_ctx->codec_ctx->flags |= AV_CODEC_FLAG_TRUNCATED; /* we do not send complete frames */
++
++        init_oh_threads(oh_decoder_ctx, nb_pthreads, thread_type);
+         av_opt_set_int(oh_decoder_ctx->codec_ctx->priv_data, "decoder-id", i, 0);
+     }
++
+     return (OHHandle) oh_ctx;
+ }
+
+@@ -237,6 +299,55 @@ int oh_start(OHHandle openHevcHandle)
+     return 1;
+ }
+
++void oh_release_picture(OHHandle openHevcHandle, const unsigned char *dataY)
++{
++    OHContext *oh_ctx = (OHContext *)openHevcHandle;
++    OHDecoderCtx *oh_decoder_ctx;
++    for (int i = 0; i < MAX_DECODERS - 1; i++)
++    {
++        oh_decoder_ctx = oh_ctx->ctx_list[i];
++        if (i <= oh_ctx->target_active_layer)
++        {
++            pthread_mutex_lock(&oh_decoder_ctx->pool_lock);
++            for (int j = 0; j < oh_decoder_ctx->pool_size; j++)
++            {
++                if (!oh_decoder_ctx->picture_pool[j].free && oh_decoder_ctx->picture_pool[j].picture->data[0] == dataY)
++                {
++                    av_frame_unref(oh_decoder_ctx->picture_pool[j].picture);
++                    oh_decoder_ctx->picture_pool[j].free = 1;
++                }
++            }
++            pthread_mutex_unlock(&oh_decoder_ctx->pool_lock);
++        }
++    }
++}
++
++int oh_acquire_picture(OHHandle openHevcHandle)
++{
++    OHContext *oh_ctx = (OHContext *)openHevcHandle;
++    OHDecoderCtx *oh_decoder_ctx;
++    int found = 0;
++    for (int i = 0; i < MAX_DECODERS - 1; i++)
++    {
++        oh_decoder_ctx = oh_ctx->ctx_list[i];
++        if (i <= oh_ctx->target_active_layer)
++        {
++            pthread_mutex_lock(&oh_decoder_ctx->pool_lock);
++            for (int j = 0; j < oh_decoder_ctx->pool_size; j++)
++            {
++                if (oh_decoder_ctx->picture_pool[j].free)
++                {
++                    found = 1;
++                    oh_decoder_ctx->picture = oh_decoder_ctx->picture_pool[j].picture;
++                    oh_decoder_ctx->picture_pool[j].free = 0;
++                    break;
++                }
++            }
++            pthread_mutex_unlock(&oh_decoder_ctx->pool_lock);
++        }
++    }
++    return found;
++}
+ int oh_decode(OHHandle openHevcHandle, const unsigned char *buff, int au_len,
+               int64_t pts)
+ {
+@@ -263,7 +374,6 @@ int oh_decode(OHHandle openHevcHandle, const unsigned char *buff, int au_len,
+             oh_decoder_ctx->avpkt.size = au_len;
+             oh_decoder_ctx->avpkt.data = (uint8_t *) buff;
+             oh_decoder_ctx->avpkt.pts  = pts;
+-
+ AV_NOWARN_DEPRECATED(
+             err = avcodec_decode_video2(oh_decoder_ctx->codec_ctx, oh_decoder_ctx->picture,
+                                         &got_picture, &oh_decoder_ctx->avpkt);)
+@@ -291,6 +401,60 @@ AV_NOWARN_DEPRECATED(
+     return oh_ctx->got_picture_mask;
+ }
+
++int oh_decode_async(OHHandle openHevcHandle, const unsigned char *buff, int au_len,
++              int64_t pts)
++{
++    int i;
++    int ret = 0;
++    int err = 0;
++
++    OHContext        *oh_ctx = (OHContext *) openHevcHandle;
++    OHDecoderCtx     *oh_decoder_ctx;
++
++    int target_active_layer = oh_ctx->target_active_layer;
++
++    oh_ctx->got_picture_mask = 0;
++
++    pthread_mutex_lock(&oh_ctx->layer_switch);
++
++    for(i =0; i < MAX_DECODERS - 1; i++)  {
++        int got_picture = 0;
++        oh_decoder_ctx         = oh_ctx->ctx_list[i];
++
++        oh_decoder_ctx->codec_ctx->quality_id = oh_ctx->target_active_layer;
++
++        if (i <= oh_ctx->target_active_layer){
++            oh_decoder_ctx->avpkt.size = au_len;
++            oh_decoder_ctx->avpkt.data = (uint8_t *) buff;
++            oh_decoder_ctx->avpkt.pts  = pts;
++AV_NOWARN_DEPRECATED(
++            err = avcodec_decode_video2(oh_decoder_ctx->codec_ctx, oh_decoder_ctx->picture,
++                                        &got_picture, &oh_decoder_ctx->avpkt);)
++            ret |= (got_picture << i);
++            if (!got_picture)
++                oh_release_picture(openHevcHandle, oh_decoder_ctx->picture->data[0]);
++        } else {
++            oh_decoder_ctx->avpkt.size = 0;
++            oh_decoder_ctx->avpkt.data = NULL;
++            oh_decoder_ctx->avpkt.pts  = 0;
++            avcodec_flush_buffers(oh_decoder_ctx->codec_ctx);
++        }
++
++        if(i < oh_ctx->target_active_layer)
++            oh_ctx->ctx_list[i+1]->codec_ctx->BL_frame =
++                    oh_ctx->ctx_list[i]->codec_ctx->BL_frame;
++    }
++    pthread_mutex_unlock(&oh_ctx->layer_switch);
++
++    oh_ctx->got_picture_mask = ret;
++
++    if (err < 0) {
++        av_log(NULL,AV_LOG_ERROR,"openHEVC decoder returned an error while decoding frame \n");
++        return err;
++    }
++
++    return oh_ctx->got_picture_mask;
++}
+
+ #if OHCONFIG_AVCBASE
+ //FIXME: There should be a better way to synchronize decoders
+@@ -923,8 +1087,34 @@ void oh_close(OHHandle openHevcHandle)
+     av_freep(&oh_ctx_list->ctx_list);
+     av_freep(&oh_ctx_list);
+     av_log(NULL,AV_LOG_DEBUG,"Close openHEVC decoder\n");
++}
+
++void oh_close_async(OHHandle openHevcHandle)
++{
++    OHContext *oh_ctx_list = (OHContext *) openHevcHandle;
++    OHDecoderCtx     *oh_ctx;
++    int i, j;
+
++    av_log(NULL,AV_LOG_DEBUG,"Closing openHEVC\n");
++    for (i = oh_ctx_list->nb_decoders - 1; i >= 0 ; i--){
++        oh_ctx = oh_ctx_list->ctx_list[i];
++        avcodec_flush_buffers(oh_ctx->codec_ctx);
++
++        avcodec_close(oh_ctx->codec_ctx);
++
++        av_parser_close(oh_ctx->parser_ctx);
++
++        av_freep(&oh_ctx->codec_ctx);
++        for (j = 0; j < oh_ctx->pool_size; j++)
++            av_freep(&(oh_ctx->picture_pool[j].picture));
++        av_freep(&oh_ctx->picture_pool);
++        pthread_mutex_destroy(&oh_ctx->pool_lock);
++        av_freep(&oh_ctx);
++    }
++    pthread_mutex_destroy(&oh_ctx_list->layer_switch);
++    av_freep(&oh_ctx_list->ctx_list);
++    av_freep(&oh_ctx_list);
++    av_log(NULL,AV_LOG_DEBUG,"Close openHEVC decoder\n");
+ }
+
+ void oh_flush(OHHandle openHevcHandle)
+diff --git a/libopenhevc/openhevc.h b/libopenhevc/openhevc.h
+index 0a63b5c..1565b61 100644
+--- a/libopenhevc/openhevc.h
++++ b/libopenhevc/openhevc.h
+@@ -158,6 +158,8 @@ typedef struct OHFrame_cpy {
+  * @param type thread_type of the threading design in use for decoding
+  * @return A decoder list if a decoder of each layer were found, NULL otherwise.
+  */
++OHHandle oh_init_async(int nb_threads, int thread_type, int pool_size);
++
+ OHHandle oh_init(int nb_threads, int thread_type);
+
+ /**
+@@ -214,6 +216,11 @@ int oh_start(OHHandle oh_hdl);
+ int  oh_decode(OHHandle oh_hdl, const unsigned char *pkt_data,
+                int pkt_size, int64_t pkt_pts);
+
++int  oh_decode_async(OHHandle oh_hdl, const unsigned char *pkt_data,
++               int pkt_size, int64_t pkt_pts);
++
++void oh_release_picture(OHHandle openHevcHandle, const unsigned char *dataY);
++int oh_acquire_picture(OHHandle openHevcHandle);
+ #if OHCONFIG_AVCBASE
+ /**
+  * Decode the video frame of size pkt_size from pkt_data into picture, in case
+@@ -267,6 +274,14 @@ void oh_flush_shvc(OHHandle oh_hdl, int layer_idx);
+ void oh_close(OHHandle oh_hdl);
+
+ /**
++ * Close and free all decoders, parsers and pictures.
++ *
++ * @param oh_hdl The codec context list of current decoders
++ */
++void oh_close_async(OHHandle oh_hdl);
++
++
++/**
+  * Update informations on the output frame
+  *
+  * @param oh_hdl      The codec context list of current decoders
+--
+1.8.3.1
