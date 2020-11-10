@@ -68,19 +68,20 @@ RUN wget -O - ${NICE_REPO} | tar xz && \
 
 
 # Build open ssl
-ARG OPENSSL_BASE_VER="1.0.2"
-ARG OPENSSL_VER="1.0.2t"
-ARG OPENSSL_REPO=http://www.openssl.org/source/old/${OPENSSL_BASE_VER}/openssl-${OPENSSL_VER}.tar.gz
+ARG OPENSSL_VER="1.1.1h"
+ARG OPENSSL_REPO=http://www.openssl.org/source/openssl-${OPENSSL_VER}.tar.gz
+ARG BUILD_PREFIX=/usr/local/ssl
+ARG BUILD_DESTDIR=/home/build
 
 RUN wget -O - ${OPENSSL_REPO} | tar xz && \
     cd openssl-${OPENSSL_VER} && \
-    ./config no-ssl3 --prefix="/usr/local" -fPIC && \
+    ./config no-ssl3 --prefix=${BUILD_PREFIX} --openssldir=${BUILD_PREFIX} -Wl,-rpath=${BUILD_PREFIX}/lib -fPIC && \
     make depend && \
     make -s V=0  && \
     make install
 
 # Build libre
-ARG LIBRE_VER="v0.4.16"
+ARG LIBRE_VER="v0.5.0"
 ARG LIBRE_REPO=https://github.com/creytiv/re.git
 
 RUN git clone ${LIBRE_REPO} && \
@@ -117,7 +118,7 @@ RUN curl -o libsrtp-${SRTP2_VER}.tar.gz ${SRTP2_REPO} && \
     cd libsrtp-${SRTP2_VER} && \
     export PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig" && \
     export CFLAGS="-fPIC" && \
-    ./configure --enable-openssl --prefix="/usr/local" --with-openssl-dir="/usr/local" && \
+    ./configure --enable-openssl --prefix="/usr/local" --with-openssl-dir="/usr/local/ssl/" && \
     make -s V=0  && \
     make install
 
@@ -161,7 +162,7 @@ RUN cd /home/FFmpeg && \
 
 
 # Install node
-ARG NODE_VER=v8.15.0
+ARG NODE_VER=v10.21.0
 ARG NODE_REPO=https://nodejs.org/dist/${NODE_VER}/node-${NODE_VER}-linux-x64.tar.xz
 
 RUN yum install -y -q ca-certificates wget xz-utils
@@ -193,7 +194,7 @@ RUN git clone ${SVT_HEVC_REPO} && \
 
 # Build OWT specific modules
 
-ARG OWTSERVER_COMMIT=70830f89320e43b55178e70ecdea57887783d81a
+ARG OWTSERVER_COMMIT=fd71357d6fdbd57d3c4be2028976bc2b34fff781
 ARG OWTSERVER_REPO=https://github.com/open-webrtc-toolkit/owt-server.git
 ARG OPENH264_MAJOR=1
 ARG OPENH264_MINOR=7
@@ -292,7 +293,7 @@ WORKDIR /home
 
 # Prerequisites
 # Install node
-ARG NODE_VER=v8.15.0
+ARG NODE_VER=v10.21.0
 ARG NODE_REPO=https://nodejs.org/dist/${NODE_VER}/node-${NODE_VER}-linux-x64.tar.xz
 
 RUN yum install -y -q ca-certificates wget xz-utils
@@ -304,10 +305,15 @@ RUN wget ${NODE_REPO} && \
 
 COPY --from=build /home/owt-server/dist /home/owt
 COPY --from=build /home/build /
-
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib64
-RUN yum install epel-release boost-system boost-thread log4cxx glib2 freetype-devel -y && \
-    yum install rabbitmq-server mongodb mongodb-server -y && \
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib64:
+RUN echo "[mongodb-org-3.6]" >> /etc/yum.repos.d/mongodb-org-3.6.repo && \
+    echo "name=MongoDB Repository" >> /etc/yum.repos.d/mongodb-org-3.6.repo && \
+    echo "baseurl=https://repo.mongodb.org/yum/redhat/7/mongodb-org/3.6/x86_64/" >> /etc/yum.repos.d/mongodb-org-3.6.repo && \
+    echo "gpgcheck=1" >> /etc/yum.repos.d/mongodb-org-3.6.repo && \
+    echo "enabled=1" >> /etc/yum.repos.d/mongodb-org-3.6.repo && \
+    echo "gpgkey=https://www.mongodb.org/static/pgp/server-3.6.asc" >> /etc/yum.repos.d/mongodb-org-3.6.repo && \
+    yum install epel-release boost-system boost-thread log4cxx glib2 freetype-devel -y && \
+    yum install rabbitmq-server mongodb-org -y && \
     yum remove -y -q epel-release && \
     rm -rf /var/cache/yum/*;
 
