@@ -9,7 +9,7 @@ fi
 
 cd openHEVC
 git checkout ffmpeg_update
-patch -p1 < ../../../external/ffmpeg_update_add_circle_list_for_to_free_frame.patch
+git am --whitespace=fix ../../../external/Update-buffer-operation-and-fix-stream-loop-coredump.patch
 ./configure --libdir=/usr/lib64 --disable-sdl2
 make -j `nproc`
 sudo make install
