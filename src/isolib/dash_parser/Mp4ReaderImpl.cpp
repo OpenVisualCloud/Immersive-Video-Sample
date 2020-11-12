@@ -2766,6 +2766,184 @@ int32_t Mp4Reader::GetTrackInformations(VarLenArray<TrackInformation>& outTrackI
     return ERROR_NONE;
 }
 
+int32_t Mp4Reader::GetTrackInformation(VarLenArray<TrackInformation>& outTrackInfos) const
+{
+    if (IsInitErr())
+    {
+        return OMAF_MP4READER_NOT_INITIALIZED;
+    }
+
+    size_t totalSize = m_initSegProps.size();
+    outTrackInfos               = VarLenArray<TrackInformation>(totalSize);
+    uint32_t basicTrackId       = 0;
+    size_t offset               = 0;
+    for (auto const& initSegment : m_initSegProps)
+    {
+        InitSegmentId initSegId = initSegment.first;
+        uint32_t newTrackId     = basicTrackId;
+
+        auto trackPropsKv = --initSegment.second.trackProperties.end();
+        ContextId trackId                      = trackPropsKv->first;
+        const TrackProperties& trackProps = trackPropsKv->second;
+        outTrackInfos.arrayElets[newTrackId].initSegmentId = initSegId.GetIndex();
+        outTrackInfos.arrayElets[newTrackId].trackId       = GenTrackId(make_pair(initSegment.first, trackId));
+        outTrackInfos.arrayElets[newTrackId].alternateGroupId = trackProps.alternateGroupId;
+        outTrackInfos.arrayElets[newTrackId].features         = trackProps.trackProperty.GetFeatureMask();
+        outTrackInfos.arrayElets[newTrackId].vrFeatures       = trackProps.trackProperty.GetVRFeatureMask();
+        outTrackInfos.arrayElets[newTrackId].timeScale =
+            m_initSegProps.at(initSegId).basicTrackInfos.at(trackId).timeScale;
+        outTrackInfos.arrayElets[newTrackId].frameRate = {};
+        std::string tempURI                             = trackProps.trackURI;
+        tempURI.push_back('\0');
+        outTrackInfos.arrayElets[newTrackId].trackURI = makeVarLenArray<char>(tempURI);
+        outTrackInfos.arrayElets[newTrackId].alternateTrackIds =
+            makeVarLenArray<unsigned int>(trackProps.alternateTrackIds);
+        outTrackInfos.arrayElets[newTrackId].referenceTrackIds =
+                VarLenArray<TypeToTrackIDs>(trackProps.referenceTrackIds.size());
+        offset = 0;
+        for (auto const& reference : trackProps.referenceTrackIds)
+        {
+            outTrackInfos.arrayElets[newTrackId].referenceTrackIds[offset].type = FourCC(reference.first.GetUInt32());
+            outTrackInfos.arrayElets[newTrackId].referenceTrackIds[offset].trackIds =
+                GenVarLenArrayMap(reference.second, [&](ContextId aContextId) {
+                    return GenTrackId({initSegment.first, aContextId});
+                });
+            offset++;
+        }
+
+        outTrackInfos.arrayElets[newTrackId].trackGroupIds =
+            VarLenArray<TypeToTrackIDs>(trackProps.trackGroupIds.size());
+        offset = 0;
+        for (auto const& group : trackProps.trackGroupIds)
+        {
+            outTrackInfos.arrayElets[newTrackId].trackGroupIds[offset].type = FourCC(group.first.GetUInt32());
+            outTrackInfos.arrayElets[newTrackId].trackGroupIds[offset].trackIds =
+                makeVarLenArray<unsigned int>(group.second);
+            offset++;
+        }
+
+        std::map<uint32_t, size_t> trackSampCounts;
+
+        std::vector<ContextId> idPairVec;
+        auto basicTrackInfosKv = --m_initSegProps.at(initSegId).basicTrackInfos.end();
+        idPairVec.push_back(basicTrackInfosKv->first);
+        trackSampCounts[basicTrackId] = 0u;
+
+        for (auto const& allSegmentProperties : initSegment.second.segPropMap)
+        {
+            if (allSegmentProperties.second.initSegmentId == initSegId)
+            {
+                auto& segTrackInfos = allSegmentProperties.second.trackDecInfos;
+                newTrackId         = basicTrackId;
+                auto ctxId = --idPairVec.end();
+                auto trackDecInfo = segTrackInfos.find(*ctxId);
+                if (trackDecInfo != segTrackInfos.end())
+                {
+                    trackSampCounts[newTrackId] += trackDecInfo->second.samples.size();
+                }
+            }
+        }
+
+        auto trackSampCount = --trackSampCounts.end();
+        auto counttrackid                                  = trackSampCount->first;
+        auto count                                         = trackSampCount->second;
+        outTrackInfos.arrayElets[counttrackid].sampleProperties = VarLenArray<TrackSampInfo>(count);
+        outTrackInfos.arrayElets[counttrackid].maxSampleSize    = 0;
+
+        std::map<uint32_t, size_t> sampOffset;
+        for (auto const& segment : CreateDashSegs(initSegId))
+        {
+            newTrackId = basicTrackId;
+            std::vector<ContextId>::iterator ctxIdIter = idPairVec.begin();
+            ctxIdIter = --idPairVec.end();
+            std::map<ContextId, TrackDecInfo>::const_iterator decInfoIter;
+            decInfoIter = segment.trackDecInfos.find((*ctxIdIter));
+            if (decInfoIter != segment.trackDecInfos.end())
+            {
+                auto& trackDecInfo = decInfoIter->second;
+                offset             = sampOffset[newTrackId];
+
+                if (trackDecInfo.hasTtyp)
+                {
+                    auto& tAtom                                          = trackDecInfo.ttyp;
+                    outTrackInfos.arrayElets[newTrackId].hasTypeInformation = true;
+
+                    outTrackInfos.arrayElets[newTrackId].type.majorBrand   = tAtom.GetMajorBrand().c_str();
+                    outTrackInfos.arrayElets[newTrackId].type.minorVersion = tAtom.GetMinorVersion();
+
+                    std::vector<FourCC> convertedCompatibleBrands;
+                    for (auto& compatibleBrand : tAtom.GetCompatibleBrands())
+                    {
+                        convertedCompatibleBrands.push_back(FourCC(compatibleBrand.c_str()));
+                    }
+                    outTrackInfos.arrayElets[newTrackId].type.compatibleBrands =
+                        makeVarLenArray<FourCC>(convertedCompatibleBrands);
+                }
+                else
+                {
+                    outTrackInfos.arrayElets[newTrackId].hasTypeInformation = false;
+                }
+
+                if (trackDecInfo.samples.size() > 0)
+                {
+                    uint32_t delta;
+                    if (trackDecInfo.samples.size() >= 3)
+                    {
+                        delta = trackDecInfo.samples.at(1).sampleDuration;
+                    }
+                    else
+                    {
+                        delta = trackDecInfo.samples.at(0).sampleDuration;
+                    }
+                    auto timeScale =
+                        m_initSegProps.at(initSegId).basicTrackInfos.at((*ctxIdIter)).timeScale;
+                    outTrackInfos.arrayElets[newTrackId].frameRate = RatValue{timeScale, delta};
+                }
+
+                for (auto const& sample : trackDecInfo.samples)
+                {
+                    outTrackInfos.arrayElets[newTrackId].sampleProperties[offset].sampleId =
+                        ItemId(sample.sampleId).GetIndex();
+                    outTrackInfos.arrayElets[newTrackId].sampleProperties[offset].sampleEntryType =
+                        FourCC(sample.sampleEntryType.GetUInt32());
+                    outTrackInfos.arrayElets[newTrackId].sampleProperties[offset].sampleDescriptionIndex =
+                        sample.sampleDescriptionIndex.GetIndex();
+                    outTrackInfos.arrayElets[newTrackId].sampleProperties[offset].sampleType = sample.sampleType;
+                    outTrackInfos.arrayElets[newTrackId].sampleProperties[offset].initSegmentId =
+                        segment.initSegmentId.GetIndex();
+                    outTrackInfos.arrayElets[newTrackId].sampleProperties[offset].segmentId = segment.segmentId.GetIndex();
+                    if (sample.compositionTimes.size())
+                    {
+                        outTrackInfos.arrayElets[newTrackId].sampleProperties[offset].earliestTStamp =
+                            sample.compositionTimes.at(0);
+                        outTrackInfos.arrayElets[newTrackId].sampleProperties[offset].earliestTStampTS =
+                            sample.compositionTimesTS.at(0);
+                    }
+                    else
+                    {
+                        outTrackInfos.arrayElets[newTrackId].sampleProperties[offset].earliestTStamp   = 0;
+                            outTrackInfos.arrayElets[newTrackId].sampleProperties[offset].earliestTStampTS = 0;
+                    }
+                    outTrackInfos.arrayElets[newTrackId].sampleProperties[offset].sampleFlags.flagsAsUInt =
+                        sample.sampleFlags.flagsAsUInt;
+                    outTrackInfos.arrayElets[newTrackId].sampleProperties[offset].sampleDurationTS =
+                        sample.sampleDuration;
+
+                    unsigned int sampleSize = sample.dataLength;
+                    if (sampleSize > outTrackInfos.arrayElets[newTrackId].maxSampleSize)
+                    {
+                        outTrackInfos.arrayElets[newTrackId].maxSampleSize = sampleSize;
+                    }
+                    offset++;
+                }
+                sampOffset[newTrackId] = offset;
+            }
+        }
+        basicTrackId++;
+    }
+    return ERROR_NONE;
+}
+
 int32_t Mp4Reader::GetDisplayWidth(uint32_t trackId, uint32_t& displayPicW) const
 {
     if (IsInitErr())

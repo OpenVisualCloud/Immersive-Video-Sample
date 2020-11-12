@@ -190,6 +190,19 @@ public:
     int32_t GetTrackInformations(VarLenArray<TrackInformation>& trackInfos) const;
 
     //!
+    //! \brief  Get the track information for basic tracks
+    //!         after one segment file is parsed and Mp4Reader
+    //!         is initialized
+    //!
+    //! \param  [out] trackInfos
+    //!         track information for basic tracks
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t GetTrackInformation(VarLenArray<TrackInformation>& trackInfos) const;
+
+    //!
     //! \brief  Get picture display width
     //!
     //! \param  [in]  trackId

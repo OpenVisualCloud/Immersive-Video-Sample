@@ -234,7 +234,29 @@ void OmafMP4VRReader::SelectedTrackInfos(std::vector<VCD::OMAF::TrackInformation
 }
 
 int32_t OmafMP4VRReader::getTrackInformations(std::vector<VCD::OMAF::TrackInformation*>& trackInfos) const {
+    double dResult;
+    clock_t lBefore = clock();
   if (nullptr == mMP4ReaderImpl) return ERROR_NULL_PTR;
+#if 1
+  VCD::MP4::Mp4Reader* pReader = (VCD::MP4::Mp4Reader*)mMP4ReaderImpl;
+
+  if (trackInfos.size() != 0) trackInfos.clear();
+
+  VCD::MP4::VarLenArray<VCD::MP4::TrackInformation>* Infos = new VCD::MP4::VarLenArray<VCD::MP4::TrackInformation>;
+  pReader->GetTrackInformation(*Infos);
+
+  for (uint32_t i = 0; i < (*Infos).size; i++) {
+    TrackInformation* trackInfo = new TrackInformation;
+    *trackInfo = (*Infos)[i];
+
+    trackInfos.push_back(trackInfo);
+  }
+
+  if (!Infos)
+      delete Infos;
+  dResult = (double)(clock() - lBefore) * 1000 / CLOCKS_PER_SEC;
+  OMAF_LOG(LOG_INFO, "Total Time for OmafMP4VRReader GetTrackInformation is %f ms\n", dResult);
+#else
   VCD::MP4::Mp4Reader* pReader = (VCD::MP4::Mp4Reader*)mMP4ReaderImpl;
 
   if (trackInfos.size() != 0) trackInfos.clear();
@@ -255,6 +277,8 @@ int32_t OmafMP4VRReader::getTrackInformations(std::vector<VCD::OMAF::TrackInform
   middleTrackInfos.clear();
 
   delete Infos;
+#endif
+
   return ERROR_NONE;
 }
 
