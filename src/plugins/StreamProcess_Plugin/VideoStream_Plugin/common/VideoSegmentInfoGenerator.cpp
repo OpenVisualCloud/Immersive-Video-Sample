@@ -32,9 +32,8 @@
 //!
 
 #include <utility>
+#include "error.h"
 #include "VideoSegmentInfoGenerator.h"
-
-VCD_NS_BEGIN
 
 VideoSegmentInfoGenerator::VideoSegmentInfoGenerator()
 {
@@ -83,17 +82,7 @@ VideoSegmentInfoGenerator::VideoSegmentInfoGenerator(const VideoSegmentInfoGener
     m_streamIdx = src.m_streamIdx;
     m_videoSegInfo = std::move(src.m_videoSegInfo);
 }
-/*
-VideoSegmentInfoGenerator& VideoSegmentInfoGenerator::operator=(VideoSegmentInfoGenerator&& other)
-{
-    m_bsBuffer = std::move(other.m_bsBuffer);
-    m_segmentationInfo = std::move(other.m_segmentationInfo);
-    m_streamIdx = other.m_streamIdx;
-    m_videoSegInfo = std::move(other.m_videoSegInfo);
 
-    return *this;
-}
-*/
 VideoSegmentInfoGenerator::~VideoSegmentInfoGenerator()
 {
     if (m_videoSegInfo)
@@ -201,5 +190,3 @@ void VideoSegmentInfoGenerator::Update()
 {
     return;
 }
-
-VCD_NS_END

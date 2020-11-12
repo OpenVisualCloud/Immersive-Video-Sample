@@ -31,9 +31,11 @@
 //! Created on April 30, 2019, 6:04 AM
 //!
 
+#include <dlfcn.h>
+
 #include "OmafPackage.h"
-#include "VideoStream.h"
-#include "AudioStream.h"
+#include "VideoStreamPluginAPI.h"
+//#include "AudioStream.h"
 #include "DefaultSegmentation.h"
 
 VCD_NS_BEGIN
@@ -45,7 +47,7 @@ OmafPackage::OmafPackage()
     m_extractorTrackMan = NULL;
     m_isSegmentationStarted = false;
     m_threadId = 0;
-    m_videoStream = NULL;
+    //m_videoStream = NULL;
 }
 
 OmafPackage::OmafPackage(const OmafPackage& src)
@@ -55,7 +57,7 @@ OmafPackage::OmafPackage(const OmafPackage& src)
     m_extractorTrackMan = std::move(src.m_extractorTrackMan);
     m_isSegmentationStarted = src.m_isSegmentationStarted;
     m_threadId = src.m_threadId;
-    m_videoStream = NULL;
+    //m_videoStream = NULL;
 }
 
 OmafPackage& OmafPackage::operator=(OmafPackage&& other)
@@ -65,7 +67,7 @@ OmafPackage& OmafPackage::operator=(OmafPackage&& other)
     m_extractorTrackMan = std::move(other.m_extractorTrackMan);
     m_isSegmentationStarted = other.m_isSegmentationStarted;
     m_threadId = other.m_threadId;
-    m_videoStream = NULL;
+    //m_videoStream = NULL;
 
     return *this;
 }
@@ -83,12 +85,58 @@ OmafPackage::~OmafPackage()
     std::map<uint8_t, MediaStream*>::iterator it;
     for (it = m_streams.begin(); it != m_streams.end();)
     {
-        DELETE_MEMORY(it->second);
+        MediaStream *stream = it->second;
+        if (stream)
+        {
+            CodecId codec = stream->GetCodecId();
+            std::map<CodecId, void*>::iterator itHdl;
+            itHdl = m_streamPlugins.find(codec);
+            if (itHdl == m_streamPlugins.end())
+            {
+                OMAF_LOG(LOG_ERROR, "Can't find corresponding stream plugin for codec %d\n", codec);
+                return;
+            }
+            void *pluginHdl = itHdl->second;
+            if (!pluginHdl)
+            {
+                OMAF_LOG(LOG_ERROR, "The stream process plugin handle is NULL !\n");
+                return;
+            }
+            if (stream->GetMediaType() == VIDEOTYPE)
+            {
+                DestroyVideoStream* destroyVS = NULL;
+                destroyVS = (DestroyVideoStream*)dlsym(pluginHdl, "Destroy");
+                const char *dlsymErr = dlerror();
+                if (dlsymErr)
+                {
+                    OMAF_LOG(LOG_ERROR, "Failed to load symbol Destroy for codec %d\n", codec);
+                    return;
+                }
+                if (!destroyVS)
+                {
+                    OMAF_LOG(LOG_ERROR, "NULL video stream destroyer !\n");
+                    return;
+                }
+                destroyVS((VideoStream*)(stream));
+            }
+        }
 
         m_streams.erase(it++);
     }
     m_streams.clear();
-    m_videoStream = NULL;
+
+    std::map<CodecId, void*>::iterator itPlug;
+    for (itPlug = m_streamPlugins.begin(); itPlug != m_streamPlugins.end(); )
+    {
+        void *plugHdl = itPlug->second;
+        if (plugHdl)
+        {
+            dlclose(plugHdl);
+            plugHdl = NULL;
+        }
+        m_streamPlugins.erase(itPlug++);
+    }
+    m_streamPlugins.clear();
 }
 
 int32_t OmafPackage::AddMediaStream(uint8_t streamIdx, BSBuffer *bs)
@@ -101,25 +149,87 @@ int32_t OmafPackage::AddMediaStream(uint8_t streamIdx, BSBuffer *bs)
 
     if (bs->mediaType == VIDEOTYPE)
     {
-        m_videoStream = new VideoStream();
-        if (!m_videoStream)
-            return OMAF_ERROR_NULL_PTR;
+        if (bs->codecId == CODEC_ID_H265)
+        {
+            void *pluginHdl = NULL;
+            std::map<CodecId, void*>::iterator it;
+            it = m_streamPlugins.find(CODEC_ID_H265);
+            if (it == m_streamPlugins.end())
+            {
+                char hevcPluginName[1024] = "/usr/local/lib/libHevcVideoStreamProcess.so";
+                pluginHdl = dlopen(hevcPluginName, RTLD_LAZY);
+                const char *dlsymErr = dlerror();
+                if (!pluginHdl)
+                {
+                    OMAF_LOG(LOG_ERROR, "Failed to open HEVC video stream plugin %s\n", hevcPluginName);
+                    if (dlsymErr)
+                    {
+                        OMAF_LOG(LOG_ERROR, "Get error msg %s\n", dlsymErr);
+                    }
+                    return OMAF_ERROR_DLOPEN;
+                }
+                m_streamPlugins.insert(std::make_pair(CODEC_ID_H265, pluginHdl));
+            }
+            else
+            {
+                pluginHdl = it->second;
+                if (!pluginHdl)
+                {
+                    OMAF_LOG(LOG_ERROR, "NULL HEVC video stream plugin !\n");
+                    return OMAF_ERROR_NULL_PTR;
+                }
+            }
 
-        ((MediaStream*)m_videoStream)->SetMediaType(VIDEOTYPE);
+            CreateVideoStream* createVS = NULL;
+            createVS = (CreateVideoStream*)dlsym(pluginHdl, "Create");
+            const char* dlsymErr1 = dlerror();
+            if (dlsymErr1)
+            {
+                OMAF_LOG(LOG_ERROR, "Failed to load symbol Create: %s\n", dlsymErr1);
+                return OMAF_ERROR_DLSYM;
+            }
 
-        m_videoStream->Initialize(streamIdx, bs, m_initInfo);
+            if (!createVS)
+            {
+                OMAF_LOG(LOG_ERROR, "NULL video stream creator !\n");
+                return OMAF_ERROR_NULL_PTR;
+            }
 
-        m_streams.insert(std::make_pair(streamIdx, (MediaStream*)m_videoStream));
-        m_videoStream = NULL;
-    } else if (bs->mediaType == AUDIOTYPE) {
-        AudioStream *as = new AudioStream();
-        if (!as)
-            return OMAF_ERROR_NULL_PTR;
+            VideoStream *vs = createVS();
+            if (!vs)
+            {
+                OMAF_LOG(LOG_ERROR, "Failed to create HEVC video stream !\n");
+                return OMAF_ERROR_NULL_PTR;
+            }
 
-        ((MediaStream*)as)->SetMediaType(AUDIOTYPE);
+            ((MediaStream*)vs)->SetMediaType(VIDEOTYPE);
+            ((MediaStream*)vs)->SetCodecId(CODEC_ID_H265);
 
-        m_streams.insert(std::make_pair(streamIdx, std::move((MediaStream*)as)));
+            m_streams.insert(std::make_pair(streamIdx, (MediaStream*)vs));
+            int32_t ret = vs->Initialize(streamIdx, bs, m_initInfo);
+            if (ret)
+            {
+                OMAF_LOG(LOG_ERROR, "Failed to initialize HEVC video stream !\n");
+                return ret;
+            }
+
+            vs = NULL;
+        }
+        else
+        {
+            OMAF_LOG(LOG_ERROR, "Not supported video codec %d\n", bs->codecId);
+            return OMAF_ERROR_INVALID_CODEC;
+        }
     }
+    //} else if (bs->mediaType == AUDIOTYPE) {
+    //    AudioStream *as = new AudioStream();
+    //    if (!as)
+    //        return OMAF_ERROR_NULL_PTR;
+
+    //    ((MediaStream*)as)->SetMediaType(AUDIOTYPE);
+
+    //    m_streams.insert(std::make_pair(streamIdx, std::move((MediaStream*)as)));
+    //}
 
     return ERROR_NONE;
 }

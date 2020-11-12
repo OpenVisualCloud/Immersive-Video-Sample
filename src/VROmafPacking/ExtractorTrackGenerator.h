@@ -37,7 +37,7 @@
 #define _EXTRACTORTRACKGENERATOR_H_
 
 #include "VROmafPacking_data.h"
-#include "definitions.h"
+#include "VROmafPacking_def.h"
 #include "MediaStream.h"
 #include "ExtractorTrack.h"
 #include "RegionWisePackingGenerator.h"

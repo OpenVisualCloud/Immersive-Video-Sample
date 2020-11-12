@@ -36,11 +36,7 @@
 #ifndef _MEDIASTREAM_H_
 #define _MEDIASTREAM_H_
 
-#include "OmafPackingCommon.h"
-#include "definitions.h"
 #include "VROmafPacking_data.h"
-
-VCD_NS_BEGIN
 
 //!
 //! \class MediaStream
@@ -84,9 +80,30 @@ public:
     //!
     MediaType GetMediaType() { return m_mediaType; };
 
+    //!
+    //! \brief  Set the codec index for stream
+    //!
+    //! \param  [in] codecIdx
+    //!         the codec index will be set to the stream
+    //!
+    //! \return void
+    //!
+    void SetCodecId(CodecId codecIdx)
+    {
+        m_codecId = codecIdx;
+    };
+
+    //!
+    //! \brief  Get the codec index of the stream
+    //!
+    //! \return CodecId
+    //!         codec index of the media stream
+    //!
+    CodecId GetCodecId() { return m_codecId; };
+
 protected:
     MediaType   m_mediaType;    //!< media type of the media stream
+    CodecId     m_codecId;      //!< codec index of the media stream
 };
 
-VCD_NS_END;
 #endif /* _MEDIASTREAM_H_ */

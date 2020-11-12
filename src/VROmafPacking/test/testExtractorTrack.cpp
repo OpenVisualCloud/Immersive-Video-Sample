@@ -31,7 +31,9 @@
 //! Created on April 30, 2019, 6:04 AM
 //!
 
+#include <dlfcn.h>
 #include "gtest/gtest.h"
+#include "VideoStreamPluginAPI.h"
 #include "../ExtractorTrackManager.h"
 
 VCD_USE_VRVIDEO;
@@ -206,8 +208,9 @@ public:
 
         m_initInfo->projType = E_SVIDEO_EQUIRECT;
 
-        VideoStream *vsLow = new VideoStream();
-        if (!vsLow)
+        m_vsPlugin = NULL;
+        m_vsPlugin = dlopen("/usr/local/lib/libHevcVideoStreamProcess.so", RTLD_LAZY);
+        if (!m_vsPlugin)
         {
             DELETE_ARRAY(m_highResHeader);
             DELETE_ARRAY(m_lowResHeader);
@@ -220,7 +223,74 @@ public:
             return;
         }
 
+        CreateVideoStream* createVS = NULL;
+        createVS = (CreateVideoStream*)dlsym(m_vsPlugin, "Create");
+        const char* dlsymErr1 = dlerror();
+        if (dlsymErr1)
+        {
+            DELETE_ARRAY(m_highResHeader);
+            DELETE_ARRAY(m_lowResHeader);
+            DELETE_ARRAY(m_totalDataLow);
+            DELETE_ARRAY(m_totalDataHigh);
+            DELETE_ARRAY(m_initInfo->bsBuffers);
+            DELETE_MEMORY(m_initInfo->segmentationInfo);
+            DELETE_MEMORY(m_initInfo->viewportInfo);
+            DELETE_MEMORY(m_initInfo);
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
+            return;
+        }
+        if (!createVS)
+        {
+            DELETE_ARRAY(m_highResHeader);
+            DELETE_ARRAY(m_lowResHeader);
+            DELETE_ARRAY(m_totalDataLow);
+            DELETE_ARRAY(m_totalDataHigh);
+            DELETE_ARRAY(m_initInfo->bsBuffers);
+            DELETE_MEMORY(m_initInfo->segmentationInfo);
+            DELETE_MEMORY(m_initInfo->viewportInfo);
+            DELETE_MEMORY(m_initInfo);
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
+            return;
+        }
+
+        DestroyVideoStream* destroyVS = NULL;
+        destroyVS = (DestroyVideoStream*)dlsym(m_vsPlugin, "Destroy");
+        const char *dlsymErr = dlerror();
+        if (dlsymErr || !destroyVS)
+        {
+            DELETE_ARRAY(m_highResHeader);
+            DELETE_ARRAY(m_lowResHeader);
+            DELETE_ARRAY(m_totalDataLow);
+            DELETE_ARRAY(m_totalDataHigh);
+            DELETE_ARRAY(m_initInfo->bsBuffers);
+            DELETE_MEMORY(m_initInfo->segmentationInfo);
+            DELETE_MEMORY(m_initInfo->viewportInfo);
+            DELETE_MEMORY(m_initInfo);
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
+            return;
+        }
+
+        VideoStream *vsLow = createVS();
+        if (!vsLow)
+        {
+            DELETE_ARRAY(m_highResHeader);
+            DELETE_ARRAY(m_lowResHeader);
+            DELETE_ARRAY(m_totalDataLow);
+            DELETE_ARRAY(m_totalDataHigh);
+            DELETE_ARRAY(m_initInfo->bsBuffers);
+            DELETE_MEMORY(m_initInfo->segmentationInfo);
+            DELETE_MEMORY(m_initInfo->viewportInfo);
+            DELETE_MEMORY(m_initInfo);
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
+            return;
+        }
+
         ((MediaStream*)vsLow)->SetMediaType(VIDEOTYPE);
+        ((MediaStream*)vsLow)->SetCodecId(CODEC_ID_H265);
 
         int32_t ret = vsLow->Initialize(lowResStreamIdx, &(m_initInfo->bsBuffers[0]), m_initInfo);
         if (ret)
@@ -233,14 +303,16 @@ public:
             DELETE_MEMORY(m_initInfo->segmentationInfo);
             DELETE_MEMORY(m_initInfo->viewportInfo);
             DELETE_MEMORY(m_initInfo);
-            DELETE_MEMORY(vsLow);
+            destroyVS((VideoStream*)(vsLow));
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
             return;
         }
 
         m_streams.insert(std::make_pair(lowResStreamIdx, (MediaStream*)vsLow));
 
         //Create and Initialize high resolution video stream
-        VideoStream *vsHigh = new VideoStream();
+        VideoStream *vsHigh = createVS();
         if (!vsHigh)
         {
             DELETE_ARRAY(m_highResHeader);
@@ -251,11 +323,14 @@ public:
             DELETE_MEMORY(m_initInfo->segmentationInfo);
             DELETE_MEMORY(m_initInfo->viewportInfo);
             DELETE_MEMORY(m_initInfo);
-            DELETE_MEMORY(vsLow);
+            destroyVS((VideoStream*)(vsLow));
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
             return;
         }
 
         ((MediaStream*)vsHigh)->SetMediaType(VIDEOTYPE);
+        ((MediaStream*)vsHigh)->SetCodecId(CODEC_ID_H265);
 
         ret = vsHigh->Initialize(highResStreamIdx, &(m_initInfo->bsBuffers[1]), m_initInfo);
         if (ret)
@@ -268,8 +343,10 @@ public:
             DELETE_MEMORY(m_initInfo->segmentationInfo);
             DELETE_MEMORY(m_initInfo->viewportInfo);
             DELETE_MEMORY(m_initInfo);
-            DELETE_MEMORY(vsLow);
-            DELETE_MEMORY(vsHigh);
+            destroyVS((VideoStream*)(vsLow));
+            destroyVS((VideoStream*)(vsHigh));
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
             return;
         }
 
@@ -286,8 +363,10 @@ public:
             DELETE_MEMORY(m_initInfo->segmentationInfo);
             DELETE_MEMORY(m_initInfo->viewportInfo);
             DELETE_MEMORY(m_initInfo);
-            DELETE_MEMORY(vsLow);
-            DELETE_MEMORY(vsHigh);
+            destroyVS((VideoStream*)(vsLow));
+            destroyVS((VideoStream*)(vsHigh));
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
             return;
         }
 
@@ -302,8 +381,10 @@ public:
             DELETE_MEMORY(m_initInfo->segmentationInfo);
             DELETE_MEMORY(m_initInfo->viewportInfo);
             DELETE_MEMORY(m_initInfo);
-            DELETE_MEMORY(vsLow);
-            DELETE_MEMORY(vsHigh);
+            destroyVS((VideoStream*)(vsLow));
+            destroyVS((VideoStream*)(vsHigh));
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
             DELETE_MEMORY(m_extractorTrackMan);
             return;
         }
@@ -327,14 +408,35 @@ public:
 
         DELETE_MEMORY(m_extractorTrackMan);
 
-        std::map<uint8_t, MediaStream*>::iterator it;
-        for (it = m_streams.begin(); it != m_streams.end();)
+        if (m_vsPlugin)
         {
-            DELETE_MEMORY(it->second);
+            DestroyVideoStream* destroyVS = NULL;
+            destroyVS = (DestroyVideoStream*)dlsym(m_vsPlugin, "Destroy");
+            const char *dlsymErr = dlerror();
+            if (dlsymErr)
+            {
+                return;
+            }
+            if (!destroyVS)
+            {
+                return;
+            }
 
-            m_streams.erase(it++);
+            std::map<uint8_t, MediaStream*>::iterator it;
+            for (it = m_streams.begin(); it != m_streams.end();)
+            {
+                MediaStream *stream = it->second;
+                if (stream && (stream->GetCodecId() == CODEC_ID_H265))
+                {
+                    destroyVS((VideoStream*)(stream));
+                }
+                m_streams.erase(it++);
+            }
+            m_streams.clear();
+
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
         }
-        m_streams.clear();
     }
 
     std::map<uint8_t, MediaStream*> m_streams;
@@ -344,6 +446,7 @@ public:
     uint8_t                         *m_lowResHeader;
     uint8_t                         *m_totalDataLow;
     uint8_t                         *m_totalDataHigh;
+    void                            *m_vsPlugin;
 };
 
 TEST_F(ExtractorTrackTest, AllProcess)

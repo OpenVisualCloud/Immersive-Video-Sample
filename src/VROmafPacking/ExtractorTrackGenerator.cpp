@@ -35,7 +35,7 @@
 #include <math.h>
 
 #include "ExtractorTrackGenerator.h"
-#include "VideoStream.h"
+#include "VideoStreamPluginAPI.h"
 
 #ifdef _USE_TRACE_
 #include "../trace/Bandwidth_tp.h"

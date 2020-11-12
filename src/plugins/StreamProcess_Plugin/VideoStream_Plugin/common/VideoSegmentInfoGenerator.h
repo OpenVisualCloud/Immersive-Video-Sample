@@ -37,10 +37,11 @@
 #define _VIDEOSEGMENTINFOGENERATOR_H_
 
 #include "VROmafPacking_data.h"
-#include "definitions.h"
-#include "OmafPackingCommon.h"
-
-VCD_NS_BEGIN
+#include "VROmafPacking_def.h"
+extern "C"
+{
+#include "safestringlib/safe_mem_lib.h"
+}
 
 //!
 //! \class VideoSegmentInfoGenerator
@@ -172,5 +173,4 @@ private:
     VideoSegmentInfo *m_videoSegInfo;     //!< pointer to the video segment information
 };
 
-VCD_NS_END;
 #endif /* _VIDEOSEGMENTINFOGENERATOR_H_ */

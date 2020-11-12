@@ -34,8 +34,9 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
-#include "../utils/ns_def.h"
-#include "../utils/error.h"
+#include "ns_def.h"
+#include "error.h"
+//#include "common_data.h"
 #include "OmafPackingLog.h"
 
 #include <stdint.h>
@@ -46,19 +47,5 @@ extern "C"
 {
 #include "safestringlib/safe_mem_lib.h"
 }
-
-#define DELETE_MEMORY(x) \
-    if (x)               \
-    {                    \
-        delete x;        \
-        x = NULL;        \
-    }
-
-#define DELETE_ARRAY(x)  \
-    if (x)               \
-    {                    \
-        delete[] x;      \
-        x = NULL;        \
-    }
 
 #endif /* _COMMON_H_ */

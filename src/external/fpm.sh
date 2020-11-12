@@ -16,6 +16,7 @@ parameters_usage(){
 package(){
     if [ ${ITEM} = "server" ] ; then
         echo 'sudo cp /usr/lib64/immersive-server/libHighResPlusFullLowResPacking.so /usr/local/lib' > post
+        echo 'sudo cp /usr/lib64/immersive-server/libHevcVideoStreamProcess.so /usr/local/lib' > post
         #echo 'sudo cp /usr/lib64/immersive-server/libSingleVideoPacking.so /usr/local/lib' >> post
         echo 'sudo ldconfig && sudo cp /usr/bin/immersive-server/WorkerServer /root' >> post
     elif [ ${ITEM} = "client" ] ; then
@@ -58,6 +59,7 @@ if [ ${ITEM} = "server" ] ; then
     cp external/ffmpeg_server_so/libswresample.so.3                   ${LIBDIR}
     cp external/ffmpeg_server_so/libpostproc.so.55                    ${LIBDIR}
     cp /usr/local/lib/libHighResPlusFullLowResPacking.so              ${LIBDIR}
+    cp /usr/local/lib/libHevcVideoStreamProcess.so                    ${LIBDIR}
     #cp /usr/local/lib/libSingleVideoPacking.so                        ${LIBDIR}
     cp /usr/local/lib/libglog.so.0                                    ${LIBDIR}
     cp /usr/local/lib/libsafestring_shared.so                         ${LIBDIR}

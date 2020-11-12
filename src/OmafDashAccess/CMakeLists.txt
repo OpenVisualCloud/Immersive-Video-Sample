@@ -8,7 +8,6 @@ OPTION(USE_ANDROID_NDK
 PROJECT(OmafDashAccess)
 
 AUX_SOURCE_DIRECTORY(. DIR_SRC)
-AUX_SOURCE_DIRECTORY(../utils UTIL_SRC)
 AUX_SOURCE_DIRECTORY(OmafDashDownload/. DOWN_SRC)
 AUX_SOURCE_DIRECTORY(OmafDashParser/. PARSE_SRC)
 AUX_SOURCE_DIRECTORY(OmafViewportPredict/. PREDICT_SRC)
@@ -47,13 +46,12 @@ ENDIF()
 
 set(DIR_SRC
     ${DIR_SRC}
-    ${UTIL_SRC}
     ${DOWN_SRC}
     ${PARSE_SRC}
     ${PREDICT_SRC}
     )
 
-ADD_LIBRARY(OmafDashAccess SHARED  ${DIR_SRC})
+ADD_LIBRARY(OmafDashAccess SHARED  ${DIR_SRC} ../utils/Log.cpp ../utils/tinyxml2.cpp)
 
 TARGET_LINK_LIBRARIES(OmafDashAccess glog)
 TARGET_LINK_LIBRARIES(OmafDashAccess curl)
