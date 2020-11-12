@@ -31,12 +31,16 @@
 //! Created on April 30, 2019, 6:04 AM
 //!
 
+#include <dlfcn.h>
 #include "gtest/gtest.h"
-#include "../VideoStream.h"
+#include "VideoStreamPluginAPI.h"
+#include "error.h"
+extern "C"
+{
+#include "safestringlib/safe_mem_lib.h"
+}
 
-VCD_USE_VRVIDEO;
 
-namespace {
 class VideoStreamTest : public testing::Test
 {
 public:
@@ -292,8 +296,9 @@ public:
 
         m_initInfo->projType = E_SVIDEO_EQUIRECT;
 
-        m_vsLow = new VideoStream();
-        if (!m_vsLow)
+        m_vsPlugin = NULL;
+        m_vsPlugin = dlopen("/usr/local/lib/libHevcVideoStreamProcess.so", RTLD_LAZY);
+        if (!m_vsPlugin)
         {
             fclose(m_highResFile);
             m_highResFile = NULL;
@@ -309,7 +314,87 @@ public:
             return;
         }
 
+        CreateVideoStream* createVS = NULL;
+        createVS = (CreateVideoStream*)dlsym(m_vsPlugin, "Create");
+        const char* dlsymErr1 = dlerror();
+        if (dlsymErr1)
+        {
+            fclose(m_highResFile);
+            m_highResFile = NULL;
+            fclose(m_lowResFile);
+            m_lowResFile = NULL;
+            DELETE_ARRAY(m_highResHeader);
+            DELETE_ARRAY(m_lowResHeader);
+            DELETE_ARRAY(m_totalDataLow);
+            DELETE_ARRAY(m_totalDataHigh);
+            DELETE_ARRAY(m_initInfo->bsBuffers);
+            DELETE_MEMORY(m_initInfo->segmentationInfo);
+            DELETE_MEMORY(m_initInfo);
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
+            return;
+        }
+
+        if (!createVS)
+        {
+            fclose(m_highResFile);
+            m_highResFile = NULL;
+            fclose(m_lowResFile);
+            m_lowResFile = NULL;
+            DELETE_ARRAY(m_highResHeader);
+            DELETE_ARRAY(m_lowResHeader);
+            DELETE_ARRAY(m_totalDataLow);
+            DELETE_ARRAY(m_totalDataHigh);
+            DELETE_ARRAY(m_initInfo->bsBuffers);
+            DELETE_MEMORY(m_initInfo->segmentationInfo);
+            DELETE_MEMORY(m_initInfo);
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
+            return;
+        }
+
+        DestroyVideoStream* destroyVS = NULL;
+        destroyVS = (DestroyVideoStream*)dlsym(m_vsPlugin, "Destroy");
+        const char *dlsymErr = dlerror();
+        if (dlsymErr || !destroyVS)
+        {
+            fclose(m_highResFile);
+            m_highResFile = NULL;
+            fclose(m_lowResFile);
+            m_lowResFile = NULL;
+            DELETE_ARRAY(m_highResHeader);
+            DELETE_ARRAY(m_lowResHeader);
+            DELETE_ARRAY(m_totalDataLow);
+            DELETE_ARRAY(m_totalDataHigh);
+            DELETE_ARRAY(m_initInfo->bsBuffers);
+            DELETE_MEMORY(m_initInfo->segmentationInfo);
+            DELETE_MEMORY(m_initInfo);
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
+            return;
+        }
+
+        m_vsLow = createVS();
+        if (!m_vsLow)
+        {
+            fclose(m_highResFile);
+            m_highResFile = NULL;
+            fclose(m_lowResFile);
+            m_lowResFile = NULL;
+            DELETE_ARRAY(m_highResHeader);
+            DELETE_ARRAY(m_lowResHeader);
+            DELETE_ARRAY(m_totalDataLow);
+            DELETE_ARRAY(m_totalDataHigh);
+            DELETE_ARRAY(m_initInfo->bsBuffers);
+            DELETE_MEMORY(m_initInfo->segmentationInfo);
+            DELETE_MEMORY(m_initInfo);
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
+            return;
+        }
+
         ((MediaStream*)m_vsLow)->SetMediaType(VIDEOTYPE);
+        ((MediaStream*)m_vsLow)->SetCodecId(CODEC_ID_H265);
 
         int32_t ret = m_vsLow->Initialize(m_lowResStreamIdx, &(m_initInfo->bsBuffers[0]), m_initInfo);
         if (ret)
@@ -325,12 +410,14 @@ public:
             DELETE_ARRAY(m_initInfo->bsBuffers);
             DELETE_MEMORY(m_initInfo->segmentationInfo);
             DELETE_MEMORY(m_initInfo);
-            DELETE_MEMORY(m_vsLow);
+            destroyVS((VideoStream*)(m_vsLow));
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
             return;
         }
 
         //Create and Initialize high resolution video stream
-        m_vsHigh = new VideoStream();
+        m_vsHigh = createVS();
         if (!m_vsHigh)
         {
             fclose(m_highResFile);
@@ -344,11 +431,14 @@ public:
             DELETE_ARRAY(m_initInfo->bsBuffers);
             DELETE_MEMORY(m_initInfo->segmentationInfo);
             DELETE_MEMORY(m_initInfo);
-            DELETE_MEMORY(m_vsLow);
+            destroyVS((VideoStream*)(m_vsLow));
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
             return;
         }
 
         ((MediaStream*)m_vsHigh)->SetMediaType(VIDEOTYPE);
+        ((MediaStream*)m_vsHigh)->SetCodecId(CODEC_ID_H265);
 
         ret = m_vsHigh->Initialize(m_highResStreamIdx, &(m_initInfo->bsBuffers[1]), m_initInfo);
         if (ret)
@@ -364,8 +454,10 @@ public:
             DELETE_ARRAY(m_initInfo->bsBuffers);
             DELETE_MEMORY(m_initInfo->segmentationInfo);
             DELETE_MEMORY(m_initInfo);
-            DELETE_MEMORY(m_vsLow);
-            DELETE_MEMORY(m_vsHigh);
+            destroyVS((VideoStream*)(m_vsLow));
+            destroyVS((VideoStream*)(m_vsHigh));
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
             return;
         }
     }
@@ -397,9 +489,6 @@ public:
             m_initInfo = NULL;
         }
 
-        DELETE_MEMORY(m_vsLow);
-        DELETE_MEMORY(m_vsHigh);
-
         remove("test_vps_lowRes.bin");
         remove("test_sps_lowRes.bin");
         remove("test_pps_lowRes.bin");
@@ -407,6 +496,32 @@ public:
         remove("test_vps_highRes.bin");
         remove("test_sps_highRes.bin");
         remove("test_pps_highRes.bin");
+
+        if (m_vsPlugin)
+        {
+            DestroyVideoStream* destroyVS = NULL;
+            destroyVS = (DestroyVideoStream*)dlsym(m_vsPlugin, "Destroy");
+            const char *dlsymErr = dlerror();
+            if (dlsymErr)
+            {
+                return;
+            }
+            if (!destroyVS)
+            {
+                return;
+            }
+            if (m_vsLow)
+            {
+                destroyVS((VideoStream*)(m_vsLow));
+            }
+            if (m_vsHigh)
+            {
+                destroyVS((VideoStream*)(m_vsHigh));
+            }
+
+            dlclose(m_vsPlugin);
+            m_vsPlugin = NULL;
+        }
     }
 
     FILE *m_highResFile;
@@ -418,6 +533,7 @@ public:
     uint8_t *m_totalDataLow;
     uint8_t *m_totalDataHigh;
     InitialInfo *m_initInfo;
+    void        *m_vsPlugin;
     VideoStream *m_vsLow;
     VideoStream *m_vsHigh;
 };
@@ -987,5 +1103,4 @@ TEST_F(VideoStreamTest, AllProcess)
 
     fclose(fp);
     fp = NULL;
-}
 }

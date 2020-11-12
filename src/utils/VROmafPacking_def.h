@@ -25,7 +25,7 @@
  */
 
 //!
-//! \file:   definitions.h
+//! \file:   VROmafPacking_def.h
 //! \brief:  Common structures definition used only internally
 //!          of the library
 //!
@@ -170,5 +170,19 @@ struct ContentCoverage
     uint8_t      defaultViewIdc;
     SphereRegion *sphereRegions;
 };
+
+#define DELETE_MEMORY(x) \
+    if (x)               \
+    {                    \
+        delete x;        \
+        x = NULL;        \
+    }
+
+#define DELETE_ARRAY(x)  \
+    if (x)               \
+    {                    \
+        delete[] x;      \
+        x = NULL;        \
+    }
 
 #endif /* _DEFINITIONS_H_ */

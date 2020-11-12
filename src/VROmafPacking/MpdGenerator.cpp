@@ -36,6 +36,7 @@
 #include <sys/timeb.h>
 #include <time.h>
 #include "MpdGenerator.h"
+#include "VideoStreamPluginAPI.h"
 
 VCD_NS_BEGIN
 

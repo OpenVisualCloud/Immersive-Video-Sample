@@ -1,0 +1,10 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${exec_prefix}/include
+
+Name: HEVC video stream process plugin
+Description: HEVC video stream process, including VPS/SPS/PPS parsing, tile nalu parsing, frame data handling for segmentation and so on.
+Version:0.0.1-DEV
+Cflags: -I${prefix}/include
+Libs: -L${libdir} -lHevcVideoStreamProcess -static-libstdc++ -l360SCVP -lpthread -L/usr/local/lib64

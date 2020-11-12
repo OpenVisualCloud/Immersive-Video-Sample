@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Intel Corporation
+ * Copyright (c) 2020, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,19 +25,17 @@
  */
 
 //!
-//! \file:   VideoStream.cpp
-//! \brief:  Video stream class implementation
+//! \file:   HevcVideoStream.cpp
+//! \brief:  HEVC Video stream process class implementation
 //!
-//! Created on April 30, 2019, 6:04 AM
+//! Created on November 6, 2020, 6:04 AM
 //!
 
-#include "VideoStream.h"
-#include "AvcNaluParser.h"
-#include "HevcNaluParser.h"
+#include "HevcVideoStream.h"
+#include "OmafPackingLog.h"
+#include "error.h"
 
-VCD_NS_BEGIN
-
-VideoStream::VideoStream()
+HevcVideoStream::HevcVideoStream()
 {
     m_streamIdx = 0;
     m_codecId = CODEC_ID_H265;
@@ -66,7 +64,7 @@ VideoStream::VideoStream()
     m_isEOS = false;
 }
 
-VideoStream::VideoStream(const VideoStream& src)
+HevcVideoStream::HevcVideoStream(const HevcVideoStream& src)
 {
     m_streamIdx = src.m_streamIdx;
     m_codecId = src.m_codecId;
@@ -95,7 +93,7 @@ VideoStream::VideoStream(const VideoStream& src)
     m_isEOS = src.m_isEOS;
 }
 
-VideoStream& VideoStream::operator=(VideoStream&& other)
+HevcVideoStream& HevcVideoStream::operator=(HevcVideoStream&& other)
 {
     m_streamIdx = other.m_streamIdx;
     m_codecId = other.m_codecId;
@@ -126,7 +124,7 @@ VideoStream& VideoStream::operator=(VideoStream&& other)
     return *this;
 }
 
-VideoStream::~VideoStream()
+HevcVideoStream::~HevcVideoStream()
 {
     if (m_srcRwpk)
     {
@@ -200,7 +198,7 @@ VideoStream::~VideoStream()
     DELETE_MEMORY(m_naluParser);
 }
 
-int32_t VideoStream::ParseHeader()
+int32_t HevcVideoStream::ParseHeader()
 {
     m_naluParser->ParseHeaderData();
     m_width = m_naluParser->GetSrcWidth();
@@ -226,7 +224,7 @@ int32_t VideoStream::ParseHeader()
     return ERROR_NONE;
 }
 
-int32_t VideoStream::FillRegionWisePackingForERP()
+int32_t HevcVideoStream::FillRegionWisePackingForERP()
 {
     if (!m_srcRwpk)
         return OMAF_ERROR_NULL_PTR;
@@ -278,7 +276,7 @@ int32_t VideoStream::FillRegionWisePackingForERP()
     return ERROR_NONE;
 }
 
-int32_t VideoStream::FillRegionWisePackingForCubeMap()
+int32_t HevcVideoStream::FillRegionWisePackingForCubeMap()
 {
     if (!m_srcRwpk)
         return OMAF_ERROR_NULL_PTR;
@@ -393,7 +391,7 @@ int32_t VideoStream::FillRegionWisePackingForCubeMap()
     return ERROR_NONE;
 }
 
-int32_t VideoStream::FillContentCoverageForERP()
+int32_t HevcVideoStream::FillContentCoverageForERP()
 {
     if (!m_srcCovi)
         return OMAF_ERROR_NULL_PTR;
@@ -437,7 +435,7 @@ int32_t VideoStream::FillContentCoverageForERP()
     return ERROR_NONE;
 }
 
-int32_t VideoStream::Initialize(
+int32_t HevcVideoStream::Initialize(
     uint8_t streamIdx,
     BSBuffer *bs,
     InitialInfo *initInfo)
@@ -470,17 +468,24 @@ int32_t VideoStream::Initialize(
     if (!m_360scvpHandle)
         return OMAF_ERROR_SCVP_INIT_FAILED;
 
-    if (m_codecId == 0) //CODEC_ID_H264
-    {
-        m_naluParser = new AvcNaluParser(m_360scvpHandle, m_360scvpParam);
-        if (!m_naluParser)
-            return OMAF_ERROR_NULL_PTR;
-    } else if (m_codecId == 1) { //CODEC_ID_H265
+    //if (m_codecId == 0) //CODEC_ID_H264
+    //{
+    //    m_naluParser = new AvcNaluParser(m_360scvpHandle, m_360scvpParam);
+    //    if (!m_naluParser)
+    //        return OMAF_ERROR_NULL_PTR;
+    //} else if (m_codecId == 1) { //CODEC_ID_H265
+    //    m_naluParser = new HevcNaluParser(m_360scvpHandle, m_360scvpParam);
+    //    if (!m_naluParser)
+    //        return OMAF_ERROR_NULL_PTR;
+    //} else {
+    //    return OMAF_ERROR_UNDEFINED_OPERATION;
+    //}
+
+    if (m_codecId == 1) { //CODEC_ID_H265
         m_naluParser = new HevcNaluParser(m_360scvpHandle, m_360scvpParam);
-        if (!m_naluParser)
-            return OMAF_ERROR_NULL_PTR;
-    } else {
-        return OMAF_ERROR_UNDEFINED_OPERATION;
+    }
+    else {
+        return OMAF_ERROR_INVALID_CODEC;
     }
 
     int32_t ret = ParseHeader();
@@ -561,7 +566,7 @@ int32_t VideoStream::Initialize(
     return ERROR_NONE;
 }
 
-int32_t VideoStream::AddFrameInfo(FrameBSInfo *frameInfo)
+int32_t HevcVideoStream::AddFrameInfo(FrameBSInfo *frameInfo)
 {
     if (!frameInfo || !(frameInfo->data))
         return OMAF_ERROR_NULL_PTR;
@@ -595,7 +600,7 @@ int32_t VideoStream::AddFrameInfo(FrameBSInfo *frameInfo)
     return ERROR_NONE;
 }
 
-void VideoStream::SetCurrFrameInfo()
+void HevcVideoStream::SetCurrFrameInfo()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (m_frameInfoList.size() > 0)
@@ -605,7 +610,7 @@ void VideoStream::SetCurrFrameInfo()
     }
 }
 
-int32_t VideoStream::UpdateTilesNalu()
+int32_t HevcVideoStream::UpdateTilesNalu()
 {
     if (!m_currFrameInfo)
         return OMAF_ERROR_NULL_PTR;
@@ -618,17 +623,17 @@ int32_t VideoStream::UpdateTilesNalu()
     return ERROR_NONE;
 }
 
-TileInfo* VideoStream::GetAllTilesInfo()
+TileInfo* HevcVideoStream::GetAllTilesInfo()
 {
     return m_tilesInfo;
 }
 
-FrameBSInfo* VideoStream::GetCurrFrameInfo()
+FrameBSInfo* HevcVideoStream::GetCurrFrameInfo()
 {
     return m_currFrameInfo;
 }
 
-void VideoStream::DestroyCurrSegmentFrames()
+void HevcVideoStream::DestroyCurrSegmentFrames()
 {
     std::list<FrameBSInfo*>::iterator it;
     for (it = m_framesToOneSeg.begin(); it != m_framesToOneSeg.end(); )
@@ -648,7 +653,7 @@ void VideoStream::DestroyCurrSegmentFrames()
     m_framesToOneSeg.clear();
 }
 
-void VideoStream::DestroyCurrFrameInfo()
+void HevcVideoStream::DestroyCurrFrameInfo()
 {
     if (m_currFrameInfo)
     {
@@ -659,7 +664,7 @@ void VideoStream::DestroyCurrFrameInfo()
     }
 }
 
-Nalu* VideoStream::GetVPSNalu()
+Nalu* HevcVideoStream::GetVPSNalu()
 {
     if (m_codecId == CODEC_ID_H265)
     {
@@ -669,14 +674,24 @@ Nalu* VideoStream::GetVPSNalu()
         return NULL;
 }
 
-Nalu* VideoStream::GetSPSNalu()
+Nalu* HevcVideoStream::GetSPSNalu()
 {
     return m_naluParser->GetSPSNalu();
 }
 
-Nalu* VideoStream::GetPPSNalu()
+Nalu* HevcVideoStream::GetPPSNalu()
 {
     return m_naluParser->GetPPSNalu();
 }
 
-VCD_NS_END
+extern "C" VideoStream* Create()
+{
+    HevcVideoStream *hevcVS = new HevcVideoStream;
+    return (VideoStream*)(hevcVS);
+}
+
+extern "C" void Destroy(VideoStream* hevcVS)
+{
+    delete hevcVS;
+    hevcVS = NULL;
+}

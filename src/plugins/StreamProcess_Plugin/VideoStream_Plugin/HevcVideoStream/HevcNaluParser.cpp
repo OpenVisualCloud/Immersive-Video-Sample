@@ -32,10 +32,13 @@
 //!
 
 #include <stdio.h>
-#include "../utils/OmafStructure.h"
+#include "OmafPackingLog.h"
+#include "error.h"
 #include "HevcNaluParser.h"
-
-VCD_NS_BEGIN
+extern "C"
+{
+#include "safestringlib/safe_mem_lib.h"
+}
 
 HevcNaluParser::~HevcNaluParser()
 {
@@ -340,10 +343,8 @@ int32_t HevcNaluParser::ParseSliceNalu(
         nalu->data[0] = (uint8_t)((0xff000000 & actualSize) >> 24);
         nalu->data[1] = (uint8_t)((0x00ff0000 & actualSize) >> 16);
         nalu->data[2] = (uint8_t)((0x0000ff00 & actualSize) >> 8);
-        nalu->data[3] = (uint8_t)((uint8_t)actualSize); 
+        nalu->data[3] = (uint8_t)((uint8_t)actualSize);
     }
 
     return ERROR_NONE;
 }
-
-VCD_NS_END

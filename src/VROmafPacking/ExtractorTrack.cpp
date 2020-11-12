@@ -33,7 +33,7 @@
 
 #include "360SCVPAPI.h"
 #include "ExtractorTrack.h"
-#include "VideoStream.h"
+#include "VideoStreamPluginAPI.h"
 
 VCD_NS_BEGIN
 

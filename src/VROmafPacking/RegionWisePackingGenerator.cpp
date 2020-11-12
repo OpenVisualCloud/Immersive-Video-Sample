@@ -33,7 +33,7 @@
 
 #include <dlfcn.h>
 
-#include "VideoStream.h"
+#include "VideoStreamPluginAPI.h"
 #include "RegionWisePackingGenerator.h"
 
 VCD_NS_BEGIN

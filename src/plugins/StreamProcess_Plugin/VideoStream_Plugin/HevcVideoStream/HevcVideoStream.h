@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Intel Corporation
+ * Copyright (c) 2020, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,51 +25,45 @@
  */
 
 //!
-//! \file:   VideoStream.h
-//! \brief:  Video stream class definition
-//! \detail: Define the video stream data and data operation,
-//!          including parsing video stream header data to get
-//!          width, height, tiles information and so on.
+//! \file:   HevcVideoStream.h
+//! \brief:  HEVC Video stream process class definition
+//! \detail: Define the data and data process for HEVC video stream
 //!
-//! Created on April 30, 2019, 6:04 AM
+//! Created on November 6, 2020, 6:04 AM
 //!
 
-#ifndef _VIDEOSTREAM_H_
-#define _VIDEOSTREAM_H_
+#ifndef _HEVCVIDEOSTREAM_H_
+#define _HEVCVIDEOSTREAM_H_
 
-#include "MediaStream.h"
-#include "NaluParser.h"
+#include "../VideoStreamPluginAPI.h"
 #include "VideoSegmentInfoGenerator.h"
-#include "../utils/OmafStructure.h"
-
-#include <list>
-#include <mutex>
-
-VCD_NS_BEGIN
-
-#define CUBEMAP_FACES_NUM 6
+#include "HevcNaluParser.h"
+extern "C"
+{
+#include "safestringlib/safe_mem_lib.h"
+}
 
 //!
-//! \class VideoStream
-//! \brief Define the video stream data and data operation
+//! \class HevcVideoStream
+//! \brief Define the data and data operation for HEVC video stream
 //!
 
-class VideoStream : public MediaStream
+class HevcVideoStream : public VideoStream
 {
 public:
     //!
     //! \brief  Constructor
     //!
-    VideoStream();
+    HevcVideoStream();
 
-    VideoStream(const VideoStream& src);
+    HevcVideoStream(const HevcVideoStream& src);
 
-    VideoStream& operator=(VideoStream&& other);
+    HevcVideoStream& operator=(HevcVideoStream&& other);
 
     //!
     //! \brief  Destructor
     //!
-    virtual ~VideoStream();
+    virtual ~HevcVideoStream();
 
     //!
     //! \brief  Initialize the video stream
@@ -320,7 +314,7 @@ public:
     };
 
     //!
-    //! \brief  Get current buffered frames number in  
+    //! \brief  Get current buffered frames number in
     //!         frame list which are not been written
     //!         into segments
     //!
@@ -401,5 +395,7 @@ private:
     std::mutex                m_mutex;            //!< thread mutex for frame information list
 };
 
-VCD_NS_END;
-#endif /* _VIDEOSTREAM_H_ */
+extern "C" VideoStream* Create();
+extern "C" void Destroy(VideoStream* vs);
+
+#endif /* _HEVCVIDEOSTREAM_H_ */

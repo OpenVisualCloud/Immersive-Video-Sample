@@ -177,9 +177,10 @@ private:
     Segmentation                    *m_segmentation;           //!< the segmentation for data segment
     ExtractorTrackManager           *m_extractorTrackMan;      //!< the extractor track manager
     std::map<uint8_t, MediaStream*> m_streams;                 //!< the media streams map
+    std::map<CodecId, void*>        m_streamPlugins;           //!< the map of CodecId and corresponding stream plugin handles
     bool                            m_isSegmentationStarted;   //!< whether the segmentation thread is started
     pthread_t                       m_threadId;                //!< thread index of segmentation thread
-    VideoStream                     *m_videoStream;
+    //VideoStream                     *m_videoStream;
 };
 
 VCD_NS_END;

@@ -37,7 +37,6 @@
 #ifndef _MPDGENERATOR_H_
 #define _MPDGENERATOR_H_
 
-//#include "definitions.h"
 #include "MediaStream.h"
 #include "ExtractorTrackManager.h"
 #include "DashSegmenter.h"

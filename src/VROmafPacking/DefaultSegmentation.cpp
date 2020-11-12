@@ -31,6 +31,7 @@
 //! Created on April 30, 2019, 6:04 AM
 //!
 
+#include "VideoStreamPluginAPI.h"
 #include "DefaultSegmentation.h"
 #include "../isolib/dash_writer/Fraction.h"
 

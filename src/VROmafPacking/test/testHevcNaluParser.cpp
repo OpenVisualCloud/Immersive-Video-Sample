@@ -32,11 +32,15 @@
 //!
 
 #include "gtest/gtest.h"
-#include "../HevcNaluParser.h"
+//#include "../../plugins/StreamProcess_Plugin/VideoStream_Plugin/HevcVideoStream//HevcNaluParser.h"
+#include "HevcNaluParser.h"
+#include "OmafPackingLog.h"
 
-VCD_USE_VRVIDEO;
+extern "C"
+{
+#include "safestringlib/safe_mem_lib.h"
+}
 
-namespace {
 class HevcNaluParserTest : public testing::Test
 {
 public:
@@ -431,5 +435,4 @@ TEST_F(HevcNaluParserTest, ParseSliceNalu)
 
     delete parser;
     parser = NULL;
-}
 }

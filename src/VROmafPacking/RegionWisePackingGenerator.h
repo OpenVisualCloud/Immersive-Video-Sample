@@ -40,7 +40,7 @@
 
 #include "OmafPackingCommon.h"
 #include "VROmafPacking_data.h"
-#include "definitions.h"
+#include "VROmafPacking_def.h"
 #include "MediaStream.h"
 #include "OMAFPackingPluginAPI.h"
 

@@ -44,7 +44,7 @@
 #include "../isolib/dash_writer/AcquireTrackData.h"
 #include "../isolib/dash_writer/DataItem.h"
 
-#include "definitions.h"
+#include "VROmafPacking_def.h"
 #include "OmafPackingCommon.h"
 #include "MediaStream.h"
 #include "ExtractorTrack.h"

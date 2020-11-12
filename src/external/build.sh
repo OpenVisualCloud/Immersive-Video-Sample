@@ -161,38 +161,47 @@ build_test(){
           -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib
 
     # Compile VROmafPacking test
-    cd ../VROmafPacking && \
-        g++ -I../../../google_test -std=c++11 -g -c \
+    cd ../ && \
+    cd ../../VROmafPacking/test/ && \
+    mkdir -p vs_plugin && \
+    cd vs_plugin && \
+    cp ../../../plugins/StreamProcess_Plugin/VideoStream_Plugin/common/NaluParser.h ./ && \
+    cp ../../../plugins/StreamProcess_Plugin/VideoStream_Plugin/HevcVideoStream/HevcNaluParser.h ./ && \
+    cp ../../../utils/VROmafPacking_def.h ./ && \
+    cp ../../../utils/OmafPackingLog.h ./ && \
+    cd ../../../build/test && \
+    cd ./VROmafPacking && \
+        g++ -I../../../VROmafPacking/test/vs_plugin -I../../../google_test -std=c++11 -g -c \
           ../../../VROmafPacking/test/testHevcNaluParser.cpp \
           -D_GLIBCXX_USE_CXX11_ABI=0 && \
-        g++ -I../../../google_test -std=c++11 -g -c \
+        g++ -I../../../VROmafPacking/test/vs_plugin -I../../../google_test -std=c++11 -g -c \
           ../../../VROmafPacking/test/testVideoStream.cpp \
           -D_GLIBCXX_USE_CXX11_ABI=0 && \
-        g++ -I../../../google_test -std=c++11 -g -c \
+        g++ -I../../../VROmafPacking/test/vs_plugin -I../../../google_test -std=c++11 -g -c \
           ../../../VROmafPacking/test/testExtractorTrack.cpp \
           -D_GLIBCXX_USE_CXX11_ABI=0 && \
-        g++ -I../../../google_test -std=c++11 -g -c \
-          ../../../VROmafPacking/test/testDefaultSegmentation.cpp \
+        g++ -I../../../VROmafPacking/test/vs_plugin -I../../../google_test -std=c++11 -g -c \
+        ../../../VROmafPacking/test/testDefaultSegmentation.cpp \
           -D_GLIBCXX_USE_CXX11_ABI=0 && \
         g++ -L/usr/local/lib testHevcNaluParser.o \
           ../googletest/googletest/build/libgtest.a -o \
           testHevcNaluParser -I/usr/local/include -lVROmafPacking \
-          -l360SCVP -lsafestring_shared -lstdc++ -lpthread -lm \
+          -lHevcVideoStreamProcess -l360SCVP -lsafestring_shared -ldl -lstdc++ -lpthread -lm \
           -L/usr/local/lib && \
         g++ -L/usr/local/lib testVideoStream.o \
           ../googletest/googletest/build/libgtest.a -o \
           testVideoStream -I/usr/local/include -lVROmafPacking \
-          -l360SCVP -lsafestring_shared -lstdc++ -lpthread -lm \
+          -lHevcVideoStreamProcess -l360SCVP -lsafestring_shared -ldl -lstdc++ -lpthread -lm \
           -L/usr/local/lib && \
         g++ -L/usr/local/lib testExtractorTrack.o \
           ../googletest/googletest/build/libgtest.a -o \
           testExtractorTrack -I/usr/local/include -lVROmafPacking \
-          -l360SCVP -lsafestring_shared -lstdc++ -lpthread -lm \
+          -lHevcVideoStreamProcess -l360SCVP -lsafestring_shared -ldl -lstdc++ -lpthread -lm \
           -L/usr/local/lib && \
         g++ -L/usr/local/lib testDefaultSegmentation.o \
           ../googletest/googletest/build/libgtest.a -o \
           testDefaultSegmentation -I/usr/local/include -lVROmafPacking \
-          -l360SCVP -lsafestring_shared -lstdc++ -lpthread -lm \
+          -lHevcVideoStreamProcess -l360SCVP -lsafestring_shared -ldl -lstdc++ -lpthread -lm \
           -L/usr/local/lib
 
     if [ "$1" == "oss" ] ; then
