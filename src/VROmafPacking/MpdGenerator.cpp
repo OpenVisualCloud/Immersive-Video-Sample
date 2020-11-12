@@ -435,7 +435,7 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
     }
     else
     {
-        uint32_t totalDur = (uint32_t)(totalFramesNum * 1000 / (double)(m_frameRate.num / m_frameRate.den) + 0.5);
+        uint32_t totalDur = (uint32_t)(totalFramesNum * 1000 / ((double)m_frameRate.num / m_frameRate.den));
         uint32_t hour = totalDur / 3600000;
         totalDur = totalDur % 3600000;
         uint32_t minute = totalDur / 60000;
