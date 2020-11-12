@@ -1256,6 +1256,10 @@ int OmafPacketParams::init(std::shared_ptr<OmafReader> reader, uint32_t reader_t
 
 int OmafSegmentNode::parse() noexcept {
   try {
+    clock_t lBefore = clock();
+    clock_t lBefore2 = lBefore;
+    double dResult;
+
     auto reader = reader_.lock();
     if (reader.get() == nullptr) {
       OMAF_LOG(LOG_ERROR, "The omaf reader is empty!\n");
@@ -1278,14 +1282,21 @@ int OmafSegmentNode::parse() noexcept {
       OMAF_LOG(LOG_ERROR, "Failed to parse %s. Error code=%d\n", this->to_string().c_str(), ret);
       return ret;
     }
+    dResult = (double)(clock() - lBefore) * 1000 / CLOCKS_PER_SEC;
+    OMAF_LOG(LOG_INFO, "OmafSegmentNode parsing segment dependency and self time is %f ms\n", dResult);
 
     // 2 cache packets from the reader
+    lBefore = clock();
     ret = cachePackets(reader);
     if (ERROR_NONE != ret) {
       OMAF_LOG(LOG_ERROR, "Failed to read packet from %s. Error code=%d\n", this->to_string().c_str(), ret);
       return ERROR_INVALID;
     }
+    dResult = (double)(clock() - lBefore) * 1000 / CLOCKS_PER_SEC;
+    OMAF_LOG(LOG_INFO, "OmafSegmentNode parsing cachePackets time is %f ms\n", dResult);
+
     // 3.1 remove self segment from reader
+    lBefore = clock();
     ret = removeSegmentStream(reader);
     if (ERROR_NONE != ret) {
       OMAF_LOG(LOG_ERROR, "Failed to remove segment from reader %s. Error code=%d\n", this->to_string().c_str(), ret);
@@ -1300,6 +1311,10 @@ int OmafSegmentNode::parse() noexcept {
         return ret;
       }
     }
+    dResult = (double)(clock() - lBefore) * 1000 / CLOCKS_PER_SEC;
+    OMAF_LOG(LOG_INFO, "OmafSegmentNode parsing remove segment dependency and self is %f ms\n", dResult);
+    dResult = (double)(clock() - lBefore2) * 1000 / CLOCKS_PER_SEC;
+    OMAF_LOG(LOG_INFO, "OmafSegmentNode parsing time in total is %f ms\n", dResult);
     return ERROR_NONE;
   } catch (const std::exception &ex) {
     OMAF_LOG(LOG_ERROR, "Exception when parse the segment! ex: %s\n", ex.what());
