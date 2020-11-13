@@ -421,6 +421,7 @@ TEST_F(ExtractorTrackTest, AllProcess)
         for (it = extractorTracks->begin(); it != extractorTracks->end(); it++)
         {
             uint16_t viewportIdx = it->first;
+
             ExtractorTrack *extractorTrack = it->second;
             Nalu *vpsNalu = extractorTrack->GetVPS();
             Nalu *spsNalu = extractorTrack->GetSPS();
@@ -466,7 +467,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
             vpsData = NULL;
             fclose(fp);
             fp = NULL;
-
             char spsFile[256] = { 0 };
             snprintf(spsFile, 256, "extractorTrack%d_sps.bin", viewportIdx);
             fp = fopen(spsFile, "r");
@@ -489,7 +489,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
                 return;
             }
             fread(spsData, 1, spsLen, fp);
-
             result = memcmp_s(spsNalu->data, spsLen, spsData, spsLen, &compRet);
             EXPECT_TRUE(result == EOK);
             EXPECT_TRUE(spsNalu->dataSize == spsLen); //includes start codes
@@ -505,6 +504,7 @@ TEST_F(ExtractorTrackTest, AllProcess)
             char ppsFile[256] = { 0 };
             snprintf(ppsFile, 256, "extractorTrack%d_pps.bin", viewportIdx);
             fp = fopen(ppsFile, "r");
+
             if (!fp)
             {
                 DELETE_MEMORY(frameLowRes);
@@ -524,7 +524,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
                 return;
             }
             fread(ppsData, 1, ppsLen, fp);
-
             result = memcmp_s(ppsNalu->data, ppsLen, ppsData, ppsLen, &compRet);
             EXPECT_TRUE(result == EOK);
             EXPECT_TRUE(ppsNalu->dataSize == ppsLen); //includes start codes
@@ -536,8 +535,25 @@ TEST_F(ExtractorTrackTest, AllProcess)
             ppsData = NULL;
             fclose(fp);
             fp = NULL;
-
-            if (viewportIdx != 1)
+            if (viewportIdx == 0)
+            {
+                EXPECT_TRUE(dstRwpk->constituentPicMatching == 0);
+                EXPECT_TRUE(dstRwpk->numRegions == 10);
+                EXPECT_TRUE(dstRwpk->projPicWidth == 3840);
+                EXPECT_TRUE(dstRwpk->projPicHeight == 1920);
+                EXPECT_TRUE(dstRwpk->packedPicWidth == 4800);
+                EXPECT_TRUE(dstRwpk->packedPicHeight == 1920);
+            }
+            else if (viewportIdx == 1)
+            {
+                EXPECT_TRUE(dstRwpk->constituentPicMatching == 0);
+                EXPECT_TRUE(dstRwpk->numRegions == 8);
+                EXPECT_TRUE(dstRwpk->projPicWidth == 3840);
+                EXPECT_TRUE(dstRwpk->projPicHeight == 1920);
+                EXPECT_TRUE(dstRwpk->packedPicWidth == 3840);
+                EXPECT_TRUE(dstRwpk->packedPicHeight == 1920);
+            }
+	        else if ((viewportIdx == 2) || (viewportIdx == 3) || (viewportIdx == 4) || (viewportIdx == 5) || (viewportIdx == 6))
             {
                 EXPECT_TRUE(dstRwpk->constituentPicMatching == 0);
                 EXPECT_TRUE(dstRwpk->numRegions == 6);
@@ -546,17 +562,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
                 EXPECT_TRUE(dstRwpk->packedPicWidth == 2880);
                 EXPECT_TRUE(dstRwpk->packedPicHeight == 1920);
             }
-            else
-            {
-
-                EXPECT_TRUE(dstRwpk->constituentPicMatching == 0);
-                EXPECT_TRUE(dstRwpk->numRegions == 8);
-                EXPECT_TRUE(dstRwpk->projPicWidth == 3840);
-                EXPECT_TRUE(dstRwpk->projPicHeight == 1920);
-                EXPECT_TRUE(dstRwpk->packedPicWidth == 3840);
-                EXPECT_TRUE(dstRwpk->packedPicHeight == 1920);
-            }
-
             EXPECT_TRUE(dstCovi->coverageShapeType == 1);
             EXPECT_TRUE(dstCovi->numRegions == 1);
             EXPECT_TRUE(dstCovi->viewIdcPresenceFlag == false);
@@ -564,45 +569,52 @@ TEST_F(ExtractorTrackTest, AllProcess)
             uint16_t idx = 0;
             if (viewportIdx == 0)
             {
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == -5898240);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 0);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 11796480);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == -1474560);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 23592960);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 8847360);
             }
             else if (viewportIdx == 1)
             {
                 EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == -11796480);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 6144);
                 EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 11796480);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 11790336);
             }
             else if (viewportIdx == 2)
             {
                 EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == 0);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 4423680);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 2949120);
                 EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 23592960);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 2949120);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 5898240);
             }
             else if (viewportIdx == 3)
             {
                 EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == 0);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == -4423680);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == -2949120);
                 EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 23592960);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 2949120);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 5898240);
             }
             else if (viewportIdx == 4)
             {
                 EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == 5898240);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 6144);
                 EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 11796480);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 11790336);
             }
             else if (viewportIdx == 5)
             {
                 EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == 0);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 0);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 6144);
                 EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 11796480);
-                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 11790336);
+            }
+            else if (viewportIdx == 6)
+            {
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == -5898240);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 6144);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 11796480);
+                EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 11790336);
             }
 
             EXPECT_TRUE(picResList->size() == 2);
@@ -650,35 +662,45 @@ TEST_F(ExtractorTrackTest, AllProcess)
             EXPECT_TRUE(rwpkSEI->dataSize != 4);
 
             EXPECT_TRUE(tilesMerDir != NULL);
-            if (viewportIdx != 1)
+            if (viewportIdx == 0)
             {
-                EXPECT_TRUE(tilesMerDir->tilesArrangeInCol.size() == 3);
+                EXPECT_TRUE(tilesMerDir->tilesArrangeInCol.size() == 5);
             }
-            else
+            else if (viewportIdx == 1)
             {
                 EXPECT_TRUE(tilesMerDir->tilesArrangeInCol.size() == 4);
+            }
+            else if ((viewportIdx == 2) || (viewportIdx == 3) || (viewportIdx == 4) || (viewportIdx == 5) ||  (viewportIdx == 6))
+            {
+                EXPECT_TRUE(tilesMerDir->tilesArrangeInCol.size() == 3);
             }
 
             std::list<TilesInCol*>::iterator itCol;
             itCol = tilesMerDir->tilesArrangeInCol.begin();
             TilesInCol *tileCol = *itCol;
-            EXPECT_TRUE(tileCol->size() == 2);
             std::list<SingleTile*>::iterator itTile;
+            SingleTile *tile;
+
+            EXPECT_TRUE(tileCol->size() == 2);
             itTile = tileCol->begin();
-            SingleTile *tile = *itTile;
+            tile = *itTile;
             EXPECT_TRUE(tile->streamIdxInMedia == 1);
             EXPECT_TRUE(tile->dstCTUIndex == 0);
             itTile++;
             tile = *itTile;
             EXPECT_TRUE(tile->streamIdxInMedia == 1);
 
-            if (viewportIdx != 1)
+            if (viewportIdx == 0)
             {
-                EXPECT_TRUE(tile->dstCTUIndex == 675);
+                EXPECT_TRUE(tile->dstCTUIndex == 1125);
             }
-            else
+            else if (viewportIdx == 1)
             {
                 EXPECT_TRUE(tile->dstCTUIndex == 900);
+            }
+            else if ((viewportIdx == 2) || (viewportIdx == 3) || (viewportIdx == 4) || (viewportIdx == 5) ||  (viewportIdx == 6))
+            {
+                EXPECT_TRUE(tile->dstCTUIndex == 675);
             }
 
             itCol++;
@@ -689,47 +711,73 @@ TEST_F(ExtractorTrackTest, AllProcess)
 
             EXPECT_TRUE(tile->streamIdxInMedia == 1);
             EXPECT_TRUE(tile->dstCTUIndex == 15);
+
             itTile++;
             tile = *itTile;
             EXPECT_TRUE(tile->streamIdxInMedia == 1);
-            if (viewportIdx != 1)
+            if (viewportIdx == 0)
             {
-                EXPECT_TRUE(tile->dstCTUIndex == 690);
+                EXPECT_TRUE(tile->dstCTUIndex == 1140);
             }
-            else
+            else if (viewportIdx == 1)
             {
                 EXPECT_TRUE(tile->dstCTUIndex == 915);
             }
+            else if ((viewportIdx == 2) || (viewportIdx == 3) || (viewportIdx == 4) || (viewportIdx == 5) ||  (viewportIdx == 6))
+            {
+                EXPECT_TRUE(tile->dstCTUIndex == 690);
+            }
+
 
             itCol++;
             tileCol = *itCol;
             EXPECT_TRUE(tileCol->size() == 2);
             itTile = tileCol->begin();
             tile = *itTile;
-            if (viewportIdx != 1)
-            {
-                EXPECT_TRUE(tile->streamIdxInMedia == 0);
-            }
-            else
+            if ((viewportIdx == 0) || (viewportIdx == 1))
             {
                 EXPECT_TRUE(tile->streamIdxInMedia == 1);
             }
-
-            EXPECT_TRUE(tile->dstCTUIndex == 30);
-            itTile++;
-            tile = *itTile;
-            if (viewportIdx != 1)
+            else if ((viewportIdx == 2) || (viewportIdx ==3) || (viewportIdx == 4) || (viewportIdx == 5) ||  (viewportIdx == 6))
             {
                 EXPECT_TRUE(tile->streamIdxInMedia == 0);
-                EXPECT_TRUE(tile->dstCTUIndex == 705);
             }
-            else
+
+            EXPECT_TRUE(tile->dstCTUIndex == 30);
+
+            itTile++;
+            tile = *itTile;
+            if (viewportIdx == 0)
+            {
+                EXPECT_TRUE(tile->streamIdxInMedia == 1);
+                EXPECT_TRUE(tile->dstCTUIndex == 1155);
+            }
+            else if (viewportIdx == 1)
             {
                 EXPECT_TRUE(tile->streamIdxInMedia == 1);
                 EXPECT_TRUE(tile->dstCTUIndex == 930);
             }
+            else if ((viewportIdx == 2) || (viewportIdx == 3) || (viewportIdx == 4) || (viewportIdx == 5) ||  (viewportIdx == 6))
+            {
+                EXPECT_TRUE(tile->streamIdxInMedia == 0);
+                EXPECT_TRUE(tile->dstCTUIndex == 705);
+            }
 
-            if (viewportIdx == 1)
+            if (viewportIdx == 0)
+            {
+                itCol++;
+                tileCol = *itCol;
+                EXPECT_TRUE(tileCol->size() == 2);
+                itTile = tileCol->begin();
+                tile = *itTile;
+                EXPECT_TRUE(tile->streamIdxInMedia == 1);
+                EXPECT_TRUE(tile->dstCTUIndex == 45);
+                itTile++;
+                tile = *itTile;
+                EXPECT_TRUE(tile->streamIdxInMedia == 1);
+                EXPECT_TRUE(tile->dstCTUIndex == 1170);
+            }
+            else if (viewportIdx == 1)
             {
                 itCol++;
                 tileCol = *itCol;
@@ -744,15 +792,34 @@ TEST_F(ExtractorTrackTest, AllProcess)
                 EXPECT_TRUE(tile->dstCTUIndex == 945);
             }
 
+            if (viewportIdx == 0)
+            {
+                itCol++;
+                tileCol = *itCol;
+                EXPECT_TRUE(tileCol->size() == 2);
+                itTile = tileCol->begin();
+                tile = *itTile;
+                EXPECT_TRUE(tile->streamIdxInMedia == 0);
+                EXPECT_TRUE(tile->dstCTUIndex == 60);
+                itTile++;
+                tile = *itTile;
+                EXPECT_TRUE(tile->streamIdxInMedia == 0);
+                EXPECT_TRUE(tile->dstCTUIndex == 1185);
+            }
+
             extractorTrack->ConstructExtractors();
             std::map<uint8_t, Extractor*> *extractors = extractorTrack->GetAllExtractors();
-            if (viewportIdx != 1)
+            if (viewportIdx == 0)
             {
-                EXPECT_TRUE(extractors->size() == 6);
+                EXPECT_TRUE(extractors->size() == 10);
             }
-            else
+            else if (viewportIdx == 1)
             {
                 EXPECT_TRUE(extractors->size() == 8);
+            }
+            else if ((viewportIdx == 2) || (viewportIdx == 3) || (viewportIdx == 4) || (viewportIdx == 5) ||  (viewportIdx == 6))
+            {
+                EXPECT_TRUE(extractors->size() == 6);
             }
 
             std::map<uint8_t, Extractor*>::iterator itExtractor;
