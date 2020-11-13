@@ -1039,7 +1039,7 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     float hFOV = m_codingSVideoInfo.viewPort.hFOV;
     float maxOffsetAngle;
     int32_t horzOffsetTileNum;
-    double lattitudeThresh1, lattitudeThresh2;
+    int32_t sign = 0;
 
     // starting time
     double dResult;
@@ -1050,17 +1050,26 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     float horzStep = ERP_HORZ_ANGLE / (float)m_tileNumCol;
     float vertStep = ERP_VERT_ANGLE / (float)m_tileNumRow;
 
-    lattitudeThresh1 = 90 - hFOV / 4 - vFOV / 2;
-    lattitudeThresh2 = 90 - vFOV / 2;
+    float thita = 0.f;
+    float phi = 0.f;
+    float fEpsi = 0.5f;
 
+    if (fPitch >= 90.f - fEpsi) {
+        if (hFOV <= 90) {
+            vFOV = 2 * RAD2DEG_FACTOR*sasin((ssin(DEG2RAD_FACTOR * hFOV / 2)) * sqrt(2));
+        }
+    }
+    else if (fPitch <= -90 + fEpsi) {
+        if (hFOV <= 90) {
+            vFOV = 2 * RAD2DEG_FACTOR*sasin((ssin(DEG2RAD_FACTOR * hFOV / 2)) * sqrt(2));
+        }
+    }
     if (fPitch > 0)
     {
-        if (fPitch < lattitudeThresh1) {
-            maxOffsetAngle = 2 * RAD2DEG_FACTOR * sasin(ssin((hFOV / 4) * DEG2RAD_FACTOR) / scos((fPitch + vFOV/2)*DEG2RAD_FACTOR)) - hFOV/2;
-            horzOffsetTileNum = maxOffsetAngle / horzStep + 1;
-        }
-        else if (fPitch < lattitudeThresh2) {
-            maxOffsetAngle = 2 * RAD2DEG_FACTOR * sasin(ssin((hFOV / 4) * DEG2RAD_FACTOR) / scos((fPitch) * DEG2RAD_FACTOR)) - hFOV/2;
+        if (fPitch < (90 - vFOV / 2)) {
+            thita = RAD2DEG_FACTOR*sasin(scos(DEG2RAD_FACTOR * hFOV / 2) * ssin((fPitch + vFOV/2)* DEG2RAD_FACTOR));
+            phi = RAD2DEG_FACTOR * sasin(ssin(DEG2RAD_FACTOR * hFOV / 2) / scos(DEG2RAD_FACTOR * thita));
+            maxOffsetAngle = phi - hFOV/2;
             horzOffsetTileNum = maxOffsetAngle / horzStep + 1;
         }
         else {
@@ -1069,12 +1078,10 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
         }
     }
     else if (fPitch < 0) {
-        if (fPitch > -lattitudeThresh1) {
-            maxOffsetAngle = 2 * RAD2DEG_FACTOR * sasin(ssin((hFOV / 4) * DEG2RAD_FACTOR) / scos((fPitch - vFOV/2) * DEG2RAD_FACTOR)) - hFOV/2;
-            horzOffsetTileNum = maxOffsetAngle / horzStep + 1;
-        }
-        else if (fPitch > -lattitudeThresh2) {
-            maxOffsetAngle = 2 * RAD2DEG_FACTOR * sasin(ssin((hFOV/4) * DEG2RAD_FACTOR) / scos((fPitch) * DEG2RAD_FACTOR)) - hFOV/2;
+        if (fPitch > -(90 - vFOV / 2)) {
+            thita = RAD2DEG_FACTOR*sasin(scos(DEG2RAD_FACTOR * hFOV / 2) * ssin((fPitch - vFOV/2)* DEG2RAD_FACTOR));
+            phi = RAD2DEG_FACTOR * sasin(ssin(DEG2RAD_FACTOR * hFOV / 2) / scos(DEG2RAD_FACTOR * thita));
+            maxOffsetAngle = phi - hFOV/2;
             horzOffsetTileNum = maxOffsetAngle / horzStep + 1;
         }
         else {
@@ -1139,6 +1146,12 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
                 opt_idx = selected_idxs[it];
             }
         }
+        if ((opt_idx == select_idx) || (opt_idx == select_idx + m_tileNumCol))
+            sign = 1;
+        else if ((opt_idx == select_idx + 1 - boundary_offset) || (opt_idx == select_idx + 1 + m_tileNumCol - boundary_offset))
+            sign = -1;
+        else
+            sign = 0;
     }
     if (opt_idx == m_tileNumRow * m_tileNumCol)
         opt_idx--;
@@ -1167,6 +1180,28 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     pTmpUpLeft->y = centerY - halfVPvert;
     pTmpDownRight->y = centerY + halfVPvert;
 
+    int32_t topRow = (int32_t)((cal_pitch - vFOV / 2) / vertStep);
+    int32_t bottomRow = (int32_t)((cal_pitch + vFOV / 2) / vertStep);
+    if ((cal_pitch - vFOV/2) < 0)
+    {
+        pTmpUpLeft->y = 0;
+        pTmpUpLeft->x = 0;
+        pTmpDownRight->x = inputWidth;
+        pTmpDownRight->y = fmax(pTmpDownRight->y, (bottomRow+1) * m_srd[idx].tileheight);
+    }
+    else
+        pTmpUpLeft->y = fmin(pTmpUpLeft->y, topRow * m_srd[idx].tileheight);
+
+    if ((cal_pitch + vFOV/2) > ERP_VERT_ANGLE)
+    {
+        pTmpUpLeft->x = 0;
+        pTmpUpLeft->y = fmin(pTmpUpLeft->y, topRow * m_srd[idx].tileheight);
+        pTmpDownRight->x = inputWidth;
+        pTmpDownRight->y = inputHeight;
+    }
+    else
+        pTmpDownRight->y = fmax(pTmpDownRight->y, (bottomRow+1) * m_srd[idx].tileheight-1);
+
     if (pTmpUpLeft->y < 0)
     {
         pTmpUpLeft->y = 0;
@@ -1191,6 +1226,12 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
         pTmpDownRight->x += m_srd[idx].tilewidth* horzOffsetTileNum;
     }
 
+    if ( ( maxOffsetAngle == 0) && (m_tileNumCol % 2 == 1) ) {
+       if (sign == -1)
+            pTmpUpLeft->x -= m_srd[idx].tilewidth;
+       else if (sign == 1)
+            pTmpDownRight->x += m_srd[idx].tilewidth;
+    }
     if (pTmpUpLeft->x < 0)
     {
         pTmpUpLeft->x = 0;
@@ -1368,7 +1409,7 @@ int32_t TgenViewport::isInsideByAngle()
     float fYaw = m_codingSVideoInfo.viewPort.fYaw;
     float hFOV = m_codingSVideoInfo.viewPort.hFOV;
     float vFOV = m_codingSVideoInfo.viewPort.vFOV;
-    float additionalVertRange = 0.f;
+    float delta = 0.0f;
 
     ITileInfo leftPoint, rightPoint, topPoint, bottomPoint;
     int32_t selectedTilesNum = 0;
@@ -1382,27 +1423,67 @@ int32_t TgenViewport::isInsideByAngle()
     float tileTopRightLatti;
     float tileBottomLeftLatti;
     float tileBottomRightLatti;
-
+    float fEpsi=1e-6;
+    float polarDetectThresh = 5.5f;
     double dResult;
     clock_t lBefore = clock();
 
     topPoint.vertPos = fPitch + vFOV / 2.0;
-    if (topPoint.vertPos > 90) {
-       additionalVertRange = topPoint.vertPos - 90;
-       topPoint.vertPos = 90;
-    }
     bottomPoint.vertPos = fPitch - vFOV / 2.0;
-    if (bottomPoint.vertPos < -90) {
-        additionalVertRange = bottomPoint.vertPos + 90;
-        bottomPoint.vertPos = -90;
+    if (fabs(fPitch - 90) <= polarDetectThresh) {
+        topPoint.vertPos = 90;
+        if (hFOV*hFOV + vFOV*vFOV < 180*180)
+            bottomPoint.vertPos = 90 - sqrt(hFOV*hFOV+vFOV*vFOV)/2;
+	else
+            bottomPoint.vertPos = 0;
     }
-    leftPoint.horzPos = clampAngle(fYaw - hFOV / 2.0, -180, 180);
-    leftPoint.vertPos = sasin(sfabs(ssin(hFOV / 360.f * S_PI) / scos(fPitch / 360.f * 2 * S_PI))) / S_PI * 360.f;;
-    rightPoint.horzPos = clampAngle(fYaw + hFOV / 2.0, -180, 180);
+    else if (topPoint.vertPos > 90)
+        topPoint.vertPos = 90;
+
+    if (fabs(fPitch + 90) <= polarDetectThresh) {
+        bottomPoint.vertPos = -90;
+        if (hFOV*hFOV + vFOV*vFOV < 180*180)
+            topPoint.vertPos = -90 + sqrt(hFOV*hFOV+vFOV*vFOV)/2;
+        else
+            topPoint.vertPos = 0;
+    }
+    else if (bottomPoint.vertPos < -90)
+        bottomPoint.vertPos = -90;
+
+    leftPoint.vertPos = sasin(scos(hFOV / 360.f * S_PI) * ssin(fPitch / 180.f * S_PI)) / S_PI * 180.f;
+    float maxhFOV;
+    float temp = sasin(scos(hFOV/360.f*S_PI) * ssin((fPitch+vFOV/2)));
+    temp = ssin(hFOV/360.f*S_PI) / scos (temp);
+    if (fabs(temp) < 1.0f)
+        maxhFOV	= sasin(temp);
+    temp = sasin(scos(hFOV / 360.f * S_PI) * ssin((fPitch - vFOV / 2)));
+    temp = ssin(hFOV / 360.f * S_PI) / scos(temp);
+    if (fabs(temp) < 1.0f)
+        maxhFOV = fmax(maxhFOV, sasin(temp));
+
     rightPoint.vertPos = leftPoint.vertPos;
+    if ((fabs(leftPoint.vertPos - 90) >= fEpsi) && (fabs(leftPoint.vertPos + 90) >= fEpsi)) {
+        float temp = ssin(hFOV / 360.f * S_PI) / scos(leftPoint.vertPos / 180.f * S_PI);
+        if (fabs(temp - 1.0) <= fEpsi)
+            leftPoint.horzPos = -180;
+        else
+            leftPoint.horzPos = clampAngle(fYaw - fmax(maxhFOV, sasin(temp)) / S_PI * 180.f, -180, 180);
+    }
+    else
+        leftPoint.horzPos =  -180;
+
+    if ((fabs(rightPoint.vertPos - 90) >= fEpsi) && (fabs(rightPoint.vertPos + 90) >= fEpsi)) {
+        float temp = ssin(hFOV / 360.f * S_PI) / scos(rightPoint.vertPos / 180.f * S_PI);
+        if (fabs(temp - 1.0) <= fEpsi)
+            rightPoint.horzPos = 180;
+        else
+            rightPoint.horzPos = clampAngle(fYaw + fmax(maxhFOV, sasin(temp)) / S_PI * 180.f, -180, 180);
+    }
+    else
+        rightPoint.horzPos = 180;
+
     topPoint.horzPos = fYaw;
     bottomPoint.horzPos = fYaw;
-
     for (idx = 0; idx < (int32_t)(FACE_NUMBER*m_tileNumRow*m_tileNumCol); idx++) {
         m_srd[idx].faceId = -1;
         m_srd[idx].isOccupy = 0;
@@ -1422,11 +1503,10 @@ int32_t TgenViewport::isInsideByAngle()
                 tileTopRightLatti = m_srd[idx].vertPosTopRight;
                 tileBottomLeftLatti = m_srd[idx].vertPosBottomLeft;
                 tileBottomRightLatti = m_srd[idx ].vertPosBottomRight;
-
-                if ((isBetweenTwoLongitudes(tileTopLeftLongi, leftPoint.horzPos, rightPoint.horzPos)
+                if ((isBetweenTwoLongitudes(tileTopLeftLongi, leftPoint.horzPos-delta, rightPoint.horzPos+delta)
                     && (((tileTopLeftLatti > bottomPoint.vertPos) && (tileTopLeftLatti < topPoint.vertPos))
                     || ((tileBottomLeftLatti > bottomPoint.vertPos) && (tileBottomLeftLatti < topPoint.vertPos))) )
-                    || ( isBetweenTwoLongitudes(tileTopRightLongi, leftPoint.horzPos, rightPoint.horzPos)
+                    || ( isBetweenTwoLongitudes(tileTopRightLongi, leftPoint.horzPos-delta, rightPoint.horzPos+delta)
                     && (((tileTopRightLatti > bottomPoint.vertPos) && (tileTopRightLatti < topPoint.vertPos))
                     || ((tileBottomRightLatti > bottomPoint.vertPos) && (tileBottomRightLatti < topPoint.vertPos)))) )
                     {
@@ -1437,7 +1517,18 @@ int32_t TgenViewport::isInsideByAngle()
                     }
                 }
             }
-        }
+    }
+    delta = 0;
+    float leftThresh = leftPoint.horzPos;
+    float rightThresh = rightPoint.horzPos;
+    if ((topPoint.vertPos != 90) && (fPitch >= 0)) {
+        delta = clampAngle(rightPoint.horzPos - leftPoint.horzPos, 0, 360) * scos(fPitch * DEG2RAD_FACTOR) / scos(topPoint.vertPos * DEG2RAD_FACTOR);
+        if (delta >= 180)
+            delta = 180;
+        delta = (delta - clampAngle(rightPoint.horzPos - leftPoint.horzPos, 0, 360)) / 2;
+    }
+    leftThresh = leftPoint.horzPos - delta;
+    rightThresh = rightPoint.horzPos + delta;
     for (i = 0; i < m_tileNumRow; i++) {
         for (j = 0; j < m_tileNumCol; j++) {
             /* Top Face */
@@ -1451,15 +1542,29 @@ int32_t TgenViewport::isInsideByAngle()
             tileBottomLeftLatti = m_srd[idx].vertPosBottomLeft;
             tileBottomRightLatti = m_srd[idx].vertPosBottomRight;
 
-            if ( ( (tileTopLeftLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileTopLeftLongi, fYaw-90, fYaw+90) )
-                || ( (tileBottomLeftLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileBottomLeftLongi, fYaw - 90, fYaw + 90) )
-                || ( (tileTopRightLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileTopRightLongi, fYaw - 90, fYaw + 90) )
-                || ( (tileBottomRightLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileBottomRightLongi, fYaw - 90, fYaw + 90) ) )
+            if ( ( (tileTopLeftLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileTopLeftLongi, leftThresh, rightThresh))
+                || ((tileBottomLeftLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileBottomLeftLongi, leftThresh, rightThresh))
+                || ((tileTopRightLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileTopRightLongi, leftThresh, rightThresh))
+                || ((tileBottomRightLatti < topPoint.vertPos)  && isBetweenTwoLongitudes(tileBottomRightLongi, leftThresh, rightThresh)) )
             {
                 m_srd[idx].isOccupy = 1;
                 m_srd[idx].faceId = 2;
                 selectedTilesNum++;
+		SCVP_LOG(LOG_INFO, "Selected tile by angle: idx %d and face_id 2\n", idx);
             }
+	}
+    }
+    delta = 0;
+    if ((bottomPoint.vertPos != -90) && (fPitch <= 0)) {
+        delta = clampAngle(rightPoint.horzPos - leftPoint.horzPos, 0, 360) * scos(fPitch * DEG2RAD_FACTOR) / scos(bottomPoint.vertPos * DEG2RAD_FACTOR);
+        if (delta >= 180)
+            delta = 180;
+        delta = (delta - clampAngle(rightPoint.horzPos - leftPoint.horzPos, 0, 360)) / 2;
+    }
+    leftThresh = leftPoint.horzPos - delta;
+    rightThresh = rightPoint.horzPos + delta;
+    for (i = 0; i < m_tileNumRow; i++) {
+        for (j = 0; j < m_tileNumCol; j++) {
             /* Bottom Face */
             idx = 3 * m_tileNumRow * m_tileNumCol + i * m_tileNumCol + j;
             tileTopLeftLongi = m_srd[idx].horzPos;
@@ -1471,20 +1576,20 @@ int32_t TgenViewport::isInsideByAngle()
             tileBottomLeftLatti = m_srd[idx].vertPosBottomLeft;
             tileBottomRightLatti = m_srd[idx].vertPosBottomRight;
 
-            if (((tileTopLeftLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopLeftLongi, fYaw - 90, fYaw + 90))
-                || ((tileBottomLeftLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomLeftLongi, fYaw - 90, fYaw + 90))
-                || ((tileTopRightLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopRightLongi, fYaw - 90, fYaw + 90))
-                || ((tileBottomRightLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomRightLongi, fYaw - 90, fYaw + 90)))
+            if ( ( (tileTopLeftLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopLeftLongi, leftThresh, rightThresh))
+                || ((tileBottomLeftLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomLeftLongi, leftThresh, rightThresh))
+                || ((tileTopRightLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopRightLongi, leftThresh, rightThresh))
+                || ((tileBottomRightLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomRightLongi, leftThresh, rightThresh)) )
             {
                 m_srd[idx].isOccupy = 1;
                 m_srd[idx].faceId = 3;
                 selectedTilesNum++;
+		SCVP_LOG(LOG_INFO, "Selected tile by angle: idx %d and face_id 3\n", idx);
             }
         }
     }
-    if (bottomPoint.vertPos == -90) {
+    if (fabs(bottomPoint.vertPos + 90) < fEpsi) {
         /* Bottom Face */
-        bottomPoint.vertPos = -90 - additionalVertRange;
         for (i = 0; i < m_tileNumRow; i++) {
             for (j = 0; j < m_tileNumCol; j++) {
                 idx = 3 * m_tileNumRow * m_tileNumCol + i * m_tileNumCol + j;
@@ -1496,21 +1601,21 @@ int32_t TgenViewport::isInsideByAngle()
                 tileTopRightLatti = m_srd[idx].vertPosTopRight;
                 tileBottomLeftLatti = m_srd[idx].vertPosBottomLeft;
                 tileBottomRightLatti = m_srd[idx].vertPosBottomRight;
-                if (((tileTopLeftLatti < bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopLeftLongi, fYaw + 90, fYaw - 90))
-                    || ((tileBottomLeftLatti < bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomLeftLongi, fYaw + 90, fYaw - 90))
-                    || ((tileTopRightLatti < bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopRightLongi, fYaw + 90, fYaw - 90))
-                    || ((tileBottomRightLatti < bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomRightLongi, fYaw + 90, fYaw - 90))) {
+                if (((tileTopLeftLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileTopLeftLongi, -180, 180))
+                    || ((tileBottomLeftLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileBottomLeftLongi, -180, 180))
+                    || ((tileTopRightLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileTopRightLongi, -180, 180))
+                    || ((tileBottomRightLatti < topPoint.vertPos) && isBetweenTwoLongitudes(tileBottomRightLongi, -180, 180))) {
                     if (m_srd[idx].isOccupy != 1) {
                         m_srd[idx].isOccupy = 1;
                         m_srd[idx].faceId = 3;
                         selectedTilesNum++;
+                        SCVP_LOG(LOG_INFO, "Selected tile by angle: idx %d and face_id 3\n", idx);
                     }
                 }
             }
         }
     }
-    else if (topPoint.vertPos == 90) {
-        bottomPoint.vertPos = 90 - additionalVertRange;
+    else if (fabs(topPoint.vertPos - 90) < fEpsi) {
         for (i = 0; i < m_tileNumRow; i++) {
             for (j = 0; j < m_tileNumCol; j++) {
                 /* Top Face */
@@ -1523,17 +1628,18 @@ int32_t TgenViewport::isInsideByAngle()
                 tileTopRightLatti = m_srd[idx].vertPosTopRight;
                 tileBottomLeftLatti = m_srd[idx].vertPosBottomLeft;
                 tileBottomRightLatti = m_srd[idx].vertPosBottomRight;
-                if (((tileTopLeftLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopLeftLongi, fYaw + 90, fYaw - 90))
-                    || ((tileBottomLeftLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomLeftLongi, fYaw + 90, fYaw - 90))
-                    || ((tileTopRightLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopRightLongi, fYaw + 90, fYaw - 90))
-                    || ((tileBottomRightLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomRightLongi, fYaw + 90, fYaw - 90)))
+                if (((tileTopLeftLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopLeftLongi, -180, 180))
+                    || ((tileBottomLeftLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomLeftLongi, -180, 180))
+                    || ((tileTopRightLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileTopRightLongi, -180, 180))
+                    || ((tileBottomRightLatti > bottomPoint.vertPos) && isBetweenTwoLongitudes(tileBottomRightLongi, -180, 180)))
 
                 {
                     if (m_srd[idx].isOccupy != 1) {
                         m_srd[idx].isOccupy = 1;
                         m_srd[idx].faceId = 2;
                         selectedTilesNum++;
-                    }
+                        SCVP_LOG(LOG_INFO, "Selected tile by angle: idx %d and face_id 2\n", idx);
+		    }
                 }
             }
         }

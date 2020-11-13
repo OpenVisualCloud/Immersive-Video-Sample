@@ -329,7 +329,7 @@ TEST_F(DefaultSegmentationTest, AllProcess)
         EXPECT_TRUE(buf.st_size != 0);
     }
 
-    for (uint8_t i = 0; i < 6; i++)
+    for (uint8_t i = 0; i < 7; i++)
     {
         snprintf(initSegName2, 1024, "./test/Test_track%d.init.mp4", 1000+i);
         EXPECT_TRUE(access(initSegName2, 0) == 0);
@@ -349,7 +349,7 @@ TEST_F(DefaultSegmentationTest, AllProcess)
         EXPECT_TRUE(buf.st_size != 0);
     }
 
-    for (uint8_t i = 0; i < 6; i++)
+    for (uint8_t i = 0; i < 7; i++)
     {
         snprintf(segName, 1024, "./test/Test_track%d.1.mp4", i + 1000);
         EXPECT_TRUE(access(segName, 0) == 0);
