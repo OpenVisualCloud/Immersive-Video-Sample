@@ -206,7 +206,9 @@ ARG OPENH264_BINARY=https://github.com/cisco/openh264/releases/download/v${OPENH
 ARG LICODE_COMMIT="8b4692c88f1fc24dedad66b4f40b1f3d804b50ca"
 ARG LICODE_REPO=https://github.com/lynckia/licode.git
 ARG LICODE_PATCH_REPO=https://github.com/open-webrtc-toolkit/owt-server/tree/master/scripts/patches/licode/
-ARG SCVP_VER="1.0.0"
+ARG SAFESTRINGLIB_COMMIT="245c4b8cff1d2e7338b7f3a82828fc8e72b29549"
+ARG SAFESTRINGLIB_REPO=https://github.com/intel/safestringlib.git
+ARG SCVP_VER="1.2.0"
 ARG SCVP_REPO=https://github.com/OpenVisualCloud/Immersive-Video-Sample/archive/v${SCVP_VER}.tar.gz
 ARG WEBRTC_REPO=https://github.com/open-webrtc-toolkit/owt-deps-webrtc.git
 ARG SERVER_PATH=/home/owt-server
@@ -217,11 +219,25 @@ ARG OWT_BRANCH_JS_COMMIT="d727af2927731ff16214d73f57964a992258636d"
 ARG WEBRTC_COMMIT="c2aa290cfe4f63d5bfbb6540122a5e6bf2783187"
 
 ARG FDKAAC_LIB=/home/build/usr/local/lib64
-RUN yum install -y -q python-devel glib2-devel boost-devel log4cxx-devel
+RUN yum install -y -q python-devel glib2-devel boost-devel log4cxx-devel glog-devel gflags-devel
 RUN yum install -y -q patch centos-release-scl devtoolset-7
 ENV PYTHONIOENCODING=UTF-8
 # Install 360scvp
 # hadolint ignore=SC1091
+RUN cd /home && \
+    source /opt/rh/devtoolset-7/enable && \
+    git clone ${SAFESTRINGLIB_REPO} && \
+    cd safestringlib && git reset --hard ${SAFESTRINGLIB_COMMIT} && \
+    mkdir build && cd build && cmake .. && \
+    make -j && \
+    mkdir -p /usr/local/lib && \
+    cp libsafestring_shared.so /usr/local/lib && \
+    mkdir -p /usr/local/lib64 && \
+    cp libsafestring_shared.so /usr/local/lib64 && \
+    mkdir -p /home/build/usr/local/lib64 && \
+    cp libsafestring_shared.so /home/build/usr/local/lib64 && \
+    mkdir -p /usr/local/include/safestringlib && \
+    cp -rf ../include/* /usr/local/include/safestringlib/
 RUN cd /home && \
     wget -O - ${SCVP_REPO} | tar xz && mv Immersive-Video-Sample-${SCVP_VER} Immersive-Video-Sample && \
     cd Immersive-Video-Sample/src/360SCVP && \
@@ -314,7 +330,7 @@ RUN echo "[mongodb-org-3.6]" >> /etc/yum.repos.d/mongodb-org-3.6.repo && \
     echo "enabled=1" >> /etc/yum.repos.d/mongodb-org-3.6.repo && \
     echo "gpgkey=https://www.mongodb.org/static/pgp/server-3.6.asc" >> /etc/yum.repos.d/mongodb-org-3.6.repo && \
     yum install epel-release boost-system boost-thread log4cxx glib2 freetype-devel -y && \
-    yum install rabbitmq-server mongodb-org -y && \
+    yum install rabbitmq-server mongodb-org glog-devel gflags-devel -y && \
     yum remove -y -q epel-release && \
     rm -rf /var/cache/yum/*;
 
