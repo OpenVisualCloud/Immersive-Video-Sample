@@ -919,7 +919,7 @@ diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/dist
 +                "Frame Width can't be divided by tile column number \n");
 +        return -1;
 +    }
-+    if(((sInfo.frameWidth/sInfo.tileColumn)%64) || (sInfo.tileColumn == 1))
++    if(((sInfo.frameWidth/sInfo.tileColumn)%64) && (sInfo.tileColumn != 1))
 +    {
 +        av_log(avctx, AV_LOG_ERROR,
 +                "Tile width can't be divided by 64 \n");
@@ -931,7 +931,7 @@ diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/dist
 +                "Frame Height can't be divided by tile row number \n");
 +        return -1;
 +    }
-+    if(((sInfo.frameHeight/sInfo.tileRow)%64) || (sInfo.tileRow == 1))
++    if(((sInfo.frameHeight/sInfo.tileRow)%64) && (sInfo.tileRow != 1))
 +    {
 +        av_log(avctx, AV_LOG_ERROR,
 +                "Tile height can't be divided by 64 \n");
