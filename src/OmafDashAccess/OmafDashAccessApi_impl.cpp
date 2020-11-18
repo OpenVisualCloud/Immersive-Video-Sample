@@ -32,6 +32,7 @@
  */
 
 #include <cstdlib>
+#include <math.h>
 
 //#include "../utils/GlogWrapper.h"
 #include "OmafDashAccessApi.h"
@@ -39,6 +40,11 @@
 #include "OmafMediaSource.h"
 #include "OmafTypes.h"
 #include "general.h"
+#ifndef _ANDROID_NDK_OPTION
+#ifdef _USE_TRACE_
+#include "../trace/Bandwidth_tp.h"
+#endif
+#endif
 
 using namespace std;
 
@@ -151,6 +157,13 @@ int OmafAccess_SeekMedia(Handler hdl, uint64_t time) {
 int OmafAccess_GetMediaInfo(Handler hdl, DashMediaInfo *info) {
   OmafMediaSource *pSource = (OmafMediaSource *)hdl;
   pSource->GetMediaInfo(info);
+#ifndef _ANDROID_NDK_OPTION
+#ifdef _USE_TRACE_
+  const char *dash_mode = (info->streaming_type == 1) ? "static" : "dynamic";
+  int32_t frameNum = round(float(info->duration) / 1000 * ((float)info->stream_info[0].framerate_num / info->stream_info[0].framerate_den));
+  tracepoint(bandwidth_tp_provider, segmentation_info, (char *)dash_mode, (int)info->stream_info[0].segmentDuration, (float)info->stream_info[0].framerate_num / info->stream_info[0].framerate_den, (uint32_t)info->stream_count, (uint64_t*)&(info->stream_info[0].bit_rate), frameNum, (int32_t)(info->duration / 1000));
+#endif
+#endif
   return ERROR_NONE;
 }
 

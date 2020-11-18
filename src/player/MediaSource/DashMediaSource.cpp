@@ -38,8 +38,11 @@
 #include "../../utils/tinyxml2.h"
 #include "../RenderType.h"
 #include "OmafDashAccessApi.h"
+#ifndef _ANDROID_NDK_OPTION
 #ifdef _USE_TRACE_
 #include "../../trace/MtHQ_tp.h"
+#include "../../trace/Bandwidth_tp.h"
+#endif
 #endif
 #define MAX_LIST_NUMBER 30
 #define MIN_LIST_REMAIN 2
@@ -264,11 +267,14 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo) {
   if (dashMediaInfo->streaming_type != 1 && dashMediaInfo->streaming_type != 2) {
     LOG(ERROR) << "dash mode is invalid!" << std::endl;
   }
+#ifndef _ANDROID_NDK_OPTION
 #ifdef _USE_TRACE_
   int32_t frameNum = round(float(mMediaInfo.mDuration) / 1000 * (vi.framerate_num / vi.framerate_den));
   const char *dash_mode = (dashMediaInfo->streaming_type == 1) ? "static" : "dynamic";
   tracepoint(mthq_tp_provider, stream_information, (char *)dash_mode, vi.mProjFormat, dashMediaInfo->stream_info[0].segmentDuration,
              dashMediaInfo->duration, vi.framerate_num / vi.framerate_den, frameNum, vi.width, vi.height);
+  tracepoint(bandwidth_tp_provider, segmentation_info, (char *)dash_mode, dashMediaInfo->stream_info[0].segmentDuration, vi.framerate_num / vi.framerate_den, (uint32_t)dashMediaInfo->stream_count, (uint64_t*)&(dashMediaInfo->stream_info[0].bit_rate), frameNum, mMediaInfo.mDuration/1000);
+#endif
 #endif
   return RENDER_STATUS_OK;
 }
@@ -319,9 +325,11 @@ void DashMediaSource::ProcessVideoPacket() {
     m_status = STATUS_STOPPED;
   }
   LOG(INFO) << "Get packet has done! and pts is " << dashPkt[0].pts << std::endl;
+#ifndef _ANDROID_NDK_OPTION
 #ifdef _USE_TRACE_
   // trace
   tracepoint(mthq_tp_provider, T8_get_packet, dashPkt[0].pts);
+#endif
 #endif
 
   if (m_needStreamDumped && !m_dumpedFile.empty()) {
