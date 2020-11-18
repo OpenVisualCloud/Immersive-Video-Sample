@@ -113,11 +113,12 @@ fi
 
 end_time=$(($(($download_end_second*1000000000))+$(($download_end_nsecond))))
 
+temp2=`cat downloaded_trace.txt | grep "segment_index_field = $segment_index," | awk -F " " '{print $25}'`
+track_num=`cat downloaded_trace.txt | grep "segment_index_field = $segment_index," |wc -l`
 
-temp2=`cat downloaded_trace.txt | grep "segment_index_field = $segment_index" | awk -F " " '{print $25}'`
 total_segs_size=$(echo $temp2 | awk -F " " '{print $1}')
 
-for i in $(seq 2 $segment_num)
+for i in $(seq 2 $track_num)
 do
   one_seg_size=$(echo $temp2 | awk -F " " '{print $'$i'}')
   total_segs_size=$(($(($total_segs_size))+$(($one_seg_size))))
@@ -128,12 +129,25 @@ all_segs_size=$(($all_segs_size+$total_segs_size))
 download_interval=$(($(($end_time))-$(($download_time))))
 
 average_bitrate=`expr $total_segs_size \* 8 \* 1000000000 / $download_interval / 1000`
+current_bitrate=`expr $total_segs_size \* 8 / 1000`
+
+if [ "$max_bitrate" -lt "$current_bitrate" ]
+then
+  max_bitrate=$current_bitrate
+fi
+
+if [ "$min_bitrate" -gt "$current_bitrate" ]
+then
+  min_bitrate=$current_bitrate
+fi
 
 download_interval_ms=`awk 'BEGIN{printf "%.2f\n", '$(($download_interval))' / 1000000}'`
 
 echo "downloading_bitrate_for_${segment_index}_segment_group = $average_bitrate Kbps, downloading_interval = $download_interval_ms ms" >> "$summary_file_name".txt
 }
 
+max_bitrate=1
+min_bitrate=100000000000
 for i in $(seq 1 $download_num)
 do
   calculate_downloading_bitrate $i $(($extractor_track_refs_num+1))
@@ -143,4 +157,6 @@ average_downloading_bitrate=`expr $all_segs_size \* 8 \* $frame_rate / $total_fr
 echo -e "\n" >> "$summary_file_name".txt
 echo "Client side bandwidth summary:" >> "$summary_file_name".txt
 echo "average_downloading_bitrate = $average_downloading_bitrate Kbps" >> "$summary_file_name".txt
+echo "maximum_downloading_bitrate = $max_bitrate Kbps" >> "$summary_file_name".txt
+echo "minimum_downloading_bitrate = $min_bitrate Kbps" >> "$summary_file_name".txt
 echo "Done"

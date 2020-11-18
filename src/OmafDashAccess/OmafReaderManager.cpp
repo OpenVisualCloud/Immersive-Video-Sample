@@ -45,6 +45,7 @@
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
 #include "../trace/MtHQ_tp.h"
+#include "../trace/Bandwidth_tp.h"
 #endif
 #endif
 
@@ -337,10 +338,10 @@ OMAF_STATUS OmafReaderManager::OpenInitSegment(std::shared_ptr<OmafSegment> pIni
 #ifdef _USE_TRACE_
     //trace
     const char *trackType = "init_track";
-    uint64_t segSize = pInitSeg->GetSegSize();
+    uint64_t streamSize = pInitSeg->GetStreamSize();
     char tileRes[128] = { 0 };
     snprintf(tileRes, 128, "%s", "none");
-    tracepoint(bandwidth_tp_provider, packed_segment_size, 0, trackType, tileRes, 0, segSize);
+    tracepoint(bandwidth_tp_provider, packed_segment_size, 0, trackType, tileRes, 0, streamSize);
 #endif
 #endif
 
@@ -919,21 +920,23 @@ void OmafReaderManager::normalSegmentStateChange(std::shared_ptr<OmafSegment> se
     if (opened_dash_node.get() != nullptr) {
         if (opened_dash_node->isExtractor()) {
             const char *trackType = "extractor_track";
-            uint64_t segSize = segment->GetSegSize();
+            uint64_t streamSize = segment->GetStreamSize();
+
             char tileRes[128] = { 0 };
             snprintf(tileRes, 128, "%s", "none");
             int trackIndex = segment->GetTrackId();
             uint32_t nSegID = segment->GetSegID();
-            tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, segSize);
+            tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, streamSize);
         }
         else {
             const char *trackType = "tile_track";
-            uint64_t segSize = segment->GetSegSize();
+            uint64_t streamSize = segment->GetStreamSize();
+
             char tileRes[128] = { 0 };
             snprintf(tileRes, 128, "%s", "none");
             int trackIndex = segment->GetTrackId();
             uint32_t nSegID = segment->GetSegID();
-            tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, segSize);
+            tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, streamSize);
         }
     }
 #endif

@@ -36,9 +36,10 @@
 
 #include "ExtractorTrackGenerator.h"
 #include "VideoStreamPluginAPI.h"
-
+#ifndef _ANDROID_NDK_OPTION
 #ifdef _USE_TRACE_
 #include "../trace/Bandwidth_tp.h"
+#endif
 #endif
 
 VCD_NS_BEGIN
@@ -168,6 +169,19 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
     Param_ViewportOutput paramViewport;
     int32_t selectedTilesNum = 0;
     selectedTilesNum = I360SCVP_getTilesInViewport(tilesInView, &paramViewport, m_360scvpHandle);
+
+    #ifndef _ANDROID_NDK_OPTION
+    #ifdef _USE_TRACE_
+        tracepoint(bandwidth_tp_provider, tiles_selection_redundancy,
+            paramViewport.dstWidthNet,
+            paramViewport.dstHeightNet,
+            paramViewport.dstWidthAlignTile,
+            paramViewport.dstHeightAlignTile,
+            paramViewport.dstWidthAlignTile / (m_initInfo->viewportInfo)->viewportWidth,
+            paramViewport.dstHeightAlignTile / (m_initInfo->viewportInfo)->viewportHeight);
+    #endif
+    #endif
+
     if ((selectedTilesNum <= 0) || ((uint64_t)(selectedTilesNum) > totalTiles))
     {
         OMAF_LOG(LOG_ERROR, "Unreasonable selected tiles number based on viewport !\n");
@@ -842,6 +856,7 @@ int32_t ExtractorTrackGenerator::Initialize()
     m_origSPSNalu   = vs->GetSPSNalu();
     m_origPPSNalu   = vs->GetPPSNalu();
 
+#ifndef _ANDROID_NDK_OPTION
 #ifdef _USE_TRACE_
     //trace
     if ((EGeometryType)((m_initInfo->viewportInfo)->inGeoType) == EGeometryType::E_SVIDEO_EQUIRECT)
@@ -868,6 +883,7 @@ int32_t ExtractorTrackGenerator::Initialize()
             (m_initInfo->viewportInfo)->verticalFOVAngle,
             projType);
     }
+#endif
 #endif
 
     ret = CalculateViewportNum();
