@@ -43,6 +43,7 @@
 #include "../../../trace/MtHQ_tp.h"
 #endif
 #include "../MediaSource/DashMediaSource.h"
+#include "../MediaSource/WebRTCMediaSource.h"
 
 // #include <time.h>
 
@@ -102,9 +103,8 @@ RenderStatus MediaPlayer_Linux::Start(void *render_context)
 #endif
 #ifdef _ENABLE_WEBRTC_SOURCE_
         case WEBRTC_SOURCE:
-            //m_mediaSource = new WebRTCMediaSource();
-            LOG(ERROR)<<"WebRTC media source is not available!"<<std::endl;
-            return RENDER_CREATE_ERROR;
+            m_mediaSource = new WebRTCMediaSource();
+            break;
 #endif
         default:
             m_mediaSource = NULL;
