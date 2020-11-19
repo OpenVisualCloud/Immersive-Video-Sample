@@ -110,10 +110,6 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
         LOG(ERROR) << "---INVALID source type input (0:remote mpd 2:webrtc support)---" << std::endl;
         return RENDER_ERROR;
       }
-      else if (renderConfig.sourceType == 2) {
-        LOG(ERROR) << "---INVALID source type input (webrtc is not enabled, please enable webrtc!)---" << std::endl;
-        return RENDER_ERROR;
-      }
     }
     else
     {
