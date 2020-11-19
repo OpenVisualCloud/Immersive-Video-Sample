@@ -30,227 +30,196 @@
 //! \file     WebRTCMediaSource.h
 //! \brief    Defines class for WebRTCMediaSource.
 //!
-#if 0
-//#ifdef _ENABLE_WEBRTC_SOURCE_
+#ifdef _ENABLE_WEBRTC_SOURCE_
 
 #ifndef _WebRTCMediaSource_H_
 #define _WebRTCMediaSource_H_
 
+#include "../Decoder/DecoderManager.h"
 #include "MediaSource.h"
 
-#include <mutex>
 #include <condition_variable>
-#include <deque>
+#include <mutex>
 
 #include "owt/base/exception.h"
-#include "owt/base/videorendererinterface.h"
 #include "owt/base/videodecoderinterface.h"
+#include "owt/base/videorendererinterface.h"
 #include "owt/conference/conferenceclient.h"
 
 #include "360SCVPAPI.h"
 
-extern "C" {
-#include <libavcodec/avcodec.h>
-}
-
 VCD_NS_BEGIN
 
+class WebRTCVideoPacketListener {
+ public:
+  virtual ~WebRTCVideoPacketListener() {}
 
-class WebRTCVideoFrame
-{
-public:
-    WebRTCVideoFrame(AVFrame *frame, RegionWisePacking *rwpk);
-
-    virtual ~WebRTCVideoFrame();
-
-    bool isValid() {return m_frame != NULL;};
-
-    uint8_t *m_buffer[3];
-    RegionWisePacking *m_rwpk;
-
-private:
-    AVFrame *m_frame;
+  virtual bool OnVideoPacket(
+      std::unique_ptr<owt::base::VideoEncodedFrame> frame) = 0;
 };
 
-class WebRTCVideoRenderer
-{
-public:
-    virtual ~WebRTCVideoRenderer() {}
+class WebRTCMediaSource : public MediaSource, public WebRTCVideoPacketListener {
+  static WebRTCMediaSource* s_CurObj;
 
-    virtual int32_t RenderFrame(AVFrame *avFrame, RegionWisePacking *rwpk) = 0;
-};
+  static void join_on_success_callback(
+      std::shared_ptr<owt::conference::ConferenceInfo> info);
+  static void join_on_failure_callback(
+      std::unique_ptr<owt::base::Exception> err);
 
-class WebRTCMediaSource : public MediaSource, public WebRTCVideoRenderer
-{
-    static WebRTCMediaSource *s_CurObj;
+  static void subscribe_on_success_callback(
+      std::shared_ptr<owt::conference::ConferenceSubscription> subscription);
+  static void subscribe_on_failure_callback(
+      std::unique_ptr<owt::base::Exception> err);
 
-    static void join_on_success_callback(std::shared_ptr<owt::conference::ConferenceInfo> info);
-    static void join_on_failure_callback(std::unique_ptr<owt::base::Exception> err);
+ public:
+  WebRTCMediaSource();
+  virtual ~WebRTCMediaSource();
 
-    static void subscribe_on_success_callback(std::shared_ptr<owt::conference::ConferenceSubscription> subscription);
-    static void subscribe_on_failure_callback(std::unique_ptr<owt::base::Exception> err);
+  //! \brief Initial in MediaInfo
+  //!
+  //!         render configuration
+  //! \return RenderStatus
+  //!         RENDER_STATUS_OK if success, else fail reason
+  //!
+  virtual RenderStatus Initialize(
+      struct RenderConfig renderConfig,
+      RenderSourceFactory* rsFactory = NULL) override;
 
-public:
-    WebRTCMediaSource();
-    virtual ~WebRTCMediaSource();
-    //! \brief Get a frame from the Media Source
-    //!
-    //!         [out] uint8_t **
-    //!         the frame buffer
-    //!         [out] struct RegionInfo *
-    //!         regionInfo
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    virtual RenderStatus GetFrame(uint8_t **buffer, struct RegionInfo *regionInfo);
-    //! \brief Initial in DashMediaInfo
-    //!
-    //! \param  [in] const char *
-    //!         media url
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    virtual RenderStatus Initialize(struct RenderConfig renderConfig, RenderSourceFactory *rsFactory=NULL);
-    //! \brief Set Media Source Info
-    //!
-    //! \param  [in] void *
-    //!         mediaInfo
-    //!
-    //! \return void *
-    //!
-    virtual RenderStatus SetMediaSourceInfo(void *mediaInfo);
-    //! \brief Get Media Source Info
-    //!
-    //! \return struct MediaSourceInfo
-    //!
-    virtual struct MediaSourceInfo GetMediaSourceInfo();
-    //! \brief Get SourceMetaData
-    //!
-    //! \return void*
-    //!
-    virtual void* GetSourceMetaData();
-    //! \brief Check is player ends
-    //!
-    //! \return bool
-    //!
-    virtual bool IsEOS();
-    //! \brief set yaw and pitch to change Viewport
-    //!
-    //! \param  [in] float
-    //!         yaw angle
-    //!         [in] pitch
-    //!         pitch angle
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    virtual RenderStatus ChangeViewport(float yaw, float pitch);
-    //! \brief set region information
-    //!
-    //! \param  [in] struct RegionInfo*
-    //!         regionInfo
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    virtual RenderStatus SetRegionInfo(struct RegionInfo* regionInfo);
-    //! \brief delete buffer data
-    //!
-    //! \param  [in] uint8_t **
-    //!         buffer
-    //!
-    //! \brief delete Region Wise Packing data
-    //!
-    //! \param  [in] RegionWisePacking *
-    //!         rwpk
-    //!
-    virtual void ClearRWPK(RegionWisePacking *rwpk);
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    virtual void DeleteBuffer(uint8_t **buffer);
+  //! \brief Get a Video frame from the Media Source
+  //!
+  //! \param  [out] uint8_t **
+  //!         the frame buffer
+  //!         [out] struct RegionInfo *
+  //!         regionInfo
+  //! \return RenderStatus
+  //!         RENDER_STATUS_OK if success, else fail reason
+  //!
+  virtual RenderStatus GetFrame(uint8_t** buffer,
+                                struct RegionInfo* regionInfo) override;
 
-    int getParam(int *flag, int* projType);
+  //! \brief Get an Audio frame from the Media Source
+  //!
+  //! \param  [out] uint8_t **
+  //!         the frame buffer
+  //!         [out] struct RegionInfo *
+  //!         regionInfo
+  //! \return RenderStatus
+  //!         RENDER_STATUS_OK if success, else fail reason
+  //!
+  virtual RenderStatus GetAudioFrame(int64_t pts, uint8_t** buffer) override;
 
-    int32_t RenderFrame(AVFrame *frame, RegionWisePacking *rwpk) override;
+  //! \brief Check is file ends
+  //!
+  //! \return bool
+  //!
+  virtual bool IsEOS() override;
 
-private:
-    std::string m_serverAddress;
-    std::shared_ptr<owt::conference::ConferenceClient> m_room;
-    std::string m_roomId;
-    std::shared_ptr<owt::conference::RemoteMixedStream> m_mixed_stream;
-    std::string m_subId;
-    int m_yaw;
-    int m_pitch;
-    std::mutex m_mutex;
-    std::condition_variable m_cond;
+  //! \brief set yaw and pitch to change Viewport
+  //!
+  //! \param  [in] float
+  //!         yaw angle
+  //!         [in] pitch
+  //!         pitch angle
+  //!
+  //! \return RenderStatus
+  //!         RENDER_STATUS_OK if success, else fail reason
+  //!
+  virtual RenderStatus ChangeViewport(float yaw, float pitch) override;
 
-    std::deque<std::shared_ptr<WebRTCVideoFrame>> m_webrtc_render_frame_queue;
-    std::deque<std::shared_ptr<WebRTCVideoFrame>> m_free_queue;
+  //! \brief UpdateFrames
+  //!
+  //! \return RenderStatus
+  //!         RENDER_STATUS_OK if success, RENDER_EOS if reach EOS
+  //!
+  virtual RenderStatus UpdateFrames(uint64_t pts) override;
 
-    owt::base::VideoDecoderInterface *m_rtcp_feedback;
+  //! \brief SeekTo
+  //!
+  //! \return RenderStatus
+  //!         RENDER_STATUS_OK if success, RENDER_EOS if reach EOS
+  //!
+  virtual RenderStatus SeekTo(uint64_t pts) override;
 
-    bool m_ready;
-    static uint32_t fullwidth,fullheight;
-    uint32_t lowwidth,lowheight,packedwidth,packedheight,frameRate,frameNum;
-    ProjectType projType;
+  //! \brief Pause
+  //!
+  //! \return RenderStatus
+  //!         RENDER_STATUS_OK if success
+  //!
+  virtual RenderStatus Pause() override;
+
+  //! \brief Play
+  //!
+  //! \return RenderStatus
+  //!         RENDER_STATUS_OK if success
+  //!
+  virtual RenderStatus Play() override;
+
+  bool OnVideoPacket(
+      std::unique_ptr<owt::base::VideoEncodedFrame> frame) override;
+
+ private:
+  void parseOptions();
+  void setMediaInfo();
+
+  int32_t m_source_width;
+  int32_t m_source_height;
+  int32_t m_source_framerate_den;
+  int32_t m_source_framerate_num;
+
+  std::string m_serverAddress;
+  std::shared_ptr<owt::conference::ConferenceClient> m_room;
+  std::string m_roomId;
+  std::shared_ptr<owt::conference::RemoteMixedStream> m_mixed_stream;
+  std::string m_subId;
+  int m_yaw;
+  int m_pitch;
+  std::mutex m_mutex;
+  std::condition_variable m_cond;
+
+  owt::base::VideoDecoderInterface* m_rtcp_feedback;
+
+  std::shared_ptr<DecoderManager> m_DecoderManager;
+
+  // 360scvp
+  param_360SCVP m_parserRWPKParam;
+  void* m_parserRWPKHandle;
+
+  bool m_ready;
 };
 
 class SimpleBuffer {
-public:
-    SimpleBuffer();
-    virtual ~SimpleBuffer();
+ public:
+  SimpleBuffer();
+  virtual ~SimpleBuffer();
 
-    void insert(const uint8_t *data, int size);
-    void resize(int new_size) {m_size = new_size <= m_max_size ? new_size : 0;}
+  void insert(const uint8_t* data, int size);
+  void resize(int new_size) { m_size = new_size <= m_max_size ? new_size : 0; }
 
-    uint8_t *data() {return m_data;}
-    int size() {return m_size;}
+  uint8_t* data() { return m_data; }
+  int size() { return m_size; }
 
-private:
-    uint8_t *m_data;
-    int m_size;
-    int m_max_size;
+ private:
+  uint8_t* m_data;
+  int m_size;
+  int m_max_size;
 };
 
-class WebRTCFFmpegVideoDecoder : public owt::base::VideoDecoderInterface {
-public:
-    WebRTCFFmpegVideoDecoder(WebRTCVideoRenderer *renderer);
-    ~WebRTCFFmpegVideoDecoder();
+class WebRTCVideoDecoderAdapter : public owt::base::VideoDecoderInterface {
+ public:
+  WebRTCVideoDecoderAdapter(WebRTCVideoPacketListener* listener);
+  ~WebRTCVideoDecoderAdapter();
 
-    bool InitDecodeContext(owt::base::VideoCodec video_codec) override;
-    owt::base::VideoDecoderInterface* Copy() override;
-    bool Release() override;
+  bool InitDecodeContext(owt::base::VideoCodec video_codec) override;
+  owt::base::VideoDecoderInterface* Copy() override;
+  bool Release() override;
 
-    bool OnEncodedFrame(std::unique_ptr<owt::base::VideoEncodedFrame> frame) override;
+  bool OnEncodedFrame(
+      std::unique_ptr<owt::base::VideoEncodedFrame> frame) override;
 
-protected:
-    bool createDecoder(const owt::base::VideoCodec video_codec);
+ private:
+  int32_t m_ref_count;
 
-private:
-    AVCodecContext *m_decCtx;
-    AVFrame *m_decFrame;
-    AVPacket m_packet;
-
-    bool m_needKeyFrame;
-
-    std::shared_ptr<SimpleBuffer> m_bitstream_buf;
-    std::deque<RegionWisePacking *> m_rwpk_queue;
-
-    WebRTCVideoRenderer *m_renderer;
-
-    // 360scvp
-    param_360SCVP m_parserRWPKParam;
-    void*         m_parserRWPKHandle;
-
-    char m_errbuff[500];
-    char *ff_err2str(int errRet);
-
-    uint32_t m_statistics_frames;
-    uint64_t m_statistics_last_timestamp;
-
-    int32_t m_ref_count;
+  WebRTCVideoPacketListener* m_listener;
 };
 
 VCD_NS_END;
