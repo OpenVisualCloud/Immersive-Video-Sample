@@ -258,6 +258,7 @@ RUN git clone -b ${OWT_BRANCH} ${OWTSERVER_REPO} && \
     source /opt/rh/devtoolset-7/enable && \
 
     cd ${SERVER_PATH} && git reset --hard ${OWTSERVER_COMMIT} && \
+    curl https://patch-diff.githubusercontent.com/raw/open-webrtc-toolkit/owt-server/pull/708.patch | git apply && \
 
     # Install node modules for owt
     npm config set proxy=${http_proxy} && \
