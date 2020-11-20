@@ -488,8 +488,6 @@ bool WebRTCMediaSource::OnVideoPacket(
   dashPkt.qtyResolution[1].top = 0;
   dashPkt.qtyResolution[1].qualityRanking = static_cast<QualityRank>(2);
 
-  dashPkt.tileRowNum = 8;
-  dashPkt.tileColNum = 10;
   dashPkt.height = rwpk->packedPicHeight;
   dashPkt.width = rwpk->packedPicWidth;
 
