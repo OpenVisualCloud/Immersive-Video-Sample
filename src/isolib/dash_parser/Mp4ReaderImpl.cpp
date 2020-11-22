@@ -371,6 +371,7 @@ int32_t Mp4Reader::ParseInitSeg(StreamIO* strIO, uint32_t initSegId)
     {
         m_readerSte = prevState;
         io.strIO.reset();
+        ISO_LOG(LOG_ERROR, "Peek to EOS\n");
         return OMAF_FILE_READ_ERROR;
     }
     io.size = strIO->GetStreamSize();
@@ -398,10 +399,12 @@ int32_t Mp4Reader::ParseInitSeg(StreamIO* strIO, uint32_t initSegId)
             error = ReadAtomParams(io, boxType, boxSize);
             if (!error)
             {
+                ISO_LOG(LOG_INFO, "boxType is %s\n", boxType);
                 if (boxType == "ftyp")
                 {
                     if (ftypFound == true)
                     {
+                        ISO_LOG(LOG_ERROR, "boxType is ftyp and is True!!!\n");
                         error = OMAF_FILE_READ_ERROR;
                         break;
                     }
@@ -445,6 +448,7 @@ int32_t Mp4Reader::ParseInitSeg(StreamIO* strIO, uint32_t initSegId)
                 {
                     if (moovFound == true)
                     {
+                        ISO_LOG(LOG_ERROR, "boxType is moov and is Found!!!\n");
                         error = OMAF_FILE_READ_ERROR;
                         break;
                     }
@@ -465,7 +469,7 @@ int32_t Mp4Reader::ParseInitSeg(StreamIO* strIO, uint32_t initSegId)
                 }
                 else if (boxType == "moof")
                 {
-					ISO_LOG(LOG_WARNING, "Skipping root level 'moof' box - not allowed in Initialization Segment\n");
+                    ISO_LOG(LOG_WARNING, "Skipping root level 'moof' box - not allowed in Initialization Segment\n");
                     error = SkipAtom(io);
                 }
                 else if (boxType == "mdat")
@@ -483,12 +487,12 @@ int32_t Mp4Reader::ParseInitSeg(StreamIO* strIO, uint32_t initSegId)
     catch (Exception& exc)
     {
         ISO_LOG(LOG_ERROR, "ParseInitSegment Exception Error: %s\n", exc.what());
-		error = OMAF_FILE_READ_ERROR;
+        error = OMAF_FILE_READ_ERROR;
     }
     catch (exception& e)
     {
         ISO_LOG(LOG_ERROR, "ParseInitSegment exception Error:: %s\n", e.what());
-		error = OMAF_FILE_READ_ERROR;
+        error = OMAF_FILE_READ_ERROR;
     }
 
     if (!error && (!ftypFound || !moovFound))
@@ -507,6 +511,8 @@ int32_t Mp4Reader::ParseInitSeg(StreamIO* strIO, uint32_t initSegId)
 
         if ((!io.strIO->IsStreamGood()) && (!io.strIO->IsReachEOS()))
         {
+            ISO_LOG(LOG_ERROR, "Stream is Good? %d\n", int32_t(io.strIO->IsStreamGood()));
+            ISO_LOG(LOG_ERROR, "Reach EOS? %d\n", int32_t(io.strIO->IsReachEOS()));
             return OMAF_FILE_READ_ERROR;
         }
         io.strIO->ClearStatus();
@@ -562,6 +568,7 @@ int32_t Mp4Reader::ParseSeg(StreamIO* strIO,
     {
         m_readerSte = prevState;
         io.strIO.reset();
+        ISO_LOG(LOG_ERROR, "Peek to EOS!!!\n");
         return OMAF_FILE_READ_ERROR;
     }
     io.size = strIO->GetStreamSize();
@@ -584,6 +591,7 @@ int32_t Mp4Reader::ParseSeg(StreamIO* strIO,
             error = ReadAtomParams(io, boxType, boxSize);
             if (!error)
             {
+                ISO_LOG(LOG_INFO, "boxType is %s\n", boxType);
                 if (boxType == "styp")
                 {
                     error = ReadAtom(io, bitstream);
@@ -675,20 +683,20 @@ int32_t Mp4Reader::ParseSeg(StreamIO* strIO,
                 else
                 {
                     ISO_LOG(LOG_WARNING, "Skipping root level box of unknown type '%s'\n", boxType.c_str());
-					error = SkipAtom(io);
+                    error = SkipAtom(io);
                 }
             }
         }
     }
     catch (Exception& exc)
     {
-		ISO_LOG(LOG_ERROR, "parseSegment Exception Error: %s\n", exc.what());
+        ISO_LOG(LOG_ERROR, "parseSegment Exception Error: %s\n", exc.what());
         error = OMAF_FILE_READ_ERROR;
     }
     catch (exception& e)
     {
         ISO_LOG(LOG_ERROR, "parseSegment exception Error: %s\n", e.what());
-		error = OMAF_FILE_READ_ERROR;
+        error = OMAF_FILE_READ_ERROR;
     }
 
     if (!error)
@@ -702,6 +710,8 @@ int32_t Mp4Reader::ParseSeg(StreamIO* strIO,
 
         if ((!io.strIO->IsStreamGood()) && (!io.strIO->IsReachEOS()))
         {
+            ISO_LOG(LOG_ERROR, "Stream is Good? %d\n", int32_t(io.strIO->IsStreamGood()));
+            ISO_LOG(LOG_ERROR, "Reach to EOS? %d\n", int32_t(io.strIO->IsReachEOS()));
             return OMAF_FILE_READ_ERROR;
         }
         io.strIO->ClearStatus();
@@ -773,6 +783,7 @@ int32_t Mp4Reader::ParseSegIndex(StreamIO* strIO,
     if (io.strIO->PeekEOS())
     {
         io.strIO.reset();
+        ISO_LOG(LOG_ERROR, "PeekEOS is true!!!\n");
         return OMAF_FILE_READ_ERROR;
     }
     io.size = strIO->GetStreamSize();
@@ -909,6 +920,7 @@ int32_t Mp4Reader::ReadStream(InitSegmentId initSegId, SegmentId segIndex)
         error = ReadAtomParams(io, boxType, boxSize);
         if (!error)
         {
+            ISO_LOG(LOG_INFO, "boxType is %s\n", boxType);
             if (boxType == "ftyp")
             {
                 if (ftypFound == true)
@@ -961,6 +973,7 @@ int32_t Mp4Reader::ReadStream(InitSegmentId initSegId, SegmentId segIndex)
             {
                 if (moovFound == true)
                 {
+                    ISO_LOG(LOG_ERROR, "boxType is moov and is True!!!\n");
                     return OMAF_FILE_READ_ERROR;
                 }
                 moovFound = true;
@@ -1004,11 +1017,11 @@ int32_t Mp4Reader::ReadStream(InitSegmentId initSegId, SegmentId segIndex)
                         if (trackDecInfo.samples.size())
                         {
                             int64_t sampleDataEndOffset = static_cast<int64_t>(
-                                trackDecInfo.samples.rbegin()->dataOffset + trackDecInfo.samples.rbegin()->dataLength);
+                            trackDecInfo.samples.rbegin()->dataOffset + trackDecInfo.samples.rbegin()->dataLength);
                             if (sampleDataEndOffset > io.size || sampleDataEndOffset < 0)
                             {
                                 ISO_LOG(LOG_ERROR, "Sample data offset exceeds movie fragment !\n");
-								throw exception();
+                                throw exception();
                             }
                         }
                     }
@@ -1020,7 +1033,7 @@ int32_t Mp4Reader::ReadStream(InitSegmentId initSegId, SegmentId segIndex)
             }
             else
             {
-				ISO_LOG(LOG_WARNING, "Skipping root level box of unknown type '%s'\n", boxType.c_str());
+                ISO_LOG(LOG_WARNING, "Skipping root level box of unknown type '%s'\n", boxType.c_str());
                 error = SkipAtom(io);
             }
         }
@@ -1037,6 +1050,8 @@ int32_t Mp4Reader::ReadStream(InitSegmentId initSegId, SegmentId segIndex)
 
         if ((!io.strIO->IsStreamGood()) && (!io.strIO->IsReachEOS()))
         {
+	    ISO_LOG(LOG_ERROR, "Stream is Good? %d\n", int32_t(io.strIO->IsStreamGood()));
+	    ISO_LOG(LOG_ERROR, "Reach to EOS? %d\n", int32_t(io.strIO->IsReachEOS()));
             return OMAF_FILE_READ_ERROR;
         }
         io.strIO->ClearStatus();
