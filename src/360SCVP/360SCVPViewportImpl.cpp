@@ -1093,6 +1093,8 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
         maxOffsetAngle = 0;
         horzOffsetTileNum = 0;
     }
+    double upCornerVertPos = ERP_VERT_ANGLE / 2 - sasin(scos(hFOV / 360.f * S_PI) * ssin((fPitch + vFOV/2) / 180.f * S_PI)) / S_PI * 180.f;
+    double downCornerVertPos = ERP_VERT_ANGLE / 2 - sasin(scos(hFOV / 360.f * S_PI) * ssin((fPitch - vFOV/2) / 180.f * S_PI)) / S_PI * 180.f;
 
     // Limit Addtional horizontal tile number to avoid array cross boundary
     if (horzOffsetTileNum > (int32_t)m_tileNumCol/2) {
@@ -1188,6 +1190,7 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
         pTmpUpLeft->x = 0;
         pTmpDownRight->x = inputWidth;
         pTmpDownRight->y = fmax(pTmpDownRight->y, (bottomRow+1) * m_srd[idx].tileheight);
+        pTmpDownRight->y = fmax(pTmpDownRight->y, (downCornerVertPos / vertStep) * m_srd[idx].tileheight);
     }
     else
         pTmpUpLeft->y = fmin(pTmpUpLeft->y, topRow * m_srd[idx].tileheight);
@@ -1196,6 +1199,7 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     {
         pTmpUpLeft->x = 0;
         pTmpUpLeft->y = fmin(pTmpUpLeft->y, topRow * m_srd[idx].tileheight);
+        pTmpUpLeft->y = fmin(pTmpUpLeft->y, (upCornerVertPos / vertStep) * m_srd[idx].tileheight);
         pTmpDownRight->x = inputWidth;
         pTmpDownRight->y = inputHeight;
     }
