@@ -125,6 +125,7 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
 
   uint64_t GetOldestPacketPTSForTrack(int trackId);
   void RemoveOutdatedPacketForTrack(int trackId, uint64_t currPTS);
+  size_t GetSamplesNumPerSegment() { return samples_num_per_seg_; };
 
  private:
   void threadRunner() noexcept;
@@ -165,6 +166,7 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
   std::thread segment_reader_worker_;
   bool breader_working_ = false;
 
+  size_t samples_num_per_seg_ = 0;
   std::shared_ptr<OmafReader> reader_;
 
   std::mutex segment_opening_mutex_;

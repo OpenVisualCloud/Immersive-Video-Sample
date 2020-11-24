@@ -51,6 +51,7 @@ OmafMediaStream::OmafMediaStream() {
   m_currFrameIdx = 0;
   m_status = STATUS_UNKNOWN;
   m_activeSegmentNum = 0;
+  m_tileSelTimeLine  = 0;
 }
 
 OmafMediaStream::~OmafMediaStream() {
@@ -59,10 +60,10 @@ OmafMediaStream::~OmafMediaStream() {
   SAFE_DELETE(m_pStreamInfo->source_resolution);
   SAFE_FREE(m_pStreamInfo);
   SAFE_FREE(mMainAdaptationSet);
-  std::list<std::map<int, OmafAdaptationSet*>>::iterator itSel;
+  std::map<uint64_t, std::map<int, OmafAdaptationSet*>>::iterator itSel;
   for (itSel = m_selectedTileTracks.begin(); itSel != m_selectedTileTracks.end(); )
   {
-    (*itSel).clear();
+    (itSel->second).clear();
     m_selectedTileTracks.erase(itSel++);
   }
   m_selectedTileTracks.clear();
@@ -546,14 +547,17 @@ int OmafMediaStream::UpdateEnabledTileTracks(std::map<int, OmafAdaptationSet*> s
     {
       std::lock_guard<std::mutex> lock(mCurrentMutex);
       //m_selectedTileTracks.clear();
+      OMAF_LOG(LOG_INFO, "Will insert tiles selection for time line %ld\n", m_tileSelTimeLine);
       std::map<int, OmafAdaptationSet*> oneSelection;
       for (auto itAS = selectedTiles.begin(); itAS != selectedTiles.end(); itAS++) {
         OmafAdaptationSet* adaptationSet = itAS->second;
         adaptationSet->Enable(true);
-
+        OMAF_LOG(LOG_INFO, "Insert track %d for time line %ld\n", itAS->first, m_tileSelTimeLine);
         oneSelection.insert(make_pair(itAS->first, itAS->second));
       }
-      m_selectedTileTracks.push_back(oneSelection);
+      //m_selectedTileTracks.push_back(oneSelection);
+      m_selectedTileTracks.insert(make_pair(m_tileSelTimeLine, oneSelection));
+      m_tileSelTimeLine++;
       m_hasTileTracksSelected = true;
     }
   }
@@ -643,19 +647,40 @@ int32_t OmafMediaStream::TilesStitching() {
   }while (!selectedFlag);
 
   uint64_t currFramePTS = 0;
+  uint64_t currSegTimeLine = 0;
   std::map<int, OmafAdaptationSet*> mapSelectedAS;
   bool isEOS = false;
-  uint32_t waitTimes = 10000;
+  uint32_t waitTimes = 1000;
   uint32_t selectionWaitTimes = 10000;
   bool prevPoseChanged = false;
   std::map<int, OmafAdaptationSet*> prevSelectedAS;
   bool segmentEnded = false;
+  bool moveToNextTimeLine = false;
+  size_t samplesNumPerSeg = 0;
+  bool skipFrames = false;
+  bool beginNewSeg = false;
   while (!isEOS && m_status != STATUS_STOPPED) {
+    beginNewSeg = false;
+
+    if (samplesNumPerSeg && !skipFrames)
+        currFramePTS++;
+
+    skipFrames = false;
+    if (samplesNumPerSeg)
+    {
+        if ((currFramePTS / samplesNumPerSeg + 1) > currSegTimeLine)
+        {
+            beginNewSeg = true;
+        }
+        currSegTimeLine = currFramePTS / samplesNumPerSeg + 1;
+    }
     // begin to generate tiles merged media packets for each frame
+    OMAF_LOG(LOG_INFO, "Begin stitch frame %ld from segment %ld\n", currFramePTS, currSegTimeLine);
+
     uint32_t currWaitTimes = 0;
     std::map<int, OmafAdaptationSet*> updatedSelectedAS;
 
-    if (prevSelectedAS.empty() || segmentEnded)
+    if (prevSelectedAS.empty() || beginNewSeg || moveToNextTimeLine)
     {
         if (prevSelectedAS.empty())
         {
@@ -679,9 +704,10 @@ int32_t OmafMediaStream::TilesStitching() {
           {
             std::lock_guard<std::mutex> lock(mCurrentMutex);
 
-            m_selectedTileTracks.pop_front(); //At the beginning, there are two same tiles selection in m_selectedTileTracks due to previous process in StartReadThread, so remove repeated one
-            updatedSelectedAS = m_selectedTileTracks.front();
+            //m_selectedTileTracks.pop_front(); //At the beginning, there are two same tiles selection in m_selectedTileTracks due to previous process in StartReadThread, so remove repeated one
+            updatedSelectedAS = m_selectedTileTracks[1]; //At the beginning, there are two same tiles selection in m_selectedTileTracks due to previous process in StartReadThread, so remove repeated one
           }
+          currSegTimeLine = 1;
         }
         else
         {
@@ -689,10 +715,13 @@ int32_t OmafMediaStream::TilesStitching() {
           {
             {
               std::lock_guard<std::mutex> lock(mCurrentMutex);
-              if (m_selectedTileTracks.size() >= 2)
+              std::map<uint64_t, std::map<int, OmafAdaptationSet*>>::iterator it;
+              it = m_selectedTileTracks.find(currSegTimeLine);
+              if (it != m_selectedTileTracks.end())
                   break;
             }
-            usleep(50);
+
+            usleep((m_pStreamInfo->segmentDuration * 1000000) / selectionWaitTimes);
             currWaitTimes++;
           }
 
@@ -700,8 +729,7 @@ int32_t OmafMediaStream::TilesStitching() {
             std::lock_guard<std::mutex> lock(mCurrentMutex);
             if (currWaitTimes < selectionWaitTimes)
             {
-              m_selectedTileTracks.pop_front();
-              updatedSelectedAS = m_selectedTileTracks.front();
+              updatedSelectedAS = m_selectedTileTracks[currSegTimeLine];
             }
             else
             {
@@ -713,7 +741,7 @@ int32_t OmafMediaStream::TilesStitching() {
               else
               {
                 updatedSelectedAS = prevSelectedAS;
-                OMAF_LOG(LOG_INFO, "Still use previous selected AS !\n");
+                OMAF_LOG(LOG_WARNING, "Tile tracks selection result for current time line hasn't come, Still use previous selected AS !\n");
               }
             }
           }
@@ -728,9 +756,11 @@ int32_t OmafMediaStream::TilesStitching() {
         OMAF_LOG(LOG_INFO, "For frame next to frame %ld, Use last viewport !\n", currFramePTS);
     }
 
+    //beginNewSeg = false;
+    moveToNextTimeLine = false;
     prevPoseChanged = prevSelectedAS.empty() ? false : IsSelectionChanged(mapSelectedAS, prevSelectedAS);
 
-    bool hasPoseChanged = false;
+    prevSelectedAS = mapSelectedAS;
     bool hasPktOutdated = false;
     std::map<uint32_t, MediaPacket*> selectedPackets;
     for (auto as_it = mapSelectedAS.begin(); as_it != mapSelectedAS.end(); as_it++) {
@@ -748,7 +778,22 @@ int32_t OmafMediaStream::TilesStitching() {
           OMAF_LOG(LOG_INFO, "For current PTS %ld :\n", currFramePTS);
           OMAF_LOG(LOG_INFO, "Outdated PTS %ld from track %d\n", pts, trackID);
           hasPktOutdated = true;
+          if ((pts - currFramePTS) >= (samplesNumPerSeg - (currFramePTS % samplesNumPerSeg)))
+          {
+              moveToNextTimeLine = true;
+              OMAF_LOG(LOG_INFO, "Current segment time line is %ld in tiles stitching !\n", currSegTimeLine);
+              if (0 == ((pts - currFramePTS) % samplesNumPerSeg))
+              {
+                  currSegTimeLine += (pts - currFramePTS) / samplesNumPerSeg;
+              }
+              else
+              {
+                  currSegTimeLine += ((pts - currFramePTS) / samplesNumPerSeg + 1);
+              }
+              OMAF_LOG(LOG_INFO, "After larger PTS occurs, current segment time line is changed to %ld !\n", currSegTimeLine);
+          }
           currFramePTS = pts;
+          skipFrames = true;
           break;
         } else if (pts < currFramePTS) {
 
@@ -756,7 +801,7 @@ int32_t OmafMediaStream::TilesStitching() {
           {
               while((!pts) && (currWaitTimes < waitTimes) && (m_status != STATUS_STOPPED))
               {
-                  usleep(50);
+                  usleep(((m_pStreamInfo->segmentDuration * 1000000) / 2) / waitTimes);
                   currWaitTimes++;
                   pts = omaf_reader_mgr_->GetOldestPacketPTSForTrack(trackID);
               }
@@ -769,12 +814,53 @@ int32_t OmafMediaStream::TilesStitching() {
               {
                   OMAF_LOG(LOG_INFO, "After wait for a moment, outdated PTS %ld from track %d\n", pts, trackID);
                   hasPktOutdated = true;
+
+                  if ((pts - currFramePTS) >= (samplesNumPerSeg - (currFramePTS % samplesNumPerSeg)))
+                  {
+                      moveToNextTimeLine = true;
+                      OMAF_LOG(LOG_INFO, "Current segment time line is %ld in tiles stitching !\n", currSegTimeLine);
+                      if (0 == ((pts - currFramePTS) % samplesNumPerSeg))
+                      {
+                          currSegTimeLine += (pts - currFramePTS) / samplesNumPerSeg;
+                      }
+                      else
+                      {
+                          currSegTimeLine += ((pts - currFramePTS) / samplesNumPerSeg + 1);
+                      }
+
+                      OMAF_LOG(LOG_INFO, "After larger PTS occurs, current segment time line is changed to %ld !\n", currSegTimeLine);
+                  }
                   currFramePTS = pts;
+                  skipFrames = true;
                   break;
               } else if (pts < currFramePTS) {
                   omaf_reader_mgr_->RemoveOutdatedPacketForTrack(trackID, currFramePTS);
                   pts = omaf_reader_mgr_->GetOldestPacketPTSForTrack(trackID);
-                  if (pts != currFramePTS)
+                  if (pts > currFramePTS)
+                  {
+                      OMAF_LOG(LOG_INFO, "After wait for a moment, outdated PTS %ld from track %d\n", pts, trackID);
+                      hasPktOutdated = true;
+
+                      if ((pts - currFramePTS) >= (samplesNumPerSeg - (currFramePTS % samplesNumPerSeg)))
+                      {
+                          moveToNextTimeLine = true;
+                          OMAF_LOG(LOG_INFO, "Current segment time line is %ld in tiles stitching !\n", currSegTimeLine);
+                          if (0 == ((pts - currFramePTS) % samplesNumPerSeg))
+                          {
+                              currSegTimeLine += (pts - currFramePTS) / samplesNumPerSeg;
+                          }
+                          else
+                          {
+                              currSegTimeLine += ((pts - currFramePTS) / samplesNumPerSeg + 1);
+                          }
+
+                          OMAF_LOG(LOG_INFO, "After larger PTS occurs, current segment time line is changed to %ld !\n", currSegTimeLine);
+                      }
+                      currFramePTS = pts;
+                      skipFrames = true;
+                      break;
+                  }
+                  else if (pts < currFramePTS)
                   {
                       OMAF_LOG(LOG_INFO, "After waiting for a while, pts %ld still diff from current PTS %ld\n", pts, currFramePTS);
                       hasPktOutdated = true;
@@ -784,9 +870,33 @@ int32_t OmafMediaStream::TilesStitching() {
           } else {
               omaf_reader_mgr_->RemoveOutdatedPacketForTrack(trackID, currFramePTS);
               pts = omaf_reader_mgr_->GetOldestPacketPTSForTrack(trackID);
-              if (pts != currFramePTS)
+
+              if (pts > currFramePTS)
               {
-                  OMAF_LOG(LOG_INFO, "Still can't get tile for PTS %ld while gotten PTS is %ld\n", currFramePTS, pts);
+                  OMAF_LOG(LOG_INFO, "After wait for a moment, outdated PTS %ld from track %d\n", pts, trackID);
+                  hasPktOutdated = true;
+
+                  if ((pts - currFramePTS) >= (samplesNumPerSeg - (currFramePTS % samplesNumPerSeg)))
+                  {
+                      moveToNextTimeLine = true;
+                      OMAF_LOG(LOG_INFO, "Current segment time line is %ld in tiles stitching !\n", currSegTimeLine);
+                      if (0 == ((pts - currFramePTS) % samplesNumPerSeg))
+                      {
+                          currSegTimeLine += (pts - currFramePTS) / samplesNumPerSeg;
+                      }
+                      else
+                      {
+                          currSegTimeLine += ((pts - currFramePTS) / samplesNumPerSeg + 1);
+                      }
+                      OMAF_LOG(LOG_INFO, "After larger PTS occurs, current segment time line is changed to %ld !\n", currSegTimeLine);
+                  }
+                  currFramePTS = pts;
+                  skipFrames = true;
+                  break;
+              }
+              else if (pts < currFramePTS)
+              {
+                  OMAF_LOG(LOG_INFO, "After waiting for a while, pts %ld still diff from current PTS %ld\n", pts, currFramePTS);
                   hasPktOutdated = true;
                   break;
               }
@@ -794,52 +904,17 @@ int32_t OmafMediaStream::TilesStitching() {
         }
       }
 
-      if ((currFramePTS == 0) || (as_it == mapSelectedAS.begin()) )
-      {
-        ret = omaf_reader_mgr_->GetNextPacket(trackID, onePacket, m_needParams);
-      } else {
-        ret = omaf_reader_mgr_->GetNextPacketWithPTS(trackID, currFramePTS, onePacket, m_needParams);
-      }
+      ret = omaf_reader_mgr_->GetNextPacketWithPTS(trackID, currFramePTS, onePacket, m_needParams);
 
+      OMAF_LOG(LOG_INFO, "Get next packet !\n");
       currWaitTimes = 0;
-      std::map<int, OmafAdaptationSet*> mapSelectedAS1;
-      {
-        std::lock_guard<std::mutex> lock(mCurrentMutex);
-        mapSelectedAS1 = updatedSelectedAS;//m_selectedTileTracks;
-      }
-      bool isPoseChanged = false;
-      isPoseChanged = IsSelectionChanged(mapSelectedAS, mapSelectedAS1);
-      if ((ret == ERROR_NULL_PACKET) && isPoseChanged) {
-        hasPoseChanged = true;
-        break;
-      }
 
       while ((ret == ERROR_NULL_PACKET) && (currWaitTimes < waitTimes) && m_status != STATUS_STOPPED) {
-        std::map<int, OmafAdaptationSet*> mapSelectedAS2;
-        {
-          std::lock_guard<std::mutex> lock(mCurrentMutex);
-          mapSelectedAS2 = updatedSelectedAS;//m_selectedTileTracks;
-        }
-        bool isPoseChanged1 = false;
-        isPoseChanged1 = IsSelectionChanged(mapSelectedAS, mapSelectedAS2);
-        if (isPoseChanged1) {
-          hasPoseChanged = true;
-          break;
-        }
 
-        usleep(1000);
+        usleep((m_pStreamInfo->segmentDuration * 1000000) / waitTimes);
         currWaitTimes++;
-        if ((currFramePTS == 0) || (as_it == mapSelectedAS.begin()) )
-        {
-          ret = omaf_reader_mgr_->GetNextPacket(trackID, onePacket, m_needParams);
-        } else {
-          OMAF_LOG(LOG_INFO, "To get packet %ld for track %d\n", currFramePTS, trackID);
-          ret = omaf_reader_mgr_->GetNextPacketWithPTS(trackID, currFramePTS, onePacket, m_needParams);
-        }
-      }
-      if (hasPoseChanged) {
-        prevPoseChanged = true;
-        break;
+        OMAF_LOG(LOG_INFO, "To get packet %ld for track %d\n", currFramePTS, trackID);
+        ret = omaf_reader_mgr_->GetNextPacketWithPTS(trackID, currFramePTS, onePacket, m_needParams);
       }
 
       if (ret == ERROR_NONE) {
@@ -849,17 +924,20 @@ int32_t OmafMediaStream::TilesStitching() {
           selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
           break;
         }
+        samplesNumPerSeg = omaf_reader_mgr_->GetSamplesNumPerSegment();
         if (as_it == mapSelectedAS.begin()) {
-          currFramePTS = onePacket->GetPTS();
           segmentEnded = onePacket->GetSegmentEnded();
           OMAF_LOG(LOG_INFO, "For frame %ld, segmentEnded %d\n", currFramePTS, segmentEnded);
         }
         OMAF_LOG(LOG_INFO, "To insert packet %ld for track %d\n", currFramePTS, trackID);
         selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
+      } else if (ret == ERROR_NULL_PACKET) {
+        hasPktOutdated = true;
+        break;
       }
     }
 
-    if (hasPoseChanged || hasPktOutdated) {
+    if (hasPktOutdated) {
       std::list<MediaPacket *> allPackets;
       for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end();) {
         MediaPacket* pkt = it1->second;
@@ -884,9 +962,17 @@ int32_t OmafMediaStream::TilesStitching() {
               omaf_reader_mgr_->RemoveOutdatedPacketForTrack(trkID, (currFramePTS));
           }
       }
+      if (beginNewSeg && !skipFrames)
+      {
+          OMAF_LOG(LOG_INFO, "Current frame %ld is key frame but has outdated, drop frames till next key frame !\n", currFramePTS);
+          currFramePTS += samplesNumPerSeg;
+          skipFrames = true;
+          usleep((m_pStreamInfo->segmentDuration * 1000000) / 2);
+      }
 
       continue;
     }
+
     OMAF_LOG(LOG_INFO, "Start to stitch packets! and pts is %ld\n", currFramePTS);
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
@@ -896,6 +982,7 @@ int32_t OmafMediaStream::TilesStitching() {
 #endif
     if (!isEOS && (selectedPackets.size() != mapSelectedAS.size()) && (currWaitTimes >= waitTimes)) {
       OMAF_LOG(LOG_INFO, "Incorrect selected tile tracks packets number for tiles stitching !\n");
+
       std::list<MediaPacket *> allPackets;
       for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end();) {
         MediaPacket* pkt = it1->second;
@@ -1008,7 +1095,6 @@ int32_t OmafMediaStream::TilesStitching() {
     OMAF_LOG(LOG_INFO, "packet pts is %ld and video number is %lld\n", one->GetPTS(), mergedPackets.size());
     selectedPackets.clear();
     prevPoseChanged = false;
-    prevSelectedAS = mapSelectedAS;
   }
 
   return ERROR_NONE;
