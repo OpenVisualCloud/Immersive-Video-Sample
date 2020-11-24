@@ -190,6 +190,7 @@ class OmafSegmentNode : public VCD::NonCopyable {
   size_t dependsSize() const noexcept { return depends_size_; }
   bool isExtractor() const noexcept { return bExtractor_; }
   bool isReady() const noexcept;
+  size_t GetSamplesNum() { return samples_num_; };
 
   // FIXME, who own the media packets
   // const std::list<MediaPacket *> packets() const { return media_packets_; }
@@ -259,6 +260,8 @@ class OmafSegmentNode : public VCD::NonCopyable {
   const size_t depends_size_ = 0;
 
   const bool bExtractor_ = false;
+
+  size_t samples_num_ = 0;
 };
 
 uint32_t buildDashTrackId(uint32_t id) noexcept { return id & static_cast<uint32_t>(0xffff); }
@@ -474,7 +477,7 @@ OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPa
         std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
         while (it != nodeset.segment_nodes_.end()) {
           auto &node = *it;
-          OMAF_LOG(LOG_INFO, "Require trackid=%u, node trackid=%u\n", trackID, node->getTrackId());
+          //OMAF_LOG(LOG_INFO, "Require trackid=%u, node trackid=%u\n", trackID, node->getTrackId());
           if (node->getTrackId() == trackID) {
             ret = node->getPacket(pPacket, requireParams);
             if (ret == ERROR_NONE) {
@@ -1060,6 +1063,7 @@ void OmafReaderManager::threadRunner() noexcept {
 #endif
 #endif
       OMAF_STATUS ret = ready_dash_node->parse();
+      samples_num_per_seg_ = ready_dash_node->GetSamplesNum();
 
       // 3. move the parsed segment/dash_node to parsed list
       if (ret == ERROR_NONE) {
@@ -1435,6 +1439,8 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
       OMAF_LOG(LOG_ERROR, "Failed to find the sample range for segment. %s\n", this->to_string().c_str());
       return ERROR_INVALID;
     }
+    OMAF_LOG(LOG_INFO, "%s has samples %lld\n", this->to_string().c_str(), (sample_end - sample_begin));
+    samples_num_ = sample_end - sample_begin;
 #if 0
     if (sample_begin < 1) {
       LOG(FATAL) << "The begin sample id is less than 1, whose value =" << sample_begin << "." << this->to_string()
