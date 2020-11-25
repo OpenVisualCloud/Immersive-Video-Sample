@@ -1437,7 +1437,7 @@ int32_t TgenViewport::isInsideByAngle()
     if (fabs(fPitch - 90) <= polarDetectThresh) {
         topPoint.vertPos = 90;
         if (hFOV*hFOV + vFOV*vFOV < 180*180)
-            bottomPoint.vertPos = 90 - sqrt(hFOV*hFOV+vFOV*vFOV)/2;
+            bottomPoint.vertPos = fmin(bottomPoint.vertPos, 90 - sqrt(hFOV*hFOV+vFOV*vFOV)/2);
 	else
             bottomPoint.vertPos = 0;
     }
@@ -1447,7 +1447,7 @@ int32_t TgenViewport::isInsideByAngle()
     if (fabs(fPitch + 90) <= polarDetectThresh) {
         bottomPoint.vertPos = -90;
         if (hFOV*hFOV + vFOV*vFOV < 180*180)
-            topPoint.vertPos = -90 + sqrt(hFOV*hFOV+vFOV*vFOV)/2;
+            topPoint.vertPos = fmax(topPoint.vertPos, -90+sqrt(hFOV*hFOV+vFOV*vFOV)/2);
         else
             topPoint.vertPos = 0;
     }
@@ -1456,11 +1456,11 @@ int32_t TgenViewport::isInsideByAngle()
 
     leftPoint.vertPos = sasin(scos(hFOV / 360.f * S_PI) * ssin(fPitch / 180.f * S_PI)) / S_PI * 180.f;
     float maxhFOV;
-    float temp = sasin(scos(hFOV/360.f*S_PI) * ssin((fPitch+vFOV/2)));
+    float temp = sasin(scos(hFOV/360.f*S_PI) * ssin((fPitch + vFOV/2) / 180.f * S_PI));
     temp = ssin(hFOV/360.f*S_PI) / scos (temp);
     if (fabs(temp) < 1.0f)
         maxhFOV	= sasin(temp);
-    temp = sasin(scos(hFOV / 360.f * S_PI) * ssin((fPitch - vFOV / 2)));
+    temp = sasin(scos(hFOV / 360.f * S_PI) * ssin((fPitch - vFOV / 2) / 180.f * S_PI));
     temp = ssin(hFOV / 360.f * S_PI) / scos(temp);
     if (fabs(temp) < 1.0f)
         maxhFOV = fmax(maxhFOV, sasin(temp));
@@ -1485,6 +1485,12 @@ int32_t TgenViewport::isInsideByAngle()
     }
     else
         rightPoint.horzPos = 180;
+
+    /* Modify left/right boundary when the updated viewpoint is very closed to polar */
+    if (fabs(bottomPoint.vertPos + 90) <= fEpsi || fabs(topPoint.vertPos - 90) <= fEpsi) {
+        leftPoint.horzPos = -180;
+        rightPoint.horzPos = 180;
+    }
 
     topPoint.horzPos = fYaw;
     bottomPoint.horzPos = fYaw;
