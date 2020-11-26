@@ -706,16 +706,30 @@ OMAF_STATUS OmafReaderManager::GetPacketQueueSize(uint32_t trackID, size_t &size
 }
 uint64_t OmafReaderManager::GetOldestPacketPTSForTrack(int trackId) {
   try {
+    uint64_t oldestPTS = 0;
+    bool findPTS = false;
     std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
     for (auto &nodeset : segment_parsed_list_) {
       for (auto &node : nodeset.segment_nodes_) {
         if (node->getTrackId() == static_cast<uint32_t>(trackId)) {
-          return node->getPTS();
+          //return node->getPTS();
+          if (!findPTS)
+          {
+            oldestPTS = node->getPTS();
+            findPTS = true;
+          }
+          else
+          {
+            if (oldestPTS > node->getPTS())
+            {
+              oldestPTS = node->getPTS();
+            }
+          }
         }
       }
     }
 
-    return 0;
+    return oldestPTS;
   } catch (const std::exception &ex) {
     OMAF_LOG(LOG_ERROR, "Failed to read packet size for trackid=%u, ex: %s\n", trackId, ex.what());
     return 0;
@@ -1063,7 +1077,17 @@ void OmafReaderManager::threadRunner() noexcept {
 #endif
 #endif
       OMAF_STATUS ret = ready_dash_node->parse();
-      samples_num_per_seg_ = ready_dash_node->GetSamplesNum();
+
+      {
+          std::lock_guard<std::mutex> lock(segment_samples_mutex_);
+          std::map<uint64_t, size_t>::iterator it;
+          it = samples_num_per_seg_.find(ready_dash_node->getTimelinePoint());
+          if (it == samples_num_per_seg_.end())
+          {
+              samples_num_per_seg_.insert(std::make_pair(ready_dash_node->getTimelinePoint(), ready_dash_node->GetSamplesNum()));
+          }
+      }
+      //samples_num_per_seg_ = ready_dash_node->GetSamplesNum();
 
       // 3. move the parsed segment/dash_node to parsed list
       if (ret == ERROR_NONE) {
@@ -1439,8 +1463,8 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
       OMAF_LOG(LOG_ERROR, "Failed to find the sample range for segment. %s\n", this->to_string().c_str());
       return ERROR_INVALID;
     }
-    OMAF_LOG(LOG_INFO, "%s has samples %lld\n", this->to_string().c_str(), (sample_end - sample_begin));
     samples_num_ = sample_end - sample_begin;
+    OMAF_LOG(LOG_INFO, "segment %s has samples num %ld\n", this->to_string().c_str(), samples_num_);
 #if 0
     if (sample_begin < 1) {
       LOG(FATAL) << "The begin sample id is less than 1, whose value =" << sample_begin << "." << this->to_string()
@@ -1581,6 +1605,7 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
       packet->SetSegID(track_info->sampleProperties[sample].segmentId);
       // media_packets_.push_back(std::move(packet));
       media_packets_.push(packet);
+      OMAF_LOG(LOG_INFO, "Push packet with PTS %ld for track %d\n", packet->GetPTS(), segment_->GetTrackId());
     }
     return ERROR_NONE;
   } catch (const std::exception &ex) {

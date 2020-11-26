@@ -125,7 +125,21 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
 
   uint64_t GetOldestPacketPTSForTrack(int trackId);
   void RemoveOutdatedPacketForTrack(int trackId, uint64_t currPTS);
-  size_t GetSamplesNumPerSegment() { return samples_num_per_seg_; };
+  size_t GetSamplesNumPerSegmentForTimeLine(uint64_t currTimeLine)
+  {
+      size_t samples_num = 0;
+      {
+          std::lock_guard<std::mutex> lock(segment_samples_mutex_);
+          std::map<uint64_t, size_t>::iterator it;
+          it = samples_num_per_seg_.find(currTimeLine);
+          if (it != samples_num_per_seg_.end())
+          {
+              samples_num = it->second;
+          }
+      }
+
+      return samples_num;
+  }
 
  private:
   void threadRunner() noexcept;
@@ -166,7 +180,9 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
   std::thread segment_reader_worker_;
   bool breader_working_ = false;
 
-  size_t samples_num_per_seg_ = 0;
+  std::mutex segment_samples_mutex_;
+  std::map<uint64_t, size_t> samples_num_per_seg_;
+  //size_t samples_num_per_seg_ = 0;
   std::shared_ptr<OmafReader> reader_;
 
   std::mutex segment_opening_mutex_;
