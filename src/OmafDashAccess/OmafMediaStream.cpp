@@ -655,32 +655,32 @@ int32_t OmafMediaStream::TilesStitching() {
   bool prevPoseChanged = false;
   std::map<int, OmafAdaptationSet*> prevSelectedAS;
   bool segmentEnded = false;
-  bool moveToNextTimeLine = false;
   size_t samplesNumPerSeg = 0;
+  size_t aveSamplesNumPerSeg = 0;
   bool skipFrames = false;
   bool beginNewSeg = false;
   while (!isEOS && m_status != STATUS_STOPPED) {
     beginNewSeg = false;
 
-    if (samplesNumPerSeg && !skipFrames)
+    if (aveSamplesNumPerSeg && !skipFrames)
         currFramePTS++;
 
     skipFrames = false;
-    if (samplesNumPerSeg)
+    if (aveSamplesNumPerSeg)
     {
-        if ((currFramePTS / samplesNumPerSeg + 1) > currSegTimeLine)
+        if ((currFramePTS / aveSamplesNumPerSeg + 1) > currSegTimeLine)
         {
             beginNewSeg = true;
         }
-        currSegTimeLine = currFramePTS / samplesNumPerSeg + 1;
+        currSegTimeLine = currFramePTS / aveSamplesNumPerSeg + 1;
     }
     // begin to generate tiles merged media packets for each frame
     OMAF_LOG(LOG_INFO, "Begin stitch frame %ld from segment %ld\n", currFramePTS, currSegTimeLine);
-
+    OMAF_LOG(LOG_INFO, "Begin new seg %d and samples num per seg %ld\n", beginNewSeg, samplesNumPerSeg);
     uint32_t currWaitTimes = 0;
     std::map<int, OmafAdaptationSet*> updatedSelectedAS;
 
-    if (prevSelectedAS.empty() || beginNewSeg || moveToNextTimeLine)
+    if (prevSelectedAS.empty() || beginNewSeg)
     {
         if (prevSelectedAS.empty())
         {
@@ -756,8 +756,6 @@ int32_t OmafMediaStream::TilesStitching() {
         OMAF_LOG(LOG_INFO, "For frame next to frame %ld, Use last viewport !\n", currFramePTS);
     }
 
-    //beginNewSeg = false;
-    moveToNextTimeLine = false;
     prevPoseChanged = prevSelectedAS.empty() ? false : IsSelectionChanged(mapSelectedAS, prevSelectedAS);
 
     prevSelectedAS = mapSelectedAS;
@@ -778,21 +776,20 @@ int32_t OmafMediaStream::TilesStitching() {
           OMAF_LOG(LOG_INFO, "For current PTS %ld :\n", currFramePTS);
           OMAF_LOG(LOG_INFO, "Outdated PTS %ld from track %d\n", pts, trackID);
           hasPktOutdated = true;
-          if ((pts - currFramePTS) >= (samplesNumPerSeg - (currFramePTS % samplesNumPerSeg)))
+          if (samplesNumPerSeg == aveSamplesNumPerSeg)
           {
-              moveToNextTimeLine = true;
-              OMAF_LOG(LOG_INFO, "Current segment time line is %ld in tiles stitching !\n", currSegTimeLine);
-              if (0 == ((pts - currFramePTS) % samplesNumPerSeg))
+              if (pts % samplesNumPerSeg)
               {
-                  currSegTimeLine += (pts - currFramePTS) / samplesNumPerSeg;
+                  pts = ((pts / samplesNumPerSeg) + 1) * samplesNumPerSeg;
               }
-              else
-              {
-                  currSegTimeLine += ((pts - currFramePTS) / samplesNumPerSeg + 1);
-              }
-              OMAF_LOG(LOG_INFO, "After larger PTS occurs, current segment time line is changed to %ld !\n", currSegTimeLine);
           }
+          else //most likely current segment is the last segment
+          {
+              pts = aveSamplesNumPerSeg * (currSegTimeLine - 1) + samplesNumPerSeg;
+          }
+
           currFramePTS = pts;
+          beginNewSeg = true;
           skipFrames = true;
           break;
         } else if (pts < currFramePTS) {
@@ -814,22 +811,18 @@ int32_t OmafMediaStream::TilesStitching() {
               {
                   OMAF_LOG(LOG_INFO, "After wait for a moment, outdated PTS %ld from track %d\n", pts, trackID);
                   hasPktOutdated = true;
-
-                  if ((pts - currFramePTS) >= (samplesNumPerSeg - (currFramePTS % samplesNumPerSeg)))
+                  if (samplesNumPerSeg == aveSamplesNumPerSeg)
                   {
-                      moveToNextTimeLine = true;
-                      OMAF_LOG(LOG_INFO, "Current segment time line is %ld in tiles stitching !\n", currSegTimeLine);
-                      if (0 == ((pts - currFramePTS) % samplesNumPerSeg))
+                      if (pts % samplesNumPerSeg)
                       {
-                          currSegTimeLine += (pts - currFramePTS) / samplesNumPerSeg;
+                          pts = ((pts / samplesNumPerSeg) + 1) * samplesNumPerSeg;
                       }
-                      else
-                      {
-                          currSegTimeLine += ((pts - currFramePTS) / samplesNumPerSeg + 1);
-                      }
-
-                      OMAF_LOG(LOG_INFO, "After larger PTS occurs, current segment time line is changed to %ld !\n", currSegTimeLine);
                   }
+                  else //most likely current segment is the last segment
+                  {
+                      pts = aveSamplesNumPerSeg * (currSegTimeLine - 1) + samplesNumPerSeg;
+                  }
+
                   currFramePTS = pts;
                   skipFrames = true;
                   break;
@@ -840,22 +833,18 @@ int32_t OmafMediaStream::TilesStitching() {
                   {
                       OMAF_LOG(LOG_INFO, "After wait for a moment, outdated PTS %ld from track %d\n", pts, trackID);
                       hasPktOutdated = true;
-
-                      if ((pts - currFramePTS) >= (samplesNumPerSeg - (currFramePTS % samplesNumPerSeg)))
+                      if (samplesNumPerSeg == aveSamplesNumPerSeg)
                       {
-                          moveToNextTimeLine = true;
-                          OMAF_LOG(LOG_INFO, "Current segment time line is %ld in tiles stitching !\n", currSegTimeLine);
-                          if (0 == ((pts - currFramePTS) % samplesNumPerSeg))
+                          if (pts % samplesNumPerSeg)
                           {
-                              currSegTimeLine += (pts - currFramePTS) / samplesNumPerSeg;
+                              pts = ((pts / samplesNumPerSeg) + 1) * samplesNumPerSeg;
                           }
-                          else
-                          {
-                              currSegTimeLine += ((pts - currFramePTS) / samplesNumPerSeg + 1);
-                          }
-
-                          OMAF_LOG(LOG_INFO, "After larger PTS occurs, current segment time line is changed to %ld !\n", currSegTimeLine);
                       }
+                      else //most likely current segment is the last segment
+                      {
+                          pts = aveSamplesNumPerSeg * (currSegTimeLine - 1) + samplesNumPerSeg;
+                      }
+
                       currFramePTS = pts;
                       skipFrames = true;
                       break;
@@ -875,21 +864,18 @@ int32_t OmafMediaStream::TilesStitching() {
               {
                   OMAF_LOG(LOG_INFO, "After wait for a moment, outdated PTS %ld from track %d\n", pts, trackID);
                   hasPktOutdated = true;
-
-                  if ((pts - currFramePTS) >= (samplesNumPerSeg - (currFramePTS % samplesNumPerSeg)))
+                  if (samplesNumPerSeg == aveSamplesNumPerSeg)
                   {
-                      moveToNextTimeLine = true;
-                      OMAF_LOG(LOG_INFO, "Current segment time line is %ld in tiles stitching !\n", currSegTimeLine);
-                      if (0 == ((pts - currFramePTS) % samplesNumPerSeg))
+                      if (pts % samplesNumPerSeg)
                       {
-                          currSegTimeLine += (pts - currFramePTS) / samplesNumPerSeg;
+                          pts = ((pts / samplesNumPerSeg) + 1) * samplesNumPerSeg;
                       }
-                      else
-                      {
-                          currSegTimeLine += ((pts - currFramePTS) / samplesNumPerSeg + 1);
-                      }
-                      OMAF_LOG(LOG_INFO, "After larger PTS occurs, current segment time line is changed to %ld !\n", currSegTimeLine);
                   }
+                  else //most likely current segment is the last segment
+                  {
+                      pts = aveSamplesNumPerSeg * (currSegTimeLine - 1) + samplesNumPerSeg;
+                  }
+
                   currFramePTS = pts;
                   skipFrames = true;
                   break;
@@ -924,7 +910,11 @@ int32_t OmafMediaStream::TilesStitching() {
           selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
           break;
         }
-        samplesNumPerSeg = omaf_reader_mgr_->GetSamplesNumPerSegment();
+        samplesNumPerSeg = omaf_reader_mgr_->GetSamplesNumPerSegmentForTimeLine(currSegTimeLine);
+        if (!aveSamplesNumPerSeg)
+        {
+            aveSamplesNumPerSeg = samplesNumPerSeg;
+        }
         if (as_it == mapSelectedAS.begin()) {
           segmentEnded = onePacket->GetSegmentEnded();
           OMAF_LOG(LOG_INFO, "For frame %ld, segmentEnded %d\n", currFramePTS, segmentEnded);
@@ -933,6 +923,7 @@ int32_t OmafMediaStream::TilesStitching() {
         selectedPackets.insert(std::make_pair((uint32_t)(trackID), onePacket));
       } else if (ret == ERROR_NULL_PACKET) {
         hasPktOutdated = true;
+        OMAF_LOG(LOG_INFO, "Still can't get frame %ld for track %d\n", currFramePTS, trackID);
         break;
       }
     }
@@ -962,12 +953,30 @@ int32_t OmafMediaStream::TilesStitching() {
               omaf_reader_mgr_->RemoveOutdatedPacketForTrack(trkID, (currFramePTS));
           }
       }
-      if (beginNewSeg && !skipFrames)
+      if (!skipFrames)
       {
-          OMAF_LOG(LOG_INFO, "Current frame %ld is key frame but has outdated, drop frames till next key frame !\n", currFramePTS);
-          currFramePTS += samplesNumPerSeg;
-          skipFrames = true;
-          usleep((m_pStreamInfo->segmentDuration * 1000000) / 2);
+          if (beginNewSeg)
+          {
+              OMAF_LOG(LOG_INFO, "Current frame %ld is key frame but has outdated, drop frames till next key frame !\n", currFramePTS);
+              currFramePTS += samplesNumPerSeg;
+              skipFrames = true;
+              usleep((m_pStreamInfo->segmentDuration * 1000000) / 2);
+          }
+          else
+          {
+              OMAF_LOG(LOG_INFO, "Frame %ld can't be stitched, move to next segment !\n", currFramePTS);
+
+              if (samplesNumPerSeg == aveSamplesNumPerSeg)
+              {
+                  currFramePTS = ((currFramePTS / samplesNumPerSeg) + 1) * samplesNumPerSeg;
+              }
+              else //most likely current segment is the last segment
+              {
+                  currFramePTS = aveSamplesNumPerSeg * (currSegTimeLine - 1) + samplesNumPerSeg;
+              }
+              skipFrames = true;
+              usleep((m_pStreamInfo->segmentDuration * 1000000) / 2);
+          }
       }
 
       continue;
