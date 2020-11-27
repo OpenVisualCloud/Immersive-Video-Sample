@@ -16,6 +16,11 @@ config("my_config") {
       "-Werror",
       "-std=c++11",
     ]
+
+    include_dirs = [
+      ".",
+      "../plugins/360SCVP_Plugins/TileSelection_Plugins",
+    ]
 }
 
 static_library("lib360SCVP") {
@@ -32,8 +37,10 @@ static_library("lib360SCVP") {
       "360SCVPHevcTileMerge.cpp",
       "360SCVPHevcTilestream.cpp",
       "360SCVPImpl.cpp",
+      "360SCVPLog.cpp",
       "360SCVPViewPort.cpp",
       "360SCVPViewportImpl.cpp",
+      "../utils/Log.cpp",
     ]
 }
 
