@@ -36,6 +36,8 @@
 #ifndef GLOGWRAPPER_H
 #define GLOGWRAPPER_H
 
+#if 0
+
 #include "glog/logging.h"
 #include <unistd.h>
 #include <sys/types.h>
@@ -82,6 +84,13 @@ class GlogWrapper {
 
  private:
 };
+
+#else
+
+#include <iostream>
+#define LOG(x) std::cout
+
+#endif
 
 #endif /* GLOGWRAPPER_H */
 
