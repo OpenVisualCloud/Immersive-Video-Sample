@@ -115,7 +115,7 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
                 for ( ; iter != oneTracks.end(); iter++)
                 {
                     // ignore when key is identical and have tracks selection limitation.
-                    if (selectedTracks.size() <= rowSize * colSize / 2)
+                    if (selectedTracks.size() <= rowSize * colSize / 2 || selectedTracks.size() < oneTracks.size())
                     {
                         selectedTracks.insert(*iter);
                     }
@@ -182,7 +182,7 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
 
         previousPose = mPose;
 
-        mPose = mPoseHistory.front().pose;
+        mPose = mPoseHistory.front();
         mPoseHistory.pop_front();
 
         if(!mPose)
@@ -381,7 +381,7 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
 
         previousPose = mPose;
 
-        mPose = mPoseHistory.front().pose;
+        mPose = mPoseHistory.front();
         mPoseHistory.pop_front();
 
         if(!mPose)

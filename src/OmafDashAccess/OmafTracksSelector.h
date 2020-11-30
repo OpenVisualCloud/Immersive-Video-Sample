@@ -108,7 +108,7 @@ private:
   int InitializePredictPlugins();
 
  protected:
-  std::list<PoseInfo> mPoseHistory;
+  std::list<HeadPose*> mPoseHistory;
   int mSize;
   std::mutex mMutex;
   HeadPose *mPose;

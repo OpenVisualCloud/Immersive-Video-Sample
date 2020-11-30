@@ -109,7 +109,7 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
 
     previousPose = mPose;
 
-    mPose = mPoseHistory.front().pose;
+    mPose = mPoseHistory.front();
     mPoseHistory.pop_front();
 
     if (!mPose) {
@@ -343,7 +343,7 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   HeadPose* previousPose = mPose;
   {
     std::lock_guard<std::mutex> lock(mMutex);
-    mPose = mPoseHistory.front().pose;
+    mPose = mPoseHistory.front();
     mPoseHistory.pop_front();
     if (!mPose) {
       return extractors;
@@ -390,7 +390,7 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   ViewportAngle *angle = predict_angles[first_predict_pts];
   predictPose->yaw = angle->yaw;
   predictPose->pitch = angle->pitch;
-  OMAF_LOG(LOG_INFO, "Start to select extractor tracks!\n");
+  OMAF_LOG(LOG_INFO, "Start to select extractor tracks by prediction!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
         // trace
@@ -409,6 +409,10 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
     tracepoint(mthq_tp_provider, T2_detect_pose_change, 1);
 #endif
 #endif
+  }
+  for (auto pre_angle : predict_angles)
+  {
+    SAFE_DELETE(pre_angle.second);
   }
   SAFE_DELETE(previousPose);
   SAFE_DELETE(predictPose);
