@@ -57,8 +57,8 @@ OmafTracksSelector::~OmafTracksSelector() {
   SAFE_DELETE(mParamViewport);
 
   if (mPoseHistory.size()) {
-    for (auto &p : mPoseHistory) {
-      SAFE_DELETE(p.pose);
+    for (auto pose : mPoseHistory) {
+      SAFE_DELETE(pose);
     }
 
     mPoseHistory.clear();
@@ -160,16 +160,15 @@ int OmafTracksSelector::UpdateViewport(HeadPose *pose) {
 
   std::lock_guard<std::mutex> lock(mMutex);
 
-  PoseInfo pi;
-  pi.pose = new HeadPose;
-  if (!(pi.pose)) return ERROR_NULL_PTR;
-  memcpy_s(pi.pose, sizeof(HeadPose), pose, sizeof(HeadPose));
-  std::chrono::high_resolution_clock clock;
-  pi.time = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-  mPoseHistory.push_front(pi);
+  HeadPose* input_pose = new HeadPose;
+
+  if (!(input_pose)) return ERROR_NULL_PTR;
+  memcpy_s(input_pose, sizeof(HeadPose), pose, sizeof(HeadPose));
+
+  mPoseHistory.push_front(input_pose);
   if (mPoseHistory.size() > (uint32_t)(this->mSize)) {
     auto pit = mPoseHistory.back();
-    SAFE_DELETE(pit.pose);
+    SAFE_DELETE(pit);
     mPoseHistory.pop_back();
   }
   // if using viewport prediction, set real time viewports.
