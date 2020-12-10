@@ -35,7 +35,7 @@
 
 #include "OmafPackage.h"
 #include "VideoStreamPluginAPI.h"
-//#include "AudioStream.h"
+#include "AudioStreamPluginAPI.h"
 #include "DefaultSegmentation.h"
 
 VCD_NS_BEGIN
@@ -46,8 +46,9 @@ OmafPackage::OmafPackage()
     m_segmentation = NULL;
     m_extractorTrackMan = NULL;
     m_isSegmentationStarted = false;
-    m_threadId = 0;
-    //m_videoStream = NULL;
+    m_videoThreadId = 0;
+    m_hasAudio = false;
+    m_audioThreadId = 0;
 }
 
 OmafPackage::OmafPackage(const OmafPackage& src)
@@ -56,8 +57,9 @@ OmafPackage::OmafPackage(const OmafPackage& src)
     m_segmentation = std::move(src.m_segmentation);
     m_extractorTrackMan = std::move(src.m_extractorTrackMan);
     m_isSegmentationStarted = src.m_isSegmentationStarted;
-    m_threadId = src.m_threadId;
-    //m_videoStream = NULL;
+    m_videoThreadId = src.m_videoThreadId;
+    m_hasAudio      = src.m_hasAudio;
+    m_audioThreadId = src.m_audioThreadId;
 }
 
 OmafPackage& OmafPackage::operator=(OmafPackage&& other)
@@ -66,17 +68,23 @@ OmafPackage& OmafPackage::operator=(OmafPackage&& other)
     m_segmentation = std::move(other.m_segmentation);
     m_extractorTrackMan = std::move(other.m_extractorTrackMan);
     m_isSegmentationStarted = other.m_isSegmentationStarted;
-    m_threadId = other.m_threadId;
-    //m_videoStream = NULL;
+    m_videoThreadId = other.m_videoThreadId;
+    m_hasAudio      = other.m_hasAudio;
+    m_audioThreadId = other.m_audioThreadId;
 
     return *this;
 }
 
 OmafPackage::~OmafPackage()
 {
-    if(m_threadId != 0)
+    if(m_videoThreadId != 0)
     {
-        pthread_join(m_threadId, NULL);
+        pthread_join(m_videoThreadId, NULL);
+    }
+
+    if(m_audioThreadId != 0)
+    {
+        pthread_join(m_audioThreadId, NULL);
     }
 
     DELETE_MEMORY(m_segmentation);
@@ -118,6 +126,23 @@ OmafPackage::~OmafPackage()
                     return;
                 }
                 destroyVS((VideoStream*)(stream));
+            }
+            else if (stream->GetMediaType() == AUDIOTYPE)
+            {
+                DestroyAudioStream* destroyAS = NULL;
+                destroyAS = (DestroyAudioStream*)dlsym(pluginHdl, "Destroy");
+                const char *dlsymErr = dlerror();
+                if (dlsymErr)
+                {
+                    OMAF_LOG(LOG_ERROR, "Failed to load symbol Destroy for codec %d\n", codec);
+                    return;
+                }
+                if (!destroyAS)
+                {
+                    OMAF_LOG(LOG_ERROR, "NULL audio stream destroyer !\n");
+                    return;
+                }
+                destroyAS((AudioStream*)(stream));
             }
         }
 
@@ -220,16 +245,80 @@ int32_t OmafPackage::AddMediaStream(uint8_t streamIdx, BSBuffer *bs)
             OMAF_LOG(LOG_ERROR, "Not supported video codec %d\n", bs->codecId);
             return OMAF_ERROR_INVALID_CODEC;
         }
+    } else if (bs->mediaType == AUDIOTYPE) {
+        m_hasAudio = true;
+        if (bs->codecId == CODEC_ID_AAC)
+        {
+            void *pluginHdl = NULL;
+            std::map<CodecId, void*>::iterator it;
+            it = m_streamPlugins.find(CODEC_ID_AAC);
+            if (it == m_streamPlugins.end())
+            {
+                char aacPluginName[1024] = "/usr/local/lib/libAACAudioStreamProcess.so";
+                pluginHdl = dlopen(aacPluginName, RTLD_LAZY);
+                const char *dlsymErr = dlerror();
+                if (!pluginHdl)
+                {
+                    OMAF_LOG(LOG_ERROR, "Failed to open AAC audio stream plugin %s\n", aacPluginName);
+                    if (dlsymErr)
+                    {
+                        OMAF_LOG(LOG_ERROR, "Get error msg %s\n", dlsymErr);
+                    }
+                    return OMAF_ERROR_DLOPEN;
+                }
+                m_streamPlugins.insert(std::make_pair(CODEC_ID_AAC, pluginHdl));
+            }
+            else
+            {
+                pluginHdl = it->second;
+                if (!pluginHdl)
+                {
+                    OMAF_LOG(LOG_ERROR, "NULL AAC audio stream plugin !\n");
+                    return OMAF_ERROR_NULL_PTR;
+                }
+            }
+
+            CreateAudioStream* createAS = NULL;
+            createAS = (CreateAudioStream*)dlsym(pluginHdl, "Create");
+            const char* dlsymErr1 = dlerror();
+            if (dlsymErr1)
+            {
+                OMAF_LOG(LOG_ERROR, "Failed to load symbol Create: %s\n", dlsymErr1);
+                return OMAF_ERROR_DLSYM;
+            }
+
+            if (!createAS)
+            {
+                OMAF_LOG(LOG_ERROR, "NULL audio stream creator !\n");
+                return OMAF_ERROR_NULL_PTR;
+            }
+
+            AudioStream *as = createAS();
+            if (!as)
+            {
+                OMAF_LOG(LOG_ERROR, "Failed to create AAC audio stream !\n");
+                return OMAF_ERROR_NULL_PTR;
+            }
+
+            ((MediaStream*)as)->SetMediaType(AUDIOTYPE);
+            ((MediaStream*)as)->SetCodecId(CODEC_ID_AAC);
+
+            m_streams.insert(std::make_pair(streamIdx, (MediaStream*)as));
+            int32_t ret = as->Initialize(streamIdx, bs, m_initInfo);
+            if (ret)
+            {
+                OMAF_LOG(LOG_ERROR, "Failed to initialize AAC audio stream !\n");
+                return ret;
+            }
+            OMAF_LOG(LOG_INFO, "Successfully add one audio stream !\n");
+            as = NULL;
+        }
+        else
+        {
+            OMAF_LOG(LOG_ERROR, "Not supported audio codec %d\n", bs->codecId);
+            return OMAF_ERROR_INVALID_CODEC;
+        }
     }
-    //} else if (bs->mediaType == AUDIOTYPE) {
-    //    AudioStream *as = new AudioStream();
-    //    if (!as)
-    //        return OMAF_ERROR_NULL_PTR;
-
-    //    ((MediaStream*)as)->SetMediaType(AUDIOTYPE);
-
-    //    m_streams.insert(std::make_pair(streamIdx, std::move((MediaStream*)as)));
-    //}
 
     return ERROR_NONE;
 }
@@ -270,9 +359,9 @@ int32_t OmafPackage::InitOmafPackage(InitialInfo *initInfo)
     else
         logCallBack = GlogFunction; //default log callback function
 
-    uint8_t videoStreamsNum = initInfo->bsNumVideo;
-    if (!videoStreamsNum)
-        return OMAF_ERROR_VIDEO_NUM;
+    //uint8_t videoStreamsNum = initInfo->bsNumVideo;
+    //if (!videoStreamsNum)
+        //return OMAF_ERROR_VIDEO_NUM;
 
     uint8_t streamsNumTotal = initInfo->bsNumVideo + initInfo->bsNumAudio;
     uint8_t streamIdx = 0;
@@ -311,28 +400,52 @@ int32_t OmafPackage::SetFrameInfo(uint8_t streamIdx, FrameBSInfo *frameInfo)
     if (!stream)
         return OMAF_ERROR_NULL_PTR;
 
-    if (stream->GetMediaType() != VIDEOTYPE)
+    if ((stream->GetMediaType() != VIDEOTYPE) && (stream->GetMediaType() != AUDIOTYPE))
         return OMAF_ERROR_MEDIA_TYPE;
 
-    int32_t ret = ((VideoStream*)stream)->AddFrameInfo(frameInfo);
+    int32_t ret = ERROR_NONE;
+    if (stream->GetMediaType() == VIDEOTYPE)
+    {
+        ret = ((VideoStream*)stream)->AddFrameInfo(frameInfo);
+    }
+    else if (stream->GetMediaType() == AUDIOTYPE)
+    {
+        //OMAF_LOG(LOG_INFO, "To add one audio frame with pts %d\n", frameInfo->pts);
+        ret = ((AudioStream*)stream)->AddFrameInfo(frameInfo);
+    }
+
     if (ret)
         return OMAF_ERROR_ADD_FRAMEINFO;
 
     return ERROR_NONE;
 }
 
-void* OmafPackage::SegmentationThread(void* pThis)
+void* OmafPackage::VideoSegmentationThread(void* pThis)
 {
     OmafPackage *omafPackage = (OmafPackage*)pThis;
 
-    omafPackage->SegmentAllStreams();
+    omafPackage->SegmentAllVideoStreams();
 
     return NULL;
 }
 
-void OmafPackage::SegmentAllStreams()
+void OmafPackage::SegmentAllVideoStreams()
 {
     m_segmentation->VideoSegmentation();
+}
+
+void* OmafPackage::AudioSegmentationThread(void* pThis)
+{
+    OmafPackage *omafPackage = (OmafPackage*)pThis;
+
+    omafPackage->SegmentAllAudioStreams();
+
+    return NULL;
+}
+
+void OmafPackage::SegmentAllAudioStreams()
+{
+    m_segmentation->AudioSegmentation();
 }
 
 int32_t OmafPackage::OmafPacketStream(uint8_t streamIdx, FrameBSInfo *frameInfo)
@@ -340,7 +453,7 @@ int32_t OmafPackage::OmafPacketStream(uint8_t streamIdx, FrameBSInfo *frameInfo)
     int32_t ret = SetFrameInfo(streamIdx, frameInfo);
     if (ret)
         return ret;
-    //printf("m_initInfo->segmentationInfo->needBufedFrames %d \n", m_initInfo->segmentationInfo->needBufedFrames);
+
     if (!m_isSegmentationStarted)
     {
         uint32_t vsNum = 0;
@@ -348,7 +461,7 @@ int32_t OmafPackage::OmafPacketStream(uint8_t streamIdx, FrameBSInfo *frameInfo)
         for (itMS = m_streams.begin(); itMS != m_streams.end(); itMS++)
         {
             MediaStream *stream = itMS->second;
-            if (stream->GetMediaType() == VIDEOTYPE)
+            if (stream && (stream->GetMediaType() == VIDEOTYPE))
             {
                 VideoStream *vs = (VideoStream*)stream;
                 if (vs->GetBufferedFrameNum() >= (uint32_t)(m_initInfo->segmentationInfo->needBufedFrames))
@@ -357,12 +470,33 @@ int32_t OmafPackage::OmafPacketStream(uint8_t streamIdx, FrameBSInfo *frameInfo)
                 }
             }
         }
-        if (vsNum == m_initInfo->bsNumVideo)
+
+        uint32_t asNum = 0;
+        for (itMS = m_streams.begin(); itMS != m_streams.end(); itMS++)
         {
-            ret = pthread_create(&m_threadId, NULL, SegmentationThread, this);
+            MediaStream *stream = itMS->second;
+            if (stream && (stream->GetMediaType() == AUDIOTYPE))
+            {
+                AudioStream *as = (AudioStream*)stream;
+                if (as->GetBufferedFrameNum() >= (uint32_t)(m_initInfo->segmentationInfo->needBufedFrames))
+                {
+                    asNum++;
+                }
+            }
+        }
+
+        if ((vsNum == m_initInfo->bsNumVideo) && (asNum == m_initInfo->bsNumAudio))
+        {
+            ret = pthread_create(&m_videoThreadId, NULL, VideoSegmentationThread, this);
             if (ret)
                 return OMAF_ERROR_CREATE_THREAD;
 
+            if (m_hasAudio)
+            {
+                ret = pthread_create(&m_audioThreadId, NULL, AudioSegmentationThread, this);
+                if (ret)
+                    return OMAF_ERROR_CREATE_THREAD;
+            }
             m_isSegmentationStarted = true;
         }
     }
@@ -377,8 +511,14 @@ int32_t OmafPackage::OmafEndStreams()
         int32_t ret = m_segmentation->VideoEndSegmentation();
         if (ret)
             return ret;
+
+        if (m_hasAudio)
+        {
+            ret = m_segmentation->AudioEndSegmentation();
+            if (ret)
+                return ret;
+        }
     }
-    //pthread_join(m_threadId, NULL);
 
     return ERROR_NONE;
 }

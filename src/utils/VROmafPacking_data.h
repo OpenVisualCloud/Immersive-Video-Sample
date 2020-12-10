@@ -64,6 +64,8 @@ typedef enum
 {
     CODEC_ID_H264 = 0,
     CODEC_ID_H265 = 1,
+
+    CODEC_ID_AAC  = 100,
 }CodecId;
 
 //!
@@ -91,6 +93,9 @@ typedef struct
     CodecId   codecId; //mandatory
     uint64_t  bitRate; //mandatory
     Rational  frameRate; //mandatory
+    uint32_t  audioObjType;
+    uint32_t  sampleRate;
+    uint8_t   channelNum;
 }BSBuffer;
 
 //!

@@ -32,6 +32,7 @@
 //!
 
 #include "VideoStreamPluginAPI.h"
+#include "AudioStreamPluginAPI.h"
 #include "DefaultSegmentation.h"
 #include "../isolib/dash_writer/Fraction.h"
 
@@ -55,16 +56,30 @@ DefaultSegmentation::~DefaultSegmentation()
     {
         TrackSegmentCtx *trackSegCtxs = itTrackCtx->second;
         MediaStream *stream = itTrackCtx->first;
-        VideoStream *vs = (VideoStream*)stream;
-        uint32_t tilesNum = vs->GetTileInRow() * vs->GetTileInCol();
-        for (uint32_t i = 0; i < tilesNum; i++)
+        if (stream && (stream->GetMediaType() == VIDEOTYPE))
         {
-           DELETE_MEMORY(trackSegCtxs[i].initSegmenter);
-           DELETE_MEMORY(trackSegCtxs[i].dashSegmenter);
-        }
+            VideoStream *vs = (VideoStream*)stream;
+            uint32_t tilesNum = vs->GetTileInRow() * vs->GetTileInCol();
+            for (uint32_t i = 0; i < tilesNum; i++)
+            {
+               DELETE_MEMORY(trackSegCtxs[i].initSegmenter);
+               DELETE_MEMORY(trackSegCtxs[i].dashSegmenter);
+            }
 
-        delete[] trackSegCtxs;
-        trackSegCtxs = NULL;
+            delete[] trackSegCtxs;
+            trackSegCtxs = NULL;
+        }
+        else if (stream && (stream->GetMediaType() == AUDIOTYPE))
+        {
+            if (trackSegCtxs)
+            {
+                DELETE_MEMORY(trackSegCtxs->initSegmenter);
+                DELETE_MEMORY(trackSegCtxs->dashSegmenter);
+
+                delete trackSegCtxs;
+                trackSegCtxs = NULL;
+            }
+        }
     }
     m_streamSegCtx.clear();
 
@@ -284,6 +299,7 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
             std::map<uint32_t, VCD::MP4::TrackId> tilesTrackIndex;
             for (uint32_t i = 0; i < tilesNum; i++)
             {
+                trackSegCtxs[i].isAudio = false;
                 trackSegCtxs[i].isExtractorTrack = false;
                 trackSegCtxs[i].tileInfo = &(tilesInfo[i]);
                 trackSegCtxs[i].tileIdx = i;
@@ -317,7 +333,7 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
 
                 trackSegCtxs[i].dashCfg.useSeparatedSidx = false;
                 trackSegCtxs[i].dashCfg.streamsIdx.push_back(it->first);
-                snprintf(trackSegCtxs[i].dashCfg.tileSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, m_trackIdStarter + i);
+                snprintf(trackSegCtxs[i].dashCfg.trackSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, m_trackIdStarter + i);
 
                 //setup DashInitSegmenter
                 trackSegCtxs[i].initSegmenter = new DashInitSegmenter(&(trackSegCtxs[i].dashInitCfg));
@@ -465,6 +481,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             if (!trackSegCtx)
                 return OMAF_ERROR_NULL_PTR;
 
+            trackSegCtx->isAudio = false;
             trackSegCtx->isExtractorTrack = true;
             trackSegCtx->extractorTrackIdx = it1->first;
             trackSegCtx->extractors = extractorTrack->GetAllExtractors();
@@ -551,7 +568,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
 
             trackSegCtx->dashCfg.useSeparatedSidx = false;
             trackSegCtx->dashCfg.streamsIdx.push_back(trackSegCtx->trackIdx.GetIndex());
-            snprintf(trackSegCtx->dashCfg.tileSegBaseName, 1024, "%s%s_track%d", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
+            snprintf(trackSegCtx->dashCfg.trackSegBaseName, 1024, "%s%s_track%d", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
 
             //set up DashInitSegmenter
             trackSegCtx->initSegmenter = new DashInitSegmenter(&(trackSegCtx->dashInitCfg));
@@ -621,6 +638,116 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
     return ERROR_NONE;
 }
 
+int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
+{
+    uint8_t audioId = 0;
+    std::map<uint8_t, MediaStream*>::iterator it;
+    for (it = m_streamMap->begin(); it != m_streamMap->end(); it++)
+    {
+        uint8_t strId = it->first;
+        MediaStream *stream = it->second;
+        if (stream && (stream->GetMediaType() == AUDIOTYPE))
+        {
+            //OMAF_LOG(LOG_INFO, "Begin to construct audio track segmentation context !\n");
+            AudioStream *as = (AudioStream*)stream;
+            uint32_t frequency = as->GetSampleRate();
+            uint8_t chlConfig  = as->GetChannelNum();
+            uint16_t bitRate   = as->GetBitRate();
+            std::vector<uint8_t> packedAudioSpecCfg = as->GetPackedSpecCfg();
+            OMAF_LOG(LOG_INFO, "Audio sample rate %d\n", frequency);
+            OMAF_LOG(LOG_INFO, "Audio channel number %d\n", chlConfig);
+            OMAF_LOG(LOG_INFO, "Audio bit rate %d\n", bitRate);
+            OMAF_LOG(LOG_INFO, "Audio specific configuration packed size %lld\n", packedAudioSpecCfg.size());
+
+            TrackSegmentCtx *trackSegCtx = new TrackSegmentCtx;
+            if (!trackSegCtx)
+                return OMAF_ERROR_NULL_PTR;
+
+            trackSegCtx->isAudio          = true;
+            trackSegCtx->isExtractorTrack = false;
+            trackSegCtx->tileInfo         = NULL;
+            trackSegCtx->tileIdx          = 0;
+            trackSegCtx->extractorTrackIdx = 0;
+            trackSegCtx->extractors        = NULL;
+            trackSegCtx->trackIdx          = (uint64_t)(DEFAULT_AUDIOTRACK_TRACKIDBASE + audioId);
+
+            TrackConfig trackConfig{};
+            trackConfig.meta.trackId = trackSegCtx->trackIdx;
+            trackConfig.meta.timescale = VCD::MP4::FractU64(1, frequency);//m_frameRate.den, m_frameRate.num * 1000); //maybe need to be changed later
+            trackConfig.meta.type = VCD::MP4::TypeOfMedia::Audio;
+            trackConfig.pipelineOutput = DataInputFormat::Audio;
+            trackSegCtx->dashInitCfg.tracks.insert(std::make_pair(trackSegCtx->trackIdx, trackConfig));
+            trackSegCtx->dashInitCfg.fragmented = true;
+            trackSegCtx->dashInitCfg.writeToBitstream = true;
+            trackSegCtx->dashInitCfg.packedSubPictures = true;
+            trackSegCtx->dashInitCfg.mode = OperatingMode::OMAF;
+            trackSegCtx->dashInitCfg.streamIds.push_back(trackConfig.meta.trackId.GetIndex());
+            snprintf(trackSegCtx->dashInitCfg.initSegName, 1024, "%s%s_track%ld.init.mp4", m_segInfo->dirName, m_segInfo->outName, (uint64_t)(DEFAULT_AUDIOTRACK_TRACKIDBASE + audioId));
+
+            //set GeneralSegConfig
+            trackSegCtx->dashCfg.sgtDuration = VCD::MP4::FractU64(m_segInfo->segDuration, 1); //?
+            trackSegCtx->dashCfg.subsgtDuration = trackSegCtx->dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
+            trackSegCtx->dashCfg.needCheckIDR = true;
+
+            VCD::MP4::TrackMeta trackMeta{};
+            trackMeta.trackId = trackSegCtx->trackIdx;
+            trackMeta.timescale = VCD::MP4::FractU64(1, frequency);//m_frameRate.den, m_frameRate.num * 1000); //?
+            trackMeta.type = VCD::MP4::TypeOfMedia::Audio;
+            trackSegCtx->dashCfg.tracks.insert(std::make_pair(trackSegCtx->trackIdx, trackMeta));
+
+            trackSegCtx->dashCfg.useSeparatedSidx = false;
+            trackSegCtx->dashCfg.streamsIdx.push_back(strId);
+            snprintf(trackSegCtx->dashCfg.trackSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, (uint64_t)(DEFAULT_AUDIOTRACK_TRACKIDBASE + audioId));
+
+            //setup DashInitSegmenter
+            trackSegCtx->initSegmenter = new DashInitSegmenter(&(trackSegCtx->dashInitCfg));
+            if (!(trackSegCtx->initSegmenter))
+            {
+                DELETE_MEMORY(trackSegCtx);
+                return OMAF_ERROR_NULL_PTR;
+            }
+
+            //setup DashSegmenter
+            trackSegCtx->dashSegmenter = new DashSegmenter(&(trackSegCtx->dashCfg), true);
+            if (!(trackSegCtx->dashSegmenter))
+            {
+                DELETE_MEMORY(trackSegCtx->initSegmenter);
+                DELETE_MEMORY(trackSegCtx);
+                return OMAF_ERROR_NULL_PTR;
+            }
+
+            trackSegCtx->qualityRanking = DEFAULT_QUALITY_RANK;
+
+            //setup CodedMeta
+            trackSegCtx->codedMeta.presIndex = 0;
+            trackSegCtx->codedMeta.codingIndex = 0;
+            trackSegCtx->codedMeta.codingTime = VCD::MP4::FrameTime{ 0, 1 };
+            trackSegCtx->codedMeta.presTime = VCD::MP4::FrameTime{ 0, 1000 };
+            trackSegCtx->codedMeta.trackId = trackSegCtx->trackIdx;
+            trackSegCtx->codedMeta.inCodingOrder = true;
+            trackSegCtx->codedMeta.format = CodedFormat::AAC;
+            trackSegCtx->codedMeta.duration = VCD::MP4::FrameDuration{SAMPLES_NUM_IN_FRAME, frequency};
+            trackSegCtx->codedMeta.channelCfg = chlConfig;
+            trackSegCtx->codedMeta.samplingFreq = frequency;
+            trackSegCtx->codedMeta.type = FrameType::IDR;
+            trackSegCtx->codedMeta.bitrate.avgBitrate = bitRate;
+            trackSegCtx->codedMeta.bitrate.maxBitrate = 0;//?
+            trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(ConfigType::AudioSpecificConfig, packedAudioSpecCfg));
+            trackSegCtx->codedMeta.isEOS = false;
+
+            trackSegCtx->isEOS = false;
+
+            m_streamSegCtx.insert(std::make_pair(stream, trackSegCtx));
+            //m_streamsIsKey.insert(std::make_pair(stream, true));
+            //m_streamsIsEOS.insert(std::make_pair(stream, false));
+        }
+    }
+
+    m_audioSegCtxsConsted = true;
+    //OMAF_LOG(LOG_INFO, "Complete audio segmentation context construction !\n");
+    return ERROR_NONE;
+}
+
 int32_t DefaultSegmentation::VideoEndSegmentation()
 {
     if (m_streamMap->size())
@@ -634,6 +761,29 @@ int32_t DefaultSegmentation::VideoEndSegmentation()
                 if (stream->GetMediaType() == VIDEOTYPE)
                 {
                     int32_t ret = EndEachVideo(stream);
+                    if (ret)
+                        return ret;
+                }
+            }
+        }
+    }
+
+    return ERROR_NONE;
+}
+
+int32_t DefaultSegmentation::AudioEndSegmentation()
+{
+    if (m_streamMap->size())
+    {
+        std::map<uint8_t, MediaStream*>::iterator it = m_streamMap->begin();
+        for ( ; it != m_streamMap->end(); it++)
+        {
+            MediaStream *stream = it->second;
+            if (stream)
+            {
+                if (stream->GetMediaType() == AUDIOTYPE)
+                {
+                    int32_t ret = EndEachAudio(stream);
                     if (ret)
                         return ret;
                 }
@@ -698,6 +848,64 @@ int32_t DefaultSegmentation::WriteSegmentForEachVideo(MediaStream *stream, bool 
 #endif
     }
 
+    return ERROR_NONE;
+}
+
+int32_t DefaultSegmentation::WriteSegmentForEachAudio(MediaStream *stream, FrameBSInfo *frameData, bool isKeyFrame, bool isEOS)
+{
+    if (!stream)
+        return OMAF_ERROR_NULL_PTR;
+
+    AudioStream *as = (AudioStream*)stream;
+
+    uint8_t hdrSize = as->GetHeaderDataSize();
+
+    std::map<MediaStream*, TrackSegmentCtx*>::iterator itStreamTrack;
+    itStreamTrack = m_streamSegCtx.find(stream);
+    if (itStreamTrack == m_streamSegCtx.end())
+        return OMAF_ERROR_STREAM_NOT_FOUND;
+
+    TrackSegmentCtx *trackSegCtx = itStreamTrack->second;
+    if (!trackSegCtx)
+        return OMAF_ERROR_NULL_PTR;
+
+    if (isKeyFrame)
+        trackSegCtx->codedMeta.type = FrameType::IDR;
+    else
+        trackSegCtx->codedMeta.type = FrameType::NONIDR;
+
+    trackSegCtx->codedMeta.isEOS = isEOS;
+    trackSegCtx->isEOS = isEOS;
+
+    if (frameData && frameData->data && frameData->dataSize)
+    {
+        trackSegCtx->audioNalu.data = frameData->data + hdrSize;
+        trackSegCtx->audioNalu.dataSize = frameData->dataSize - hdrSize;
+    }
+    else
+    {
+        trackSegCtx->audioNalu.data = NULL;
+        trackSegCtx->audioNalu.dataSize = 0;
+    }
+
+    DashSegmenter *dashSegmenter = trackSegCtx->dashSegmenter;
+    if (!dashSegmenter)
+        return OMAF_ERROR_NULL_PTR;
+
+    //OMAF_LOG(LOG_INFO, "Write audio track segment !\n");
+    int32_t ret = dashSegmenter->SegmentData(trackSegCtx);
+    if (ret)
+        return ret;
+
+    trackSegCtx->codedMeta.presIndex++;
+    trackSegCtx->codedMeta.codingIndex++;
+    trackSegCtx->codedMeta.presTime.m_num += 1000 / (m_frameRate.num / m_frameRate.den);
+    trackSegCtx->codedMeta.presTime.m_den = 1000;
+
+    //OMAF_LOG(LOG_INFO, "EOS %d\n", trackSegCtx->isEOS);
+    m_audioSegNum = dashSegmenter->GetSegmentsNum();
+
+    //OMAF_LOG(LOG_INFO, "AUDIO seg num %ld\n", m_audioSegNum);
     return ERROR_NONE;
 }
 
@@ -1000,6 +1208,36 @@ int32_t DefaultSegmentation::LastExtractorTrackSegmentation()
     return ERROR_NONE;
 }
 
+bool DefaultSegmentation::HasAudio()
+{
+    std::map<uint8_t, MediaStream*>::iterator it;
+    for (it = m_streamMap->begin(); it != m_streamMap->end(); it++)
+    {
+        MediaStream *stream = it->second;
+        if (stream && (stream->GetMediaType() == AUDIOTYPE))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool DefaultSegmentation::OnlyAudio()
+{
+    std::map<uint8_t, MediaStream*>::iterator it;
+    for (it = m_streamMap->begin(); it != m_streamMap->end(); it++)
+    {
+        MediaStream *stream = it->second;
+        if (stream && (stream->GetMediaType() == VIDEOTYPE))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 int32_t DefaultSegmentation::VideoSegmentation()
 {
     uint64_t currentT = 0;
@@ -1010,6 +1248,30 @@ int32_t DefaultSegmentation::VideoSegmentation()
     ret = ConstructExtractorTrackSegCtx();
     if (ret)
         return ret;
+
+    bool hasAudio = HasAudio();
+    if (hasAudio)
+    {
+        uint32_t waitTimes = 10000;
+        uint32_t currWaitTime = 0;
+        while (currWaitTime < waitTimes)
+        {
+            {
+                std::lock_guard<std::mutex> lock(m_audioMutex);
+                if (m_audioSegCtxsConsted)
+                {
+                    break;
+                }
+            }
+            usleep(50);
+            currWaitTime++;
+        }
+        if (currWaitTime >= waitTimes)
+        {
+            OMAF_LOG(LOG_ERROR, "Constructing segmentation context for audio stream takes too long time !\n");
+            return OMAF_ERROR_TIMED_OUT;
+        }
+    }
 
     m_mpdGen = new MpdGenerator(
                     &m_streamSegCtx,
@@ -1118,6 +1380,29 @@ int32_t DefaultSegmentation::VideoSegmentation()
     {
         if (m_segNum == 1)
         {
+            if (hasAudio)
+            {
+                uint32_t waitTimes = 10000;
+                uint32_t currWaitTime = 0;
+                while (currWaitTime < waitTimes)
+                {
+                    {
+                        std::lock_guard<std::mutex> lock(m_audioMutex);
+                        if (m_audioSegNum >= 1)
+                        {
+                            break;
+                        }
+                    }
+                    usleep(50);
+                    currWaitTime++;
+                }
+                if (currWaitTime >= waitTimes)
+                {
+                    OMAF_LOG(LOG_ERROR, "It takes too much time to generate the first audio segment !\n");
+                    return OMAF_ERROR_TIMED_OUT;
+                }
+            }
+
             if (m_segInfo->isLive)
             {
                 m_mpdGen->UpdateMpd(m_segNum, m_framesNum);
@@ -1299,7 +1584,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
             std::chrono::high_resolution_clock clock;
             uint64_t before = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-            OMAF_LOG(LOG_INFO, "Complete one seg in %lld ms\n", (before - currentT));
+            OMAF_LOG(LOG_INFO, "Complete one seg for video in %lld ms\n", (before - currentT));
             currentT = before;
         }
 
@@ -1342,6 +1627,29 @@ int32_t DefaultSegmentation::VideoSegmentation()
         {
             if (m_segInfo->isLive)
             {
+                if (hasAudio)
+                {
+                    uint32_t waitTimes = 10000;
+                    uint32_t currWaitTime = 0;
+                    while (currWaitTime < waitTimes)
+                    {
+                        {
+                            std::lock_guard<std::mutex> lock(m_audioMutex);
+                            if (m_audioSegNum >= m_segNum)
+                            {
+                                break;
+                            }
+                        }
+                        usleep(50);
+                        currWaitTime++;
+                    }
+                    if (currWaitTime >= waitTimes)
+                    {
+                        OMAF_LOG(LOG_ERROR, "Audio still hasn't generated all segments !\n");
+                        OMAF_LOG(LOG_ERROR, "Video segments num %ld and audio segments num %ld\n", m_segNum, m_audioSegNum);
+                        return OMAF_ERROR_TIMED_OUT;
+                    }
+                }
                 int32_t ret = m_mpdGen->UpdateMpd(m_segNum, m_framesNum);
                 if (ret)
                     return ret;
@@ -1356,6 +1664,30 @@ int32_t DefaultSegmentation::VideoSegmentation()
                     m_framesNum, m_segNum);
 #endif
 
+                if (hasAudio)
+                {
+                    uint32_t waitTimes = 10000;
+                    uint32_t currWaitTime = 0;
+                    while (currWaitTime < waitTimes)
+                    {
+                        {
+                            std::lock_guard<std::mutex> lock(m_audioMutex);
+                            if (m_audioSegNum >= m_segNum)
+                            {
+                                break;
+                            }
+                        }
+                        usleep(50);
+                        currWaitTime++;
+                    }
+                    if (currWaitTime >= waitTimes)
+                    {
+                        OMAF_LOG(LOG_ERROR, "Audio still hasn't generated all segments !\n");
+                        OMAF_LOG(LOG_ERROR, "Video segments num %ld and audio segments num %ld\n", m_segNum, m_audioSegNum);
+                        return OMAF_ERROR_TIMED_OUT;
+                    }
+                }
+
                 int32_t ret = m_mpdGen->WriteMpd(m_framesNum);
                 if (ret)
                     return ret;
@@ -1369,6 +1701,192 @@ int32_t DefaultSegmentation::VideoSegmentation()
     return ERROR_NONE;
 }
 
+int32_t DefaultSegmentation::AudioSegmentation()
+{
+    OMAF_LOG(LOG_INFO, "Launch audio segmentation thread !\n");
+    uint64_t currentT = 0;
+    int32_t ret = ConstructAudioTrackSegCtx();
+    if (ret)
+        return ret;
+    //OMAF_LOG(LOG_INFO, "Construction for audio track segmentation context DONE !\n");
+    bool onlyAudio = OnlyAudio();
+    if (onlyAudio)
+    {
+        m_mpdGen = new MpdGenerator(
+                        &m_streamSegCtx,
+                        &m_extractorSegCtx,
+                        m_segInfo,
+                        m_projType,
+                        m_frameRate);
+        if (!m_mpdGen)
+            return OMAF_ERROR_NULL_PTR;
+
+        ret = m_mpdGen->Initialize();
+
+        if (ret)
+            return ret;
+    }
+
+    std::map<MediaStream*, TrackSegmentCtx*>::iterator itStreamTrack;
+    for (itStreamTrack = m_streamSegCtx.begin(); itStreamTrack != m_streamSegCtx.end(); itStreamTrack++)
+    {
+        MediaStream *stream = itStreamTrack->first;
+        TrackSegmentCtx* trackSegCtx = itStreamTrack->second;
+
+        if (stream->GetMediaType() == AUDIOTYPE)
+        {
+            DashInitSegmenter *initSegmenter = trackSegCtx->initSegmenter;
+            if (!initSegmenter)
+                return OMAF_ERROR_NULL_PTR;
+
+            ret = initSegmenter->GenerateInitSegment(trackSegCtx, m_trackSegCtx);
+            if (ret)
+                return ret;
+
+        }
+    }
+
+    //OMAF_LOG(LOG_INFO, "Done audio initial segment !\n");
+    m_audioPrevSegNum = m_audioSegNum;
+    //OMAF_LOG(LOG_INFO, "Initial audio segment num %ld\n", m_audioSegNum);
+
+    bool nowEOS = false;
+    bool eosWritten = false;
+    while(1)
+    {
+        if (onlyAudio)
+        {
+            if (m_audioSegNum == 1)
+            {
+                if (m_segInfo->isLive)
+                {
+                    m_mpdGen->UpdateMpd(m_audioSegNum, m_framesNum);
+                }
+            }
+        }
+
+        std::map<uint8_t, MediaStream*>::iterator itStream = m_streamMap->begin();
+        for ( ; itStream != m_streamMap->end(); itStream++)
+        {
+            MediaStream *stream = itStream->second;
+            if (stream && (stream->GetMediaType() == AUDIOTYPE))
+            {
+                AudioStream *as = (AudioStream*)stream;
+                as->SetCurrFrameInfo();
+                FrameBSInfo *currFrame = as->GetCurrFrameInfo();
+
+                while (!currFrame)
+                {
+                    usleep(50);
+                    as->SetCurrFrameInfo();
+                    currFrame = as->GetCurrFrameInfo();
+                    if (!currFrame && (as->GetEOS()))
+                        break;
+                }
+                nowEOS = as->GetEOS();
+                if (currFrame)
+                {
+                    //m_framesIsKey[as] = currFrame->isKeyFrame;
+                    //m_streamsIsEOS[as] = false;
+
+                    //vs->UpdateTilesNalu();
+                    //WriteSegmentForEachVideo(vs, currFrame->isKeyFrame, false);
+                    WriteSegmentForEachAudio(as, currFrame, true, false);
+                }
+                else
+                {
+                    //m_framesIsKey[vs] = false;
+                    //m_streamsIsEOS[as] = true;
+
+                    //WriteSegmentForEachVideo(vs, false, true);
+                    WriteSegmentForEachAudio(as, NULL, false, true);
+                    eosWritten = true;
+                }
+            }
+        }
+
+        for (itStream = m_streamMap->begin(); itStream != m_streamMap->end(); itStream++)
+        {
+            MediaStream *stream = itStream->second;
+            if (stream && (stream->GetMediaType() == AUDIOTYPE))
+            {
+                AudioStream *as = (AudioStream*)stream;
+
+                if (m_audioSegNum == (m_audioPrevSegNum + 1))
+                {
+                    as->DestroyCurrSegmentFrames();
+                }
+
+                as->AddFrameToSegment();
+            }
+        }
+
+        if (m_audioSegNum == (m_audioPrevSegNum + 1))
+        {
+            m_audioPrevSegNum++;
+
+            std::chrono::high_resolution_clock clock;
+            uint64_t before = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+            OMAF_LOG(LOG_INFO, "Complete one seg for audio in %lld ms\n", (before - currentT));
+            currentT = before;
+        }
+
+        if (m_segInfo->isLive)
+        {
+            if (m_segInfo->windowSize && m_segInfo->extraWindowSize)
+            {
+                int32_t removeCnt = m_audioSegNum - m_segInfo->windowSize - m_segInfo->extraWindowSize;
+                if (removeCnt > 0)
+                {
+                    for (itStream = m_streamMap->begin(); itStream != m_streamMap->end(); itStream++)
+                    {
+                        MediaStream *stream = itStream->second;
+                        if (stream && (stream->GetMediaType() == AUDIOTYPE))
+                        {
+                            TrackSegmentCtx* oneSegCtx = m_streamSegCtx[stream];
+                            if (!oneSegCtx)
+                                return OMAF_ERROR_NULL_PTR;
+
+                            VCD::MP4::TrackId trackIndex = oneSegCtx->trackIdx;
+                            char rmFile[1024];
+                            snprintf(rmFile, 1024, "%s%s_track%d.%d.mp4", m_segInfo->dirName, m_segInfo->outName, trackIndex.GetIndex(), removeCnt);
+                            remove(rmFile);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (onlyAudio)
+        {
+            if (nowEOS && eosWritten)
+            {
+                if (m_segInfo->isLive)
+                {
+                    int32_t ret = m_mpdGen->UpdateMpd(m_audioSegNum, m_framesNum);
+                    if (ret)
+                        return ret;
+                } else {
+                    int32_t ret = m_mpdGen->WriteMpd(m_framesNum);
+                    if (ret)
+                        return ret;
+                }
+                OMAF_LOG(LOG_INFO, "Total %ld frames written into segments!\n", m_framesNum);
+                break;
+            }
+            m_framesNum++;
+        }
+
+        //OMAF_LOG(LOG_INFO, "NOW eos %d \n", nowEOS);
+        if (nowEOS && eosWritten)
+        {
+            break;
+        }
+    }
+
+    return ERROR_NONE;
+}
+
 int32_t DefaultSegmentation::EndEachVideo(MediaStream *stream)
 {
     if (!stream)
@@ -1376,6 +1894,17 @@ int32_t DefaultSegmentation::EndEachVideo(MediaStream *stream)
 
     VideoStream *vs = (VideoStream*)stream;
     vs->SetEOS(true);
+
+    return ERROR_NONE;
+}
+
+int32_t DefaultSegmentation::EndEachAudio(MediaStream *stream)
+{
+    if (!stream)
+        return OMAF_ERROR_NULL_PTR;
+
+    AudioStream *as = (AudioStream*)stream;
+    as->SetEOS(true);
 
     return ERROR_NONE;
 }

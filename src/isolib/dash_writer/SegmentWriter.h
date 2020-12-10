@@ -296,6 +296,60 @@ struct HevcExtractorTrackPackedData
     FrameBuf GenFrameData() const;
 };
 
+struct Ambisonic
+{
+    uint8_t type;
+    uint32_t order;
+    uint8_t channelOrdering;
+    uint8_t normalization;
+    vector<uint32_t> channelMap;
+};
+
+struct ChannelPosition
+{
+    int speakerPosition = 0;
+    int azimuth   = 0;
+    int elevation = 0;
+
+    ChannelPosition() = default;
+};
+
+struct ChannelLayout
+{
+    int streamStructure = 0;
+    int layout = 0;
+    vector<ChannelPosition> positions;
+    set<int> omitted;
+    int objectCount = 0;
+
+    ChannelLayout() = default;
+};
+
+struct MP4AudioSampleEntry : public OmniSampleEntry
+{
+    uint16_t sampleSize;
+    uint16_t channelCount;
+    uint32_t sampleRate;
+    uint16_t esId;
+    uint16_t dependsOnEsId;
+    string url;
+    uint32_t bufferSize;
+    uint32_t maxBitrate;
+    uint32_t avgBitrate;
+    string decSpecificInfo;  // tag 5
+
+    bool nonDiegetic;
+    DataItem<Ambisonic> ambisonic;
+    DataItem<ChannelLayout> channelLayout;
+
+    unique_ptr<SampleEntryBoxWrapper> GenSampleEntryBox() const override;
+    unique_ptr<HandlerBoxWrapper> GenHandlerBox() const override;
+    uint32_t GetWidthFP() const override;
+    uint32_t GetHeightFP() const override;
+
+    MP4AudioSampleEntry() = default;
+};
+
 struct TrackDescription
 {
     TrackDescription();

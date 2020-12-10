@@ -113,14 +113,24 @@ public:
 private:
 
     //!
-    //! \brief  Segmentation thread execution function
+    //! \brief  Video Segmentation thread execution function
     //!
     //! \param  [in] pThis
     //!         this OmafPackage
     //!
     //! \return void
     //!
-    static void* SegmentationThread(void* pThis);
+    static void* VideoSegmentationThread(void* pThis);
+
+    //!
+    //! \brief  Audio Segmentation thread execution function
+    //!
+    //! \param  [in] pThis
+    //!         this OmafPackage
+    //!
+    //! \return void
+    //!
+    static void* AudioSegmentationThread(void* pThis);
 
     //!
     //! \brief  Add media stream into media stream map
@@ -167,11 +177,19 @@ private:
     int32_t SetFrameInfo(uint8_t streamIdx, FrameBSInfo *frameInfo);
 
     //!
-    //! \brief  Segment all media streams
+    //! \brief  Segment all video media streams
     //!
     //! \return void
     //!
-    void SegmentAllStreams();
+    void SegmentAllVideoStreams();
+
+    //!
+    //! \brief  Segment all audio media streams
+    //!
+    //! \return void
+    //!
+    void SegmentAllAudioStreams();
+
 private:
     InitialInfo                     *m_initInfo;               //!< the initial information input by library interface
     Segmentation                    *m_segmentation;           //!< the segmentation for data segment
@@ -179,8 +197,9 @@ private:
     std::map<uint8_t, MediaStream*> m_streams;                 //!< the media streams map
     std::map<CodecId, void*>        m_streamPlugins;           //!< the map of CodecId and corresponding stream plugin handles
     bool                            m_isSegmentationStarted;   //!< whether the segmentation thread is started
-    pthread_t                       m_threadId;                //!< thread index of segmentation thread
-    //VideoStream                     *m_videoStream;
+    pthread_t                       m_videoThreadId;           //!< thread index of video segmentation thread
+    bool                            m_hasAudio;
+    pthread_t                       m_audioThreadId;           //!< thread index of audio segmentation thread
 };
 
 VCD_NS_END;

@@ -57,6 +57,7 @@ VCD_NS_BEGIN
 #define DEFAULT_HEVC_TEMPORALIDPLUS1 1
 
 #define DEFAULT_EXTRACTORTRACK_TRACKIDBASE 1000
+#define DEFAULT_AUDIOTRACK_TRACKIDBASE     2000
 
 #define DEFAULT_QUALITY_RANK 1
 #define MAINSTREAM_QUALITY_RANK 1
@@ -198,7 +199,7 @@ struct GeneralSegConfig
 
     //std::shared_ptr<Log> log;
 
-    char tileSegBaseName[1024];
+    char trackSegBaseName[1024];
 };
 
 //!
@@ -339,6 +340,8 @@ struct CodedMeta
     uint32_t width = 0;
     uint32_t height = 0;
 
+    uint8_t channelCfg = 0;
+    uint32_t samplingFreq = 0;
     Bitrate bitrate = {}; // bitrate information
 
     FrameType type = FrameType::NA;
@@ -367,6 +370,7 @@ struct CodedMeta
 //!
 struct TrackSegmentCtx
 {
+    bool              isAudio;
     bool              isExtractorTrack;
 
     TileInfo          *tileInfo;
@@ -376,6 +380,8 @@ struct TrackSegmentCtx
     std::map<uint8_t, Extractor*>* extractors;
     Nalu              extractorTrackNalu;
     std::list<VCD::MP4::TrackId> refTrackIdxs;
+
+    Nalu              audioNalu;
 
     VCD::MP4::TrackId trackIdx;
     InitSegConfig     dashInitCfg;
@@ -489,6 +495,7 @@ private:
     //!
     void AddH265ExtractorTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
 
+    void AddAACTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
     //!
     //! \brief  Make initial segment for the track
     //!

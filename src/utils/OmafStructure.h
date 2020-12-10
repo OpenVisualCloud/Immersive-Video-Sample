@@ -74,6 +74,7 @@ VCD_OMAF_BEGIN
 #define SCHEMEIDURI_FRAMEPACKINGTYPE            "urn:mpeg:mpegB:cicp:VideoFramePackingType"
 #define SCHEMEIDURI_SRD                         "urn:mpeg:dash:srd:2014"
 #define SCHEMEIDURI_PRESELECTION                "urn:mpeg:dash:preselection:2016"
+#define SCHEMEIDURI_AUDIO                       "urn:mpeg:dash:23003:3:audio_channel_configuration:2011"
 #define OMAF_XMLNS_VALUE                        "urn:mpeg:mpegI:omaf:2017"
 #define XSI_XMLNS_VALUE                         "http://www.w3.org/2001/XMLSchema-instance"
 #define XMLNS_VALUE                             "urn:mpeg:dash:schema:mpd:2011"
@@ -130,7 +131,9 @@ VCD_OMAF_BEGIN
 
 //attribute values
 #define MIMETYPE_VALUE                          "video/mp4 profiles=&apos;hevd&apos;"
+#define MIMETYPE_AUDIO                          "audio/mp4"
 #define CODECS_VALUE                            "resv.podv+ercm.hvc1.2.4.L90.80"
+#define CODECS_AUDIO                            "mp4a.40.1"
 #define CODECS_VALUE_EXTRACTORTRACK             "resv.podv+ercm.hvc2.2.4.L120.80"
 #define TYPE_STATIC                             "static"
 #define TYPE_LIVE                               "dynamic"
@@ -139,6 +142,9 @@ VCD_OMAF_BEGIN
 #define SEGMENT_REPRESENTATIONID                "RepresentationID"
 #define SEGMENT_TIME                            "Time"
 #define SEGMENT_BANDWIDTH                       "Bandwidth"
+
+#define AUDIOSAMPLINGRATE                       "audioSamplingRate"
+#define AUDIOCHANNELCONFIGURATION               "AudioChannelConfiguration"
 
 //CC relative
 //node name

@@ -145,23 +145,30 @@ int32_t DashSegmenter::SegmentData(TrackSegmentCtx *trackSegCtx)
 {
     if (!trackSegCtx->codedMeta.isEOS)
     {
-        if (trackSegCtx->isExtractorTrack)
+        if (trackSegCtx->isAudio)
         {
-
-            if (!(trackSegCtx->extractors))
-                return OMAF_ERROR_NULL_PTR;
-
-            PackExtractors(trackSegCtx->extractors, trackSegCtx->refTrackIdxs, &(trackSegCtx->extractorTrackNalu));
-            return SegmentOneTrack(&(trackSegCtx->extractorTrackNalu), trackSegCtx->codedMeta, trackSegCtx->dashCfg.tileSegBaseName);
+            return SegmentOneTrack(&(trackSegCtx->audioNalu), trackSegCtx->codedMeta, trackSegCtx->dashCfg.trackSegBaseName);
         }
         else
         {
-            return SegmentOneTrack(trackSegCtx->tileInfo->tileNalu, trackSegCtx->codedMeta, trackSegCtx->dashCfg.tileSegBaseName);
+            if (trackSegCtx->isExtractorTrack)
+            {
+
+                if (!(trackSegCtx->extractors))
+                    return OMAF_ERROR_NULL_PTR;
+
+                PackExtractors(trackSegCtx->extractors, trackSegCtx->refTrackIdxs, &(trackSegCtx->extractorTrackNalu));
+                return SegmentOneTrack(&(trackSegCtx->extractorTrackNalu), trackSegCtx->codedMeta, trackSegCtx->dashCfg.trackSegBaseName);
+            }
+            else
+            {
+                return SegmentOneTrack(trackSegCtx->tileInfo->tileNalu, trackSegCtx->codedMeta, trackSegCtx->dashCfg.trackSegBaseName);
+            }
         }
     }
     else
     {
-        return SegmentOneTrack(NULL, trackSegCtx->codedMeta, trackSegCtx->dashCfg.tileSegBaseName);
+        return SegmentOneTrack(NULL, trackSegCtx->codedMeta, trackSegCtx->dashCfg.trackSegBaseName);
     }
 }
 
