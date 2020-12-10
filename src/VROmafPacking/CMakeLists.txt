@@ -16,10 +16,10 @@ ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0
 
 IF(USE_TRACE)
   ADD_DEFINITIONS("-D_USE_TRACE_")
-  INCLUDE_DIRECTORIES(/usr/local/include ../utils ../360SCVP ../isolib ../trace)
+  INCLUDE_DIRECTORIES(/usr/local/include ../utils ../360SCVP ../isolib ../trace ../plugins/StreamProcess_Plugin)
   LINK_DIRECTORIES(/usr/local/lib ../isolib/dash_writer ../trace)
 ELSE()
-  INCLUDE_DIRECTORIES(/usr/local/include ../utils ../360SCVP ../isolib)
+  INCLUDE_DIRECTORIES(/usr/local/include ../utils ../360SCVP ../isolib ../plugins/StreamProcess_Plugin)
   LINK_DIRECTORIES(/usr/local/lib ../isolib/dash_writer)
 ENDIF()
 

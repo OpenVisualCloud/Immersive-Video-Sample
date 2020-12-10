@@ -112,4 +112,5 @@ typedef int OMAF_STATUS;
 #define OMAF_ERROR_FILE_WRITE                    -105
 #define OMAF_ERROR_INVALID_THREAD                -106
 #define OMAF_ERROR_INVALID_CODEC                 -107
+#define OMAF_ERROR_TIMED_OUT                     -108
 #endif /* ERROR_H */

@@ -354,6 +354,47 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
     return ERROR_NONE;
 }
 
+int32_t MpdGenerator::WriteAudioTrackAS(XMLElement *periodEle, TrackSegmentCtx *pTrackSegCtx)
+{
+    TrackSegmentCtx trackSegCtx = *pTrackSegCtx;
+
+    char string[1024];
+    memset_s(string, 1024, 0);
+
+    XMLElement *asEle = m_xmlDoc->NewElement(ADAPTATIONSET);
+    asEle->SetAttribute(INDEX, trackSegCtx.trackIdx.GetIndex());
+    asEle->SetAttribute(MIMETYPE, MIMETYPE_AUDIO);//MIMETYPE_VALUE); //?
+    asEle->SetAttribute(CODECS, CODECS_AUDIO);//CODECS_VALUE);
+    asEle->SetAttribute(AUDIOSAMPLINGRATE, trackSegCtx.codedMeta.samplingFreq);
+
+    asEle->SetAttribute(SEGMENTALIGNMENT, 1);
+    asEle->SetAttribute(SUBSEGMENTALIGNMENT, 1);
+    periodEle->InsertEndChild(asEle);
+
+    XMLElement *representationEle = m_xmlDoc->NewElement(REPRESENTATION);
+    memset_s(string, 1024, 0);
+    snprintf(string, 1024, "%s_track%d", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
+    representationEle->SetAttribute(INDEX, string);//trackSegCtx.trackIdx.GetIndex());
+    representationEle->SetAttribute(BANDWIDTH, trackSegCtx.codedMeta.bitrate.avgBitrate);
+    representationEle->SetAttribute(AUDIOSAMPLINGRATE, trackSegCtx.codedMeta.samplingFreq);
+    representationEle->SetAttribute(STARTWITHSAP, 1);
+    asEle->InsertEndChild(representationEle);
+
+    memset_s(string, 1024, 0);
+    snprintf(string, 1024, "%s_track%d.$Number$.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
+    XMLElement *sgtTpeEle = m_xmlDoc->NewElement(SEGMENTTEMPLATE);
+    sgtTpeEle->SetAttribute(MEDIA, string);
+    memset_s(string, 1024, 0);
+    snprintf(string, 1024, "%s_track%d.init.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
+    sgtTpeEle->SetAttribute(INITIALIZATION, string);
+    sgtTpeEle->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
+    sgtTpeEle->SetAttribute(STARTNUMBER, 1);
+    sgtTpeEle->SetAttribute(TIMESCALE, m_timeScale);
+    representationEle->InsertEndChild(sgtTpeEle);
+
+    return ERROR_NONE;
+}
+
 int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
 {
     const char *declaration = "xml version=\"1.0\" encoding=\"UTF-8\"";
@@ -495,7 +536,6 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
     }
 
     mpdEle->InsertEndChild(periodEle);
-    //xmlDoc.InsertEndChild(periodEle);
 
     if (m_segInfo->hasMainAS)
     {
@@ -571,15 +611,21 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
         itTrackCtx++)
     {
         MediaStream *stream = itTrackCtx->first;
-        if (stream->GetMediaType() != VIDEOTYPE)
-            return OMAF_ERROR_MEDIA_TYPE;
 
-        VideoStream *vs = (VideoStream*)stream;
-        uint32_t tilesNum = vs->GetTileInRow() * vs->GetTileInCol();
-        TrackSegmentCtx *trackSegCtxs = itTrackCtx->second;
-        for (uint32_t i = 0; i < tilesNum; i++)
+        if (stream && (stream->GetMediaType() == VIDEOTYPE))
         {
-            WriteTileTrackAS(periodEle, &(trackSegCtxs[i]));
+            VideoStream *vs = (VideoStream*)stream;
+            uint32_t tilesNum = vs->GetTileInRow() * vs->GetTileInCol();
+            TrackSegmentCtx *trackSegCtxs = itTrackCtx->second;
+            for (uint32_t i = 0; i < tilesNum; i++)
+            {
+                WriteTileTrackAS(periodEle, &(trackSegCtxs[i]));
+            }
+        }
+        else if (stream && (stream->GetMediaType() == AUDIOTYPE))
+        {
+            TrackSegmentCtx *trackSegCtx = itTrackCtx->second;
+            WriteAudioTrackAS(periodEle, trackSegCtx);
         }
     }
 

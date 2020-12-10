@@ -399,7 +399,7 @@ int32_t Mp4Reader::ParseInitSeg(StreamIO* strIO, uint32_t initSegId)
             error = ReadAtomParams(io, boxType, boxSize);
             if (!error)
             {
-                ISO_LOG(LOG_INFO, "boxType is %s\n", boxType);
+                ISO_LOG(LOG_INFO, "boxType is %s\n", boxType.c_str());
                 if (boxType == "ftyp")
                 {
                     if (ftypFound == true)
@@ -591,7 +591,7 @@ int32_t Mp4Reader::ParseSeg(StreamIO* strIO,
             error = ReadAtomParams(io, boxType, boxSize);
             if (!error)
             {
-                ISO_LOG(LOG_INFO, "boxType is %s\n", boxType);
+                ISO_LOG(LOG_INFO, "boxType is %s\n", boxType.c_str());
                 if (boxType == "styp")
                 {
                     error = ReadAtom(io, bitstream);
@@ -920,7 +920,7 @@ int32_t Mp4Reader::ReadStream(InitSegmentId initSegId, SegmentId segIndex)
         error = ReadAtomParams(io, boxType, boxSize);
         if (!error)
         {
-            ISO_LOG(LOG_INFO, "boxType is %s\n", boxType);
+            ISO_LOG(LOG_INFO, "boxType is %s\n", boxType.c_str());
             if (boxType == "ftyp")
             {
                 if (ftypFound == true)

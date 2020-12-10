@@ -145,6 +145,20 @@ private:
     int32_t WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *pTrackSegCtx);
 
     //!
+    //! \brief  Write AdaptationSet for audio track in mpd file
+    //!
+    //! \param  [in] periodEle
+    //!         pointer to period element has been create for
+    //!         mpd file using tinyxml2
+    //! \param  [in] pTrackSegCtx
+    //!         pointer to track segmentation context for audio track
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t WriteAudioTrackAS(XMLElement *periodEle, TrackSegmentCtx *pTrackSegCtx);
+
+    //!
     //! \brief  Write AdaptationSet for extractor track in mpd file
     //!
     //! \param  [in] periodEle

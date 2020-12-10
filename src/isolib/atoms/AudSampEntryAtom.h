@@ -92,7 +92,7 @@ public:
     //!
     //! \return   void
     //!
-    MEMBER_SETANDGET_FUNC_WITH_OPTION(std::uint16_t, m_channelNumber, ChannelNumber, const);
+    //MEMBER_SETANDGET_FUNC_WITH_OPTION(std::uint16_t, m_channelNumber, ChannelNumber, const);
 
     //!
     //! \brief    Set and Get function for m_sampleSize member
@@ -108,7 +108,7 @@ public:
     //!
     //! \return   void
     //!
-    MEMBER_SETANDGET_FUNC_WITH_OPTION(std::uint16_t, m_sampleSize, SampleSize, const);
+    //MEMBER_SETANDGET_FUNC_WITH_OPTION(std::uint16_t, m_sampleSize, SampleSize, const);
 
     //!
     //! \brief    Get ChannelCount
@@ -126,8 +126,11 @@ public:
     //!
     //! \return   void
     //!
-    void SetChannelCount(std::uint16_t height);
+    void SetChannelCount(std::uint16_t channelCnt);
 
+    void SetSampleSize(std::uint16_t sampSize);
+
+    std::uint16_t GetSampleSize() const;
     //!
     //! \brief    Get SampleRate
     //!

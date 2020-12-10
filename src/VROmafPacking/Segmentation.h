@@ -90,12 +90,30 @@ public:
 
     //!
     //! \brief  End the segmentation process for
-    //!         all media streams
+    //!         all video streams
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t VideoEndSegmentation() = 0;
+
+    //!
+    //! \brief  Execute the segmentation process for
+    //!         all audio streams
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t AudioSegmentation() = 0;
+
+    //!
+    //! \brief  End the segmentation process for
+    //!         all audio streams
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t AudioEndSegmentation() = 0;
 
 private:
     //!

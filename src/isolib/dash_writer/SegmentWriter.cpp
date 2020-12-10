@@ -694,6 +694,117 @@ FrameBuf HevcExtractorTrackPackedData::GenFrameData() const
     return frmBuf;
 }
 
+unique_ptr<SampleEntryBoxWrapper> MP4AudioSampleEntry::GenSampleEntryBox() const
+{
+    auto box = MakeUnique<MP4AudioSampleEntryAtom, SampleEntryAtom>();
+    ElementaryStreamDescriptorAtom& esdBox = box->GetESDAtom();
+    ElementaryStreamDescriptorAtom::ES_Params esd{};
+    box->SetSampleSize(sampleSize);
+    box->SetChannelCount(channelCount);
+    box->SetSampleRate(sampleRate);
+    box->SetDataReferenceIndex(1);
+    esd.descrFlag       = 3;
+    esd.flags           = dependsOnEsId ? 0x80 : 0;
+    esd.id              = esId;
+    esd.depend          = dependsOnEsId;
+    if (url.size())
+    {
+        esd.URLlen = static_cast<uint8_t>(url.size());
+        esd.URL    = {url.begin(), url.end()};
+    }
+
+    esd.decConfig.flag = 4;
+    esd.decConfig.strType = 0x05;
+    esd.decConfig.idc = 0x40;
+    esd.decConfig.bufferSizeDB = bufferSize;
+    esd.decConfig.avgBitrate = avgBitrate;
+    esd.decConfig.maxBitrate = maxBitrate;
+    esd.decConfig.info.flag = 5;
+    esd.decConfig.info.size = static_cast<uint32_t>(decSpecificInfo.size());
+    esd.decConfig.info.info.resize(decSpecificInfo.size());
+    for (size_t i = 0; i < decSpecificInfo.size(); ++i)
+    {
+        esd.decConfig.info.info[i] = static_cast<uint8_t>(decSpecificInfo[i]);
+    }
+
+    esdBox.SetESDescriptor(esd);
+
+    if (nonDiegetic)
+    {
+        box->SetNonDiegeticAudioAtom(NonDiegeticAudioAtom());
+    }
+    if (ambisonic)
+    {
+        const auto& amb = *ambisonic;
+        SpatialAudioAtom sab;
+        sab.SetAmbisonicType(amb.type);
+        sab.SetAmbisonicOrder(amb.order);
+        sab.SetAmbisonicChannelOrdering(amb.channelOrdering);
+        sab.SetAmbisonicNormalization(amb.normalization);
+        sab.SetChannelMap(vector<uint32_t>{amb.channelMap.begin(), amb.channelMap.end()});
+        box->SetSpatialAudioAtom(sab);
+    }
+
+    if (channelLayout)
+    {
+        const ChannelLayout& chnl = *channelLayout;
+        ChannelLayoutAtom b;
+
+        b.SetChannelNumber(channelCount);
+        if (chnl.streamStructure & 1)  // stream structured
+        {
+            b.SetDefinedLayout(static_cast<uint8_t>(chnl.layout));
+            if (chnl.layout == 0)
+            {
+                for (ChannelPosition pos : chnl.positions)
+                {
+                    ChannelLayoutAtom::ChannelLayout layout{};
+                    layout.speakerPosition = static_cast<uint8_t>(pos.speakerPosition);
+                    layout.azimuthAngle    = static_cast<int16_t>(pos.azimuth);
+                    layout.elevationAngle  = static_cast<int8_t>(pos.elevation);
+                    b.AddChannelLayout(layout);
+                }
+            }
+            else
+            {
+                uint64_t omittedChannelsMap{};
+                for (auto omitted : chnl.omitted)
+                {
+                    omittedChannelsMap = omittedChannelsMap | (1ull << omitted);
+                }
+                b.SetOmittedChannelsMap(omittedChannelsMap);
+            }
+        }
+        if (chnl.streamStructure & 2)  // object structured
+        {
+            b.SetObjectCount(static_cast<uint8_t>(chnl.objectCount));
+        }
+
+        box->SetChannelLayoutAtom(b);
+    }
+
+    return MakeUnique<SampleEntryBoxWrapper>(StaticCast<SampleEntryAtom>(move(box)));
+}
+
+unique_ptr<HandlerBoxWrapper> MP4AudioSampleEntry::GenHandlerBox() const
+{
+    unique_ptr<HandlerBoxWrapper> handlerBox =
+        MakeUnique<HandlerBoxWrapper>(MakeUnique<HandlerAtom, HandlerAtom>());
+    handlerBox->handlerBox->SetHandlerType("soun");
+    handlerBox->handlerBox->SetName("SoundHandler");
+    return handlerBox;
+}
+
+uint32_t MP4AudioSampleEntry::GetWidthFP() const
+{
+    return 0;
+}
+
+uint32_t MP4AudioSampleEntry::GetHeightFP() const
+{
+    return 0;
+}
+
 TrackDescription::TrackDescription(TrackMeta inTrackMeta,
                                    FileInfo inFileInfo,
                                    const OmniSampleEntry& inSmpEty)

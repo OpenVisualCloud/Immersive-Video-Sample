@@ -157,15 +157,47 @@ void DashInitSegmenter::AddH265ExtractorTrack(VCD::MP4::TrackId trackId, CodedMe
     m_trackDescriptions.insert(make_pair(trackId, move(trackDes)));
 }
 
+void DashInitSegmenter::AddAACTrack(VCD::MP4::TrackId trackId, CodedMeta& inMetaData)
+{
+    std::vector<uint8_t> audioSpecInfo = inMetaData.decoderConfig.at(ConfigType::AudioSpecificConfig);
+    VCD::MP4::TrackMeta trackMeta = m_config.tracks.at(trackId).meta;
+    VCD::MP4::FileInfo trackFileInfo;
+    trackFileInfo.creationTime = 0;
+    trackFileInfo.modificationTime = 0;
+    VCD::MP4::MP4AudioSampleEntry sampleEntry;
+
+    sampleEntry.sampleSize = 16;
+    sampleEntry.channelCount = inMetaData.channelCfg;
+    sampleEntry.sampleRate = inMetaData.samplingFreq;
+    sampleEntry.esId = 1;
+    sampleEntry.dependsOnEsId = 0;
+    sampleEntry.bufferSize = 0;
+    sampleEntry.maxBitrate = inMetaData.bitrate.maxBitrate;
+    sampleEntry.avgBitrate = inMetaData.bitrate.avgBitrate;
+    for (auto byte : audioSpecInfo)
+    {
+        sampleEntry.decSpecificInfo.push_back(static_cast<char>(byte));
+    }
+
+    if (m_config.mode == OperatingMode::OMAF)
+    {
+        m_omafAudioTrackBrand = "oa2d";
+    }
+
+    m_trackDescriptions.insert(make_pair(trackId, VCD::MP4::TrackDescription(trackMeta, trackFileInfo, sampleEntry)));
+    OMAF_LOG(LOG_INFO, "Done adding AAC track !\n");
+}
+
 int32_t DashInitSegmenter::GenerateInitSegment(
     TrackSegmentCtx *trackSegCtx,
     map<VCD::MP4::TrackId, TrackSegmentCtx*> tileTrackSegCtxs)
 {
     VCD::MP4::TrackId trackId = trackSegCtx->trackIdx;
-    OMAF_LOG(LOG_INFO, "Generate initial segment !\n");
+    OMAF_LOG(LOG_INFO, "Generate initial segment for track %d!\n", trackId.GetIndex());
     bool hadFirstFramesRemaining = m_firstFrameRemaining.size();
     bool endOfStream = trackSegCtx->codedMeta.isEOS;
     VCD::MP4::DataItem<CodedMeta> codedMeta;
+    //OMAF_LOG(LOG_INFO, "Is audio %d\n", trackSegCtx->isAudio);
     if (!(trackSegCtx->isExtractorTrack))
     {
         if (!endOfStream && m_firstFrameRemaining.count(trackId))
@@ -182,7 +214,9 @@ int32_t DashInitSegmenter::GenerateInitSegment(
                 AddH265VideoTrack(trackId, *codedMeta);
                 break;
             case CodedFormat::AAC:
-                return OMAF_ERROR_UNDEFINED_OPERATION;
+                //OMAF_LOG(LOG_INFO, "To add AAC track !\n");
+                AddAACTrack(trackId, *codedMeta);
+                break;
             case CodedFormat::TimedMetadata:
                 return OMAF_ERROR_UNDEFINED_OPERATION;
             case CodedFormat::H265Extractor:
@@ -218,7 +252,8 @@ int32_t DashInitSegmenter::GenerateInitSegment(
                         AddH265VideoTrack(normalTrack.first, *codedMeta);
                         break;
                     case CodedFormat::AAC:
-                        return OMAF_ERROR_UNDEFINED_OPERATION;
+                        AddAACTrack(normalTrack.first, *codedMeta);
+                        break;
                     case CodedFormat::TimedMetadata:
                         return OMAF_ERROR_UNDEFINED_OPERATION;
                     case CodedFormat::H265Extractor:
@@ -249,7 +284,8 @@ int32_t DashInitSegmenter::GenerateInitSegment(
                         AddH265VideoTrack(trackId, *codedMeta);
                         break;
                     case CodedFormat::AAC:
-                        return OMAF_ERROR_UNDEFINED_OPERATION;
+                        AddAACTrack(trackId, *codedMeta);
+                        break;
                     case CodedFormat::TimedMetadata:
                         return OMAF_ERROR_UNDEFINED_OPERATION;
                     case CodedFormat::H265Extractor:
@@ -270,6 +306,7 @@ int32_t DashInitSegmenter::GenerateInitSegment(
     {
         if (m_config.writeToBitstream)
         {
+            //OMAF_LOG(LOG_INFO, "WRITE TO BS FOR track %d\n", trackId.GetIndex());
             if (!endOfStream)
             {
                 ostringstream frameStream;

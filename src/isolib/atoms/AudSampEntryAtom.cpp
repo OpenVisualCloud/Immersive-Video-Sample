@@ -83,6 +83,26 @@ std::uint16_t AudioSampleEntryAtom::GetVersion() const
     return m_version;
 }
 
+void AudioSampleEntryAtom::SetChannelCount(std::uint16_t channelCnt)
+{
+    m_channelNumber = channelCnt;
+}
+
+std::uint16_t AudioSampleEntryAtom::GetChannelCount() const
+{
+    return m_channelNumber;
+}
+
+void AudioSampleEntryAtom::SetSampleSize(std::uint16_t sampSize)
+{
+    m_sampleSize = sampSize;
+}
+
+std::uint16_t AudioSampleEntryAtom::GetSampleSize() const
+{
+    return m_sampleSize;
+}
+
 std::uint32_t AudioSampleEntryAtom::GetSampleRate() const
 {
     if (m_version == 1 && m_hasSamplingRateAtom)

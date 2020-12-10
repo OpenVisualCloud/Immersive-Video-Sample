@@ -55,6 +55,9 @@ public:
     DefaultSegmentation()
     {
         m_segNum = 0;
+        m_audioSegNum = 0;
+        m_audioPrevSegNum = 0;
+        m_audioSegCtxsConsted = false;
         m_framesNum = 0;
         m_videoSegInfo = NULL;
         m_projType  = VCD::OMAF::ProjectionFormat::PF_ERP;
@@ -87,6 +90,9 @@ public:
     DefaultSegmentation(std::map<uint8_t, MediaStream*> *streams, ExtractorTrackManager *extractorTrackMan, InitialInfo *initInfo) : Segmentation(streams, extractorTrackMan, initInfo)
     {
         m_segNum = 0;
+        m_audioSegNum = 0;
+        m_audioPrevSegNum = 0;
+        m_audioSegCtxsConsted = false;
         m_framesNum = 0;
         m_videoSegInfo = NULL;
         m_projType  = VCD::OMAF::ProjectionFormat::PF_ERP;
@@ -107,6 +113,9 @@ public:
     DefaultSegmentation(const DefaultSegmentation& src)
     {
         m_segNum = src.m_segNum;
+        m_audioSegNum = src.m_audioSegNum;
+        m_audioPrevSegNum = src.m_audioPrevSegNum;
+        m_audioSegCtxsConsted = src.m_audioSegCtxsConsted;
         m_framesNum = src.m_framesNum;
         m_videoSegInfo = std::move(src.m_videoSegInfo);
         m_projType  = src.m_projType;
@@ -127,6 +136,9 @@ public:
     DefaultSegmentation& operator=(DefaultSegmentation&& other)
     {
         m_segNum = other.m_segNum;
+        m_audioSegNum = other.m_audioSegNum;
+        m_audioPrevSegNum = other.m_audioPrevSegNum;
+        m_audioSegCtxsConsted = other.m_audioSegCtxsConsted;
         m_framesNum = other.m_framesNum;
         m_videoSegInfo = NULL;
         m_projType  = other.m_projType;
@@ -161,12 +173,30 @@ public:
 
     //!
     //! \brief  End the segmentation process for
-    //!         all media streams
+    //!         all video streams
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
     virtual int32_t VideoEndSegmentation();
+
+    //!
+    //! \brief  Execute the segmentation process for
+    //!         all audio streams
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t AudioSegmentation();
+
+    //!
+    //! \brief  End the segmentation process for
+    //!         all audio streams
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t AudioEndSegmentation();
 
 private:
     //!
@@ -182,7 +212,7 @@ private:
 
     //!
     //! \brief  Construct track segmentation context
-    //!         for all tracks and all media streams
+    //!         for all video tile tracks
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
@@ -197,6 +227,15 @@ private:
     //!         ERROR_NONE if success, else failed reason
     //!
     int32_t ConstructExtractorTrackSegCtx();
+
+    //!
+    //! \brief  Construct track segmentation context
+    //!         for all audio tracks
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t ConstructAudioTrackSegCtx();
 
     //!
     //! \brief  Write segments for specified video stream
@@ -224,6 +263,17 @@ private:
         bool isEOS);
 
     //!
+    //! \brief  Write segments for specified audio stream
+    //!
+    //! \param  [in] stream
+    //!         pointer to specified audio stream
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t WriteSegmentForEachAudio(MediaStream *stream, FrameBSInfo *frameData, bool isKeyFrame, bool isEOS);
+
+    //!
     //! \brief  End segmentation process for specified video stream
     //!
     //! \param  [in] stream
@@ -233,6 +283,17 @@ private:
     //!         ERROR_NONE if success, else failed reason
     //!
     int32_t EndEachVideo(MediaStream *stream);
+
+    //!
+    //! \brief  End segmentation process for specified audio stream
+    //!
+    //! \param  [in] stream
+    //!         pointer to specified audio stream
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t EndEachAudio(MediaStream *stream);
 
     //!
     //! \brief  Start segmentation thread for specified extractor track
@@ -311,6 +372,24 @@ private:
         m_isFramesReady = isFramesReady;
     };
 
+    //!
+    //! \brief  Check whether there are only audio streams
+    //!         in input streams
+    //!
+    //! \return bool
+    //!         true if there are only audio streams, else false
+    //!
+    bool OnlyAudio();
+
+    //!
+    //! \brief  Check whether there is audio stream in input
+    //!         streams
+    //!
+    //! \return bool
+    //!         true if there is audio stream, else false
+    //!
+    bool HasAudio();
+
 private:
     std::map<MediaStream*, TrackSegmentCtx*>       m_streamSegCtx;       //!< map of media stream and its track segmentation context
     std::map<ExtractorTrack*, TrackSegmentCtx*>    m_extractorSegCtx;    //!< map of extractor track and its track segmentation context
@@ -322,6 +401,10 @@ private:
     std::map<uint8_t, std::map<uint32_t, VCD::MP4::TrackId>> m_tilesTrackIdxs;     //!< map of tile and its track index
     std::map<VCD::MP4::TrackId, TrackSegmentCtx*>            m_trackSegCtx;        //!< map of tile track and its track segmentation context
     uint64_t                                       m_segNum;             //!< current written segments number
+    std::mutex                                     m_audioMutex;
+    uint64_t                                       m_audioSegNum;
+    uint64_t                                       m_audioPrevSegNum;
+    bool                                           m_audioSegCtxsConsted;
     uint64_t                                       m_framesNum;          //!< current written frames number
     std::map<pthread_t, ExtractorTrack*>           m_extractorThreadIds; //!< map of thread ID for extractor track segmentation and corresponding extractor track
     bool                                           m_isEOS;              //!< whether EOS has been gotten for all media streams
