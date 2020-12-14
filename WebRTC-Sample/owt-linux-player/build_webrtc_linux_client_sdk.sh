@@ -1,5 +1,10 @@
 #!/bin/bash -e
 
+SUDO=""
+if [[ $EUID -ne 0 ]]; then
+  SUDO="sudo -E"
+fi
+
 ROOT=`pwd`/webrtc_linux_client_sdk
 BUILD=${ROOT}/Build
 PREFIX=${ROOT}/release
@@ -7,11 +12,11 @@ DEPS=${BUILD}/deps
 PATCHES=${ROOT}/../patches
 
 install_dependencies() {
-    sudo -E apt-get update
-    sudo -E apt install -y git build-essential wget python cmake pkg-config libglib2.0-dev libgtk-3-dev libasound2-dev libpulse-dev
+    ${SUDO} apt-get update
+    ${SUDO} apt install -y git build-essential wget python cmake pkg-config libglib2.0-dev libgtk-3-dev libasound2-dev libpulse-dev
 
     # player
-    sudo -E apt install -y yasm libgoogle-glog-dev libva-dev libglm-dev libglfw3-dev libgles2-mesa-dev libglu1-mesa-dev liblzma-dev
+    ${SUDO} apt install -y yasm libgoogle-glog-dev libva-dev libglm-dev libglfw3-dev libgles2-mesa-dev libglu1-mesa-dev liblzma-dev
 
     # set git user
     if [ -z "`git config --get user.email`" ]; then
