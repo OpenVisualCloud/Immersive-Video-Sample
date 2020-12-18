@@ -1392,7 +1392,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
         {
             if (hasAudio)
             {
-                uint32_t waitTimes = 10000;
+                uint32_t waitTimes = 50000;
                 uint32_t currWaitTime = 0;
                 while (currWaitTime < waitTimes)
                 {
@@ -1706,7 +1706,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 if (ret)
                     return ret;
             }
-            OMAF_LOG(LOG_INFO, "Total %ld frames written into segments!\n", m_framesNum);
+            OMAF_LOG(LOG_INFO, "Totally write %ld frames into video tracks!\n", m_framesNum);
             break;
         }
         m_framesNum++;
@@ -1766,6 +1766,7 @@ int32_t DefaultSegmentation::AudioSegmentation()
 
     bool nowEOS = false;
     bool eosWritten = false;
+    uint64_t framesWritten = 0;
     while(1)
     {
         if (onlyAudio)
@@ -1800,20 +1801,11 @@ int32_t DefaultSegmentation::AudioSegmentation()
                 nowEOS = as->GetEOS();
                 if (currFrame)
                 {
-                    //m_framesIsKey[as] = currFrame->isKeyFrame;
-                    //m_streamsIsEOS[as] = false;
-
-                    //vs->UpdateTilesNalu();
-                    //WriteSegmentForEachVideo(vs, currFrame->isKeyFrame, false);
                     WriteSegmentForEachAudio(as, currFrame, true, false);
+                    framesWritten++;
                 }
                 else
                 {
-                    //m_framesIsKey[vs] = false;
-                    //m_streamsIsEOS[as] = true;
-
-                    //WriteSegmentForEachVideo(vs, false, true);
-                    WriteSegmentForEachAudio(as, NULL, false, true);
                     eosWritten = true;
                 }
             }
@@ -1898,6 +1890,7 @@ int32_t DefaultSegmentation::AudioSegmentation()
         }
     }
 
+    OMAF_LOG(LOG_INFO, "Totally write %ld frames into audio track!\n", framesWritten);
     return ERROR_NONE;
 }
 
