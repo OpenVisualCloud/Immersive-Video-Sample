@@ -85,6 +85,7 @@ class OmafMediaSource {
   virtual int OpenMedia(std::string url, std::string cacheDir, void* externalLog, bool enableExtractor, bool enablePredictor = false,
                         std::string predictPluginName = "", std::string dllPath = "") = 0;
 
+  virtual int StartStreaming() = 0;
   //!
   //! \brief  Close the media. it's pure interface
   //!

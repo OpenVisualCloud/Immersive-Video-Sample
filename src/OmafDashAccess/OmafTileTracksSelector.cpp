@@ -94,6 +94,8 @@ bool IsSelectionChanged(TracksMap selection1, TracksMap selection2)
 int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
 {
     TracksMap selectedTracks;
+    uint32_t rowSize = pStream->GetRowSize();
+    uint32_t colSize = pStream->GetColSize();
     if (mUsePrediction && mPoseHistory.size() >= POSE_SIZE) // using prediction
     {
         std::vector<std::pair<ViewportPriority, TracksMap>>  predictedTracksArray = GetTileTracksByPosePrediction(pStream);
@@ -103,8 +105,6 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
         }
         else
         {
-            uint32_t rowSize = pStream->GetRowSize();
-            uint32_t colSize = pStream->GetColSize();
             // fetch union set of predictedTracksArray ordered by ViewportPriority
             std::sort(predictedTracksArray.begin(), predictedTracksArray.end(), \
                 [&](std::pair<ViewportPriority, TracksMap> track1, std::pair<ViewportPriority, TracksMap> track2) { return track1.first < track2.first;});

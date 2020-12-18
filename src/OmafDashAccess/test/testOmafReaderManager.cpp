@@ -71,6 +71,7 @@ class OmafReaderManagerTest : public testing::Test {
       printf("Failed to open media \n");
       return;
     }
+    m_source->StartStreaming();
     OmafReaderManager::OmafReaderParams params;
     params.duration_ = 1000;
     params.mode_ = OmafDashMode::EXTRACTOR;

@@ -59,6 +59,7 @@ OmafDashSource::OmafDashSource() {
   dcount = 1;
   mPreExtractorID = 0;
   m_stitch = nullptr;
+  mIsLocalMedia = false;
 }
 
 OmafDashSource::~OmafDashSource() {
@@ -126,10 +127,10 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
   uint32_t httpLen = strlen(strHTTP);
   uint32_t httpsLen = strlen(strHTTPS);
 
-  bool isLocalMedia = false;
+  mIsLocalMedia = false;
 
   if (0 != strncmp(url.c_str(), strHTTP, httpLen) && 0 != strncmp(url.c_str(), strHTTPS, httpsLen)) {
-    isLocalMedia = true;
+    mIsLocalMedia = true;
   }
 
   /// init download manager
@@ -137,7 +138,7 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
   int ret = ERROR_NONE;
   DownloadManager* pDM = DOWNLOADMANAGER::GetInstance();
 
-  if (!isLocalMedia) {
+  if (!mIsLocalMedia) {
     pDM->SetMaxCacheSize(MAX_CACHE_SIZE);
 
     pDM->SetCacheFolder(cacheDir);
@@ -193,7 +194,7 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
     return OMAF_ERROR_INVALID_PROJECTIONTYPE;
   }
   OMAF_LOG(LOG_INFO, "The DASH Source is from %s projection !\n", projStr.c_str());
-  if (!isLocalMedia) {
+  if (!mIsLocalMedia) {
     // base URL should be "http://IP:port/FilePrefix/"
     std::size_t pos = mMPDinfo->baseURL[0].find(":");
     pos = mMPDinfo->baseURL[0].find(":", pos + 1);
@@ -291,10 +292,18 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
   // READERMANAGER::GetInstance()->SetExtractorEnabled(enableExtractor);
 
   /// if MPD is static one, don't create thread to download
-  if (!isLocalMedia) {
+  // if (!isLocalMedia) {
+  //   StartThread();
+  // }
+
+  return ERROR_NONE;
+}
+
+int OmafDashSource::StartStreaming()
+{
+  if (!mIsLocalMedia) {
     StartThread();
   }
-
   return ERROR_NONE;
 }
 

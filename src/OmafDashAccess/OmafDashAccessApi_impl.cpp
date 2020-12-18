@@ -137,9 +137,19 @@ int OmafAccess_OpenMedia(Handler hdl, DashStreamingClient *pCtx, bool enablePred
   }
   OmafMediaSource *pSource = (OmafMediaSource *)hdl;
   pSource->SetLoop(false);
+  // for android ndk compile, transform char* to string is mandatory
+  string media_url = pCtx->media_url;
+  string cache_path = pCtx->cache_path;
+  string s_predictPluginName = predictPluginName;
+  string s_libPath = libPath;
+  return pSource->OpenMedia(media_url, cache_path, pCtx->log_callback, pCtx->enable_extractor, enablePredictor,
+                            s_predictPluginName, s_libPath);
+}
 
-  return pSource->OpenMedia(pCtx->media_url, pCtx->cache_path, pCtx->log_callback, pCtx->enable_extractor, enablePredictor,
-                            predictPluginName, libPath);
+int OmafAccess_StartStreaming(Handler hdl)
+{
+  OmafMediaSource *pSource = (OmafMediaSource *)hdl;
+  return pSource->StartStreaming();
 }
 
 int OmafAccess_CloseMedia(Handler hdl) {
