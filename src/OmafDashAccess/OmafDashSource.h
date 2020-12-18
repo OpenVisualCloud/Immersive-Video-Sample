@@ -70,6 +70,7 @@ class OmafDashSource : public OmafMediaSource, Threadable {
   //!
   virtual int OpenMedia(std::string url, std::string cacheDir, void* externalLog, bool enableExtractor = true,
                         bool enablePredictor = false, std::string predictPluginName = "", std::string libPath = "");
+  virtual int StartStreaming();
   virtual int CloseMedia();
   virtual int GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool needParams, bool clearBuf);
   virtual int GetStatistic(DashStatisticInfo* dsInfo);
@@ -176,6 +177,7 @@ private:
   OmafTilesStitch* m_stitch = nullptr;
   std::shared_ptr<OmafDashSegmentClient> dash_client_;
   std::shared_ptr<OmafReaderManager> omaf_reader_mgr_;
+  bool mIsLocalMedia;
 };
 
 VCD_OMAF_END;

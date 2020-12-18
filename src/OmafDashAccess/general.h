@@ -50,6 +50,12 @@
 #include "glog/logging.h"
 #include "OmafStructure.h"
 
+#ifdef _ANDROID_NDK_OPTION_
+#include <android/log.h>
+#define LOG_TAG "OmafDashAccess"
+#define ANDROID_LOGD(...) __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
+#endif
+
 #define SAFE_DELETE(x) \
   if (NULL != (x)) {   \
     delete (x);        \

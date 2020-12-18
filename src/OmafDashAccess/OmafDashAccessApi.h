@@ -139,6 +139,13 @@ int OmafAccess_OpenMedia(Handler hdl, DashStreamingClient* pCtx, bool enablePred
                          char* libPath);
 
 /*
+ * description: API to start a dash stream
+ * params: hdl - [in] handler created with DashStreaming_Init
+ *
+ * return: the error return from the API
+ */
+int OmafAccess_StartStreaming(Handler hdl);
+/*
  * description: API to seek a stream. only work with static mode. not implement yet.
  * params: hdl - [in] handler created with DashStreaming_Init
  *         time - [in] the position to be seek

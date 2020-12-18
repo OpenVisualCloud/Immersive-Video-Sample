@@ -241,7 +241,7 @@ OMAF_STATUS OmafCurlEasyDownloader::start(int64_t offset, int64_t size, onData d
       if (size > 0) {
         ss << size;
       }
-      OMAF_LOG(LOG_INFO, "To download the range: %s\n", ss.str());
+      // OMAF_LOG(LOG_INFO, "To download the range: %s\n", ss.str());
       curl_easy_setopt(easy_curl_, CURLOPT_RANGE, ss.str().c_str());
     }
     dcb_ = dcb;

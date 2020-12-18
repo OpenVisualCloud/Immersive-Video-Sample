@@ -118,6 +118,7 @@ TEST_F(MediaSourceTest, OpenMedia_static) {
 
   ret = dashSource->OpenMedia(url_static, cache, NULL, true, false, "", "");
   EXPECT_TRUE(ret == ERROR_NONE);
+  dashSource->StartStreaming();
 
   sleep(5);
   dashSource->CloseMedia();
@@ -141,6 +142,7 @@ TEST_F(MediaSourceTest, OpenMedia_live) {
 
   ret = dashSource->OpenMedia(url_live, cache, NULL, true, false, "", "");
   EXPECT_TRUE(ret == ERROR_NONE);
+  dashSource->StartStreaming();
 
   sleep(5);
   dashSource->CloseMedia();
@@ -165,6 +167,7 @@ TEST_F(MediaSourceTest, OpenMedia_static_withPredictor) {
 
   ret = dashSource->OpenMedia(url_static, cache, NULL, true, true, pluginName, libPath);
   EXPECT_TRUE(ret == ERROR_NONE);
+  dashSource->StartStreaming();
 
   sleep(15);
   dashSource->CloseMedia();
@@ -189,6 +192,7 @@ TEST_F(MediaSourceTest, OpenMedia_live_withPredictor) {
 
   ret = dashSource->OpenMedia(url_live, cache, NULL, true, true, pluginName, libPath);
   EXPECT_TRUE(ret == ERROR_NONE);
+  dashSource->StartStreaming();
 
   sleep(15);
   dashSource->CloseMedia();
@@ -213,6 +217,7 @@ TEST_F(MediaSourceTest, OpenMedia_static_changeViewport) {
 
   ret = dashSource->OpenMedia(url_static, cache, NULL, true, false, "", "");
   EXPECT_TRUE(ret == ERROR_NONE);
+  dashSource->StartStreaming();
 
   int16_t vpcnt = 200;
   while (vpcnt > 0) {
@@ -247,6 +252,7 @@ TEST_F(MediaSourceTest, OpenMedia_live_changeViewport) {
 
   ret = dashSource->OpenMedia(url_live, cache, NULL, true, false, "", "");
   EXPECT_TRUE(ret == ERROR_NONE);
+  dashSource->StartStreaming();
 
   sleep(1);
 
