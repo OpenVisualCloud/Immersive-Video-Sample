@@ -696,6 +696,7 @@ FrameBuf HevcExtractorTrackPackedData::GenFrameData() const
 
 unique_ptr<SampleEntryBoxWrapper> MP4AudioSampleEntry::GenSampleEntryBox() const
 {
+    ISO_LOG(LOG_INFO, "Gen sample entry box for MP4AudioSampleEntry \n");
     auto box = MakeUnique<MP4AudioSampleEntryAtom, SampleEntryAtom>();
     ElementaryStreamDescriptorAtom& esdBox = box->GetESDAtom();
     ElementaryStreamDescriptorAtom::ES_Params esd{};
@@ -823,10 +824,7 @@ TrackDescription::TrackDescription(TrackMeta inTrackMeta,
     box->SetDuration(uint32_t((duration / timeScale).asDouble()));
     mediaHeaderBox = move(MakeUnique<MediaHeaderBoxWrapper>(move(box)));//GenMediaHeaderAtom(inFileInfo, inTrackMeta.timescale);
 
-    //handlerBox     = inSmpEty.GenHandlerBox();
-    handlerBox = move(MakeUnique<HandlerBoxWrapper>(MakeUnique<HandlerAtom, HandlerAtom>()));
-    handlerBox->handlerBox->SetHandlerType("vide");
-    handlerBox->handlerBox->SetName("VideoHandler");
+    handlerBox     = inSmpEty.GenHandlerBox();
 
     UniquePtr<TrackHeaderAtom> thead = MakeUnique<TrackHeaderAtom, TrackHeaderAtom>();
     trackHeaderBox = move(MakeUnique<TrackHeaderBoxWrapper>(move(thead)));

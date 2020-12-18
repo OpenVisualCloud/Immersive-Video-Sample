@@ -359,10 +359,6 @@ int32_t OmafPackage::InitOmafPackage(InitialInfo *initInfo)
     else
         logCallBack = GlogFunction; //default log callback function
 
-    //uint8_t videoStreamsNum = initInfo->bsNumVideo;
-    //if (!videoStreamsNum)
-        //return OMAF_ERROR_VIDEO_NUM;
-
     uint8_t streamsNumTotal = initInfo->bsNumVideo + initInfo->bsNumAudio;
     uint8_t streamIdx = 0;
     for( ; streamIdx < streamsNumTotal; streamIdx++)

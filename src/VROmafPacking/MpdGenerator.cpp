@@ -380,6 +380,11 @@ int32_t MpdGenerator::WriteAudioTrackAS(XMLElement *periodEle, TrackSegmentCtx *
     representationEle->SetAttribute(STARTWITHSAP, 1);
     asEle->InsertEndChild(representationEle);
 
+    XMLElement *audioChlCfgEle = m_xmlDoc->NewElement(AUDIOCHANNELCONFIGURATION);
+    audioChlCfgEle->SetAttribute(SCHEMEIDURI, SCHEMEIDURI_AUDIO);
+    audioChlCfgEle->SetAttribute(COMMON_VALUE, trackSegCtx.codedMeta.channelCfg);
+    representationEle->InsertEndChild(audioChlCfgEle);
+
     memset_s(string, 1024, 0);
     snprintf(string, 1024, "%s_track%d.$Number$.mp4", m_segInfo->outName, trackSegCtx.trackIdx.GetIndex());
     XMLElement *sgtTpeEle = m_xmlDoc->NewElement(SEGMENTTEMPLATE);
