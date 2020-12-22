@@ -1,0 +1,10 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${exec_prefix}/include
+
+Name:MediaPlayer
+Description: Media Player Library
+Version:0.0.1-DEV
+Cflags: -I${prefix}/include
+Libs: -L${libdir} -lMediaPlayer -lOmafDashAccess -lavfilter -lavformat -lavcodec -lavdevice -lavutil -lswscale -lswresample -l360SCVP -lglfw -lGL -lGLU -lX11 -lpthread -llzma -lz -lglog -lEGL -lGLESv2 -ldl -lsafestring_shared -L/usr/lib64 -L/usr/local/lib64
