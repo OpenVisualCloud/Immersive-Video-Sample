@@ -1,7 +1,9 @@
 # Immersive Video Delivery Reference Player
 
 ## Introduction
-The reference 360 player is used to play the mixed-resolution stream video transmitted from the server. Based on the current viewport, corresponding regions are rendered on the window. The workflow is as follows:
+The reference 360 player is used to play the mixed-resolution stream video transmitted from the server. Linux and Android platform are both supported, in which android player development is based on google VR android SDK.(https://github.com/googlevr/gvr-android-sdk)
+
+Based on the current viewport, corresponding regions are rendered on the window. The workflow is as follows:
 
 <IMG src="img/OMAF_Compliant-Video-Delivery-RefPlayer_workflow.png" height="450">
  
@@ -30,7 +32,7 @@ Second, in Create function in CubeMapMesh class, skyboxVertices is defined to de
 And in Bind function in CubeMapMesh class, the vertices in each face would be transformed according to m_transformType data. The transform action here is reverse to the action described in m_transformType, which is to rotate the scene back to NO_TRANSFORM.
 
 ## Configuration
-The configuration file, config.xml, is used to config parameters for 360 player, as shown in the following Table:
+The configuration file, config.xml, is used to config parameters for 360 linux player, as shown in the following Table:
 
 | **Parameters** | **Descriptions** | **examples** |
 | --- | --- | --- |

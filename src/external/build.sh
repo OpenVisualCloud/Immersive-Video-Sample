@@ -47,7 +47,7 @@ build_client(){
     cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=client ../../
     make -j $(nproc)
     sudo make install
-    cp ../../player/config.xml ./player
+    cp ../../player/app/linux/config.xml ./player/app
 }
 
 build_ci(){
@@ -93,7 +93,7 @@ build_ci(){
         sudo cp ffmpeg_client/libswscale/libswscale.so.5 ffmpeg_client_so/libswscale.so.5
         sudo cp ffmpeg_client/libswresample/libswresample.so.3 ffmpeg_client_so/libswresample.so.3
         sudo cp /usr/local/lib/libpostproc.so.55 ffmpeg_client_so/libpostproc.so.55
-        cd ${EX_PATH} && ./fpm.sh client ${GIT_SHORT_HEAD}
+        # cd ${EX_PATH} && ./fpm.sh client ${GIT_SHORT_HEAD}
     fi
 }
 
