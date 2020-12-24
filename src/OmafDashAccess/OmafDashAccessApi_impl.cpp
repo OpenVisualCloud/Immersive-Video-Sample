@@ -200,29 +200,40 @@ int OmafAccess_GetPacket(Handler hdl, int stream_id, DashPacket *packet, int *si
       // int outSize = pPkt->Size();
       // char *buf = (char *)malloc(outSize * sizeof(char));
       // memcpy_s(buf, pPkt->Payload(), outSize);
-      RegionWisePacking *newRwpk = new RegionWisePacking;
-      const RegionWisePacking &pRwpk = pPkt->GetRwpk();
-      *newRwpk = pRwpk;
-      newRwpk->rectRegionPacking = new RectangularRegionWisePacking[newRwpk->numRegions];
-      memcpy_s(newRwpk->rectRegionPacking, pRwpk.numRegions * sizeof(RectangularRegionWisePacking),
-               pRwpk.rectRegionPacking, pRwpk.numRegions * sizeof(RectangularRegionWisePacking));
-      SourceResolution *srcRes = new SourceResolution[pPkt->GetQualityNum()];
-      memcpy_s(srcRes, pPkt->GetQualityNum() * sizeof(SourceResolution), pPkt->GetSourceResolutions(),
-               pPkt->GetQualityNum() * sizeof(SourceResolution));
-      packet[i].rwpk = newRwpk;
-      packet[i].buf = pPkt->MovePayload();
-      packet[i].size = pPkt->Size();
-      packet[i].segID = pPkt->GetSegID();
-      packet[i].videoID = pPkt->GetVideoID();
-      packet[i].video_codec = pPkt->GetCodecType();
-      packet[i].pts = pPkt->GetPTS();
-      packet[i].height = pPkt->GetVideoHeight();
-      packet[i].width = pPkt->GetVideoWidth();
-      packet[i].numQuality = pPkt->GetQualityNum();
-      packet[i].qtyResolution = srcRes;
-      packet[i].tileRowNum = pPkt->GetVideoTileRowNum();
-      packet[i].tileColNum = pPkt->GetVideoTileColNum();
-      packet[i].bEOS = pPkt->GetEOS();
+      if (pPkt->GetMediaType() == MediaType_Video)
+      {
+          RegionWisePacking *newRwpk = new RegionWisePacking;
+          const RegionWisePacking &pRwpk = pPkt->GetRwpk();
+          *newRwpk = pRwpk;
+          newRwpk->rectRegionPacking = new RectangularRegionWisePacking[newRwpk->numRegions];
+          memcpy_s(newRwpk->rectRegionPacking, pRwpk.numRegions * sizeof(RectangularRegionWisePacking),
+                   pRwpk.rectRegionPacking, pRwpk.numRegions * sizeof(RectangularRegionWisePacking));
+          SourceResolution *srcRes = new SourceResolution[pPkt->GetQualityNum()];
+          memcpy_s(srcRes, pPkt->GetQualityNum() * sizeof(SourceResolution), pPkt->GetSourceResolutions(),
+                   pPkt->GetQualityNum() * sizeof(SourceResolution));
+          packet[i].rwpk = newRwpk;
+          packet[i].buf = pPkt->MovePayload();
+          packet[i].size = pPkt->Size();
+          packet[i].segID = pPkt->GetSegID();
+          packet[i].videoID = pPkt->GetVideoID();
+          packet[i].video_codec = pPkt->GetCodecType();
+          packet[i].pts = pPkt->GetPTS();
+          packet[i].height = pPkt->GetVideoHeight();
+          packet[i].width = pPkt->GetVideoWidth();
+          packet[i].numQuality = pPkt->GetQualityNum();
+          packet[i].qtyResolution = srcRes;
+          packet[i].tileRowNum = pPkt->GetVideoTileRowNum();
+          packet[i].tileColNum = pPkt->GetVideoTileColNum();
+          packet[i].bEOS = pPkt->GetEOS();
+      }
+      else if (pPkt->GetMediaType() == MediaType_Audio)
+      {
+          packet[i].buf = pPkt->MovePayload();
+          packet[i].size = pPkt->Size();
+          packet[i].segID = pPkt->GetSegID();
+          packet[i].pts = pPkt->GetPTS();
+          packet[i].bEOS = pPkt->GetEOS();
+      }
     } else {
       packet[i].bEOS = true;
     }

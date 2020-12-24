@@ -50,6 +50,9 @@ OmafSegment::OmafSegment(DashSegmentSourceParams ds_params, int segCnt, bool bIn
     seg_id_ = initSeg_id_;
   }
   mQualityRanking = INVALID_QUALITY_RANKING;
+  mMediaType = MediaType_Video;
+  mChlsNum = 0;
+  mSampleRate = 0;
 }
 
 OmafSegment::~OmafSegment() {

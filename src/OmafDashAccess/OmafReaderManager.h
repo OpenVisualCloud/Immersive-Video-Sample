@@ -58,6 +58,7 @@ enum class OmafDashMode { EXTRACTOR = 0, LATER_BINDING = 1 };
 
 class OmafSegmentNode;
 class OmafPacketParams;
+class OmafAudioPacketParams;
 
 struct _omafSegmentNodeTimedSet {
   int64_t timeline_point_ = -1;
@@ -171,6 +172,13 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
     packet_params_for_extractors_[extractorTrackIdx] = std::move(params);
   }
 
+  std::shared_ptr<OmafAudioPacketParams> getPacketParamsForAudio(uint32_t audioTrackIdx) noexcept {
+    return packet_params_for_audio_[audioTrackIdx];
+  }
+  void setPacketParamsForAudio(uint32_t audioTrackIdx, std::shared_ptr<OmafAudioPacketParams> params) {
+    packet_params_for_audio_[audioTrackIdx] = std::move(params);
+  }
+
  private:
   std::shared_ptr<OmafDashSegmentClient> dash_client_;
 
@@ -198,6 +206,8 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
   std::map<uint32_t, std::shared_ptr<OmafPacketParams>> omaf_packet_params_;
 
   std::map<uint32_t, std::shared_ptr<OmafPacketParams>> packet_params_for_extractors_;
+
+  std::map<uint32_t, std::shared_ptr<OmafAudioPacketParams>> packet_params_for_audio_;
 
   std::mutex initSeg_mutex_;
 

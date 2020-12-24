@@ -151,6 +151,7 @@ public:
     //!
     virtual RepresentationElement* BuildRepresentation(OmafXMLElement* xmlRepresentation);
 
+    virtual AudioChannelConfigurationElement* BuildAudioChannelConfiguration(OmafXMLElement* xmlAudioChlCfg);
     //!
     //! \brief    Build Segment Element according to XML element
     //!

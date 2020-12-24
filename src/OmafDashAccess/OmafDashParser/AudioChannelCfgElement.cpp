@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Intel Corporation
+ * Copyright (c) 2020, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,41 +26,38 @@
  */
 
 //!
-//! \file:   RepresentationElement.cpp
-//! \brief:  Representation element class
+//! \file:   AudioChannelCfgElement.cpp
+//! \brief:  AudioChannelConfiguration element class
 //!
 
-#include "RepresentationElement.h"
+#include "AudioChannelCfgElement.h"
 
 VCD_OMAF_BEGIN
 
-RepresentationElement::RepresentationElement()
+AudioChannelConfigurationElement::~AudioChannelConfigurationElement()
 {
-    m_segment = nullptr;
-    m_audioChlCfg = nullptr;
-    m_width = 0;
-    m_height = 0;
-    m_audioSamplingRate = 0;
-    m_bandwidth = 0;
+    m_chlCfg = 0;
 }
 
-RepresentationElement::~RepresentationElement()
+ODStatus AudioChannelConfigurationElement::ParseSchemeIdUriAndValue()
 {
-    m_id.clear();
-    m_codecs.clear();
-    m_mimeType.clear();
-    m_width = 0;
-    m_height = 0;
-    m_audioSamplingRate = 0;
-    m_frameRate.clear();
-    m_sar.clear();
-    m_startWithSAP.clear();
-    m_qualityRanking.clear();
-    m_bandwidth = 0;
+    ODStatus ret = OD_STATUS_SUCCESS;
 
-    SAFE_DELETE(m_segment);
-    SAFE_DELETE(m_audioChlCfg);
+    if(GetSchemeIdUri() == SCHEMEIDURI_AUDIO)
+    {
+        if(0 == GetValue().length())
+        {
+            OMAF_LOG(LOG_ERROR, "SchemeIdUri Audio doesn't have value.\n");
+            ret = OD_STATUS_INVALID;
+        }
+        else
+        {
+            m_chlCfg = StringToInt(GetValue());
+            OMAF_LOG(LOG_INFO, "Parsed audio channel configuration is %d\n", m_chlCfg);
+        }
+    }
+
+    return ret;
 }
-
 
 VCD_OMAF_END;

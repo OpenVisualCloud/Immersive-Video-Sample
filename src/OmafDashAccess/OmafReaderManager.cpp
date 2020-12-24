@@ -86,6 +86,39 @@ class OmafPacketParams : public VCD::NonCopyable {
   bool binit_ = false;
 };
 
+class OmafAudioPacketParams : public VCD::NonCopyable {
+  friend OmafSegmentNode;
+
+  public:
+  using Ptr = std::shared_ptr<OmafAudioPacketParams>;
+
+  public:
+  OmafAudioPacketParams(){};
+  virtual ~OmafAudioPacketParams(){};
+
+  public:
+  int init(std::shared_ptr<OmafReader> reader, uint32_t reader_trackId, uint32_t sampleId) noexcept;
+
+  void writeADTSHdr(uint32_t frameSize);
+
+  private:
+  int  unPackUnsignedIntValue(uint8_t bitsNum, uint32_t *value);
+  void packOneBit(bool value);
+  void packUnsignedIntValue(uint8_t bitsNum, uint32_t value);
+
+  std::vector<uint8_t> params_;
+
+  uint32_t             objType_;
+
+  uint32_t             frequencyIdx_;
+
+  uint32_t             channelCfg_;
+
+  int32_t              curr_bit_pos_ = 0;
+
+  bool                 binit_ = false;
+};
+
 // FIXME use better class name?
 class OmafSegmentNode : public VCD::NonCopyable {
  public:
@@ -182,6 +215,13 @@ class OmafSegmentNode : public VCD::NonCopyable {
     }
   }
 
+  MediaType getMediaType() {
+    if (segment_.get() != nullptr) {
+      return segment_->GetMediaType();
+    }
+    return MediaType_NONE;
+  }
+
   const std::chrono::steady_clock::time_point &startTime() const noexcept { return start_time_; };
   bool checkTimeout(int32_t ms) const noexcept {
     auto now = std::chrono::steady_clock::now();
@@ -233,6 +273,21 @@ class OmafSegmentNode : public VCD::NonCopyable {
       reader_mgr->setPacketParamsForExtractors(segment_->GetTrackId(), std::move(params));
     }
   }
+
+  OmafAudioPacketParams::Ptr getPacketParamsForAudio() {
+    auto reader_mgr = omaf_reader_mgr_.lock();
+    if (reader_mgr) {
+      return reader_mgr->getPacketParamsForAudio(segment_->GetTrackId());
+    }
+    return nullptr;
+  }
+  void setPacketParamsForAudio(OmafAudioPacketParams::Ptr params) {
+    auto reader_mgr = omaf_reader_mgr_.lock();
+    if (reader_mgr) {
+      reader_mgr->setPacketParamsForAudio(segment_->GetTrackId(), std::move(params));
+    }
+  }
+
  private:
   std::weak_ptr<OmafReaderManager> omaf_reader_mgr_;
 
@@ -485,9 +540,9 @@ OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPa
               bpacket_readed = true;
             }
             timeline_point_ = node->getTimelinePoint();
-            OMAF_LOG(LOG_INFO, "timeline_point_ is %ld in GetNextPacket, bpacket_readed %d\n", timeline_point_, bpacket_readed);
+            //OMAF_LOG(LOG_INFO, "timeline_point_ is %ld in GetNextPacket, bpacket_readed %d\n", timeline_point_, bpacket_readed);
             if (0 == node->packetQueueSize()) {
-              OMAF_LOG(LOG_INFO, "Node count=%d. %s\n", node.use_count(), node->to_string().c_str());
+              //OMAF_LOG(LOG_INFO, "Node count=%d. %s\n", node.use_count(), node->to_string().c_str());
               nodeset.segment_nodes_.erase(it);
             }
 
@@ -513,11 +568,6 @@ OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPa
         pPacket->SetEOS(true);
       }
     }
-    //  if (!bpacket_readed) {
-    //    OMAF_LOG(LOG_INFO, "Wait dash segment parsed!");
-    //    segment_parsed_cv_.wait(lock);
-    //   }
-    //  }  // end while
 
     // 2. sync timeline point for outside reading
     // drop all dashset whose timeline point is less than timeline point
@@ -551,7 +601,7 @@ OMAF_STATUS OmafReaderManager::GetNextPacketWithPTS(uint32_t trackID, uint64_t p
         std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
         while (it != nodeset.segment_nodes_.end()) { //loop on different node (track)
           auto &node = *it;
-          OMAF_LOG(LOG_INFO, "Require trackid=%u, node trackid=%u\n", trackID, node->getTrackId());
+          //OMAF_LOG(LOG_INFO, "Require trackid=%u, node trackid=%u\n", trackID, node->getTrackId());
           if (node->getTrackId() == trackID) {
             ret = node->getPacket(pPacket, requireParams);
             if (ret == ERROR_NONE) {
@@ -563,7 +613,7 @@ OMAF_STATUS OmafReaderManager::GetNextPacketWithPTS(uint32_t trackID, uint64_t p
             }
 
             if (0 == node->packetQueueSize()) {
-              OMAF_LOG(LOG_INFO, "Node count=%d. %s\n", node.use_count(), node->to_string().c_str());
+              //OMAF_LOG(LOG_INFO, "Node count=%d. %s\n", node.use_count(), node->to_string().c_str());
               nodeset.segment_nodes_.erase(it);
             }
 
@@ -589,11 +639,6 @@ OMAF_STATUS OmafReaderManager::GetNextPacketWithPTS(uint32_t trackID, uint64_t p
         pPacket->SetEOS(true);
       }
     }
-    //  if (!bpacket_readed) {
-    //    OMAF_LOG(LOG_INFO, "Wait dash segment parsed!");
-    //    segment_parsed_cv_.wait(lock);
-    //   }
-    //  }  // end while
 
     // 2. sync timeline point for outside reading
     // drop all dashset whose timeline point is less than timeline point
@@ -769,6 +814,7 @@ void OmafReaderManager::initSegmentStateChange(std::shared_ptr<OmafSegment> pIni
 
     initSeg_ready_count_++;
 
+    OMAF_LOG(LOG_INFO, "Parsed init seg %u\n", pInitSeg->GetInitSegID());
     // 2 get the track information when all init segment parsed
     if (initSegParsedCount() == media_source_->GetTrackCount() && !IsInitSegmentsParsed()) {
       buildInitSegmentInfo();
@@ -1058,7 +1104,7 @@ void OmafReaderManager::normalSegmentStateChange(std::shared_ptr<OmafSegment> se
 
 void OmafReaderManager::threadRunner() noexcept {
   try {
-    OMAF_LOG(LOG_INFO, "Start the reader runner!\n");
+    //OMAF_LOG(LOG_INFO, "Start the reader runner!\n");
 
     while (breader_working_) {
       // 1. find the ready segment/dash_node opend list
@@ -1073,7 +1119,7 @@ void OmafReaderManager::threadRunner() noexcept {
 
       // 2. parse the ready segment/dash_node
       const int64_t timeline_point = ready_dash_node->getTimelinePoint();
-      OMAF_LOG(LOG_INFO, "Get ready segment! timeline=%lld\n", timeline_point);
+      //OMAF_LOG(LOG_INFO, "Get ready segment! timeline=%lld\n", timeline_point);
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
       tracepoint(mthq_tp_provider, T4_parse_start_time, timeline_point);
@@ -1081,6 +1127,7 @@ void OmafReaderManager::threadRunner() noexcept {
 #endif
       OMAF_STATUS ret = ready_dash_node->parse();
 
+      if (ready_dash_node->getMediaType() == MediaType_Video)
       {
           std::lock_guard<std::mutex> lock(segment_samples_mutex_);
           std::map<uint64_t, size_t>::iterator it;
@@ -1094,7 +1141,7 @@ void OmafReaderManager::threadRunner() noexcept {
 
       // 3. move the parsed segment/dash_node to parsed list
       if (ret == ERROR_NONE) {
-        OMAF_LOG(LOG_INFO, "Success to parsed dash segment! timeline=%lld\n", timeline_point);
+        //OMAF_LOG(LOG_INFO, "Success to parsed dash segment! timeline=%lld\n", timeline_point);
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
       tracepoint(mthq_tp_provider, T5_parse_end_time, timeline_point);
@@ -1138,7 +1185,7 @@ OmafSegmentNode::Ptr OmafReaderManager::findReadySegmentNode() noexcept {
     OmafSegmentNode::Ptr ready_dash_node;
     std::unique_lock<std::mutex> lock(segment_opened_mutex_);
     for (auto &nodeset : segment_opened_list_) {
-      OMAF_LOG(LOG_INFO, "To find the ready node set timeline=%lld\n", nodeset.timeline_point_);
+      //OMAF_LOG(LOG_INFO, "To find the ready node set timeline=%lld\n", nodeset.timeline_point_);
 
       // 1.1.1 try to find the ready node
       std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
@@ -1148,6 +1195,10 @@ OmafSegmentNode::Ptr OmafReaderManager::findReadySegmentNode() noexcept {
           if (work_params_.mode_ == OmafDashMode::EXTRACTOR) {
             if (node->isExtractor()) {
               ready_dash_node = std::move(node);
+            }
+            else if (node->getMediaType() == MediaType_Audio) {
+              ready_dash_node = std::move(node);
+              OMAF_LOG(LOG_INFO, "Found one ready audio track segment node!\n");
             }
           } else {
             ready_dash_node = std::move(node);
@@ -1283,6 +1334,125 @@ int OmafPacketParams::init(std::shared_ptr<OmafReader> reader, uint32_t reader_t
     binit_ = false;
     return ERROR_INVALID;
   }
+}
+
+int OmafAudioPacketParams::unPackUnsignedIntValue(uint8_t bitsNum, uint32_t *value)
+{
+  int ret = ERROR_NONE;
+  if ((8 - ((uint8_t)(curr_bit_pos_) % 8)) > bitsNum)
+  {
+    uint8_t tempVal = params_[(uint8_t)(curr_bit_pos_)/8];
+    tempVal <<= (curr_bit_pos_ % 8);
+    tempVal >>= (8 - bitsNum);
+    *value = (uint32_t)tempVal;
+  }
+  else if ((16 - ((uint8_t)(curr_bit_pos_) % 16)) > bitsNum)
+  {
+    uint16_t tempVal1 = (uint16_t)(params_[(uint8_t)(curr_bit_pos_)/8]);
+    uint16_t tempVal2 = (uint16_t)(params_[(uint8_t)(curr_bit_pos_)/8 + 1]);
+    uint16_t tempVal  = (tempVal1 << 8) | tempVal2;
+    tempVal <<= curr_bit_pos_;
+    tempVal >>= (16 - bitsNum);
+    *value = (uint32_t)tempVal;
+  }
+  else
+  {
+    OMAF_LOG(LOG_ERROR, "Not supported bits number %d for bits reader !\n", bitsNum);
+    ret = OMAF_ERROR_INVALID_DATA;
+  }
+  return ret;
+}
+
+int OmafAudioPacketParams::init(std::shared_ptr<OmafReader> reader, uint32_t reader_trackId, uint32_t sampleId) noexcept {
+  try {
+    std::vector<VCD::OMAF::DecoderSpecificInfo> parameterSets;
+    int ret = reader->getDecoderConfiguration(reader_trackId, sampleId, parameterSets);
+    if (ret) {
+      OMAF_LOG(LOG_ERROR, "Failed to get audio specific info !\n");
+      return ret;
+    }
+
+    for (auto const &parameter : parameterSets) {
+      if (parameter.codecSpecInfoType == VCD::MP4::AudioSpecificConfig) {
+        params_.resize(parameter.codecSpecInfoBits.size);
+        for (size_t i = 0; i < parameter.codecSpecInfoBits.size; i++) {
+          params_[i] = parameter.codecSpecInfoBits[i];
+        }
+      }
+    }
+
+    binit_ = params_.size();
+
+    ret = unPackUnsignedIntValue(5, &objType_);
+    if (ret)
+      return ret;
+
+    OMAF_LOG(LOG_INFO, "Parsed audio obj type %d\n", objType_);
+    curr_bit_pos_ += 5;
+
+    ret = unPackUnsignedIntValue(4, &frequencyIdx_);
+    if (ret)
+      return ret;
+
+    OMAF_LOG(LOG_INFO, "Parsed audio sample rate idx %d\n", frequencyIdx_);
+    curr_bit_pos_ += 4;
+
+    ret = unPackUnsignedIntValue(4, &channelCfg_);
+    if (ret)
+      return ret;
+
+    OMAF_LOG(LOG_INFO, "Parsed audio channel configuration %d\n", channelCfg_);
+    curr_bit_pos_ += 4;
+
+    return ERROR_NONE;
+  } catch(const std::exception &ex) {
+    OMAF_LOG(LOG_ERROR, "Failed to init audio packet params, ex: %s\n", ex.what());
+    binit_ = false;
+    return ERROR_INVALID;
+  }
+}
+
+void OmafAudioPacketParams::packOneBit(bool value)
+{
+  --curr_bit_pos_;
+  if (curr_bit_pos_ == -1)
+  {
+    curr_bit_pos_ = 7;
+    params_.push_back(0);
+  }
+  params_[params_.size() - 1] |= (uint8_t(value) << curr_bit_pos_);
+}
+
+void OmafAudioPacketParams::packUnsignedIntValue(uint8_t bitsNum, uint32_t value)
+{
+  for (int32_t num = (bitsNum - 1); num >= 0; --num)
+  {
+    packOneBit(((value >> num) & 1));
+  }
+}
+
+void OmafAudioPacketParams::writeADTSHdr(uint32_t frameSize)
+{
+  params_.clear();
+  curr_bit_pos_ = 0;
+
+  packUnsignedIntValue(12, 0xfff);
+  packUnsignedIntValue(1, 0);
+  packUnsignedIntValue(2, 0);
+  packUnsignedIntValue(1, 1);
+  packUnsignedIntValue(2, objType_);
+  packUnsignedIntValue(4, frequencyIdx_);
+  packUnsignedIntValue(1, 0);
+  packUnsignedIntValue(3, channelCfg_);
+  packUnsignedIntValue(1, 0);
+  packUnsignedIntValue(1, 0);
+
+  packUnsignedIntValue(1, 0);
+  packUnsignedIntValue(1, 0);
+  packUnsignedIntValue(13, (frameSize + 7)); //ADTS Header size is 7 bytes
+  packUnsignedIntValue(11, 0x7ff);
+  packUnsignedIntValue(2, 0);
+  OMAF_LOG(LOG_INFO, "ADTS header size %ld bytes\n", params_.size());
 }
 
 int OmafSegmentNode::parse() noexcept {
@@ -1432,18 +1602,28 @@ int OmafSegmentNode::getPacket(MediaPacket *&pPacket, bool requireParams) noexce
 
     pPacket = media_packets_.front();
     media_packets_.pop();
-    if (requireParams) {
-      auto packet_params = (bExtractor_ == true) ? getPacketParamsForExtractors() : getPacketParams();
-      if (packet_params.get() == nullptr || !packet_params->binit_) {
-        OMAF_LOG(LOG_ERROR, "Invalid VPS/SPS/PPS in getting packet !\n");
-        return OMAF_ERROR_INVALID_DATA;
+    if (pPacket->GetMediaType() == MediaType_Video)
+    {
+      if (requireParams) {
+        auto packet_params = (bExtractor_ == true) ? getPacketParamsForExtractors() : getPacketParams();
+        if (packet_params.get() == nullptr || !packet_params->binit_) {
+          OMAF_LOG(LOG_ERROR, "Invalid VPS/SPS/PPS in getting packet !\n");
+          return OMAF_ERROR_INVALID_DATA;
+        }
+        pPacket->InsertParams(packet_params->params_);
+        pPacket->SetVPSLen(packet_params->vps_.size());
+        pPacket->SetSPSLen(packet_params->sps_.size());
+        pPacket->SetPPSLen(packet_params->pps_.size());
+        pPacket->SetVideoHeaderSize(packet_params->params_.size());
       }
-      pPacket->InsertParams(packet_params->params_);
-      pPacket->SetVPSLen(packet_params->vps_.size());
-      pPacket->SetSPSLen(packet_params->sps_.size());
-      pPacket->SetPPSLen(packet_params->pps_.size());
-      pPacket->SetVideoHeaderSize(packet_params->params_.size());
     }
+    else if (pPacket->GetMediaType() == MediaType_Audio)
+    {
+      if (requireParams) {
+        pPacket->InsertADTSHdr();
+      }
+    }
+
     return ERROR_NONE;
   } catch (const std::exception &ex) {
     OMAF_LOG(LOG_ERROR, "Exception when read the frame! ex: %s\n", ex.what());
@@ -1475,141 +1655,199 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
       return ERROR_INVALID;
     }
 #endif
-    auto packet_params = (bExtractor_ == true) ? getPacketParamsForExtractors() : getPacketParams();
-    for (size_t sample = sample_begin; sample < sample_end; sample++) {
-      uint32_t reader_track_id = buildReaderTrackId(segment_->GetTrackId(), segment_->GetInitSegID());
+    if (segment_->GetMediaType() == MediaType_Video) {
+      auto packet_params = (bExtractor_ == true) ? getPacketParamsForExtractors() : getPacketParams();
+      for (size_t sample = sample_begin; sample < sample_end; sample++) {
+        uint32_t reader_track_id = buildReaderTrackId(segment_->GetTrackId(), segment_->GetInitSegID());
 
-      if (packet_params.get() == nullptr) {
-        packet_params = std::make_shared<OmafPacketParams>();
-      }
-      if (!packet_params->binit_) {
-        ret = packet_params->init(reader, reader_track_id, sample);
+        if (packet_params.get() == nullptr) {
+          packet_params = std::make_shared<OmafPacketParams>();
+        }
+        if (!packet_params->binit_) {
+          ret = packet_params->init(reader, reader_track_id, sample);
+          if (ret != ERROR_NONE) {
+            OMAF_LOG(LOG_ERROR, "Failed to read the packet params include width/height/vps/sps/pps!\n");
+            return ret;
+          }
+          if (bExtractor_)
+          {
+            this->setPacketParamsForExtractors(packet_params);
+          }
+          else
+          {
+            this->setPacketParams(packet_params);
+          }
+        }
+
+        // cache packets
+        // std::shared_ptr<MediaPacket> packet = make_unique_vcd<MediaPacket>;
+        MediaPacket *packet = new MediaPacket();
+        if (packet == nullptr) {
+          OMAF_LOG(LOG_ERROR, "Failed to create the packet!\n");
+          return ERROR_INVALID;
+        }
+        uint32_t packet_size = ((packet_params->width_ * packet_params->height_ * 3) >> 1) >> 1;
+        // FIXME, we need refine the packet buffer. we may include the vps/pps/sps here
+        packet->ReAllocatePacket(packet_size);
+
+        if (mode_ == OmafDashMode::EXTRACTOR) {
+          ret = reader->getExtractorTrackSampleData(reader_track_id, sample, static_cast<char *>(packet->Payload()),
+                                                    packet_size);
+        } else {
+          ret = reader->getTrackSampleData(reader_track_id, sample, static_cast<char *>(packet->Payload()), packet_size);
+        }
         if (ret != ERROR_NONE) {
-          OMAF_LOG(LOG_ERROR, "Failed to read the packet params include width/height/vps/sps/pps!\n");
+          OMAF_LOG(LOG_ERROR, "Failed to read sample data from reader, code= %d\n", ret);
+          SAFE_DELETE(packet);
           return ret;
         }
-        if (bExtractor_)
-        {
-          this->setPacketParamsForExtractors(packet_params);
+
+        std::unique_ptr<RegionWisePacking> pRwpk = make_unique_vcd<RegionWisePacking>();
+        ret = reader->getPropertyRegionWisePacking(reader_track_id, sample, pRwpk.get());
+        if (ret != ERROR_NONE) {
+          OMAF_LOG(LOG_ERROR, "Failed to read region wise packing data from reader, code= %d\n", ret);
+          SAFE_DELETE(packet);
+          return ret;
         }
-        else
+        packet->SetRwpk(std::move(pRwpk));
+        packet->SetPTS(track_info->sampleProperties.size * (segment_->GetSegID() - 1) + sample_begin + sample);
+        if ((sample + 1) == sample_end)
         {
-          this->setPacketParams(packet_params);
+            packet->SetSegmentEnded(true);
         }
-      }
 
-      // cache packets
-      // std::shared_ptr<MediaPacket> packet = make_unique_vcd<MediaPacket>;
-      MediaPacket *packet = new MediaPacket();
-      if (packet == nullptr) {
-        OMAF_LOG(LOG_ERROR, "Failed to create the packet!\n");
-        return ERROR_INVALID;
-      }
-      uint32_t packet_size = ((packet_params->width_ * packet_params->height_ * 3) >> 1) >> 1;
-      // FIXME, we need refine the packet buffer. we may include the vps/pps/sps here
-      packet->ReAllocatePacket(packet_size);
+        // for later binding
+        packet->SetQualityRanking(segment_->GetQualityRanking());
 
-      if (mode_ == OmafDashMode::EXTRACTOR) {
-        ret = reader->getExtractorTrackSampleData(reader_track_id, sample, static_cast<char *>(packet->Payload()),
-                                                  packet_size);
-      } else {
-        ret = reader->getTrackSampleData(reader_track_id, sample, static_cast<char *>(packet->Payload()), packet_size);
-      }
-      if (ret != ERROR_NONE) {
-        OMAF_LOG(LOG_ERROR, "Failed to read sample data from reader, code= %d\n", ret);
-        SAFE_DELETE(packet);
-        return ret;
-      }
-
-      std::unique_ptr<RegionWisePacking> pRwpk = make_unique_vcd<RegionWisePacking>();
-      ret = reader->getPropertyRegionWisePacking(reader_track_id, sample, pRwpk.get());
-      if (ret != ERROR_NONE) {
-        OMAF_LOG(LOG_ERROR, "Failed to read region wise packing data from reader, code= %d\n", ret);
-        SAFE_DELETE(packet);
-        return ret;
-      }
-      packet->SetRwpk(std::move(pRwpk));
-      packet->SetPTS(track_info->sampleProperties.size * (segment_->GetSegID() - 1) + sample_begin + sample);
-      if ((sample + 1) == sample_end)
-      {
-          packet->SetSegmentEnded(true);
-      }
-
-      // for later binding
-      packet->SetQualityRanking(segment_->GetQualityRanking());
-
-      if (mode_ == OmafDashMode::EXTRACTOR) {
-        packet->SetQualityNum(MAX_QUALITY_NUM);
-        vector<uint32_t> boundLeft(1);  // num of quality is limited to 2.
-        vector<uint32_t> boundTop(1);
-        const RegionWisePacking &rwpk = packet->GetRwpk();
-        packet->SetVideoWidth(rwpk.packedPicWidth);
-        packet->SetVideoHeight(rwpk.packedPicHeight);
-        if (projection_fmt_ == ProjectionFormat::PF_ERP)
-        {
-            for (int j = rwpk.numRegions - 1; j >= 0; j--) {
-              if (rwpk.rectRegionPacking[j].projRegLeft == 0 && rwpk.rectRegionPacking[j].projRegTop == 0 &&
-                  (rwpk.rectRegionPacking[j].packedRegLeft != 0) &&
-                  (rwpk.rectRegionPacking[j].packedRegTop == 0)) {
-                boundLeft.push_back(rwpk.rectRegionPacking[j].packedRegLeft);
-                boundTop.push_back(rwpk.rectRegionPacking[j].packedRegTop);
-                break;
-              }
-            }
-        }
-        else if (projection_fmt_ == ProjectionFormat::PF_CUBEMAP)
-        {
-            uint32_t lowTileW = 0;
-            uint32_t lowTileH = 0;
-            int j = 0;
-            for (j = rwpk.numRegions - 1; j >= 0; j--) {
-              if (rwpk.rectRegionPacking[j].projRegLeft == 0 && rwpk.rectRegionPacking[j].projRegTop == 0)
-              {
-                  lowTileW = rwpk.rectRegionPacking[j].projRegWidth;
-                  lowTileH = rwpk.rectRegionPacking[j].projRegHeight;
+        if (mode_ == OmafDashMode::EXTRACTOR) {
+          packet->SetQualityNum(MAX_QUALITY_NUM);
+          vector<uint32_t> boundLeft(1);  // num of quality is limited to 2.
+          vector<uint32_t> boundTop(1);
+          const RegionWisePacking &rwpk = packet->GetRwpk();
+          packet->SetVideoWidth(rwpk.packedPicWidth);
+          packet->SetVideoHeight(rwpk.packedPicHeight);
+          if (projection_fmt_ == ProjectionFormat::PF_ERP)
+          {
+              for (int j = rwpk.numRegions - 1; j >= 0; j--) {
+                if (rwpk.rectRegionPacking[j].projRegLeft == 0 && rwpk.rectRegionPacking[j].projRegTop == 0 &&
+                    (rwpk.rectRegionPacking[j].packedRegLeft != 0) &&
+                    (rwpk.rectRegionPacking[j].packedRegTop == 0)) {
+                  boundLeft.push_back(rwpk.rectRegionPacking[j].packedRegLeft);
+                  boundTop.push_back(rwpk.rectRegionPacking[j].packedRegTop);
                   break;
+                }
               }
-            }
-
-            int lowResStartIdx = 0;
-            for ( ; j >= 0; j--) {
-              if ((rwpk.rectRegionPacking[j].projRegWidth == lowTileW) &&
-                  (rwpk.rectRegionPacking[j].projRegHeight == lowTileH) &&
-                  (rwpk.rectRegionPacking[j].packedRegLeft != 0) &&
-                  (rwpk.rectRegionPacking[j].packedRegTop == 0))
-              {
-                  lowResStartIdx = j;
-              }
-            }
-            boundLeft.push_back(rwpk.rectRegionPacking[lowResStartIdx].packedRegLeft);
-            boundTop.push_back(rwpk.rectRegionPacking[lowResStartIdx].packedRegTop);
-        }
-
-        for (int idx = 0; idx < packet->GetQualityNum(); idx++) {
-          SourceResolution srcRes;
-          srcRes.qualityRanking = static_cast<QualityRank>(idx + 1);
-          srcRes.top = boundTop[idx];
-          srcRes.left = boundLeft[idx];
-          srcRes.height = rwpk.packedPicHeight;
-          if (idx == 0) {
-            srcRes.width = boundLeft[idx + 1] - boundLeft[idx];
-          } else {
-            srcRes.width = rwpk.packedPicWidth - boundLeft[idx];
           }
-          packet->SetSourceResolution(idx, srcRes);
-        }
-      } else {
-        packet->SetSRDInfo(segment_->GetSRDInfo());
-      }
+          else if (projection_fmt_ == ProjectionFormat::PF_CUBEMAP)
+          {
+              uint32_t lowTileW = 0;
+              uint32_t lowTileH = 0;
+              int j = 0;
+              for (j = rwpk.numRegions - 1; j >= 0; j--) {
+                if (rwpk.rectRegionPacking[j].projRegLeft == 0 && rwpk.rectRegionPacking[j].projRegTop == 0)
+                {
+                    lowTileW = rwpk.rectRegionPacking[j].projRegWidth;
+                    lowTileH = rwpk.rectRegionPacking[j].projRegHeight;
+                    break;
+                }
+              }
 
-      packet->SetRealSize(packet_size);
-      OMAF_LOG(LOG_INFO, "Sample id=%lld\n", sample);
-      // packet->SetSegID(track_info->sampleProperties[sample - 1].segmentId);
-      packet->SetSegID(track_info->sampleProperties[sample].segmentId);
-      // media_packets_.push_back(std::move(packet));
-      media_packets_.push(packet);
-      OMAF_LOG(LOG_INFO, "Push packet with PTS %ld for track %d\n", packet->GetPTS(), segment_->GetTrackId());
+              int lowResStartIdx = 0;
+              for ( ; j >= 0; j--) {
+                if ((rwpk.rectRegionPacking[j].projRegWidth == lowTileW) &&
+                    (rwpk.rectRegionPacking[j].projRegHeight == lowTileH) &&
+                    (rwpk.rectRegionPacking[j].packedRegLeft != 0) &&
+                    (rwpk.rectRegionPacking[j].packedRegTop == 0))
+                {
+                    lowResStartIdx = j;
+                }
+              }
+              boundLeft.push_back(rwpk.rectRegionPacking[lowResStartIdx].packedRegLeft);
+              boundTop.push_back(rwpk.rectRegionPacking[lowResStartIdx].packedRegTop);
+          }
+
+          for (int idx = 0; idx < packet->GetQualityNum(); idx++) {
+            SourceResolution srcRes;
+            srcRes.qualityRanking = static_cast<QualityRank>(idx + 1);
+            srcRes.top = boundTop[idx];
+            srcRes.left = boundLeft[idx];
+            srcRes.height = rwpk.packedPicHeight;
+            if (idx == 0) {
+              srcRes.width = boundLeft[idx + 1] - boundLeft[idx];
+            } else {
+              srcRes.width = rwpk.packedPicWidth - boundLeft[idx];
+            }
+            packet->SetSourceResolution(idx, srcRes);
+          }
+        } else {
+          packet->SetSRDInfo(segment_->GetSRDInfo());
+        }
+
+        packet->SetRealSize(packet_size);
+        packet->SetSegID(track_info->sampleProperties[sample].segmentId);
+
+        media_packets_.push(packet);
+        OMAF_LOG(LOG_INFO, "Push packet with PTS %ld for track %d\n", packet->GetPTS(), segment_->GetTrackId());
+      }
     }
+    else if (segment_->GetMediaType() == MediaType_Audio) {
+      auto packet_params = getPacketParamsForAudio();
+      for (size_t sample = sample_begin; sample < sample_end; sample++) {
+        uint32_t reader_track_id = buildReaderTrackId(segment_->GetTrackId(), segment_->GetInitSegID());
+
+        if (packet_params.get() == nullptr) {
+          packet_params = std::make_shared<OmafAudioPacketParams>();
+        }
+        if (!packet_params->binit_) {
+          ret = packet_params->init(reader, reader_track_id, sample);
+          if (ret != ERROR_NONE) {
+            OMAF_LOG(LOG_ERROR, "Failed to read the packet params for audio track!\n");
+            return ret;
+          }
+
+          this->setPacketParamsForAudio(packet_params);
+        }
+
+        MediaPacket *packet = new MediaPacket();
+        if (packet == nullptr) {
+          OMAF_LOG(LOG_ERROR, "Failed to create the packet!\n");
+          return ERROR_INVALID;
+        }
+
+        uint32_t chlNum = segment_->GetAudioChlNum();
+        uint32_t packet_size = 1024 * chlNum;
+
+        packet->ReAllocatePacket(packet_size);
+
+        ret = reader->getTrackSampleData(reader_track_id, sample, static_cast<char *>(packet->Payload()), packet_size);
+
+        if (ret != ERROR_NONE) {
+          OMAF_LOG(LOG_ERROR, "Failed to read sample data from reader for audio track, code= %d\n", ret);
+          SAFE_DELETE(packet);
+          return ret;
+        }
+
+        packet->SetPTS(track_info->sampleProperties.size * (segment_->GetSegID() - 1) + sample_begin + sample);
+        if ((sample + 1) == sample_end)
+        {
+            packet->SetSegmentEnded(true);
+        }
+
+        packet->SetMediaType(MediaType_Audio);
+
+        packet->SetRealSize(packet_size);
+
+        packet_params->writeADTSHdr(packet_size);
+        packet->SetADTSHdr(packet_params->params_);
+
+        packet->SetSegID(track_info->sampleProperties[sample].segmentId);
+
+        media_packets_.push(packet);
+        OMAF_LOG(LOG_INFO, "Push packet with PTS %ld for audio track %d\n", packet->GetPTS(), segment_->GetTrackId());
+        OMAF_LOG(LOG_INFO, "Add packet size %d\n", packet_size);
+      }
+    }
+
     return ERROR_NONE;
   } catch (const std::exception &ex) {
     OMAF_LOG(LOG_ERROR, "Exception when read packets! ex: %s\n", ex.what());

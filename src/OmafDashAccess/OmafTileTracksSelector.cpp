@@ -93,67 +93,77 @@ bool IsSelectionChanged(TracksMap selection1, TracksMap selection2)
 
 int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
 {
-    TracksMap selectedTracks;
-    uint32_t rowSize = pStream->GetRowSize();
-    uint32_t colSize = pStream->GetColSize();
-    if (mUsePrediction && mPoseHistory.size() >= POSE_SIZE) // using prediction
+    DashStreamInfo *streamInfo = pStream->GetStreamInfo();
+    int ret = ERROR_NONE;
+    if (streamInfo->stream_type == MediaType_Video)
     {
-        std::vector<std::pair<ViewportPriority, TracksMap>>  predictedTracksArray = GetTileTracksByPosePrediction(pStream);
-        if (predictedTracksArray.empty()) // Prediction error occurs
+        TracksMap selectedTracks;
+        uint32_t rowSize = pStream->GetRowSize();
+        uint32_t colSize = pStream->GetColSize();
+        if (mUsePrediction && mPoseHistory.size() >= POSE_SIZE) // using prediction
+        {
+            std::vector<std::pair<ViewportPriority, TracksMap>>  predictedTracksArray = GetTileTracksByPosePrediction(pStream);
+            if (predictedTracksArray.empty()) // Prediction error occurs
+            {
+                selectedTracks = GetTileTracksByPose(pStream);
+            }
+            else
+            {
+                // fetch union set of predictedTracksArray ordered by ViewportPriority
+                std::sort(predictedTracksArray.begin(), predictedTracksArray.end(), \
+                    [&](std::pair<ViewportPriority, TracksMap> track1, std::pair<ViewportPriority, TracksMap> track2) { return track1.first < track2.first;});
+                for (uint32_t i = 0; i < predictedTracksArray.size(); i++)
+                {
+                    TracksMap oneTracks = predictedTracksArray[i].second;
+                    TracksMap::iterator iter = oneTracks.begin();
+                    for ( ; iter != oneTracks.end(); iter++)
+                    {
+                        // ignore when key is identical and have tracks selection limitation.
+                        if (selectedTracks.size() <= rowSize * colSize / 2 || selectedTracks.size() < oneTracks.size())
+                        {
+                            selectedTracks.insert(*iter);
+                        }
+                        else break;
+                    }
+                }
+            }
+            // clear predictedTracksArray
+            if (predictedTracksArray.size())
+            {
+                for (uint32_t i = 0; i < predictedTracksArray.size(); i++)
+                {
+                    predictedTracksArray[i].second.clear();
+                }
+                predictedTracksArray.clear();
+            }
+        }
+        else // not using prediction
         {
             selectedTracks = GetTileTracksByPose(pStream);
         }
-        else
+
+        if (selectedTracks.empty() && m_currentTracks.empty())
+            return ERROR_INVALID;
+
+        bool isPoseChanged = IsSelectionChanged(m_currentTracks, selectedTracks);
+
+        if (m_currentTracks.empty() || isPoseChanged)
         {
-            // fetch union set of predictedTracksArray ordered by ViewportPriority
-            std::sort(predictedTracksArray.begin(), predictedTracksArray.end(), \
-                [&](std::pair<ViewportPriority, TracksMap> track1, std::pair<ViewportPriority, TracksMap> track2) { return track1.first < track2.first;});
-            for (uint32_t i = 0; i < predictedTracksArray.size(); i++)
+            if (m_currentTracks.size())
             {
-                TracksMap oneTracks = predictedTracksArray[i].second;
-                TracksMap::iterator iter = oneTracks.begin();
-                for ( ; iter != oneTracks.end(); iter++)
-                {
-                    // ignore when key is identical and have tracks selection limitation.
-                    if (selectedTracks.size() <= rowSize * colSize / 2 || selectedTracks.size() < oneTracks.size())
-                    {
-                        selectedTracks.insert(*iter);
-                    }
-                    else break;
-                }
+                m_currentTracks.clear();
             }
+            m_currentTracks = selectedTracks;
         }
-        // clear predictedTracksArray
-        if (predictedTracksArray.size())
-        {
-            for (uint32_t i = 0; i < predictedTracksArray.size(); i++)
-            {
-                predictedTracksArray[i].second.clear();
-            }
-            predictedTracksArray.clear();
-        }
+        selectedTracks.clear();
+
+        ret = pStream->UpdateEnabledTileTracks(m_currentTracks);
     }
-    else // not using prediction
+    else if (streamInfo->stream_type == MediaType_Audio)
     {
-        selectedTracks = GetTileTracksByPose(pStream);
+        ret = pStream->EnableAllAudioTracks();
     }
 
-    if (selectedTracks.empty() && m_currentTracks.empty())
-        return ERROR_INVALID;
-
-    bool isPoseChanged = IsSelectionChanged(m_currentTracks, selectedTracks);
-
-    if (m_currentTracks.empty() || isPoseChanged)
-    {
-        if (m_currentTracks.size())
-        {
-            m_currentTracks.clear();
-        }
-        m_currentTracks = selectedTracks;
-    }
-    selectedTracks.clear();
-
-    int ret = pStream->UpdateEnabledTileTracks(m_currentTracks);
     return ret;
 }
 
