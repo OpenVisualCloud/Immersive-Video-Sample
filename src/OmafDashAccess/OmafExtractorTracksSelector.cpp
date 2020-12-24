@@ -50,41 +50,51 @@ VCD_OMAF_BEGIN
 OmafExtractorTracksSelector::~OmafExtractorTracksSelector() { mCurrentExtractor = nullptr; }
 
 int OmafExtractorTracksSelector::SelectTracks(OmafMediaStream* pStream) {
-  OmafExtractor* pSelectedExtrator = NULL;
-  if (mUsePrediction) {
-    ListExtractor predict_extractors = GetExtractorByPosePrediction(pStream);
-    if (predict_extractors.empty()) {
-      pSelectedExtrator = GetExtractorByPose(pStream);
-    } else
-      pSelectedExtrator = predict_extractors.front();
-  } else {
-    pSelectedExtrator = GetExtractorByPose(pStream);
-  }
 
-  if (NULL == pSelectedExtrator && !mCurrentExtractor) return ERROR_NULL_PTR;
-
-  bool isExtractorChanged = false;
-  // not first time and changed and change to different extractor
-  if (mCurrentExtractor && pSelectedExtrator && mCurrentExtractor != pSelectedExtrator) {
-    isExtractorChanged = true;
-  }
-
-  mCurrentExtractor = pSelectedExtrator ? pSelectedExtrator : mCurrentExtractor;
-
-  ListExtractor extractors;
-
-  extractors.push_front(mCurrentExtractor);
-
-  if (isExtractorChanged || extractors.size() > 1)  //?
+  DashStreamInfo *streamInfo = pStream->GetStreamInfo();
+  int ret = ERROR_NONE;
+  if (streamInfo->stream_type == MediaType_Video)
   {
-    list<int> trackIDs;
-    for (auto& it : extractors) {
-      trackIDs.push_back(it->GetTrackNumber());
-    }
-    // READERMANAGER::GetInstance()->RemoveTrackFromPacketQueue(trackIDs);
-  }
+      OmafExtractor* pSelectedExtrator = NULL;
+      if (mUsePrediction) {
+        ListExtractor predict_extractors = GetExtractorByPosePrediction(pStream);
+        if (predict_extractors.empty()) {
+          pSelectedExtrator = GetExtractorByPose(pStream);
+        } else
+          pSelectedExtrator = predict_extractors.front();
+      } else {
+        pSelectedExtrator = GetExtractorByPose(pStream);
+      }
 
-  int ret = pStream->UpdateEnabledExtractors(extractors);
+      if (NULL == pSelectedExtrator && !mCurrentExtractor) return ERROR_NULL_PTR;
+
+      bool isExtractorChanged = false;
+      // not first time and changed and change to different extractor
+      if (mCurrentExtractor && pSelectedExtrator && mCurrentExtractor != pSelectedExtrator) {
+        isExtractorChanged = true;
+      }
+
+      mCurrentExtractor = pSelectedExtrator ? pSelectedExtrator : mCurrentExtractor;
+
+      ListExtractor extractors;
+
+      extractors.push_front(mCurrentExtractor);
+
+      if (isExtractorChanged || extractors.size() > 1)  //?
+      {
+        list<int> trackIDs;
+        for (auto& it : extractors) {
+          trackIDs.push_back(it->GetTrackNumber());
+        }
+        // READERMANAGER::GetInstance()->RemoveTrackFromPacketQueue(trackIDs);
+      }
+
+      ret = pStream->UpdateEnabledExtractors(extractors);
+  }
+  else if (streamInfo->stream_type == MediaType_Audio)
+  {
+      ret = pStream->EnableAllAudioTracks();
+  }
 
   return ret;
 }

@@ -33,6 +33,7 @@
 #ifndef REPRESENTATIONELEMENT_H
 #define REPRESENTATIONELEMENT_H
 #include "OmafElementBase.h"
+#include "AudioChannelCfgElement.h"
 #include "SegmentElement.h"
 
 VCD_OMAF_BEGIN
@@ -119,6 +120,7 @@ class RepresentationElement : public OmafElementBase {
   //!
   MEMBER_SET_AND_GET_FUNC(int32_t, m_height, Height);
 
+  MEMBER_SET_AND_GET_FUNC(int32_t, m_audioSamplingRate, AudioSamplingRate);
   //!
   //! \brief    Set function for m_frameRate member
   //!
@@ -203,6 +205,8 @@ class RepresentationElement : public OmafElementBase {
   //!
   MEMBER_SET_AND_GET_FUNC(SegmentElement*, m_segment, Segment);
 
+  MEMBER_SET_AND_GET_FUNC(AudioChannelConfigurationElement*, m_audioChlCfg, AudioChlCfg);
+
   //!
   //! \brief    Set value to m_dependencyId member
   //!
@@ -232,6 +236,7 @@ private:
   int32_t m_width;                //!< the width attribute
   int32_t m_height;               //!< the height attribute
   string m_frameRate;             //!< the frameRate attribute
+  int32_t m_audioSamplingRate;   //!< the audio sampling rate attribute
   string m_sar;                   //!< the sar attribute
   string m_startWithSAP;          //!< the startWithSAP attribute
   string m_qualityRanking;        //!< the qualityRanking attribute
@@ -239,6 +244,7 @@ private:
   vector<string> m_dependencyId;  //!< the dependencyId attribute
 
   SegmentElement* m_segment;  //!< the SegmentTemplate child elements
+  AudioChannelConfigurationElement* m_audioChlCfg;
 };
 
 VCD_OMAF_END;

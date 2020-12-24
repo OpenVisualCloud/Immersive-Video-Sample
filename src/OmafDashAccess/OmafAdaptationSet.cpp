@@ -93,49 +93,46 @@ int OmafAdaptationSet::Initialize(AdaptationSetElement* pAdaptationSet) {
 
   SelectRepresentation();
 
-  // if( ERROR_NOT_FOUND ==
-  // OmafProperty::Get2DQualityRanking(mAdaptationSet->GetAdditionalSubNodes(),
-  // &mTwoDQuality) ){
-  //     OmafProperty::Get2DQualityRanking(mRepresentation->GetAdditionalSubNodes(),
-  //     &mTwoDQuality);
-  // }
+  mMimeType = mAdaptationSet->GetMimeType();
+  std::string type = GetSubstr(mMimeType, '/', true);
 
-  // OmafProperty::GetFramePackingType(mAdaptationSet->GetAdditionalSubNodes(),
-  // this->mFpt); if(FP_UNKNOWN==mFpt)
-  //     OmafProperty::GetFramePackingType(mRepresentation->GetAdditionalSubNodes(),
-  //     this->mFpt);
-
-  mSrqr = mAdaptationSet->GetSphereQuality();
-  mSRD = mAdaptationSet->GetSRD();
-  mPreselID = mAdaptationSet->GetPreselection();
-  mRwpkType = mAdaptationSet->GetRwpkType();
-  mCC = mAdaptationSet->GetContentCoverage();
-  mID = stoi(mAdaptationSet->GetId());
-
-  if ((mPF == ProjectionFormat::PF_CUBEMAP) && !IsExtractor())
+  if (type == "video")
   {
-      mTileInfo = new TileDef;
-      if (!mTileInfo)
-          return OMAF_ERROR_NULL_PTR;
-      if (NULL == mSRD)
+      mSrqr = mAdaptationSet->GetSphereQuality();
+      mSRD = mAdaptationSet->GetSRD();
+      mPreselID = mAdaptationSet->GetPreselection();
+      mRwpkType = mAdaptationSet->GetRwpkType();
+      mCC = mAdaptationSet->GetContentCoverage();
+      //mID = stoi(mAdaptationSet->GetId());
+
+      if ((mPF == ProjectionFormat::PF_CUBEMAP) && !IsExtractor())
       {
-        OMAF_LOG(LOG_ERROR, "SRD information is invalid for track %d!\n", mID);
-        return OMAF_ERROR_NULL_PTR;
+          mTileInfo = new TileDef;
+          if (!mTileInfo)
+              return OMAF_ERROR_NULL_PTR;
+          if (NULL == mSRD)
+          {
+            OMAF_LOG(LOG_ERROR, "SRD information is invalid for track %d!\n", mID);
+            return OMAF_ERROR_NULL_PTR;
+          }
+          mTileInfo->x = mSRD->get_X();
+          mTileInfo->y = mSRD->get_Y();
       }
-      mTileInfo->x = mSRD->get_X();
-      mTileInfo->y = mSRD->get_Y();
+
+      for (auto it = mRepresentation->GetDependencyIDs().begin(); it != mRepresentation->GetDependencyIDs().end(); it++) {
+        std::string id = *it;
+        mDependIDs.push_back(atoi(id.c_str()));
+      }
   }
 
-  for (auto it = mRepresentation->GetDependencyIDs().begin(); it != mRepresentation->GetDependencyIDs().end(); it++) {
-    std::string id = *it;
-    mDependIDs.push_back(atoi(id.c_str()));
-  }
-
+  mID = stoi(mAdaptationSet->GetId());
+  OMAF_LOG(LOG_INFO, "ID of AS %d\n", mID);
   SegmentElement* segment = mRepresentation->GetSegment();
 
   if (nullptr != segment) {
     mStartNumber = segment->GetStartNumber();
     mSegmentDuration = segment->GetDuration() / segment->GetTimescale();
+    OMAF_LOG(LOG_INFO, "Segment duration %ld\n", mSegmentDuration);
   }
 
   // mAudioInfo.sample_rate = parse_int(
@@ -143,21 +140,41 @@ int OmafAdaptationSet::Initialize(AdaptationSetElement* pAdaptationSet) {
   // mRepresentation->GetAudioChannelConfiguration().size();
   // mAudioInfo.channel_bytes = 2;
 
-  mVideoInfo.bit_rate = mRepresentation->GetBandwidth();
-  mVideoInfo.height = mRepresentation->GetHeight();
-  mVideoInfo.width = mRepresentation->GetWidth();
-  mVideoInfo.frame_Rate.num = atoi(GetSubstr(mRepresentation->GetFrameRate(), '/', true).c_str());
-  mVideoInfo.frame_Rate.den = atoi(GetSubstr(mRepresentation->GetFrameRate(), '/', false).c_str());
-  mVideoInfo.sar.num = atoi(GetSubstr(mRepresentation->GetSar(), ':', true).c_str());
-  mVideoInfo.sar.den = atoi(GetSubstr(mRepresentation->GetSar(), ':', false).c_str());
+  if (type == "video")
+  {
+      mVideoInfo.bit_rate = mRepresentation->GetBandwidth();
+      mVideoInfo.height = mRepresentation->GetHeight();
+      mVideoInfo.width = mRepresentation->GetWidth();
+      mVideoInfo.frame_Rate.num = atoi(GetSubstr(mRepresentation->GetFrameRate(), '/', true).c_str());
+      mVideoInfo.frame_Rate.den = atoi(GetSubstr(mRepresentation->GetFrameRate(), '/', false).c_str());
+      mVideoInfo.sar.num = atoi(GetSubstr(mRepresentation->GetSar(), ':', true).c_str());
+      mVideoInfo.sar.den = atoi(GetSubstr(mRepresentation->GetSar(), ':', false).c_str());
+      mType = MediaType_Video;
+      JudgeMainAdaptationSet();
+  }
+  else if (type == "audio")
+  {
+      AudioChannelConfigurationElement* audioElement = mRepresentation->GetAudioChlCfg();
+      if (!audioElement)
+      {
+          OMAF_LOG(LOG_ERROR, "Failed to get audio channel configuration element from MPD parsing!\n");
+          return OMAF_ERROR_INVALID_DATA;
+      }
 
-  mMimeType = mAdaptationSet->GetMimeType();
+      mAudioInfo.channels = audioElement->GetChannelCfg();
+      //mAudioInfo.channel_bytes =
+      mAudioInfo.sample_rate = mRepresentation->GetAudioSamplingRate();
+      OMAF_LOG(LOG_INFO, "Audio sample rate %u and channel cfg %u\n", mAudioInfo.sample_rate, mAudioInfo.channels);
+
+      mType = MediaType_Audio;
+  }
+  //mMimeType = mAdaptationSet->GetMimeType();
   mCodec = mAdaptationSet->GetCodecs();
 
-  mType = MediaType_Video;
-  if (GetSubstr(mRepresentation->GetMimeType(), '/', true) == "audio") mType = MediaType_Audio;
+  //mType = MediaType_Video;
+  //if (GetSubstr(mRepresentation->GetMimeType(), '/', true) == "audio") mType = MediaType_Audio;
 
-  JudgeMainAdaptationSet();
+  //JudgeMainAdaptationSet();
 
   return ERROR_NONE;
 }
@@ -252,8 +269,9 @@ int OmafAdaptationSet::LoadLocalSegment() {
   pSegment->SetInitSegID(this->mInitSegment->GetInitSegID());
   pSegment->SetSegID(mSegNum);
   pSegment->SetTrackId(this->mInitSegment->GetTrackId());
+  pSegment->SetMediaType(mType);
 
-  if (typeid(*this) != typeid(OmafExtractor)) {
+  if ((mType == MediaType_Video) && (typeid(*this) != typeid(OmafExtractor))) {
     auto qualityRanking = GetRepresentationQualityRanking();
     pSegment->SetQualityRanking(qualityRanking);
     SRDInfo srdInfo;
@@ -263,6 +281,12 @@ int OmafAdaptationSet::LoadLocalSegment() {
     srdInfo.height = mSRD->get_H();
     pSegment->SetSRDInfo(srdInfo);
   }
+  else if (mType == MediaType_Audio)
+  {
+    pSegment->SetAudioChlNum(mAudioInfo.channels);
+    pSegment->SetAudioSampleRate(mAudioInfo.sample_rate);
+  }
+
   OMAF_LOG(LOG_INFO, "Load OmafSegment for AdaptationSet %d\n", this->mID );
 
   mSegments.push_back(std::move(pSegment));
@@ -421,37 +445,44 @@ int OmafAdaptationSet::DownloadSegment() {
   if (mReEnable) mReEnable = false;
 
   if (pSegment.get() != nullptr) {
-  if (this->mInitSegment.get() == nullptr) return ERROR_NULL_PTR;
-  pSegment->SetInitSegID(this->mInitSegment->GetInitSegID());
-  if (typeid(*this) != typeid(OmafExtractor)) {
-    auto qualityRanking = GetRepresentationQualityRanking();
-    pSegment->SetQualityRanking(qualityRanking);
-    SRDInfo srdInfo;
-    srdInfo.left = mSRD->get_X();
-    srdInfo.top = mSRD->get_Y();
-    srdInfo.width = mSRD->get_W();
-    srdInfo.height = mSRD->get_H();
-    pSegment->SetSRDInfo(srdInfo);
-  }
-  pSegment->SetSegID(mSegNum);
-  pSegment->SetTrackId(this->mInitSegment->GetTrackId());
-  ret = omaf_reader_mgr_->OpenSegment(std::move(pSegment), IsExtractor());
+    if (this->mInitSegment.get() == nullptr) return ERROR_NULL_PTR;
+    pSegment->SetInitSegID(this->mInitSegment->GetInitSegID());
+    pSegment->SetMediaType(mType);
+    if ((mType == MediaType_Video) && (typeid(*this) != typeid(OmafExtractor))) {
+      auto qualityRanking = GetRepresentationQualityRanking();
+      pSegment->SetQualityRanking(qualityRanking);
+      SRDInfo srdInfo;
+      srdInfo.left = mSRD->get_X();
+      srdInfo.top = mSRD->get_Y();
+      srdInfo.width = mSRD->get_W();
+      srdInfo.height = mSRD->get_H();
+      pSegment->SetSRDInfo(srdInfo);
+    }
+    else if (mType == MediaType_Audio)
+    {
+      pSegment->SetAudioChlNum(mAudioInfo.channels);
+      pSegment->SetAudioSampleRate(mAudioInfo.sample_rate);
+    }
 
-  if (ERROR_NONE != ret) {
-    OMAF_LOG(LOG_ERROR, "Fail to Download OmafSegment for AdaptationSet: %d\n", this->mID);
-  }
+    pSegment->SetSegID(mSegNum);
+    pSegment->SetTrackId(this->mInitSegment->GetTrackId());
+    ret = omaf_reader_mgr_->OpenSegment(std::move(pSegment), IsExtractor());
 
-  //  pthread_mutex_lock(&mMutex);
-  // NOTE: won't record segments in adaption set since GetNextSegment() not be
-  // called
-  //       , and this will lead to memory growth.
-  // mSegments.push_back(pSegment);
-  // pthread_mutex_unlock(&mMutex);
+    if (ERROR_NONE != ret) {
+      OMAF_LOG(LOG_ERROR, "Fail to Download OmafSegment for AdaptationSet: %d\n", this->mID);
+    }
 
-  mActiveSegNum++;
-  mSegNum++;
+    //  pthread_mutex_lock(&mMutex);
+    // NOTE: won't record segments in adaption set since GetNextSegment() not be
+    // called
+    //       , and this will lead to memory growth.
+    // mSegments.push_back(pSegment);
+    // pthread_mutex_unlock(&mMutex);
 
-  return ret;
+    mActiveSegNum++;
+    mSegNum++;
+
+    return ret;
   }
   else {
     OMAF_LOG(LOG_ERROR, "Create OmafSegment for AdaptationSet: %d Number: %d failed\n", this->mID, mActiveSegNum);

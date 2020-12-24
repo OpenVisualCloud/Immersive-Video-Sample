@@ -141,6 +141,8 @@ class OmafMediaStream {
   //!
   int UpdateEnabledTileTracks(std::map<int, OmafAdaptationSet*> selectedTiles);
 
+  int EnableAllAudioTracks();
+
   //!
   //! \brief  Get count of tracks
   //!
@@ -229,6 +231,8 @@ class OmafMediaStream {
   void SetSegmentNumber( uint32_t seg_num ) { m_activeSegmentNum = seg_num; } ;
 
   std::list<MediaPacket*> GetOutTilesMergedPackets();
+
+  MediaType GetStreamMediaType() { return m_pStreamInfo->stream_type; };
 
   void Close();
 

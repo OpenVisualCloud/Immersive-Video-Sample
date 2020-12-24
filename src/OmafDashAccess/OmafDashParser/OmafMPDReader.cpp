@@ -197,9 +197,16 @@ AdaptationSetElement* OmafMPDReader::BuildAdaptationSet(OmafXMLElement* xml)
     adaptionSet->SetId(xml->GetAttributeVal(INDEX));
     adaptionSet->SetMimeType(xml->GetAttributeVal(MIMETYPE));
     adaptionSet->SetCodecs(xml->GetAttributeVal(CODECS));
-    adaptionSet->SetMaxWidth(xml->GetAttributeVal(MAXWIDTH));
-    adaptionSet->SetMaxHeight(xml->GetAttributeVal(MAXHEIGHT));
-    adaptionSet->SetMaxFrameRate(xml->GetAttributeVal(MAXFRAMERATE));
+    if (GetSubstr(adaptionSet->GetMimeType(), '/', true) == "video")
+    {
+        adaptionSet->SetMaxWidth(xml->GetAttributeVal(MAXWIDTH));
+        adaptionSet->SetMaxHeight(xml->GetAttributeVal(MAXHEIGHT));
+        adaptionSet->SetMaxFrameRate(xml->GetAttributeVal(MAXFRAMERATE));
+    }
+    else if (GetSubstr(adaptionSet->GetMimeType(), '/', true) == "audio")
+    {
+        adaptionSet->SetAudioSamplingRate(xml->GetAttributeVal(AUDIOSAMPLINGRATE));
+    }
     adaptionSet->SetSegmentAlignment(xml->GetAttributeVal(SEGMENTALIGNMENT));
     adaptionSet->SetSubsegmentAlignment(xml->GetAttributeVal(SUBSEGMENTALIGNMENT));
 
@@ -333,6 +340,7 @@ RepresentationElement* OmafMPDReader::BuildRepresentation(OmafXMLElement* xmlRep
     representation->SetWidth(StringToInt(xmlRepresentation->GetAttributeVal(WIDTH)));
     representation->SetHeight(StringToInt(xmlRepresentation->GetAttributeVal(HEIGHT)));
     representation->SetFrameRate(xmlRepresentation->GetAttributeVal(FRAMERATE));
+    representation->SetAudioSamplingRate(StringToInt(xmlRepresentation->GetAttributeVal(AUDIOSAMPLINGRATE)));
     representation->SetSar(xmlRepresentation->GetAttributeVal(SAR));
     representation->SetStartWithSAP(xmlRepresentation->GetAttributeVal(STARTWITHSAP));
     representation->SetQualityRanking(xmlRepresentation->GetAttributeVal(QUALITYRANKING));
@@ -360,6 +368,15 @@ RepresentationElement* OmafMPDReader::BuildRepresentation(OmafXMLElement* xmlRep
             else
                 OMAF_LOG(LOG_WARNING,"Fail to add segment.\n");
         }
+        else if (child->GetName() == "AudioChannelConfiguration")
+        {
+            AudioChannelConfigurationElement* audioElement = nullptr;
+            audioElement = BuildAudioChannelConfiguration(child);
+            if (audioElement)
+                representation->SetAudioChlCfg(audioElement);
+            else
+                OMAF_LOG(LOG_WARNING, "Fail to add audio channel configuration.\n");
+        }
         else
         {
             OMAF_LOG(LOG_INFO,"Can't parse element in BuildRepresentation.\n");
@@ -368,6 +385,34 @@ RepresentationElement* OmafMPDReader::BuildRepresentation(OmafXMLElement* xmlRep
     }
 
     return representation;
+}
+
+AudioChannelConfigurationElement* OmafMPDReader::BuildAudioChannelConfiguration(OmafXMLElement* xmlAudioChlCfg)
+{
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlAudioChlCfg, "Failed to read audio channel configuration element.\n", LOG_ERROR);
+    AudioChannelConfigurationElement* audioCfg = new AudioChannelConfigurationElement();
+    CheckNullPtr_PrintLog_ReturnNullPtr(audioCfg, "Failed to create audio channel configuration node.\n", LOG_ERROR);
+    audioCfg->SetSchemeIdUri(xmlAudioChlCfg->GetAttributeVal(SCHEMEIDURI));
+    audioCfg->SetValue(xmlAudioChlCfg->GetAttributeVal(VALUE));
+
+    audioCfg->ParseSchemeIdUriAndValue();
+
+    map<string, string> attributes = xmlAudioChlCfg->GetAttributes();
+    audioCfg->AddOriginalAttributes(attributes);
+
+    vector<OmafXMLElement*> childElement = xmlAudioChlCfg->GetChildElements();
+    for(auto child : childElement)
+    {
+        if(!child)
+        {
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in Viewport Element.\n");
+            continue;
+        }
+
+        audioCfg->AddChildElement(child);
+    }
+
+    return audioCfg;
 }
 
 SegmentElement* OmafMPDReader::BuildSegment(OmafXMLElement* xmlSegment)

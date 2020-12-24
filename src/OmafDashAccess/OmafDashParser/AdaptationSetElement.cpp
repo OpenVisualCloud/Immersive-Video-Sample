@@ -46,6 +46,7 @@ AdaptationSetElement::~AdaptationSetElement()
     m_maxWidth.clear();
     m_maxHeight.clear();
     m_maxFrameRate.clear();
+    m_audioSamplingRate.clear();
     m_segmentAlignment.clear();
     m_subsegmentAlignment.clear();
 

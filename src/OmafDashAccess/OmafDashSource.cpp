@@ -254,7 +254,7 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
     stream->SetStreamID(id);
     // stream->SetEnabledExtractor(enableExtractor);
     stream->SetOmafReaderMgr(omaf_reader_mgr_);
-    if (!enableExtractor)
+    if (!enableExtractor && (stream->GetStreamMediaType() == MediaType_Video))
     {
       stream->SetMaxStitchResolution(omaf_dash_params_.max_decode_width_, omaf_dash_params_.max_decode_height_);
     }
@@ -277,24 +277,18 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
 
   m_selector->SetProjectionFmt(projFmt);
   if (enablePredictor) m_selector->EnablePosePrediction(predictPluginName, libPath, enableExtractor);
-  // Setup initial Viewport and select Adaption Set
-  auto it = mMapStream.begin();
-  if (it == mMapStream.end()) {
-    return ERROR_INVALID;
+
+  for (auto it =  mMapStream.begin(); it != mMapStream.end(); it++)
+  {
+    if ((it->second)->GetStreamMediaType() == MediaType_Video)
+    {
+      ret = m_selector->SetInitialViewport(mViewPorts, &mHeadSetInfo, (it->second));
+      if (ret != ERROR_NONE) return ret;
+    }
   }
-  ret = m_selector->SetInitialViewport(mViewPorts, &mHeadSetInfo, (it->second));
-  if (ret != ERROR_NONE) return ret;
 
   // set status
   this->SetStatus(STATUS_READY);
-
-  // READERMANAGER::GetInstance()->Initialize(this);
-  // READERMANAGER::GetInstance()->SetExtractorEnabled(enableExtractor);
-
-  /// if MPD is static one, don't create thread to download
-  // if (!isLocalMedia) {
-  //   StartThread();
-  // }
 
   return ERROR_NONE;
 }
@@ -314,7 +308,7 @@ int OmafDashSource::GetTrackCount() {
     OmafMediaStream* pStream = (OmafMediaStream*)it->second;
     cnt += pStream->GetTrackCount();
   }
-
+  OMAF_LOG(LOG_INFO, "All tracks cnt %d\n", cnt);
   return cnt;
 }
 
@@ -378,12 +372,15 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
     std::map<int, OmafAdaptationSet*> mapAS = pStream->GetMediaAdaptationSet();
     // std::map<int, OmafAdaptationSet*> mapSelectedAS = pStream->GetSelectedTileTracks();
     if (mapAS.size() == 1) {
-      OMAF_LOG(LOG_INFO, "There is only one tile for the video stream !\n");
-      for (auto as_it = mapAS.begin(); as_it != mapAS.end(); as_it++) {
-        OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
-        // int ret = READERMANAGER::GetInstance()->GetNextFrame(pAS->GetTrackNumber(), pkt, needParams);
-        int ret = omaf_reader_mgr_->GetNextPacket(pAS->GetTrackNumber(), pkt, needParams);
-        if (ret == ERROR_NONE) pkts->push_back(pkt);
+      //OMAF_LOG(LOG_INFO, "There is only one tile for the video stream !\n");
+      if (pStream->GetStreamMediaType() == MediaType_Audio)
+      {
+          OMAF_LOG(LOG_INFO, "Get one packet for audio !\n");
+          for (auto as_it = mapAS.begin(); as_it != mapAS.end(); as_it++) {
+              OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
+              int ret = omaf_reader_mgr_->GetNextPacket(pAS->GetTrackNumber(), pkt, true);
+              if (ret == ERROR_NONE) pkts->push_back(pkt);
+          }
       }
     } else {
       std::list<MediaPacket*> mergedPackets;

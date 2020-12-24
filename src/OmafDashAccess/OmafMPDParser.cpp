@@ -178,6 +178,7 @@ int OmafMPDParser::GroupAdaptationSet(PeriodElement* pPeriod, TYPE_OMAFADAPTATIO
     if (mTmpAS == NULL) return ERROR_INVALID;
     /// catalog the Adaptation according to the media type: video, audio, etc
     std::string type = GetSubstr(mTmpAS->GetMimeType(), '/', true);
+    OMAF_LOG(LOG_INFO, "Create one AS with type %s\n", type.c_str());
 
     mapAdaptationSets[type].push_back(mTmpAS);
   }
@@ -188,13 +189,19 @@ int OmafMPDParser::GroupAdaptationSet(PeriodElement* pPeriod, TYPE_OMAFADAPTATIO
 int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFSTREAMS& listStream) {
   int ret = ERROR_NONE;
   uint32_t allExtractorCnt = 0;
+  uint32_t videoStrNum = 0;
   std::map<std::string, OmafMediaStream*> streamsMap;
   for (auto it = mapAdaptationSets.begin(); it != mapAdaptationSets.end(); it++) {
     OMAFADAPTATIONSETS ASs = it->second;
+    std::vector<OmafAdaptationSet*>::iterator mainASit;
     std::string type = it->first;
     mTmpStream = new OmafMediaStream();
     if (mTmpStream == NULL) return ERROR_INVALID;
-    auto mainASit = ASs.begin();
+    if (strncmp(type.c_str(), "video", 5) == 0)
+    {
+        mainASit = ASs.begin();
+        videoStrNum++;
+    }
 
     for (auto as_it = ASs.begin(); as_it != ASs.end(); as_it++) {
       OmafAdaptationSet* pOmafAs = (OmafAdaptationSet*)(*as_it);
@@ -207,10 +214,21 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
         }
       } else {
         mTmpStream->AddAdaptationSet(pOmafAs);
-        if (pOmafAs->IsMain()) {
-          pOmafAs->SetProjectionFormat(mPF);
-          mTmpStream->SetMainAdaptationSet(pOmafAs);
-          mainASit = as_it;
+        if (strncmp(type.c_str(), "video", 5) == 0)
+        {
+            if (pOmafAs->IsMain()) {
+              pOmafAs->SetProjectionFormat(mPF);
+              mTmpStream->SetMainAdaptationSet(pOmafAs);
+              mainASit = as_it;
+            }
+        }
+        else if (strncmp(type.c_str(), "audio", 5) == 0)
+        {
+            if (as_it == ASs.begin())
+            {
+              mTmpStream->SetMainAdaptationSet(pOmafAs);
+              mainASit = as_it;
+            }
         }
       }
     }
@@ -221,12 +239,17 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
     }
 
     // remove main AS from AdaptationSets for it has no real data
-    ASs.erase(mainASit);
+    if (strncmp(type.c_str(), "video", 5) == 0)
+    {
+        ASs.erase(mainASit);
+    }
 
     streamsMap.insert(std::make_pair(type, mTmpStream));
   }
   OMAF_LOG(LOG_INFO, "allExtractorCnt %u\n", allExtractorCnt);
-  if (allExtractorCnt < mapAdaptationSets.size()) {
+  OMAF_LOG(LOG_INFO, "video streams num %u\n", videoStrNum);
+  //if (allExtractorCnt < mapAdaptationSets.size()) {
+  if (allExtractorCnt < videoStrNum) {
     if (mExtractorEnabled) {
       OMAF_LOG(LOG_INFO, "There isn't extractor track from MPD parsing, extractor track enablement should be false !\n");
       mExtractorEnabled = false;
@@ -237,7 +260,14 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
   for (itStream = streamsMap.begin(); itStream != streamsMap.end(); itStream++) {
     std::string type = itStream->first;
     OmafMediaStream* stream = itStream->second;
-    stream->SetEnabledExtractor(mExtractorEnabled);
+    if (strncmp(type.c_str(), "video", 5) == 0)
+    {
+        stream->SetEnabledExtractor(mExtractorEnabled);
+    }
+    else
+    {
+        stream->SetEnabledExtractor(false);
+    }
     stream->InitStream(type);
     listStream.push_back(stream);
   }

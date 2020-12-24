@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Intel Corporation
+ * Copyright (c) 2020, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,41 +26,46 @@
  */
 
 //!
-//! \file:   RepresentationElement.cpp
-//! \brief:  Representation element class
+//! \file:   AudioChannelCfgElement.h
+//! \brief:  AudioChannelConfiguration element class
 //!
 
-#include "RepresentationElement.h"
+#ifndef AUDIOCHANNELCONFIGURATIONELEMENT_H
+#define AUDIOCHANNELCONFIGURATIONELEMENT_H
+#include "OmafElementBase.h"
+#include "DescriptorElement.h"
 
 VCD_OMAF_BEGIN
 
-RepresentationElement::RepresentationElement()
+class AudioChannelConfigurationElement: public DescriptorElement, public OmafElementBase
 {
-    m_segment = nullptr;
-    m_audioChlCfg = nullptr;
-    m_width = 0;
-    m_height = 0;
-    m_audioSamplingRate = 0;
-    m_bandwidth = 0;
-}
+public:
 
-RepresentationElement::~RepresentationElement()
-{
-    m_id.clear();
-    m_codecs.clear();
-    m_mimeType.clear();
-    m_width = 0;
-    m_height = 0;
-    m_audioSamplingRate = 0;
-    m_frameRate.clear();
-    m_sar.clear();
-    m_startWithSAP.clear();
-    m_qualityRanking.clear();
-    m_bandwidth = 0;
+    //!
+    //! \brief Constructor
+    //!
+    AudioChannelConfigurationElement(){};
 
-    SAFE_DELETE(m_segment);
-    SAFE_DELETE(m_audioChlCfg);
-}
+    //!
+    //! \brief Destructor
+    //!
+    virtual ~AudioChannelConfigurationElement();
 
+    //!
+    //! \brief    Parse SchemeIdUri and it's value
+    //!
+    //! \return   ODStatus
+    //!           OD_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual ODStatus ParseSchemeIdUriAndValue();
+
+    int32_t GetChannelCfg() { return m_chlCfg; };
+
+private:
+
+    int32_t m_chlCfg;
+};
 
 VCD_OMAF_END;
+
+#endif //AUDIOCHANNELCONFIGURATIONELEMENT_H

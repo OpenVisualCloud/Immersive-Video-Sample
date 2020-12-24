@@ -108,6 +108,30 @@ class MediaPacket : public VCD::NonCopyable {
     return this;
   }
 
+  MediaPacket* InsertADTSHdr() {
+    char* new_dest = nullptr;
+    // FIXME align size?
+    if (m_nAllocSize >= m_nRealSize + m_audioADTSHdr.size()) {
+      new_dest = m_pPayload;
+    } else {
+      void* tmp = malloc(m_nRealSize + m_audioADTSHdr.size());
+      new_dest = reinterpret_cast<char*>(tmp);
+      m_nAllocSize = m_nRealSize + m_audioADTSHdr.size();
+    }
+
+    // 1. move origin payload
+    memmove(new_dest + m_audioADTSHdr.size(), m_pPayload, m_nRealSize);
+    memcpy_s(new_dest, m_nAllocSize - m_nRealSize, m_audioADTSHdr.data(), m_audioADTSHdr.size());
+    m_nRealSize += m_audioADTSHdr.size();
+
+    // this is a new buffer
+    if (new_dest != m_pPayload) {
+      free(m_pPayload);
+      m_pPayload = new_dest;
+    }
+    return this;
+  }
+
   //!
   //! \brief  Allocate the packet buffer, and fill the buffer with fill
   //!
@@ -326,6 +350,16 @@ class MediaPacket : public VCD::NonCopyable {
 
   bool     GetSegmentEnded() { return m_segmentEnded; };
 
+  void     SetMediaType(MediaType mediaType) { m_mediaType = mediaType; };
+
+  MediaType GetMediaType() { return m_mediaType; };
+
+  void     SetADTSHdr(std::vector<uint8_t> audioParams)
+  {
+      m_audioADTSHdr = audioParams;
+      printf("m_audioADTSHdr size %ld\n", m_audioADTSHdr.size());
+  };
+
 private:
     MediaPacket& operator=(const MediaPacket& other) { return *this; };
     MediaPacket(const MediaPacket& other) { /* do not create copies */ };
@@ -359,6 +393,8 @@ private:
   uint32_t m_SPSLen = 0;
   uint32_t m_PPSLen = 0;
   bool     m_segmentEnded = false;
+  MediaType m_mediaType = MediaType_Video;
+  std::vector<uint8_t> m_audioADTSHdr;
 
   void deleteRwpk() {
     if (m_rwpk) {

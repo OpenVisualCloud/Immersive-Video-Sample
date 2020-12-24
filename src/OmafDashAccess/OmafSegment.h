@@ -237,6 +237,18 @@ class OmafSegment : public VCD::NonCopyable, public VCD::MP4::StreamIO, public e
 
   std::string to_string() const noexcept;
 
+  void SetMediaType(MediaType type) { mMediaType = type; };
+
+  MediaType GetMediaType() { return mMediaType; };
+
+  void SetAudioChlNum(uint32_t chlNum) { mChlsNum = chlNum; };
+
+  uint32_t GetAudioChlNum() { return mChlsNum; };
+
+  void SetAudioSampleRate(uint32_t sampleRate) { mSampleRate = sampleRate; };
+
+  uint32_t GetAudioSampleRate() { return mSampleRate; };
+
  private:
   //!
   //!  \brief save the memory data to file.
@@ -277,6 +289,11 @@ class OmafSegment : public VCD::NonCopyable, public VCD::MP4::StreamIO, public e
   SRDInfo mSRDInfo;             //<! top/left/width/height info for the tile track segment
 
   std::ifstream mFileStream;
+
+  MediaType mMediaType;
+
+  uint32_t mChlsNum;
+  uint32_t mSampleRate;
 
  private:
   static std::atomic_uint32_t INITSEG_ID;

@@ -126,6 +126,7 @@ public:
     //!
     MEMBER_SET_AND_GET_FUNC(string, m_maxFrameRate, MaxFrameRate);
 
+    MEMBER_SET_AND_GET_FUNC(string, m_audioSamplingRate, AudioSamplingRate);
     //!
     //! \brief    Set function for m_segmentAlignment member
     //!
@@ -288,6 +289,8 @@ private:
     string                               m_maxWidth;               //!< the maxWidth attribute
     string                               m_maxHeight;              //!< the maxHeight attribute
     string                               m_maxFrameRate;           //!< the maxFramerate attribute
+    string                               m_audioSamplingRate;
+
     string                               m_segmentAlignment;       //!< the segmentAlignment attribute
     string                               m_subsegmentAlignment;    //!< the subsegmentAlignment attribute
     vector<ViewportElement*>             m_viewport;               //!< the Viewport elements
