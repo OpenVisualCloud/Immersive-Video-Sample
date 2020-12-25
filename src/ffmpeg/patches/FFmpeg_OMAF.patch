@@ -4793,7 +4793,7 @@ diff -urN FFmpeg/libavformat/Makefile FFmpeg-patched/libavformat/Makefile
 diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_packing_enc.c
 --- FFmpeg/libavformat/omaf_packing_enc.c	1970-01-01 08:00:00.000000000 +0800
 +++ FFmpeg-patched/libavformat/omaf_packing_enc.c	2020-09-27 13:35:13.543526537 +0800
-@@ -0,0 +1,636 @@
+@@ -0,0 +1,707 @@
 +/*
 + * Intel tile Dash muxer
 + *
@@ -5038,7 +5038,7 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +        initInfo->logFunction = NULL;
 +    }
 +
-+    initInfo->bsBuffers = (BSBuffer*)malloc(sizeof(BSBuffer) * initInfo->bsNumVideo);
++    initInfo->bsBuffers = (BSBuffer*)malloc(sizeof(BSBuffer) * (initInfo->bsNumVideo + initInfo->bsNumAudio));
 +    if (!(initInfo->bsBuffers))
 +    {
 +        av_log(s, AV_LOG_ERROR, "Failed to malloc memory for video bitstream buffer \n");
@@ -5176,7 +5176,7 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +
 +    if (c->initInfo->bsBuffers)
 +    {
-+        for (int i = 0; i < c->initInfo->bsNumVideo; i++)
++        for (int i = 0; i < (c->initInfo->bsNumVideo + c->initInfo->bsNumAudio); i++)
 +        {
 +            if (c->initInfo->bsBuffers[i].data)
 +            {
@@ -5236,17 +5236,47 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +        int i = pkt->stream_index;
 +        AVStream *st = s->streams[i];
 +
-+        if (!(pkt->side_data))
-+            return -1;
-+
-+        c->initInfo->bsBuffers[i].dataSize = pkt->side_data->size;
-+        c->initInfo->bsBuffers[i].data = (uint8_t*)malloc(c->initInfo->bsBuffers[i].dataSize * sizeof(uint8_t));
-+        if (!(c->initInfo->bsBuffers[i].data))
++        if (((st->codecpar->codec_id == AV_CODEC_ID_HEVC) || (st->codecpar->codec_id == AV_CODEC_ID_H264)) && (pkt->pts == 0))
 +        {
-+            av_log(s, AV_LOG_ERROR, "Failed to malloc memory for holding bitstream header data \n");
-+            return -1;
++            c->initInfo->bsBuffers[i].dataSize = pkt->side_data->size;
++
++            c->initInfo->bsBuffers[i].data = (uint8_t*)malloc(c->initInfo->bsBuffers[i].dataSize * sizeof(uint8_t));
++            if (!(c->initInfo->bsBuffers[i].data))
++            {
++                av_log(s, AV_LOG_ERROR, "Failed to malloc memory for holding bitstream header data \n");
++                return -1;
++            }
++            memcpy(c->initInfo->bsBuffers[i].data, pkt->side_data->data, c->initInfo->bsBuffers[i].dataSize);
++
 +        }
-+        memcpy(c->initInfo->bsBuffers[i].data, pkt->side_data->data, c->initInfo->bsBuffers[i].dataSize);
++        else if ((st->codecpar->codec_id == AV_CODEC_ID_AAC) && (pkt->pts == -1024))
++        {
++            c->initInfo->bsBuffers[i].dataSize = pkt->size;
++
++            c->initInfo->bsBuffers[i].data = (uint8_t*)malloc(c->initInfo->bsBuffers[i].dataSize * sizeof(uint8_t));
++            if (!(c->initInfo->bsBuffers[i].data))
++            {
++                av_log(s, AV_LOG_ERROR, "Failed to malloc memory for holding bitstream header data \n");
++                return -1;
++            }
++            memcpy(c->initInfo->bsBuffers[i].data, pkt->data, c->initInfo->bsBuffers[i].dataSize);
++        }
++
++        //c->initInfo->bsBuffers[i].data = (uint8_t*)malloc(c->initInfo->bsBuffers[i].dataSize * sizeof(uint8_t));
++        //if (!(c->initInfo->bsBuffers[i].data))
++        //{
++        //    av_log(s, AV_LOG_ERROR, "Failed to malloc memory for holding bitstream header data \n");
++        //    return -1;
++        //}
++
++        //if ((st->codecpar->codec_id == AV_CODEC_ID_HEVC) || (st->codecpar->codec_id == AV_CODEC_ID_H264))
++        //{
++        //    memcpy(c->initInfo->bsBuffers[i].data, pkt->side_data->data, c->initInfo->bsBuffers[i].dataSize);
++        //}
++        //else if (st->codecpar->codec_id == AV_CODEC_ID_AAC)
++        //{
++        //    memcpy(c->initInfo->bsBuffers[i].data, pkt->data, c->initInfo->bsBuffers[i].dataSize);
++        //}
 +
 +        if (st->codecpar->codec_id == AV_CODEC_ID_H264)
 +        {
@@ -5255,6 +5285,10 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +        else if (st->codecpar->codec_id == AV_CODEC_ID_HEVC)
 +        {
 +            c->initInfo->bsBuffers[i].codecId = CODEC_ID_H265;
++        }
++        else if (st->codecpar->codec_id == AV_CODEC_ID_AAC)
++        {
++            c->initInfo->bsBuffers[i].codecId = CODEC_ID_AAC;
 +        }
 +
 +        c->initInfo->bsBuffers[i].bitRate = st->codecpar->bit_rate;
@@ -5268,6 +5302,9 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +                break;
 +            case AVMEDIA_TYPE_AUDIO:
 +                c->initInfo->bsBuffers[i].mediaType = AUDIOTYPE;
++                c->initInfo->bsBuffers[i].audioObjType = st->codecpar->profile ;
++                c->initInfo->bsBuffers[i].sampleRate = st->codecpar->sample_rate;
++                c->initInfo->bsBuffers[i].channelNum = st->codecpar->channels;
 +                break;
 +            case AVMEDIA_TYPE_SUBTITLE:
 +                c->initInfo->bsBuffers[i].mediaType = SUBTITLETYPE;
@@ -5276,32 +5313,68 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +                break;
 +        }
 +
-+        c->inStreamsNum++;
++        if (((st->codecpar->codec_id == AV_CODEC_ID_HEVC) || (st->codecpar->codec_id == AV_CODEC_ID_H264)) && (pkt->pts == 0))
++        {
++            c->inStreamsNum++;
++        }
++        else if ((st->codecpar->codec_id == AV_CODEC_ID_AAC) && (pkt->pts == -1024))
++        {
++            c->inStreamsNum++;
++        }
 +
 +        FrameBSInfo* frameInfo = (FrameBSInfo*)malloc(sizeof(FrameBSInfo));
-+        frameInfo->dataSize = pkt->size - pkt->side_data->size;
++        memset(frameInfo, 0, sizeof(FrameBSInfo));
++        if (((st->codecpar->codec_id == AV_CODEC_ID_HEVC) || (st->codecpar->codec_id == AV_CODEC_ID_H264)) && (pkt->pts == 0))
++        {
++            frameInfo->dataSize = pkt->size - pkt->side_data->size;
++        }
++        else if (((st->codecpar->codec_id == AV_CODEC_ID_HEVC) || (st->codecpar->codec_id == AV_CODEC_ID_H264)) && (pkt->pts != 0))
++        {
++            frameInfo->dataSize = pkt->size;
++        }
++        else if (st->codecpar->codec_id == AV_CODEC_ID_AAC)
++        {
++            frameInfo->dataSize = pkt->size;
++        }
++
 +        frameInfo->data = (uint8_t*)malloc(frameInfo->dataSize * sizeof(uint8_t));
 +        if (!(frameInfo->data))
 +        {
 +            av_log(s, AV_LOG_ERROR, "Failed to malloc memory for buffered frame data \n");
 +            return -1;
 +        }
-+        memcpy(frameInfo->data, pkt->data + pkt->side_data->size, frameInfo->dataSize);
-+        frameInfo->isKeyFrame = (pkt->flags & AV_PKT_FLAG_KEY);
++        if (((st->codecpar->codec_id == AV_CODEC_ID_HEVC) || (st->codecpar->codec_id == AV_CODEC_ID_H264)) && (pkt->pts == 0))
++        {
++            memcpy(frameInfo->data, pkt->data + pkt->side_data->size, frameInfo->dataSize);
++            frameInfo->isKeyFrame = (pkt->flags & AV_PKT_FLAG_KEY);
++        }
++        else if (((st->codecpar->codec_id == AV_CODEC_ID_HEVC) || (st->codecpar->codec_id == AV_CODEC_ID_H264)) && (pkt->pts != 0))
++        {
++            memcpy(frameInfo->data, pkt->data, frameInfo->dataSize);
++            frameInfo->isKeyFrame = (pkt->flags & AV_PKT_FLAG_KEY);
++        }
++        else if (st->codecpar->codec_id == AV_CODEC_ID_AAC)
++        {
++            memcpy(frameInfo->data, pkt->data, frameInfo->dataSize);
++            frameInfo->isKeyFrame = true;
++        }
 +        frameInfo->pts = pkt->pts;
 +
 +        c->bufferedFrames[c->bufferedFramesNum].streamIdx = pkt->stream_index;
 +        c->bufferedFrames[c->bufferedFramesNum].frameBSInfo = frameInfo;
 +        c->bufferedFramesNum++;
 +
-+        free(pkt->side_data->data);
-+        pkt->side_data->data = NULL;
-+        pkt->side_data->size = 0;
-+        free(pkt->side_data);
-+        pkt->side_data = NULL;
-+        pkt->side_data_elems = 0;
++        if (((st->codecpar->codec_id == AV_CODEC_ID_HEVC) || (st->codecpar->codec_id == AV_CODEC_ID_H264)) && (pkt->pts == 0))
++        {
++            free(pkt->side_data->data);
++            pkt->side_data->data = NULL;
++            pkt->side_data->size = 0;
++            free(pkt->side_data);
++            pkt->side_data = NULL;
++            pkt->side_data_elems = 0;
++        }
 +
-+        if (c->inStreamsNum == c->initInfo->bsNumVideo)
++        if (c->inStreamsNum == (c->initInfo->bsNumVideo + c->initInfo->bsNumAudio))
 +        {
 +            c->handler = VROmafPackingInit(c->initInfo);
 +            if (!(c->handler))
@@ -5428,8 +5501,6 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +    .deinit         = omaf_free,
 +    .priv_class     = &omaf_class,
 +};
-+
-+
 diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_dash_dec.c
 --- FFmpeg/libavformat/tiled_dash_dec.c	1970-01-01 08:00:00.000000000 +0800
 +++ FFmpeg-patched/libavformat/tiled_dash_dec.c	2020-09-27 13:35:13.559526536 +0800
