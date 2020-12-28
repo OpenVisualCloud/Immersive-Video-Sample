@@ -330,15 +330,19 @@ int32_t genViewport_getContentCoverage(void* pGenHandle, CCDef* pOutCC)
     if(!pOutCC)
         return -1;
 
-    SPos *pUpLeft = cTAppConvCfg->m_pUpLeft;
-    SPos *pDownRight = cTAppConvCfg->m_pDownRight;
-
-    int32_t videoWidth = cTAppConvCfg->m_iInputWidth;
-    int32_t videoHeight = cTAppConvCfg->m_iInputHeight;
-
     // ERP mode may have 2 faces for boundary case
     if(cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_EQUIRECT)
     {
+        /* ERP used shape type 0 too. Utilize the FOV to generate CC info */
+        coverageShapeType = 0;
+        cTAppConvCfg->getContentCoverage(pOutCC, coverageShapeType);
+#if 0
+        SPos *pUpLeft = cTAppConvCfg->m_pUpLeft;
+        SPos *pDownRight = cTAppConvCfg->m_pDownRight;
+
+        int32_t videoWidth = cTAppConvCfg->m_iInputWidth;
+        int32_t videoHeight = cTAppConvCfg->m_iInputHeight;
+
         int32_t w = 0, h = 0, x = 0, y = 0;
         bool coverBoundary = pUpLeft[1].faceIdx == 0 ? true : false;
         x = coverBoundary ?  max(pUpLeft[0].x, pUpLeft[1].x) : pUpLeft[0].x;
@@ -351,6 +355,7 @@ int32_t genViewport_getContentCoverage(void* pGenHandle, CCDef* pOutCC)
         pOutCC->centreElevation = (int32_t)((((videoHeight / 2) - (float)(y + h / 2)) * 180 * 65536) / videoHeight);
         pOutCC->azimuthRange    = (uint32_t)((w * 360.f * 65536) / videoWidth);
         pOutCC->elevationRange  = (uint32_t)((h * 180.f * 65536) / videoHeight);
+#endif
     }
     else if(cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP)
     {
@@ -408,7 +413,7 @@ int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile)
     int32_t idx = 0;
     TileDef* pOutTileTmp = pOutTile;
     int32_t faceNum = (cTAppConvCfg->m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 2;
-	if (cTAppConvCfg->m_usageType == E_PARSER_ONENAL)
+    if (cTAppConvCfg->m_usageType == E_PARSER_ONENAL)
     {
         tileNum = maxTileNum;
     }
@@ -521,6 +526,7 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
             }
         }
     }
+    SCVP_LOG(LOG_INFO, "Tile Selection Final Resulted %d Tiles in Total!!!\n", tileNum);
     return tileNum;
 }
 
@@ -735,6 +741,12 @@ TgenViewport::~TgenViewport()
         delete [] m_srd;
         m_srd = NULL;
     }
+
+    if (m_pViewportHorizontalBoudaryPoints)
+    {
+        delete[] m_pViewportHorizontalBoudaryPoints;
+        m_pViewportHorizontalBoudaryPoints = NULL;
+    }
 }
 
 TgenViewport& TgenViewport::operator=(const TgenViewport& src)
@@ -775,6 +787,13 @@ int32_t TgenViewport::create(uint32_t tileNumRow, uint32_t tileNumCol)
         if (!m_srd)
             return -1;
     }
+    if (!m_pViewportHorizontalBoudaryPoints)
+    {
+        m_pViewportHorizontalBoudaryPoints = new SpherePoint[ERP_VERT_ANGLE / HORZ_BOUNDING_STEP + 1];
+        if (!m_pViewportHorizontalBoudaryPoints)
+            return -1;
+    }
+
     return 0;
 }
 
@@ -794,6 +813,11 @@ void TgenViewport::destroy()
     {
         delete [] m_srd;
         m_srd = NULL;
+    }
+    if (m_pViewportHorizontalBoudaryPoints)
+    {
+        delete[] m_pViewportHorizontalBoudaryPoints;
+        m_pViewportHorizontalBoudaryPoints = NULL;
     }
 }
 
@@ -1029,18 +1053,96 @@ int32_t TgenViewport::calcTilesGridInCubemap()
     return 0;
 }
 
+
+float TgenViewport::calculateLongitudeFromThita(float Latti, float phi, float maxLongiOffset) //Latti is the point lattitude we're interested
+{
+    float longi = 0;
+    if (Latti < 90 - phi)
+        longi = sasin(ssin(DEG2RAD_FACTOR * phi) / scos(DEG2RAD_FACTOR * Latti)) * RAD2DEG_FACTOR;
+    else
+        longi = maxLongiOffset;
+    return longi;
+}
+
+float TgenViewport::calculateLattitudeFromPhi(float phi, float pitch) //pitch is the top point lattitude
+{
+    float latti = 0;
+    latti = sasin(ssin(DEG2RAD_FACTOR * pitch) * scos(DEG2RAD_FACTOR * phi)) * RAD2DEG_FACTOR;
+    return latti;
+}
+
+float TgenViewport::calculateLatti(float pitch, float hFOV) //pitch is the top point lattitude when yaw=pitch=0
+{
+    double fDen, fNum;
+    fDen = ssin(DEG2RAD_FACTOR * hFOV / 2) * ssin(DEG2RAD_FACTOR * pitch);
+    fDen *= fDen;
+    fDen = 1 - fDen;
+    fNum = scos(DEG2RAD_FACTOR * pitch);
+    fNum *= fNum;
+    return sacos(sqrt(fNum / fDen))* RAD2DEG_FACTOR;
+}
+
+float TgenViewport::calculateLongiByLatti(float latti, float pitch) //pitch is the curve top point's lattitude
+{
+    float instantPhi, ret;
+    instantPhi = sacos(ssin(latti * DEG2RAD_FACTOR) / ssin(pitch * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR;
+    ret = sasin(ssin(instantPhi * DEG2RAD_FACTOR) / scos(latti * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR;
+    return ret;
+}
+
+int32_t TgenViewport::selectTilesInsideOnOneRow(ITileInfo *pTileInfo, int32_t tileNumCol, float leftCol, float rightCol, int32_t row)
+{
+    if (leftCol >= 0 && rightCol < tileNumCol)
+    {
+        for (int32_t j = (int32_t)leftCol; j < rightCol; j++)
+            pTileInfo[j + row * tileNumCol].isOccupy = 1;
+    }
+    else if (leftCol < 0 && rightCol < tileNumCol)
+    {
+        if (rightCol >= 0)
+        {
+            for (int32_t j = 0; j < rightCol; j++)
+                pTileInfo[j + row * tileNumCol].isOccupy = 1;
+            for (int32_t j = (int32_t)(tileNumCol + leftCol); j < tileNumCol; j++)
+                pTileInfo[j + row * tileNumCol].isOccupy = 1;
+        }
+        else
+        {
+            for (int32_t j = (int32_t)(tileNumCol + leftCol); j < tileNumCol+rightCol; j++)
+                pTileInfo[j + row * tileNumCol].isOccupy = 1;
+        }
+    }
+    else if (leftCol >= 0 && rightCol >= tileNumCol)
+    {
+        if (leftCol < tileNumCol)
+        {
+            for (int32_t j = (int32_t)leftCol; j < tileNumCol; j++)
+                pTileInfo[j + row * tileNumCol].isOccupy = 1;
+            for (int32_t j = 0; j < rightCol - tileNumCol; j++)
+                pTileInfo[j + row * tileNumCol].isOccupy = 1;
+        }
+        else
+        {
+            for (int32_t j = (int32_t)(leftCol - tileNumCol); j < rightCol - tileNumCol; j++)
+                pTileInfo[j + row * tileNumCol].isOccupy = 1;
+        }
+    }
+    else
+    {
+        for (int32_t j = 0; j < tileNumCol; j++)
+            pTileInfo[j + row * tileNumCol].isOccupy = 1;
+    }
+    return 0;
+}
+
 int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short dstWidth, short dstHeight)
 {
-    uint32_t idx = 0;
-    int32_t faceNum = (m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) ? 6 : 1;
     float fYaw = m_codingSVideoInfo.viewPort.fYaw;
     float fPitch = m_codingSVideoInfo.viewPort.fPitch;
     float vFOV = m_codingSVideoInfo.viewPort.vFOV;
     float hFOV = m_codingSVideoInfo.viewPort.hFOV;
-    float maxOffsetAngle;
-    int32_t horzOffsetTileNum;
-    int32_t sign = 0;
 
+    SCVP_LOG(LOG_INFO, "Yaw is %f and Pitch is %f\n", fYaw, fPitch);
     // starting time
     double dResult;
     clock_t lBefore = clock();
@@ -1049,217 +1151,384 @@ int32_t  TgenViewport::selectregion(short inputWidth, short inputHeight, short d
     float cal_pitch = ERP_VERT_ANGLE / 2 - fPitch;
     float horzStep = ERP_HORZ_ANGLE / (float)m_tileNumCol;
     float vertStep = ERP_VERT_ANGLE / (float)m_tileNumRow;
+    float leftCol, rightCol;
+    float thita, phi;
+    int32_t topRow = (int32_t)((cal_pitch - vFOV / 2) / vertStep);
+    int32_t bottomRow = (int32_t)((cal_pitch + vFOV / 2) / vertStep);
+    SpherePoint topPoint, bottomPoint;
+    SpherePoint topLeftPoint, topRightPoint, bottomLeftPoint, bottomRightPoint;
+    float slope, longiOffsetOnHorzBoundary;
+    float vertPos, vertPosBottom;
+    SPos* pTmpUpLeft = m_pUpLeft;
+    SPos* pTmpDownRight = m_pDownRight;
 
-    float thita = 0.f;
-    float phi = 0.f;
-    float fEpsi = 0.5f;
-
-    if (fPitch >= 90.f - fEpsi) {
-        if (hFOV <= 90) {
-            vFOV = 2 * RAD2DEG_FACTOR*sasin((ssin(DEG2RAD_FACTOR * hFOV / 2)) * sqrt(2));
-        }
-    }
-    else if (fPitch <= -90 + fEpsi) {
-        if (hFOV <= 90) {
-            vFOV = 2 * RAD2DEG_FACTOR*sasin((ssin(DEG2RAD_FACTOR * hFOV / 2)) * sqrt(2));
-        }
-    }
-    if (fPitch > 0)
+    for (uint32_t i = 0; i < m_tileNumCol * m_tileNumRow; i++)
     {
-        if (fPitch < (90 - vFOV / 2)) {
-            thita = RAD2DEG_FACTOR*sasin(scos(DEG2RAD_FACTOR * hFOV / 2) * ssin((fPitch + vFOV/2)* DEG2RAD_FACTOR));
-            phi = RAD2DEG_FACTOR * sasin(ssin(DEG2RAD_FACTOR * hFOV / 2) / scos(DEG2RAD_FACTOR * thita));
-            maxOffsetAngle = phi - hFOV/2;
-            horzOffsetTileNum = maxOffsetAngle / horzStep + 1;
-        }
-        else {
-            maxOffsetAngle = 0;
-            horzOffsetTileNum = 0;
-        }
+        m_srd[i].horzPosTopRight = m_srd[i].horzPosBottomRight = m_srd[i].horzPos + horzStep;
+        m_srd[i].horzPosBottomLeft = m_srd[i].horzPos;
+        m_srd[i].vertPosBottomLeft = m_srd[i].vertPosBottomRight = m_srd[i].vertPos - vertStep;
+        m_srd[i].vertPosTopRight = m_srd[i].vertPos;
+        m_srd[i].isOccupy = 0;
     }
-    else if (fPitch < 0) {
-        if (fPitch > -(90 - vFOV / 2)) {
-            thita = RAD2DEG_FACTOR*sasin(scos(DEG2RAD_FACTOR * hFOV / 2) * ssin((fPitch - vFOV/2)* DEG2RAD_FACTOR));
-            phi = RAD2DEG_FACTOR * sasin(ssin(DEG2RAD_FACTOR * hFOV / 2) / scos(DEG2RAD_FACTOR * thita));
-            maxOffsetAngle = phi - hFOV/2;
-            horzOffsetTileNum = maxOffsetAngle / horzStep + 1;
-        }
-        else {
-            maxOffsetAngle = 0;
-            horzOffsetTileNum = 0;
-        }
-    }
-    else {
-        maxOffsetAngle = 0;
-        horzOffsetTileNum = 0;
-    }
-    double upCornerVertPos = ERP_VERT_ANGLE / 2 - sasin(scos(hFOV / 360.f * S_PI) * ssin((fPitch + vFOV/2) / 180.f * S_PI)) / S_PI * 180.f;
-    double downCornerVertPos = ERP_VERT_ANGLE / 2 - sasin(scos(hFOV / 360.f * S_PI) * ssin((fPitch - vFOV/2) / 180.f * S_PI)) / S_PI * 180.f;
-
-    // Limit Addtional horizontal tile number to avoid array cross boundary
-    if (horzOffsetTileNum > (int32_t)m_tileNumCol/2) {
-        SCVP_LOG(LOG_WARNING, "Addtional horizontal tile number is %d and bigger than total colomns\n", horzOffsetTileNum);
-    }
-
-    // seek the center tile of the FOV
-    float leastDistance = FLT_MAX;
-    uint32_t opt_idx = m_tileNumRow * m_tileNumCol;
-
-    for (int32_t faceid = 0; faceid < faceNum; faceid++)
+    for (uint32_t i = 0; i < FACE_NUMBER; i++)
     {
-        // select optimization
-        std::pair<uint32_t, uint32_t> fov_corr((uint32_t)cal_yaw / (uint32_t)horzStep, (uint32_t)cal_pitch / (uint32_t)vertStep);
-        if (fov_corr.second == m_tileNumRow){
-            fov_corr.second--;
-        }
-        if (fov_corr.first == m_tileNumCol){
-            fov_corr.first--;
-        }
-        std::vector<uint32_t> selected_idxs;
-        uint32_t select_idx = fov_corr.first + fov_corr.second * m_tileNumCol;
-        uint32_t boundary_offset = fov_corr.first == m_tileNumCol -1 ? m_tileNumCol : 0;
-        if (fov_corr.second == m_tileNumRow - 1 && faceNum == 1) // erp ( add idx at bottom to select opt_idx )
-        {
-            m_srd[select_idx + m_tileNumCol].x = m_srd[select_idx].x;
-            m_srd[select_idx + m_tileNumCol].y = inputHeight;
-            m_srd[select_idx + m_tileNumCol].tilewidth = m_srd[select_idx].tilewidth;
-            m_srd[select_idx + m_tileNumCol].tileheight = m_srd[select_idx].tileheight;
-            m_srd[select_idx + m_tileNumCol].horzPos = m_srd[select_idx].horzPos;
-            m_srd[select_idx + m_tileNumCol].vertPos = m_srd[select_idx].vertPos - ERP_VERT_ANGLE / (float)m_tileNumRow;
-
-            m_srd[select_idx + 1 + m_tileNumCol - boundary_offset].x = m_srd[select_idx + 1 - boundary_offset].x;
-            m_srd[select_idx + 1 + m_tileNumCol - boundary_offset].y = inputHeight;
-            m_srd[select_idx + 1 + m_tileNumCol - boundary_offset].tilewidth = m_srd[select_idx + 1 - boundary_offset].tilewidth;
-            m_srd[select_idx + 1 + m_tileNumCol - boundary_offset].tileheight = m_srd[select_idx + 1 - boundary_offset].tileheight;
-            m_srd[select_idx + 1 + m_tileNumCol - boundary_offset].horzPos = m_srd[select_idx + 1 - boundary_offset].horzPos;
-            m_srd[select_idx + 1 + m_tileNumCol - boundary_offset].vertPos = m_srd[select_idx + 1 - boundary_offset].vertPos - ERP_VERT_ANGLE / (float)m_tileNumRow;
-        }
-        selected_idxs.push_back(select_idx);
-        selected_idxs.push_back(select_idx + 1 - boundary_offset);
-        selected_idxs.push_back(select_idx + m_tileNumCol);
-        selected_idxs.push_back(select_idx + 1 + m_tileNumCol - boundary_offset);
-        for (uint32_t it=0;it<selected_idxs.size();it++)
-        {
-            float correct_offset = fYaw - m_srd[selected_idxs[it]].horzPos > ERP_HORZ_ANGLE / 2 ? ERP_HORZ_ANGLE : 0;
-            float distance = sqrt(pow(fYaw - m_srd[selected_idxs[it]].horzPos - correct_offset, 2) + pow(fPitch - m_srd[selected_idxs[it]].vertPos, 2));
-            if (distance < leastDistance)
-            {
-                leastDistance = distance;
-                opt_idx = selected_idxs[it];
-            }
-        }
-        if ((opt_idx == select_idx) || (opt_idx == select_idx + m_tileNumCol))
-            sign = 1;
-        else if ((opt_idx == select_idx + 1 - boundary_offset) || (opt_idx == select_idx + 1 + m_tileNumCol - boundary_offset))
-            sign = -1;
-        else
-            sign = 0;
-    }
-    if (opt_idx == m_tileNumRow * m_tileNumCol)
-        opt_idx--;
-    idx = opt_idx;
-    //select all of the tiles to cover the whole viewport
-    short centerX = m_srd[idx].x;
-    short centerY = m_srd[idx].y;
-    short halfVPhorz = (dstWidth - m_srd[idx].tilewidth) >> 1;
-    short halfVPvert = (dstHeight - m_srd[idx].tileheight) >> 1;
-
-    for (uint32_t i=0;i<FACE_NUMBER;i++)
-    {
-        m_pUpLeft[i].x = inputWidth;
-        m_pUpLeft[i].y = inputHeight;
-        m_pDownRight[i].x = 0;
-        m_pDownRight[i].y = 0;
+        m_pUpLeft[i].x = 0;
+        m_pUpLeft[i].y = 0;
+        m_pDownRight[i].x = inputWidth;
+        m_pDownRight[i].y = inputHeight;
         m_pUpLeft[i].faceIdx = -1;
         m_pDownRight[i].faceIdx = -1;
     }
-    SPos*pTmpUpLeft = m_pUpLeft;
-    SPos*pTmpDownRight = m_pDownRight;
     pTmpUpLeft->faceIdx = 0;
     pTmpDownRight->faceIdx = 0;
-    pTmpUpLeft->x = centerX - halfVPhorz;
-    pTmpDownRight->x = centerX + halfVPhorz;
-    pTmpUpLeft->y = centerY - halfVPvert;
-    pTmpDownRight->y = centerY + halfVPvert;
 
-    int32_t topRow = (int32_t)((cal_pitch - vFOV / 2) / vertStep);
-    int32_t bottomRow = (int32_t)((cal_pitch + vFOV / 2) / vertStep);
-    if ((cal_pitch - vFOV/2) < 0)
-    {
-        pTmpUpLeft->y = 0;
-        pTmpUpLeft->x = 0;
-        pTmpDownRight->x = inputWidth;
-        pTmpDownRight->y = fmax(pTmpDownRight->y, (bottomRow+1) * m_srd[idx].tileheight);
-        pTmpDownRight->y = fmax(pTmpDownRight->y, (downCornerVertPos / vertStep) * m_srd[idx].tileheight);
-    }
-    else
-        pTmpUpLeft->y = fmin(pTmpUpLeft->y, topRow * m_srd[idx].tileheight);
+    /* Calculate the topLeft point lattitude when yaw=pitch=0 */
+    thita = calculateLatti(vFOV / 2, hFOV);
+    /* Phi is half of the open angle of the topLeft/topRight point with the sphere center, which won't change under different pitch/yaw */
+    phi = sacos(ssin(thita * DEG2RAD_FACTOR) / ssin((vFOV/2) * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR;
+    /* Calculate the topLeft/topRight point position with current pitch */
+    topLeftPoint.thita = topRightPoint.thita = sasin(scos(phi * DEG2RAD_FACTOR) * ssin((fPitch+vFOV/2) * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR;
+    topLeftPoint.alpha = cal_yaw - fabs(sasin(ssin(phi * DEG2RAD_FACTOR) / scos(topLeftPoint.thita * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR);
+    topRightPoint.alpha = cal_yaw + fabs(sasin(ssin(phi * DEG2RAD_FACTOR) / scos(topLeftPoint.thita * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR);
+    bottomLeftPoint.thita = bottomRightPoint.thita = sasin(scos(phi * DEG2RAD_FACTOR) * ssin((fPitch - vFOV / 2) * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR;
+    bottomLeftPoint.alpha = cal_yaw - fabs(sasin(ssin(phi * DEG2RAD_FACTOR) / scos(bottomLeftPoint.thita * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR);
+    bottomRightPoint.alpha = cal_yaw + fabs(sasin(ssin(phi * DEG2RAD_FACTOR) / scos(bottomLeftPoint.thita * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR);
 
-    if ((cal_pitch + vFOV/2) > ERP_VERT_ANGLE)
-    {
-        pTmpUpLeft->x = 0;
-        pTmpUpLeft->y = fmin(pTmpUpLeft->y, topRow * m_srd[idx].tileheight);
-        pTmpUpLeft->y = fmin(pTmpUpLeft->y, (upCornerVertPos / vertStep) * m_srd[idx].tileheight);
-        pTmpDownRight->x = inputWidth;
-        pTmpDownRight->y = inputHeight;
-    }
-    else
-        pTmpDownRight->y = fmax(pTmpDownRight->y, (bottomRow+1) * m_srd[idx].tileheight-1);
+    /* Calculate top/bottom point position */
+    topPoint.thita = fPitch + vFOV / 2;
+    bottomPoint.thita = fPitch - vFOV / 2;
+    topPoint.alpha = bottomPoint.alpha = cal_yaw;
 
-    if (pTmpUpLeft->y < 0)
+    /* Calculate boundary thita/alpha between every 180/(5*m_tileNumRow) degrees */
+    SpherePoint* pHorzBoundaryPoint = m_pViewportHorizontalBoudaryPoints;
+    SpherePoint* pHorzBoundaryPointHist = pHorzBoundaryPoint;
+
+    for (float offsetAngle = vFOV / 2; offsetAngle >= -vFOV / 2; offsetAngle -= HORZ_BOUNDING_STEP)
     {
-        pTmpUpLeft->y = 0;
-        pTmpUpLeft->x = 0;
-        pTmpDownRight->x = inputWidth;
-    }
-    else if (maxOffsetAngle != 0 && fPitch >= 0)
-    {
-        pTmpUpLeft->x -= m_srd[idx].tilewidth * horzOffsetTileNum;
-        pTmpDownRight->x += m_srd[idx].tilewidth* horzOffsetTileNum;
-    }
-    // Need to ajust after region select optimization in two pole areas
-    if (pTmpDownRight->y >= inputHeight)
-    {
-        pTmpUpLeft->x = 0;
-        pTmpDownRight->x = inputWidth;
-        pTmpDownRight->y = inputHeight;
-    }
-    else if (maxOffsetAngle != 0 && fPitch < 0)
-    {
-        pTmpUpLeft->x -= m_srd[idx].tilewidth* horzOffsetTileNum;
-        pTmpDownRight->x += m_srd[idx].tilewidth* horzOffsetTileNum;
+        float instantThita = calculateLatti(offsetAngle, hFOV);
+        float instantPhi;
+        if (fabs(offsetAngle) <= 1e-9)
+            instantPhi = hFOV / 2;
+        else
+            instantPhi = sacos(ssin(instantThita * DEG2RAD_FACTOR) / ssin((fabs(offsetAngle)) * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR;
+        pHorzBoundaryPoint->thita = calculateLattitudeFromPhi(instantPhi, fPitch + offsetAngle);
+        pHorzBoundaryPoint->alpha = calculateLongitudeFromThita(pHorzBoundaryPoint->thita, instantPhi, hFOV/2);
+        pHorzBoundaryPointHist = pHorzBoundaryPoint;
+        pHorzBoundaryPoint++;
     }
 
-    if ( ( maxOffsetAngle == 0) && (m_tileNumCol % 2 == 1) ) {
-       if (sign == -1)
-            pTmpUpLeft->x -= m_srd[idx].tilewidth;
-       else if (sign == 1)
-            pTmpDownRight->x += m_srd[idx].tilewidth;
-    }
-    if (pTmpUpLeft->x < 0)
+    float topLatti, bottomLatti;
+    float leftColOnCurrentLine, rightColOnCurrentLine;
+    float leftColOnHorzBound, rightColOnHorzBound;
+
+    if (fPitch + vFOV / 2 > 90) //Top row crosses the north polar
     {
-        pTmpUpLeft->x = 0;
-        pTmpDownRight++;
-        pTmpDownRight->faceIdx = 0;
-        pTmpDownRight->x = inputWidth;
-        pTmpDownRight->y = m_pDownRight->y;
-        pTmpUpLeft++;
-        pTmpUpLeft->faceIdx = 0;
-        pTmpUpLeft->x = inputWidth - (halfVPhorz - centerX);
-        pTmpUpLeft->y = m_pUpLeft->y;
+        topLatti = topLeftPoint.thita;
+        topRow = (int32_t)((ERP_VERT_ANGLE / 2 - topLatti) / vertStep);
+        leftCol = topLeftPoint.alpha / horzStep;
+        rightCol = topRightPoint.alpha / horzStep;
+
+        for (int32_t i = 0; i <= topRow; i++)
+        {
+            vertPos = m_srd[i * m_tileNumCol].vertPos;
+            if (vertPos >= ERP_VERT_ANGLE - (fPitch + vFOV / 2))
+            {
+                /* Select all tiles in current row */
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, 0, m_tileNumCol, i);
+            }
+            else {
+                leftColOnCurrentLine = (cal_yaw - 180 + calculateLongiByLatti(vertPos, fPitch + vFOV / 2)) / horzStep;
+                rightColOnCurrentLine = (cal_yaw + 180 - calculateLongiByLatti(vertPos, fPitch + vFOV / 2)) / horzStep;
+                pHorzBoundaryPoint = m_pViewportHorizontalBoudaryPoints;
+                pHorzBoundaryPointHist = pHorzBoundaryPoint;
+                pHorzBoundaryPoint++;
+                longiOffsetOnHorzBoundary = 90;
+                for (int32_t j = 0; j <= vFOV / HORZ_BOUNDING_STEP; j++)
+                {
+                    if (vertPos < pHorzBoundaryPoint->thita && vertPos >= pHorzBoundaryPointHist->thita)
+                    {
+                        slope = (pHorzBoundaryPoint->alpha - pHorzBoundaryPointHist->alpha) / (pHorzBoundaryPoint->thita - pHorzBoundaryPointHist->thita);
+                        longiOffsetOnHorzBoundary = slope * (vertPos - pHorzBoundaryPointHist->thita) + pHorzBoundaryPointHist->alpha;
+                        break;
+                    }
+                    else
+                    {
+                        pHorzBoundaryPoint++;
+                        pHorzBoundaryPointHist++;
+                    }
+                }
+                leftColOnHorzBound = (cal_yaw - 180 + longiOffsetOnHorzBoundary) / horzStep;
+                rightColOnHorzBound = (cal_yaw +180 - longiOffsetOnHorzBoundary) / horzStep;
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftColOnCurrentLine, leftColOnHorzBound, i);
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, rightColOnHorzBound, rightColOnCurrentLine, i);
+            }
+        }
     }
-    else if (pTmpDownRight->x > inputWidth)
+    else if (fPitch + vFOV / 2 < 0) //Top row below the equator
     {
-        pTmpDownRight->x = inputWidth;
-        pTmpDownRight++;
-        pTmpDownRight->faceIdx = 0;
-        pTmpUpLeft++;
-        pTmpUpLeft->faceIdx = 0;
-        pTmpUpLeft->x = 0;
-        pTmpUpLeft->y = m_pUpLeft->y;
-        pTmpDownRight->x = centerX + halfVPhorz - inputWidth;
-        pTmpDownRight->y = m_pDownRight->y;
+        topLatti = topLeftPoint.thita;
+        topRow = (int32_t)((ERP_VERT_ANGLE / 2 - topLatti) / vertStep);
+        leftCol = topLeftPoint.alpha / horzStep;
+        rightCol = topRightPoint.alpha / horzStep;
+        int32_t i;
+        for (i = topRow; i <= (int32_t)((ERP_VERT_ANGLE / 2 - topPoint.thita) / vertStep); i++)
+        {
+            vertPosBottom = m_srd[i * m_tileNumCol].vertPosBottomLeft;
+            pHorzBoundaryPoint = m_pViewportHorizontalBoudaryPoints;
+            pHorzBoundaryPointHist = pHorzBoundaryPoint;
+            pHorzBoundaryPoint++;
+            longiOffsetOnHorzBoundary = 90;
+            for (int32_t j = 0; j < vFOV / HORZ_BOUNDING_STEP; j++)
+            {
+                if (vertPosBottom < pHorzBoundaryPoint->thita && vertPosBottom >= pHorzBoundaryPointHist->thita)
+                {
+                    slope = (pHorzBoundaryPoint->alpha - pHorzBoundaryPointHist->alpha) / (pHorzBoundaryPoint->thita - pHorzBoundaryPointHist->thita);
+                    longiOffsetOnHorzBoundary = slope * (vertPosBottom - pHorzBoundaryPointHist->thita) + pHorzBoundaryPointHist->alpha;
+                    break;
+                }
+                else
+                {
+                    pHorzBoundaryPoint++;
+                    pHorzBoundaryPointHist++;
+                }
+            }
+
+            leftColOnHorzBound = (cal_yaw - longiOffsetOnHorzBoundary) / horzStep;
+            rightColOnHorzBound = (cal_yaw + longiOffsetOnHorzBoundary) / horzStep;
+            if (vertPosBottom <= topPoint.thita)
+            {
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftColOnHorzBound, rightColOnHorzBound, i); //To be modified with left/right boundary
+            }
+            else
+            {
+                leftColOnCurrentLine = (cal_yaw - calculateLongiByLatti(vertPosBottom, topPoint.thita)) / horzStep;
+                rightColOnCurrentLine = (cal_yaw + calculateLongiByLatti(vertPosBottom, topPoint.thita)) / horzStep;
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftColOnHorzBound, leftColOnCurrentLine, i); //To be modified with left/right boundary
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, rightColOnCurrentLine, rightColOnHorzBound, i); //To be modified with left/right boundary
+            }
+        }
+        if (fPitch - vFOV / 2 <= -ERP_VERT_ANGLE / 2)
+        {
+            for (; i < (int32_t)m_tileNumRow; i++)
+            {
+                vertPosBottom = m_srd[i * m_tileNumCol].vertPosBottomLeft;
+                longiOffsetOnHorzBoundary = 90;
+                pHorzBoundaryPoint = m_pViewportHorizontalBoudaryPoints;
+                pHorzBoundaryPointHist = pHorzBoundaryPoint;
+                pHorzBoundaryPoint++;
+                for (int32_t j = 0; j < vFOV / HORZ_BOUNDING_STEP; j++)
+                {
+                    if (vertPosBottom < pHorzBoundaryPoint->thita && vertPosBottom >= pHorzBoundaryPointHist->thita)
+                    {
+                        slope = (pHorzBoundaryPoint->alpha - pHorzBoundaryPointHist->alpha) / (pHorzBoundaryPoint->thita - pHorzBoundaryPointHist->thita);
+                        longiOffsetOnHorzBoundary = slope * (vertPosBottom - pHorzBoundaryPointHist->thita) + pHorzBoundaryPointHist->alpha;
+                        break;
+                    }
+                    else
+                    {
+                        pHorzBoundaryPoint++;
+                        pHorzBoundaryPointHist++;
+                    }
+                }
+
+                leftColOnHorzBound = (cal_yaw - longiOffsetOnHorzBoundary) / horzStep;
+                rightColOnHorzBound = (cal_yaw + longiOffsetOnHorzBoundary) / horzStep;
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftColOnHorzBound, rightColOnHorzBound, i);
+            }
+	}
     }
+    else //normal top row between north polar and equator
+    {
+        topLatti = topLeftPoint.thita;
+        topRow = (int32_t)((ERP_VERT_ANGLE / 2 - topLatti) / vertStep);
+        leftCol = topLeftPoint.alpha / horzStep;
+        rightCol = topRightPoint.alpha / horzStep;
+
+        /* Select tiles on the row of viewport's topLeft/topRight Point */
+        selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftCol, rightCol, topRow);
+
+        /* Select tiles on rows between viewport's topLeft/topRightPoint and topPoint */
+        if (topRow > (ERP_VERT_ANGLE / 2 - topPoint.thita) / vertStep) {
+            for (int32_t i = topRow-1; i >= (int32_t)((ERP_VERT_ANGLE / 2 - topPoint.thita) / vertStep); i--)
+            {
+                vertPos = m_srd[i * m_tileNumCol].vertPosBottomLeft;
+
+                leftColOnCurrentLine = (cal_yaw - calculateLongiByLatti(vertPos, topPoint.thita)) / horzStep;
+                rightColOnCurrentLine = (cal_yaw + calculateLongiByLatti(vertPos, topPoint.thita)) / horzStep;
+                if (leftColOnCurrentLine != rightColOnCurrentLine)
+                    selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftColOnCurrentLine, rightColOnCurrentLine, i);
+            }
+        }
+    }
+
+    if (fPitch - vFOV / 2 < -ERP_VERT_ANGLE /2) //Bottom row crosses the south polar
+    {
+        bottomLatti = bottomLeftPoint.thita;
+        bottomRow = (int32_t)((ERP_VERT_ANGLE / 2 - bottomLatti) / vertStep);
+        leftCol = bottomLeftPoint.alpha / horzStep;
+        rightCol = bottomRightPoint.alpha / horzStep;
+
+        for (int32_t i = m_tileNumRow-1; i >= bottomRow; i--)
+        {
+            vertPosBottom = m_srd[i * m_tileNumCol].vertPosBottomLeft;
+            if (vertPosBottom <= -ERP_VERT_ANGLE - (fPitch - vFOV / 2))
+            {
+                /* Select all tiles in current row */
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, 0, m_tileNumCol, i);
+            }
+            else {
+                leftColOnCurrentLine = (cal_yaw - 180 + calculateLongiByLatti(vertPosBottom, -ERP_VERT_ANGLE - (fPitch - vFOV / 2))) / horzStep;
+                rightColOnCurrentLine = (cal_yaw + 180 - calculateLongiByLatti(vertPosBottom, -ERP_VERT_ANGLE - (fPitch - vFOV / 2))) / horzStep;
+                pHorzBoundaryPoint = m_pViewportHorizontalBoudaryPoints;
+                pHorzBoundaryPointHist = pHorzBoundaryPoint;
+                pHorzBoundaryPoint++;
+                longiOffsetOnHorzBoundary = 90;
+                for (int32_t j = 0; j < vFOV / HORZ_BOUNDING_STEP; j++)
+                {
+                    if (vertPosBottom < pHorzBoundaryPoint->thita && vertPosBottom >= pHorzBoundaryPointHist->thita)
+                    {
+                        slope = (pHorzBoundaryPoint->alpha - pHorzBoundaryPointHist->alpha) / (pHorzBoundaryPoint->thita - pHorzBoundaryPointHist->thita);
+                        longiOffsetOnHorzBoundary = slope * (vertPosBottom - pHorzBoundaryPointHist->thita) + pHorzBoundaryPointHist->alpha;
+                        break;
+                    }
+                    else
+                    {
+                        pHorzBoundaryPoint++;
+                        pHorzBoundaryPointHist++;
+                    }
+                }
+                leftColOnHorzBound = (cal_yaw - 180 + longiOffsetOnHorzBoundary) / horzStep;
+                rightColOnHorzBound = (cal_yaw + 180 - longiOffsetOnHorzBoundary) / horzStep;
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftColOnCurrentLine, leftColOnHorzBound, i);
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, rightColOnHorzBound, rightColOnCurrentLine, i);
+            }
+        }
+		}
+    else if (fPitch - vFOV / 2 > 0) //Bottom row above the equator
+    {
+        bottomLatti = bottomLeftPoint.thita;
+        bottomRow = (int32_t)((ERP_VERT_ANGLE / 2 - bottomLatti) / vertStep);
+        leftCol = bottomLeftPoint.alpha / horzStep;
+        rightCol = bottomRightPoint.alpha / horzStep;
+        int32_t i;
+        for (i = bottomRow; i >= (int32_t)((ERP_VERT_ANGLE / 2 - bottomPoint.thita) / vertStep); i--)
+        {
+            vertPos = m_srd[i * m_tileNumCol].vertPos;
+            longiOffsetOnHorzBoundary = 90;
+            pHorzBoundaryPoint = m_pViewportHorizontalBoudaryPoints;
+            pHorzBoundaryPointHist = pHorzBoundaryPoint;
+            pHorzBoundaryPoint++;
+            for (int32_t j = 0; j < vFOV / HORZ_BOUNDING_STEP; j++)
+            {
+                if (vertPos < pHorzBoundaryPoint->thita && vertPos >= pHorzBoundaryPointHist->thita)
+                {
+                    slope = (pHorzBoundaryPoint->alpha - pHorzBoundaryPointHist->alpha) / (pHorzBoundaryPoint->thita - pHorzBoundaryPointHist->thita);
+                    longiOffsetOnHorzBoundary = slope * (vertPos - pHorzBoundaryPointHist->thita) + pHorzBoundaryPointHist->alpha;
+                    break;
+                }
+                else
+                {
+                    pHorzBoundaryPoint++;
+                    pHorzBoundaryPointHist++;
+                }
+            }
+
+            leftColOnHorzBound = (cal_yaw - longiOffsetOnHorzBoundary) / horzStep;
+            rightColOnHorzBound = (cal_yaw + longiOffsetOnHorzBoundary) / horzStep;
+            if (vertPos >= bottomPoint.thita)
+            {
+                    selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftColOnHorzBound, rightColOnHorzBound, i);
+            }
+            else {
+                leftColOnCurrentLine = (cal_yaw - calculateLongiByLatti(vertPos, bottomPoint.thita)) / horzStep;
+                rightColOnCurrentLine = (cal_yaw + calculateLongiByLatti(vertPos, bottomPoint.thita)) / horzStep;
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftColOnHorzBound, leftColOnCurrentLine, i);
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, rightColOnCurrentLine, rightColOnHorzBound, i);
+            }
+        }
+        if (fPitch + vFOV / 2 >= ERP_VERT_ANGLE / 2)
+        {
+            for (; i >= 0; i--)
+            {
+                vertPos = m_srd[i * m_tileNumCol].vertPos;
+                longiOffsetOnHorzBoundary = 90;
+                pHorzBoundaryPoint = m_pViewportHorizontalBoudaryPoints;
+                pHorzBoundaryPointHist = pHorzBoundaryPoint;
+                pHorzBoundaryPoint++;
+                for (int32_t j = 0; j < vFOV / HORZ_BOUNDING_STEP; j++)
+                {
+                    if (vertPos < pHorzBoundaryPoint->thita && vertPos >= pHorzBoundaryPointHist->thita)
+                    {
+                        slope = (pHorzBoundaryPoint->alpha - pHorzBoundaryPointHist->alpha) / (pHorzBoundaryPoint->thita - pHorzBoundaryPointHist->thita);
+                        longiOffsetOnHorzBoundary = slope * (vertPos - pHorzBoundaryPointHist->thita) + pHorzBoundaryPointHist->alpha;
+                        break;
+                    }
+                    else
+                    {
+                        pHorzBoundaryPoint++;
+                        pHorzBoundaryPointHist++;
+                    }
+                }
+
+                leftColOnHorzBound = (cal_yaw - longiOffsetOnHorzBoundary) / horzStep;
+                rightColOnHorzBound = (cal_yaw + longiOffsetOnHorzBoundary) / horzStep;
+                selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftColOnHorzBound, rightColOnHorzBound, i);
+            }
+	}
+    }
+    else { //normal bottom row between south polar and equator
+        bottomLatti = bottomLeftPoint.thita;
+        bottomRow = (int32_t)((ERP_VERT_ANGLE / 2 - bottomLatti) / vertStep);
+        leftCol = bottomLeftPoint.alpha / horzStep;
+        rightCol = bottomRightPoint.alpha / horzStep;
+
+        /* Select tiles on the row of viewport's bottomLeft/bottomRight Point */
+        selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftCol, rightCol, bottomRow);
+
+        /* Select tiles on rows between viewport's bottomLeft/bottomRight and bottomPoint */
+        if (bottomRow < (ERP_VERT_ANGLE / 2 - bottomPoint.thita) / vertStep) {
+            for (int32_t i = bottomRow+1; i <= (int32_t)((ERP_VERT_ANGLE / 2 - bottomPoint.thita) / vertStep); i++)
+            {
+                vertPos = m_srd[i * m_tileNumCol].vertPos;
+                leftColOnCurrentLine = (cal_yaw - calculateLongiByLatti(vertPos, bottomPoint.thita)) / horzStep;
+                rightColOnCurrentLine = (cal_yaw + calculateLongiByLatti(vertPos, bottomPoint.thita)) / horzStep;
+                if (leftColOnCurrentLine != rightColOnCurrentLine)
+                    selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftColOnCurrentLine, rightColOnCurrentLine, i);
+            }
+        }
+    }
+
+    if (topRow != bottomRow)
+    {
+        for (int32_t i = topRow+1; i <= bottomRow-1; i++)
+        {
+            vertPosBottom = m_srd[i * m_tileNumCol].vertPosBottomLeft;
+
+            pHorzBoundaryPoint = m_pViewportHorizontalBoudaryPoints;
+            pHorzBoundaryPointHist = pHorzBoundaryPoint;
+            pHorzBoundaryPoint++;
+            longiOffsetOnHorzBoundary = 90;
+            for (int32_t j = 0; j < vFOV / HORZ_BOUNDING_STEP; j++)
+            {
+                if (vertPosBottom < pHorzBoundaryPoint->thita && vertPosBottom >= pHorzBoundaryPointHist->thita)
+                {
+                    slope = (pHorzBoundaryPoint->alpha - pHorzBoundaryPointHist->alpha) / (pHorzBoundaryPoint->thita - pHorzBoundaryPointHist->thita);
+                    longiOffsetOnHorzBoundary = slope * (vertPosBottom - pHorzBoundaryPointHist->thita) + pHorzBoundaryPointHist->alpha;
+                    break;
+                }
+                else
+                {
+                    pHorzBoundaryPoint++;
+                    pHorzBoundaryPointHist++;
+                }
+            }
+
+            leftColOnHorzBound = (cal_yaw - longiOffsetOnHorzBoundary) / horzStep;
+            rightColOnHorzBound = (cal_yaw + longiOffsetOnHorzBoundary) / horzStep;
+            selectTilesInsideOnOneRow(m_srd, m_tileNumCol, leftColOnHorzBound, rightColOnHorzBound, i); //To be modified with left/right boundary
+        }
+    }
+
     dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
     SCVP_LOG(LOG_INFO, "Total Time for tile selection: %f s\n", dResult);
     return 0;
@@ -1486,12 +1755,6 @@ int32_t TgenViewport::isInsideByAngle()
     else
         rightPoint.horzPos = 180;
 
-    /* Modify left/right boundary when the updated viewpoint is very closed to polar */
-    if (fabs(bottomPoint.vertPos + 90) <= fEpsi || fabs(topPoint.vertPos - 90) <= fEpsi) {
-        leftPoint.horzPos = -180;
-        rightPoint.horzPos = 180;
-    }
-
     topPoint.horzPos = fYaw;
     bottomPoint.horzPos = fYaw;
     for (idx = 0; idx < (int32_t)(FACE_NUMBER*m_tileNumRow*m_tileNumCol); idx++) {
@@ -1675,16 +1938,16 @@ int32_t TgenViewport::calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol,
         {
             for (int32_t col = 0; col < tileCol; col++)
             {
-                pTileInfoTmp->isOccupy = isInside(pTileInfoTmp->x, pTileInfoTmp->y, pTileInfoTmp->tilewidth, pTileInfoTmp->tileheight, faceid);
+                //pTileInfoTmp->isOccupy = isInside(pTileInfoTmp->x, pTileInfoTmp->y, pTileInfoTmp->tilewidth, pTileInfoTmp->tileheight, faceid);
                 if (pTileInfoTmp->isOccupy == 1)
                 {
                     ret++;
                     // printf("facid, x, y : %d, %d, %d\n", cubeMapFaceMap[faceid], pTileInfoTmp->x, pTileInfoTmp->y);
                 }
                 pTileInfoTmp++;
-                }
             }
         }
+    }
     }
     else if (m_sourceSVideoInfo.geoType == SVIDEO_CUBEMAP) {
         ret = isInsideByAngle();

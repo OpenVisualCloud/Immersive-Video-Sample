@@ -80,6 +80,15 @@ struct ITileInfo
     float vertPosBottomLeft;
     float vertPosTopRight;
 };
+
+/*  Point description on Sperial surface */
+typedef struct SPHEREPOINT
+{
+    POSType alpha;
+    POSType thita;
+    POSType phi;
+} SpherePoint;
+
 /// generate viewport class
 class TgenViewport
 {
@@ -106,7 +115,7 @@ public:
     int32_t       m_maxTileNum;
     UsageType     m_usageType;
     Param_VideoFPStruct m_paramVideoFP;
-
+    SpherePoint   *m_pViewportHorizontalBoudaryPoints;
     inline int32_t round(POSType t) { return (int32_t)(t+ (t>=0? 0.5 :-0.5)); };
 public:
     TgenViewport();
@@ -125,6 +134,54 @@ public:
     int32_t  calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol, int32_t tileRow);
     int32_t  calcTilesGridInCubemap();
     int32_t  getContentCoverage(CCDef* pOutCC, int32_t coverageShapeType);
+
+private:
+    /* Calculation of viewport lattitude and longitude functions */
+    /* calculateLongitudeFromThita:                              *
+     *    Param:                                                 *
+     *        Latti: Point spherial lattitude                    *
+     *        Phi:   The angle to the sphere center              *
+     *        maxLongiOffset: The maximum longitude offset       *
+     *    Return:                                                *
+     *        The point longitude                                */
+    float    calculateLongitudeFromThita(float Latti, float phi, float maxLongiOffset);
+    /* calculateLattitudeFromPhi:                                *
+     *    Param:                                                 *
+     *        phi:   The angle to the sphere center              *
+     *        pitch: The lattitude of the center point of the    *
+     *               current great circle                        *
+     *    Return:                                                *
+     *        The point lattitude                                */
+   float    calculateLattitudeFromPhi(float phi, float pitch);
+   /* calculateLatti:                                *
+    *    Param:                                                 *
+    *        pitch: The lattitude of the center point of the    *
+    *               current great circle                        *
+    *        hFOV: The horizontal FOV of the viewport           *
+    *    Return:                                                *
+    *        The viewport's topleft point lattitude             */
+   float    calculateLatti(float pitch, float hFOV);
+   /* calculateLatti:                                *
+    *    Param:                                                 *
+    *        pitch: The lattitude of the center point of the    *
+    *               current great circle                        *
+    *        latti: The point lattitudehorizontal FOV of the
+    *        viewport                                           *
+    *    Return:                                                *
+    *        The point longitude offset to the viewport center  */
+    float    calculateLongiByLatti(float latti, float pitch);
+
+   /* selectTilesInsideOnOneRow: Choose tiles in the give row   *
+    *    Param:                                                 *
+    *        pTileInfo: Tile Info for output                    *
+    *        leftCol: The most left tile index of current row   *
+    *        rightCol: The most left tile index of current row  *
+    *        tileNumCol: The tile number in one row             *
+    *        row: The row number                                *
+    *        hFOV: The horizontal FOV of the viewport           *
+    *    Return:                                                *
+    *        Error code.                                        */
+    int32_t  selectTilesInsideOnOneRow(ITileInfo* pTileInfo, int32_t tileNumCol, float leftCol, float rightCol, int32_t row);
 };// END CLASS DEFINITION
 
 //! \}
