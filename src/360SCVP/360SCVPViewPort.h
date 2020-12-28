@@ -37,6 +37,7 @@
 #define HALF_PI_IN_DEGREE 90
 #define DEG2RAD_FACTOR (S_PI/PI_IN_DEGREE)
 #define RAD2DEG_FACTOR (PI_IN_DEGREE/S_PI)
+#define HORZ_BOUNDING_STEP 5
 
 // ====================================================================================================================
 // Class definition
