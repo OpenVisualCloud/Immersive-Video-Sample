@@ -5488,7 +5488,7 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_dash_dec.c
 --- FFmpeg/libavformat/tiled_dash_dec.c	1970-01-01 08:00:00.000000000 +0800
 +++ FFmpeg-patched/libavformat/tiled_dash_dec.c	2020-09-27 13:35:13.559526536 +0800
-@@ -0,0 +1,362 @@
+@@ -0,0 +1,408 @@
 +/*
 + * Intel tile Dash Demuxer
 + *
@@ -5572,90 +5572,115 @@ diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_d
 +{
 +    int ret = 0;
 +    TiledDASHDecContext *c = s->priv_data;
-+    // TODO: read packet for one stream once??
-+    int streamId = 0;
 +    frameCnt++;
-+
-+    DashStreamInfo stInfo = c->mInfo.stream_info[streamId];
-+
-+    DashPacket dashPkt[5];
-+    memset(dashPkt, 0, 5 * sizeof(DashPacket));
-+    int dashPktNum = 0;
-+
-+    ret = OmafAccess_GetPacket(c->hdl, streamId, &(dashPkt[0]), &dashPktNum, &(pkt->pts), c->needHeaders, c->mClearBuf);
-+    if(ret != ERROR_NONE){
-+        //av_log(s, AV_LOG_ERROR, "OmafAccess_GetPacket get null packet\    n" );
-+        //av_packet_unref(pkt);
-+    }
-+
-+    if ((frameCnt % 50) == 0)
++    // TODO: read packet for one stream once??
++    for (int streamId = 0; streamId < c->mInfo.stream_count; streamId++)
 +    {
-+        HeadPose newPose;
-+        newPose.yaw = 45;
-+        newPose.pitch = 90;
-+        OmafAccess_ChangeViewport(c->hdl, &newPose);
-+    }
-+    else if ((frameCnt % 75) == 0)
-+    {
-+        OmafAccess_ChangeViewport(c->hdl, &(c->pose));
-+    }
++    //int streamId = 0;
++    //frameCnt++;
 +
-+    if(dashPktNum && dashPkt[0].buf && dashPkt[0].size)
-+    {
-+        int size = dashPkt[0].size;
-+        if (av_new_packet(pkt, size) < 0)
-+            return AVERROR(ENOMEM);
++        DashStreamInfo stInfo = c->mInfo.stream_info[streamId];
 +
-+        memcpy(pkt->data, dashPkt[0].buf, size);
-+        pkt->size = size;
++        DashPacket dashPkt[5];
++        memset(dashPkt, 0, 5 * sizeof(DashPacket));
++        int dashPktNum = 0;
 +
-+        free(dashPkt[0].buf);
-+        dashPkt[0].buf = NULL;
-+        if (dashPkt[0].rwpk != NULL)
++        if (stInfo.stream_type == MediaType_Video)
 +        {
-+            if (dashPkt[0].rwpk->rectRegionPacking != NULL)
-+            {
-+                free(dashPkt[0].rwpk->rectRegionPacking);
-+                dashPkt[0].rwpk->rectRegionPacking = NULL;
++            ret = OmafAccess_GetPacket(c->hdl, streamId, &(dashPkt[0]), &dashPktNum, &(pkt->pts), c->needHeaders, c->mClearBuf);
++            if(ret != ERROR_NONE){
++                //av_log(s, AV_LOG_ERROR, "OmafAccess_GetPacket get null packet\    n" );
++                //av_packet_unref(pkt);
 +            }
-+            free(dashPkt[0].rwpk);
-+            dashPkt[0].rwpk = NULL;
-+        }
-+        if (dashPkt[0].qtyResolution)
-+        {
-+            free(dashPkt[0].qtyResolution);
-+            dashPkt[0].qtyResolution = NULL;
-+        }
-+        if(c->needHeaders){c->needHeaders = false;}
-+    }
 +
-+    for (int pktIdx = 1; pktIdx < dashPktNum; pktIdx++)
-+    {
-+        if (dashPkt[pktIdx].buf && dashPkt[pktIdx].size)
-+        {
-+            free(dashPkt[pktIdx].buf);
-+            dashPkt[pktIdx].buf = NULL;
-+
-+            if (dashPkt[pktIdx].rwpk != NULL)
++            if ((frameCnt % 50) == 0)
 +            {
-+                if (dashPkt[pktIdx].rwpk->rectRegionPacking != NULL)
++                HeadPose newPose;
++                newPose.yaw = 45;
++                newPose.pitch = 90;
++                OmafAccess_ChangeViewport(c->hdl, &newPose);
++            }
++            else if ((frameCnt % 75) == 0)
++            {
++                OmafAccess_ChangeViewport(c->hdl, &(c->pose));
++            }
++
++            if(dashPktNum && dashPkt[0].buf && dashPkt[0].size)
++            {
++                int size = dashPkt[0].size;
++                if (av_new_packet(pkt, size) < 0)
++                    return AVERROR(ENOMEM);
++
++                memcpy(pkt->data, dashPkt[0].buf, size);
++                pkt->size = size;
++
++                free(dashPkt[0].buf);
++                dashPkt[0].buf = NULL;
++                if (dashPkt[0].rwpk != NULL)
 +                {
-+                    free(dashPkt[pktIdx].rwpk->rectRegionPacking);
-+                    dashPkt[pktIdx].rwpk->rectRegionPacking = NULL;
++                    if (dashPkt[0].rwpk->rectRegionPacking != NULL)
++                    {
++                        free(dashPkt[0].rwpk->rectRegionPacking);
++                        dashPkt[0].rwpk->rectRegionPacking = NULL;
++                    }
++                    free(dashPkt[0].rwpk);
++                    dashPkt[0].rwpk = NULL;
 +                }
-+                free(dashPkt[pktIdx].rwpk);
-+                dashPkt[pktIdx].rwpk = NULL;
++                if (dashPkt[0].qtyResolution)
++                {
++                    free(dashPkt[0].qtyResolution);
++                    dashPkt[0].qtyResolution = NULL;
++                }
++                if(c->needHeaders){c->needHeaders = false;}
 +            }
-+            if (dashPkt[pktIdx].qtyResolution)
++
++            for (int pktIdx = 1; pktIdx < dashPktNum; pktIdx++)
 +            {
-+                free(dashPkt[pktIdx].qtyResolution);
-+                dashPkt[pktIdx].qtyResolution = NULL;
++                if (dashPkt[pktIdx].buf && dashPkt[pktIdx].size)
++                {
++                    free(dashPkt[pktIdx].buf);
++                    dashPkt[pktIdx].buf = NULL;
++
++                    if (dashPkt[pktIdx].rwpk != NULL)
++                    {
++                        if (dashPkt[pktIdx].rwpk->rectRegionPacking != NULL)
++                        {
++                            free(dashPkt[pktIdx].rwpk->rectRegionPacking);
++                            dashPkt[pktIdx].rwpk->rectRegionPacking = NULL;
++                        }
++                        free(dashPkt[pktIdx].rwpk);
++                        dashPkt[pktIdx].rwpk = NULL;
++                    }
++                    if (dashPkt[pktIdx].qtyResolution)
++                    {
++                        free(dashPkt[pktIdx].qtyResolution);
++                        dashPkt[pktIdx].qtyResolution = NULL;
++                    }
++                }
++            }
++        }
++        else if (stInfo.stream_type == MediaType_Audio)
++        {
++            uint64_t audio_pts = 0;
++            ret = OmafAccess_GetPacket(c->hdl, streamId, &(dashPkt[0]), &dashPktNum, &(audio_pts), c->needHeaders, c->mClearBuf);
++            if(ret == ERROR_NULL_PACKET)
++            {
++                av_log(s, AV_LOG_INFO, "OmafAccess_GetPacket get null packet\n" );
++            }
++
++            if(dashPktNum && dashPkt[0].buf && dashPkt[0].size)
++            {
++                FILE *audioFP = fopen("dumpedAAC.aac", "ab+");
++                if (!audioFP)
++                {
++                    av_log(s, AV_LOG_ERROR, "Failed to open dumpedAAC.m4a !\n" );
++                }
++                fwrite(dashPkt[0].buf, 1, dashPkt[0].size, audioFP);
++                fclose(audioFP);
++                audioFP = NULL;
 +            }
 +        }
 +    }
-+
-+    if(c->mClearBuf){c->mClearBuf = false;}
-+
 +    return ret;
 +}
 +
@@ -5712,11 +5737,23 @@ diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_d
 +    ret = OmafAccess_SetupHeadSetInfo(c->hdl, &(c->HSInfo));
 +
 +    ret = OmafAccess_OpenMedia(c->hdl, c->client, false, "", "");
++    ret = OmafAccess_StartStreaming(c->hdl);
 +
 +    c->lastPose.yaw = c->HSInfo.pose->yaw;
 +    c->lastPose.pitch = c->HSInfo.pose->pitch;
 +
 +    ret = OmafAccess_GetMediaInfo(c->hdl, &(c->mInfo));
++    printf("Media streams cnt is %d\n", c->mInfo.stream_count);
++    bool hasAudio = false;
++    for(int i = 0 ; i < c->mInfo.stream_count ; i++)
++    {
++        DashStreamInfo stInfo = c->mInfo.stream_info[i];
++        if (stInfo.stream_type == MediaType_Audio)
++        {
++            hasAudio = true;
++            break;
++        }
++    }
 +
 +    for(int i = 0 ; i < c->mInfo.stream_count ; i++)
 +    {
@@ -5737,10 +5774,20 @@ diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_d
 +        else if(stInfo.stream_type == MediaType_Audio)
 +        {
 +            st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
-+            c->n_audios = c->mInfo.stream_count;
++            if (hasAudio)
++            {
++                c->n_videos = c->mInfo.stream_count - 1;
++            }
++            else
++            {
++                c->n_videos = c->mInfo.stream_count;
++                c->n_audios = 1;
++                st->codecpar->codec_id = AV_CODEC_ID_AAC;
++            }
++            st->codecpar->codec_id = AV_CODEC_ID_HEVC;
 +        }
 +
-+        st->codecpar->codec_id = AV_CODEC_ID_HEVC;
++        // st->codecpar->codec_id = AV_CODEC_ID_HEVC;
 +
 +        st->codecpar->width = stInfo.width;
 +        st->codecpar->height = stInfo.height;
