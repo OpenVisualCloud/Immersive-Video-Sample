@@ -5769,11 +5769,6 @@ diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_d
 +        if(stInfo.stream_type == MediaType_Video)
 +        {
 +            st->codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
-+            c->n_videos = c->mInfo.stream_count;
-+        }
-+        else if(stInfo.stream_type == MediaType_Audio)
-+        {
-+            st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
 +            if (hasAudio)
 +            {
 +                c->n_videos = c->mInfo.stream_count - 1;
@@ -5781,10 +5776,14 @@ diff -urN FFmpeg/libavformat/tiled_dash_dec.c FFmpeg-patched/libavformat/tiled_d
 +            else
 +            {
 +                c->n_videos = c->mInfo.stream_count;
-+                c->n_audios = 1;
-+                st->codecpar->codec_id = AV_CODEC_ID_AAC;
 +            }
 +            st->codecpar->codec_id = AV_CODEC_ID_HEVC;
++        }
++        else if(stInfo.stream_type == MediaType_Audio)
++        {
++            st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
++            c->n_audios = 1;
++            st->codecpar->codec_id = AV_CODEC_ID_AAC;
 +        }
 +
 +        // st->codecpar->codec_id = AV_CODEC_ID_HEVC;
