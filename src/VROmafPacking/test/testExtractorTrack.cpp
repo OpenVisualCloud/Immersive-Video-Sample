@@ -651,7 +651,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
                     break;
                 case 1:
                 case 3:
-                case 5:
                 case 6:
                     EXPECT_TRUE(dstRwpk->constituentPicMatching == 0);
                     EXPECT_TRUE(dstRwpk->numRegions == 8);
@@ -660,9 +659,17 @@ TEST_F(ExtractorTrackTest, AllProcess)
                     EXPECT_TRUE(dstRwpk->packedPicWidth == 3840);
                     EXPECT_TRUE(dstRwpk->packedPicHeight == 1920);
                     break;
+                case 5:
+                    EXPECT_TRUE(dstRwpk->constituentPicMatching == 0);
+                    EXPECT_TRUE(dstRwpk->numRegions == 10);
+                    EXPECT_TRUE(dstRwpk->projPicWidth == 3840);
+                    EXPECT_TRUE(dstRwpk->projPicHeight == 1920);
+                    EXPECT_TRUE(dstRwpk->packedPicWidth == 4800);
+                    EXPECT_TRUE(dstRwpk->packedPicHeight == 1920);
+                    break;
                 default:
                     EXPECT_TRUE(dstRwpk->constituentPicMatching == 0);
-                    EXPECT_TRUE(dstRwpk->numRegions == 6);
+                    EXPECT_TRUE(dstRwpk->numRegions == 10);
                     EXPECT_TRUE(dstRwpk->projPicWidth == 3840);
                     EXPECT_TRUE(dstRwpk->projPicHeight == 1920);
                     EXPECT_TRUE(dstRwpk->packedPicWidth == 2880);
@@ -708,13 +715,13 @@ TEST_F(ExtractorTrackTest, AllProcess)
                     break;
                 case 5:
                     EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == -8847360);
-                    EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 0);
+                    EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == -2949120);
                     EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 8192000);
                     EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 8847360);
                     break;
                 case 6:
-                    EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == -5898240);
-                    EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == -2949120);
+                    EXPECT_TRUE(dstCovi->sphereRegions[idx].centreAzimuth == -8847360);
+                    EXPECT_TRUE(dstCovi->sphereRegions[idx].centreElevation == 0);
                     EXPECT_TRUE(dstCovi->sphereRegions[idx].azimuthRange == 8192000);
                     EXPECT_TRUE(dstCovi->sphereRegions[idx].elevationRange == 8847360);
                     break;
@@ -776,9 +783,13 @@ TEST_F(ExtractorTrackTest, AllProcess)
             {
                 EXPECT_TRUE(tilesMerDir->tilesArrangeInCol.size() == 3);
             }
-            else if ((viewportIdx == 1) || (viewportIdx == 3) || (viewportIdx == 5) || (viewportIdx == 6))
+            else if ((viewportIdx == 1) || (viewportIdx == 3) || (viewportIdx == 6))
             {
                 EXPECT_TRUE(tilesMerDir->tilesArrangeInCol.size() == 4);
+            }
+            else if (viewportIdx == 5)
+            {
+                EXPECT_TRUE(tilesMerDir->tilesArrangeInCol.size() == 5);
             }
 
             std::list<TilesInCol*>::iterator itCol;
@@ -801,9 +812,13 @@ TEST_F(ExtractorTrackTest, AllProcess)
             {
                 EXPECT_TRUE(tile->dstCTUIndex == 675);
             }
-            else if ((viewportIdx == 1) || (viewportIdx == 3)  || (viewportIdx == 5) || (viewportIdx == 6))
+            else if ((viewportIdx == 1) || (viewportIdx == 3) || (viewportIdx == 6))
             {
                 EXPECT_TRUE(tile->dstCTUIndex == 900);
+            }
+            else if (viewportIdx == 5)
+            {
+                EXPECT_TRUE(tile->dstCTUIndex == 1125);
             }
 
             itCol++;
@@ -812,7 +827,6 @@ TEST_F(ExtractorTrackTest, AllProcess)
             EXPECT_TRUE(tileCol->size() == 2);
             itTile = tileCol->begin();
             tile = *itTile;
-
             EXPECT_TRUE(tile->streamIdxInMedia == 1);
             EXPECT_TRUE(tile->dstCTUIndex == 15);
 
@@ -823,9 +837,13 @@ TEST_F(ExtractorTrackTest, AllProcess)
             {
                 EXPECT_TRUE(tile->dstCTUIndex == 690);
             }
-            else if ((viewportIdx == 1) || (viewportIdx == 3)  || (viewportIdx == 5) || (viewportIdx == 6))
+            else if ((viewportIdx == 1) || (viewportIdx == 3) || (viewportIdx == 6))
             {
                 EXPECT_TRUE(tile->dstCTUIndex == 915);
+            }
+            else if (viewportIdx == 5)
+            {
+                EXPECT_TRUE(tile->dstCTUIndex == 1140);
             }
 
             itCol++;
@@ -854,13 +872,12 @@ TEST_F(ExtractorTrackTest, AllProcess)
 
             itTile++;
             tile = *itTile;
-
             if  ((viewportIdx == 0) || (viewportIdx == 2) || (viewportIdx == 4))
             {
                 EXPECT_TRUE(tile->streamIdxInMedia == 0);
                 EXPECT_TRUE(tile->dstCTUIndex == 705);
             }
-            else if ((viewportIdx == 1) || (viewportIdx == 3) || (viewportIdx == 5) || (viewportIdx == 6))
+            else if ((viewportIdx == 1) || (viewportIdx == 3) || (viewportIdx == 6))
             {
                 EXPECT_TRUE(tile->streamIdxInMedia == 1);
                 EXPECT_TRUE(tile->dstCTUIndex == 930);
@@ -871,7 +888,7 @@ TEST_F(ExtractorTrackTest, AllProcess)
                 EXPECT_TRUE(tile->dstCTUIndex == 1155);
             }
             if (tilesArrangeInColSize != 0) {
-                if ((viewportIdx == 1) || (viewportIdx == 3) || (viewportIdx == 5) || (viewportIdx == 6))
+                if ((viewportIdx == 1) || (viewportIdx == 3) || (viewportIdx == 6))
                 {
                     itCol++;
                     tileCol = *itCol;
@@ -885,7 +902,37 @@ TEST_F(ExtractorTrackTest, AllProcess)
                     EXPECT_TRUE(tile->streamIdxInMedia == 0);
                     EXPECT_TRUE(tile->dstCTUIndex == 945);
                 }
+                else if (viewportIdx == 5)
+                {
+                    itCol++;
+                    tileCol = *itCol;
+                    EXPECT_TRUE(tileCol->size() == 2);
+                    itTile = tileCol->begin();
+                    tile = *itTile;
+                    EXPECT_TRUE(tile->streamIdxInMedia == 1);
+                    EXPECT_TRUE(tile->dstCTUIndex == 45);
+                    itTile++;
+                    tile = *itTile;
+                    EXPECT_TRUE(tile->streamIdxInMedia == 1);
+                    EXPECT_TRUE(tile->dstCTUIndex == 1170);
+                }
                 tilesArrangeInColSize--;
+            }
+            if (tilesArrangeInColSize != 0) {
+                if (viewportIdx == 5)
+                {
+                    itCol++;
+                    tileCol = *itCol;
+                    EXPECT_TRUE(tileCol->size() == 2);
+                    itTile = tileCol->begin();
+                    tile = *itTile;
+                    EXPECT_TRUE(tile->streamIdxInMedia == 0);
+                    EXPECT_TRUE(tile->dstCTUIndex == 60);
+                    itTile++;
+                    tile = *itTile;
+                    EXPECT_TRUE(tile->streamIdxInMedia == 0);
+                    EXPECT_TRUE(tile->dstCTUIndex == 1185);
+                }
             }
 
             extractorTrack->ConstructExtractors();
@@ -894,9 +941,13 @@ TEST_F(ExtractorTrackTest, AllProcess)
             {
                 EXPECT_TRUE(extractors->size() == 6);
             }
-            else if ((viewportIdx == 1) || (viewportIdx == 3) || (viewportIdx == 5) || (viewportIdx == 6))
+            else if ((viewportIdx == 1) || (viewportIdx == 3) || (viewportIdx == 6))
             {
                 EXPECT_TRUE(extractors->size() == 8);
+            }
+            else if (viewportIdx == 5)
+            {
+                EXPECT_TRUE(extractors->size() == 10);
             }
 
             std::map<uint8_t, Extractor*>::iterator itExtractor;
