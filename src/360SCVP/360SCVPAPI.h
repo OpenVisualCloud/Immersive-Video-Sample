@@ -27,6 +27,7 @@
 #define _360SCVP_API_H_
 #include "stdint.h"
 #include <stdbool.h>
+#include "../utils/pose.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,7 +42,6 @@ extern "C" {
 #define ID_SCVP_PARAM_SEI_VIEWPORT         1006
 #define ID_SCVP_BITSTREAMS_HEADER          1007
 #define ID_SCVP_RWPK_INFO                  1008
-
 #define DEFAULT_REGION_NUM                 1000
 
 typedef enum SliceType {
@@ -51,11 +51,18 @@ typedef enum SliceType {
     E_SLICE_IDR = 3,
 }SliceType;
 
+/*!
+ *
+ *  The enum type support both sphere projection and planar.
+ *  The planar video, like pan-zoom usage, uses E_VIDEO_PLANAR
+ *
+ */
 typedef enum EGeometryType
 {
     E_SVIDEO_EQUIRECT = 0,
     E_SVIDEO_CUBEMAP,
     E_SVIDEO_VIEWPORT,
+    E_SVIDEO_PLANAR,
     E_SVIDEO_TYPE_NUM,
 }EGeometryType;
 
@@ -100,12 +107,73 @@ typedef enum H265SEIType
     E_OMNI_VIEWPORT
 }H265SEIType;
 
+/*！
+ * Plugin Type definitions:
+ *
+ * E_PLUGIN_TILE_SELECTION: For plugins which implemented tile selection
+ *
+ */
+typedef enum PluginType
+{
+    E_PLUGIN_TILE_SELECTION = 0,
+    E_PLUGIN_TYPE_NUM,
+}PluginType;
+
+/*!
+ * Plugin Format definitions:
+ *
+ * E_PLUGIN_EQUIRECT: For plugins which is used on ERP projection
+ * E_PLUGIN_CUBEMAP: For plugins which is used on Cubemap projection
+ * E_PLUGIN_PLANAR: For plugins which is used on Planar projection
+ *
+ */
+typedef enum PluginFormat
+{
+    E_PLUGIN_EQUIRECT = 0,
+    E_PLUGIN_CUBEMAP,
+    E_PLUGIN_PLANAR,
+    E_PLUGIN_FORMAT_NUM
+}PluginFormat;
+
+/*!
+ * Plugin Defintion for 360SCVP
+ *
+ * PluginType: Tile selection, etc.
+ * PluginFormat: Indicate the video projection: Equirect, cubemap, panzoom, etc.
+ * PluginLibPath: Plugin library file full name
+ *
+ */
+typedef struct PLUGIN_DEF
+{
+    PluginType      pluginType;
+    PluginFormat    pluginFormat;
+    char*           pluginLibPath;
+}PluginDef;
+
+/*!
+ *
+ *  The structure support both sphere projection and planar video
+ *  x: The top left X-axis coordinate of the tile
+ *  y: The top left Y-axis coordinate of the tile
+ *  idx: The tile index.
+ *  faceId: Which projection face the tile locates. Only used for 3D projections.
+ *  streamId: Which stream the tile locates. Only used for 2D projection.
+ *  Offset:
+ *      The four offsets provide the viewport area points distance to the current tile points.
+ *      Users can write their own implementation to utilize these information for render module
+ *
+ */
 typedef struct TILE_DEF
 {
     int32_t x;
     int32_t y;
     int32_t idx;
     int32_t faceId;
+    int32_t streamId;       //for planar tile selection only
+    int32_t upLeftXOffset;
+    int32_t upLeftYOffset;
+    int32_t downRightXOffset;
+    int32_t downRightYOffset;
 } TileDef;
 
 typedef struct CC_DEF
@@ -303,6 +371,19 @@ typedef struct PARAM_VIDEOFPSTRUCT
 }Param_VideoFPStruct;
 
 //!
+//! \brief  This structure stores the image width/height and tile width/height for each resolution
+//!         Utilized for multi-resolution use cases.
+//!
+//!
+typedef struct STREAM_INFO
+{
+    unsigned int FrameWidth;
+    unsigned int FrameHeight;
+    int32_t      TileWidth;
+    int32_t      TileHeight;
+}Stream_Info;
+
+//!
 //! \brief  This structure is for the viewport output parameters
 //!
 //! \param    dstWidthAlignTile,     output,    the width inside the viewport, which may add the edge to allign with tile
@@ -425,6 +506,8 @@ typedef struct PARAM_360SCVP
     Param_PicInfo          paramPicInfo;
     Param_ViewPortInfo     paramViewPort;
     param_streamStitchInfo paramStitchInfo;
+    int32_t                sourceResolutionNum;
+    Stream_Info           *pStreamInfo;
     int32_t                destWidth;
     int32_t                destHeight;
     unsigned int           frameWidth;
@@ -435,6 +518,7 @@ typedef struct PARAM_360SCVP
     unsigned int           inputLowBistreamLen;
     unsigned char         *pOutputSEI;
     unsigned int           outputSEILen;
+    PluginDef              pluginDef;
     uint32_t               timeStamp;
     void                  *logFunction;       //external log callback function pointer, NULL if external log is not used
 }param_360SCVP;
@@ -483,6 +567,18 @@ int32_t I360SCVP_process(param_360SCVP* pParam360SCVP, void * p360SCVPHandle);
 //!     not 0,  if fail
 //!
 int32_t I360SCVP_setViewPort(void * p360SCVPHandle, float yaw, float pitch);
+
+//!
+//! \brief      This function sets the parameter of the viewPort with extention
+//!
+//! \param      void *  p360SCVPHandle,    input, which is created by the I360SVCP_Init function
+//! \param      void *   pViewportInfo,    input, the viewport information handle
+//!
+//! \return     int32_t, the status of the function.
+//!     0,      if succeed
+//!     not 0,  if fail
+//!
+int32_t I360SCVP_setViewPortEx(void * p360SCVPHandle, HeadPose* pose);
 
 //!
 //! \brief      This function completes the un-initialization, free the memory

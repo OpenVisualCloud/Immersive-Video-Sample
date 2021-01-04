@@ -27,12 +27,14 @@
 #include "stdlib.h"
 #include "string.h"
 #include "assert.h"
+#include <dlfcn.h>
 #include "360SCVPTiledstreamAPI.h"
 #include "360SCVPViewportAPI.h"
 #include "360SCVPMergeStreamAPI.h"
 #include "360SCVPCommonDef.h"
 #include "360SCVPHevcEncHdr.h"
 #include "360SCVPLog.h"
+#include "TileSelectionPlugins_API.h"
 #include "360SCVPImpl.h"
 #include "360SCVPHevcTileMerge.h"
 
@@ -94,6 +96,11 @@ TstitchStream::TstitchStream()
     m_xTopLeftNet = 0;
     m_yTopLeftNet = 0;
     m_dstRwpk = RegionWisePacking();
+    m_pTileSelection = NULL;
+    m_pluginLibHdl = NULL;
+    m_createPlugin = NULL;
+    m_destroyPlugin = NULL;
+    m_bNeedPlugin = false;
 }
 
 TstitchStream::TstitchStream(TstitchStream& other)
@@ -168,6 +175,11 @@ TstitchStream::TstitchStream(TstitchStream& other)
     m_yTopLeftNet = other.m_yTopLeftNet;
     m_dstRwpk = RegionWisePacking();
     m_dstRwpk = other.m_dstRwpk;
+    m_pTileSelection = NULL;
+    m_pluginLibHdl = NULL;
+    m_createPlugin = NULL;
+    m_destroyPlugin = NULL;
+    m_bNeedPlugin = false;
 }
 
 TstitchStream::~TstitchStream()
@@ -234,10 +246,19 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
         m_pViewportParam.m_paramVideoFP.faces[0][0].idFace = 1;
         m_pViewportParam.m_paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
     }
-    else
+    else if (m_pViewportParam.m_input_geoType == E_SVIDEO_CUBEMAP)
     {
         m_pViewportParam.m_paramVideoFP.cols = pViewPortInfo->paramVideoFP.cols;
         m_pViewportParam.m_paramVideoFP.rows = pViewPortInfo->paramVideoFP.rows;
+    }
+    else if (m_pViewportParam.m_input_geoType == E_SVIDEO_PLANAR)
+    {
+        m_pViewportParam.m_paramVideoFP.cols = 1;
+        m_pViewportParam.m_paramVideoFP.rows = 1;
+    }
+    else {
+        SCVP_LOG(LOG_ERROR, "The Input GeoType %d is not supported by viewport implementation!\n", m_pViewportParam.m_input_geoType);
+        return ERROR_BAD_PARAM;
     }
 
     /* Check the paramVideoFP rows / cols exceeds the maximum array size */
@@ -514,6 +535,8 @@ int32_t TstitchStream::init(param_360SCVP* pParamStitchStream)
     m_usedType = pParamStitchStream->usedType;
     m_dstRwpk.rectRegionPacking = NULL;
     pParamStitchStream->paramViewPort.usageType = (UsageType)(pParamStitchStream->usedType);
+    m_pViewportParam.m_input_geoType = pParamStitchStream->paramViewPort.geoTypeInput;
+
     if (pParamStitchStream->logFunction)
         logCallBack = (LogFunction)(pParamStitchStream->logFunction);
     else
@@ -532,6 +555,68 @@ int32_t TstitchStream::init(param_360SCVP* pParamStitchStream)
 		pParamStitchStream->paramViewPort.paramVideoFP.faces[0][0].idFace = 1;
 		pParamStitchStream->paramViewPort.paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
 	}
+    else if (pParamStitchStream->paramViewPort.geoTypeInput == E_SVIDEO_PLANAR)
+    {
+        char* pluginLibPath = pParamStitchStream->pluginDef.pluginLibPath;
+        m_bNeedPlugin = true;
+        if (!pluginLibPath) {
+            SCVP_LOG(LOG_ERROR, "The plugin library file path is NULL!\n");
+            return OMAF_INVALID_PLUGIN_PARAM;
+        }
+        void* libHandler = dlopen(pluginLibPath, RTLD_LAZY);
+        const char *dlsymErr = dlerror();
+        if (!libHandler)
+        {
+            SCVP_LOG(LOG_ERROR,"failed to open tile selection library path!\n");
+            return OMAF_ERROR_DLOPEN;
+        }
+
+        if (dlsymErr) {
+            SCVP_LOG(LOG_ERROR, "Get error msg when load the plugin lib file: %s\n", dlsymErr);
+            return OMAF_ERROR_DLSYM;
+        }
+
+        CreateTileSelection *createTS = NULL;
+        createTS = (CreateTileSelection*)dlsym(libHandler, "Create");
+        dlsymErr = dlerror();
+        if (dlsymErr) {
+            SCVP_LOG(LOG_ERROR, "Failed to load symbol Create: %s\n", dlsymErr);
+            return OMAF_ERROR_DLSYM;
+        }
+
+        if (!createTS) {
+            SCVP_LOG(LOG_ERROR, "NULL Tile Selection Creator !\n");
+            return ERROR_NULL_PTR;
+        }
+        TileSelection *tileSelection = createTS();
+        if (!tileSelection) {
+            SCVP_LOG(LOG_ERROR,"failed to Create TileSelection Handler!\n");
+            dlclose(libHandler);
+            libHandler = NULL;
+            return ERROR_NULL_PTR;
+        }
+
+        DestroyTileSelection *destroyTS = NULL;
+        destroyTS = (DestroyTileSelection*)dlsym(libHandler, "Destroy");
+        dlsymErr = dlerror();
+        if (dlsymErr)
+        {
+            SCVP_LOG(LOG_ERROR, "Failed to load symbol Destroy for TileSelection!\n");
+            return OMAF_ERROR_DLSYM;
+        }
+        if (!destroyTS) {
+            SCVP_LOG(LOG_ERROR, "NULL Destroy TileSelection!\n");
+            return ERROR_NULL_PTR;
+        }
+        m_pTileSelection = tileSelection;
+        m_pluginLibHdl = libHandler;
+        m_createPlugin = (void*)createTS;
+        m_destroyPlugin = (void*)destroyTS;
+        ret = m_pTileSelection->Initialize(pParamStitchStream);
+        if (ret) {
+            SCVP_LOG(LOG_ERROR, "Failed to Initialize Tile Selection Plugin with error code %d\n", ret);
+        }
+    }
 
     if (m_usedType == E_VIEWPORT_ONLY)
     {
@@ -655,7 +740,7 @@ int32_t TstitchStream::uninit()
     m_hevcState = NULL;
     if (m_specialInfo[0])
          delete[]m_specialInfo[0];
-     m_specialInfo[0] = NULL;
+    m_specialInfo[0] = NULL;
     if (m_specialInfo[1])
          delete[]m_specialInfo[1];
     m_specialInfo[1] = NULL;
@@ -663,6 +748,30 @@ int32_t TstitchStream::uninit()
     if (m_dstRwpk.rectRegionPacking)
         delete[]m_dstRwpk.rectRegionPacking;
     m_dstRwpk.rectRegionPacking = NULL;
+
+    if (m_pTileSelection) {
+        ret = m_pTileSelection->UnInit();
+        if (ret != ERROR_NONE) {
+            SCVP_LOG(LOG_ERROR, "Tile Selection Uninitialization is Failed with error code %d\n", ret);
+            return ret;
+        }
+        DestroyTileSelection *destroyTS = NULL;
+
+        destroyTS = (DestroyTileSelection*)m_destroyPlugin;
+        if (!destroyTS)
+        {
+            SCVP_LOG(LOG_ERROR, "NULL Destroy TileSelection!\n");
+            return ERROR_NULL_PTR;
+        }
+        void* pluginHdl = m_pluginLibHdl;
+        (*destroyTS)(m_pTileSelection);
+        if (pluginHdl != NULL)
+            dlclose(pluginHdl);
+        m_createPlugin = NULL;
+        m_destroyPlugin = NULL;
+        m_pluginLibHdl = NULL;
+        ret = ERROR_NONE;
+    }
 
     return ret;
 }
@@ -893,11 +1002,18 @@ int32_t TstitchStream::getTilesByLegacyWay(TileDef* pOutTile)
     return ret;
 }
 
-int32_t TstitchStream::setViewPort(float yaw, float pitch)
+int32_t TstitchStream::setViewPort(HeadPose *pose)
 {
-    return genViewport_setViewPort(m_pViewport, yaw, pitch);
+    int32_t ret = 0;
+    if (m_pTileSelection) {
+        ret = m_pTileSelection->SetViewportInfo(pose);
+        return ret;
+    }
+    else if (m_bNeedPlugin)
+        return SCVP_ERROR_PLUGIN_NOEXIST;
+    else
+        return genViewport_setViewPort(m_pViewport, pose->yaw, pose->pitch);
 }
-
 
 int32_t TstitchStream::doMerge(param_360SCVP* pParamStitchStream)
 {
@@ -1077,10 +1193,19 @@ int32_t TstitchStream::getTilesInViewport(TileDef* pOutTile)
     int32_t ret = 0;
     if (pOutTile == NULL)
         return -1;
-    ret = genViewport_getTilesInViewport(m_pViewport, pOutTile);
-    m_viewportDestWidth = m_pViewportParam.m_viewportDestWidth;
-    m_viewportDestHeight = m_pViewportParam.m_viewportDestHeight;
 
+    if (m_pTileSelection) {
+        ret = m_pTileSelection->GetTilesInViewport(pOutTile);
+        return ret;
+    }
+    else if (m_bNeedPlugin)
+        return SCVP_ERROR_PLUGIN_NOEXIST;
+    else
+    {
+        ret = genViewport_getTilesInViewport(m_pViewport, pOutTile);
+        m_viewportDestWidth = m_pViewportParam.m_viewportDestWidth;
+        m_viewportDestHeight = m_pViewportParam.m_viewportDestHeight;
+    }
     return ret;
 }
 

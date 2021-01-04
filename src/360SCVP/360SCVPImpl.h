@@ -26,6 +26,7 @@
 #ifndef _360SCVP_IMPL_H_
 #define _360SCVP_IMPL_H_
 #include "360SCVPHevcTilestream.h"
+#include "../utils/data_type.h"
 
 class TstitchStream
 {
@@ -74,7 +75,8 @@ protected:
     int32_t         m_lrTilesInRow;
     int32_t         m_hrTilesInRow;
     int32_t         m_hrTilesInCol;
-    RegionWisePacking m_dstRwpk;
+    RegionWisePacking     m_dstRwpk;
+    TileSelection  *m_pTileSelection;
 
 public:
     uint16_t        m_nalType;
@@ -98,7 +100,7 @@ public:
     int32_t  uninit();
     int32_t  getViewPortTiles();
     int32_t  feedParamToGenStream(param_360SCVP* pParamStitchStream);
-    int32_t  setViewPort(float yaw, float pitch);
+    int32_t  setViewPort(HeadPose *pose);
     int32_t  doMerge(param_360SCVP* pParamStitchStream);
     int32_t  getFixedNumTiles(TileDef* pOutTile);
     int32_t  getTilesInViewport(TileDef* pOutTile);
@@ -131,6 +133,12 @@ protected:
     int32_t initMerge(param_360SCVP* pParamStitchStream, int32_t sliceSize);
     int32_t initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t tilecolCount, int32_t tilerowCount);
     int32_t merge_partstream_into1bitstream(int32_t totalInputLen);
+
+private:
+    void* m_pluginLibHdl;
+    void* m_createPlugin;
+    void* m_destroyPlugin;
+    bool  m_bNeedPlugin;
 };// END CLASS DEFINITION
 
 #endif // _360SCVP_IMPL_H_
