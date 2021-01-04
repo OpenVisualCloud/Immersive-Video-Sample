@@ -75,6 +75,7 @@ INSTALL(TARGETS OmafDashAccess
         ARCHIVE DESTINATION lib/static)
 
 INSTALL(FILES ${PROJECT_SOURCE_DIR}/../utils/error.h DESTINATION include)
+INSTALL(FILES ${PROJECT_SOURCE_DIR}/../utils/pose.h DESTINATION include)
 INSTALL(FILES ${PROJECT_SOURCE_DIR}/../utils/data_type.h DESTINATION include)
 INSTALL(FILES ${PROJECT_SOURCE_DIR}/../utils/ns_def.h DESTINATION include)
 INSTALL(FILES ${PROJECT_SOURCE_DIR}/../utils/OmafStructure.h DESTINATION include)

@@ -34,6 +34,7 @@
 #include "360SCVPCommonDef.h"
 #include "360SCVPHevcEncHdr.h"
 #include "360SCVPLog.h"
+#include "TileSelectionPlugins_API.h"
 #include "360SCVPImpl.h"
 
 void* I360SCVP_Init(param_360SCVP* pParam360SCVP)
@@ -96,10 +97,26 @@ int32_t   I360SCVP_process(param_360SCVP* pParam360SCVP, void* p360SCVPHandle)
 int32_t I360SCVP_setViewPort(void* p360SCVPHandle, float yaw, float pitch)
 {
     int32_t ret = 0;
+    HeadPose pose;
     TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
     if (!pStitch)
         return 1;
-    ret = pStitch->setViewPort(yaw, pitch);
+    pose.yaw = yaw;
+    pose.pitch = pitch;
+    ret = pStitch->setViewPort(&pose);
+
+    pStitch->getViewPortTiles();
+
+    return ret;
+}
+
+int32_t I360SCVP_setViewPortEx(void* p360SCVPHandle, HeadPose* pose)
+{
+    int32_t ret = 0;
+    TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
+    if (!pStitch)
+        return 1;
+    ret = pStitch->setViewPort(pose);
 
     pStitch->getViewPortTiles();
 
