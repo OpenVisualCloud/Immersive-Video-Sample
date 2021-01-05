@@ -27,7 +27,7 @@
 #define _360SCVP_API_H_
 #include "stdint.h"
 #include <stdbool.h>
-#include "../utils/pose.h"
+#include "pose.h"
 
 #ifdef __cplusplus
 extern "C" {
