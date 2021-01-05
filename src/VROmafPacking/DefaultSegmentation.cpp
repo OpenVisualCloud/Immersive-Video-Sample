@@ -41,10 +41,8 @@
 #include <cstdint>
 #include <sys/time.h>
 
-#ifndef _ANDROID_NDK_OPTION
 #ifdef _USE_TRACE_
 #include "../trace/Bandwidth_tp.h"
-#endif
 #endif
 
 VCD_NS_BEGIN
@@ -835,7 +833,6 @@ int32_t DefaultSegmentation::WriteSegmentForEachVideo(MediaStream *stream, bool 
 
         m_segNum = dashSegmenter->GetSegmentsNum();
 
-#ifndef _ANDROID_NDK_OPTION
 #ifdef _USE_TRACE_
         //trace
         if (m_segNum == (m_prevSegNum + 1))
@@ -848,7 +845,6 @@ int32_t DefaultSegmentation::WriteSegmentForEachVideo(MediaStream *stream, bool 
 
             tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, m_segNum, segSize);
         }
-#endif
 #endif
     }
 
@@ -950,7 +946,6 @@ int32_t DefaultSegmentation::WriteSegmentForEachExtractorTrack(
     trackSegCtx->codedMeta.presTime.m_num += 1000 / (m_frameRate.num / m_frameRate.den);
     trackSegCtx->codedMeta.presTime.m_den = 1000;
 
-#ifndef _ANDROID_NDK_OPTION
 #ifdef _USE_TRACE_
     uint64_t currSegNum = dashSegmenter->GetSegmentsNum();
     if (currSegNum == (m_prevSegNum + 1))
@@ -963,7 +958,6 @@ int32_t DefaultSegmentation::WriteSegmentForEachExtractorTrack(
 
         tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, currSegNum, segSize);
     }
-#endif
 #endif
 
     return ERROR_NONE;
@@ -1314,7 +1308,6 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 if (ret)
                     return ret;
 
-#ifndef _ANDROID_NDK_OPTION
 #ifdef _USE_TRACE_
                 //trace
                 uint64_t initSegSize = initSegmenter->GetInitSegmentSize();
@@ -1325,7 +1318,6 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
                 tracepoint(bandwidth_tp_provider, packed_segment_size,
                             trackIndex, trackType, tileRes, 0, initSegSize);
-#endif
 #endif
             }
         }
@@ -1348,7 +1340,6 @@ int32_t DefaultSegmentation::VideoSegmentation()
             if (ret)
                 return ret;
 
-#ifndef _ANDROID_NDK_OPTION
 #ifdef _USE_TRACE_
             //trace
             uint64_t initSegSize = initSegmenter->GetInitSegmentSize();
@@ -1359,7 +1350,6 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
             tracepoint(bandwidth_tp_provider, packed_segment_size,
                         trackIndex, trackType, tileRes, 0, initSegSize);
-#endif
 #endif
         }
     }
@@ -1443,7 +1433,6 @@ int32_t DefaultSegmentation::VideoSegmentation()
                     m_framesIsKey[vs] = currFrame->isKeyFrame;
                     m_streamsIsEOS[vs] = false;
 
-#ifndef _ANDROID_NDK_OPTION
 #ifdef _USE_TRACE_
                     //trace
                     char resolution[1024] = { 0 };
@@ -1452,7 +1441,6 @@ int32_t DefaultSegmentation::VideoSegmentation()
                     snprintf(tileSplit, 1024, "%d x %d", vs->GetTileInCol(), vs->GetTileInRow());
                     tracepoint(bandwidth_tp_provider, encoded_frame_size,
                                 &resolution[0], &tileSplit[0], m_framesNum, currFrame->dataSize);
-#endif
 #endif
 
                     vs->UpdateTilesNalu();
@@ -1666,7 +1654,6 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 if (ret)
                     return ret;
             } else {
-#ifndef _ANDROID_NDK_OPTION
 #ifdef _USE_TRACE_
                 //trace
                 const char *dashMode = "static";
@@ -1675,7 +1662,6 @@ int32_t DefaultSegmentation::VideoSegmentation()
                     dashMode, m_segInfo->segDuration, currFrameRate,
                     m_videosNum, m_videosBitrate,
                     m_framesNum, m_segNum);
-#endif
 #endif
 
                 if (hasAudio)

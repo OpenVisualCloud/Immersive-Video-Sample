@@ -40,7 +40,7 @@
 #include "OmafMediaSource.h"
 #include "OmafTypes.h"
 #include "general.h"
-#ifndef _ANDROID_NDK_OPTION
+#ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
 #include "../trace/Bandwidth_tp.h"
 #endif
@@ -167,7 +167,7 @@ int OmafAccess_SeekMedia(Handler hdl, uint64_t time) {
 int OmafAccess_GetMediaInfo(Handler hdl, DashMediaInfo *info) {
   OmafMediaSource *pSource = (OmafMediaSource *)hdl;
   pSource->GetMediaInfo(info);
-#ifndef _ANDROID_NDK_OPTION
+#ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
   const char *dash_mode = (info->streaming_type == 1) ? "static" : "dynamic";
   int32_t frameNum = round(float(info->duration) / 1000 * ((float)info->stream_info[0].framerate_num / info->stream_info[0].framerate_den));
