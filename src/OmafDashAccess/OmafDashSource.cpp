@@ -99,7 +99,7 @@ int OmafDashSource::SyncTime(std::string url) {
   return ret;
 }
 
-int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* externalLog, bool enableExtractor,
+int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* externalLog, PluginDef i360scvp_plugin, bool enableExtractor,
                               bool enablePredictor, std::string predictPluginName, std::string libPath) {
   if (externalLog)
     logCallBack = (LogFunction)externalLog;
@@ -189,6 +189,8 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
     projStr = "ERP";
   } else if (projFmt == ProjectionFormat::PF_CUBEMAP) {
     projStr = "CubeMap";
+  } else if (projFmt == ProjectionFormat::PF_PLANAR) {
+    projStr = "Planar";
   } else {
     OMAF_LOG(LOG_ERROR, "Invalid projection format !\n");
     return OMAF_ERROR_INVALID_PROJECTIONTYPE;
@@ -276,7 +278,13 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
   }
 
   m_selector->SetProjectionFmt(projFmt);
+  if (projFmt == ProjectionFormat::PF_PLANAR)
+  {
+    m_selector->SetTwoDQualityInfos(mMPDParser->GetTwoDQualityInfos());
+  }
   if (enablePredictor) m_selector->EnablePosePrediction(predictPluginName, libPath, enableExtractor);
+  m_selector->SetSegmentDuration(mMPDinfo->max_segment_duration);
+  m_selector->SetI360SCVPPlugin(i360scvp_plugin);
 
   for (auto it =  mMapStream.begin(); it != mMapStream.end(); it++)
   {

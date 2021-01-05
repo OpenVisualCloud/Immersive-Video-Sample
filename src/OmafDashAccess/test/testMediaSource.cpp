@@ -116,7 +116,9 @@ TEST_F(MediaSourceTest, OpenMedia_static) {
   int ret = dashSource->SetupHeadSetInfo(clientInfo);
   EXPECT_TRUE(ret == ERROR_NONE);
 
-  ret = dashSource->OpenMedia(url_static, cache, NULL, true, false, "", "");
+  PluginDef i360ScvpPlugin;
+  i360ScvpPlugin.pluginLibPath = NULL;
+  ret = dashSource->OpenMedia(url_static, cache, NULL, i360ScvpPlugin, true, false, "", "");
   EXPECT_TRUE(ret == ERROR_NONE);
   dashSource->StartStreaming();
 
@@ -140,7 +142,9 @@ TEST_F(MediaSourceTest, OpenMedia_live) {
   int ret = dashSource->SetupHeadSetInfo(clientInfo);
   EXPECT_TRUE(ret == ERROR_NONE);
 
-  ret = dashSource->OpenMedia(url_live, cache, NULL, true, false, "", "");
+  PluginDef i360ScvpPlugin;
+  i360ScvpPlugin.pluginLibPath = NULL;
+  ret = dashSource->OpenMedia(url_live, cache, NULL, i360ScvpPlugin, true, false, "", "");
   EXPECT_TRUE(ret == ERROR_NONE);
   dashSource->StartStreaming();
 
@@ -165,7 +169,9 @@ TEST_F(MediaSourceTest, OpenMedia_static_withPredictor) {
   int ret = dashSource->SetupHeadSetInfo(clientInfo);
   EXPECT_TRUE(ret == ERROR_NONE);
 
-  ret = dashSource->OpenMedia(url_static, cache, NULL, true, true, pluginName, libPath);
+  PluginDef i360ScvpPlugin;
+  i360ScvpPlugin.pluginLibPath = NULL;
+  ret = dashSource->OpenMedia(url_static, cache, NULL, i360ScvpPlugin, true, true, pluginName, libPath);
   EXPECT_TRUE(ret == ERROR_NONE);
   dashSource->StartStreaming();
 
@@ -190,7 +196,9 @@ TEST_F(MediaSourceTest, OpenMedia_live_withPredictor) {
   int ret = dashSource->SetupHeadSetInfo(clientInfo);
   EXPECT_TRUE(ret == ERROR_NONE);
 
-  ret = dashSource->OpenMedia(url_live, cache, NULL, true, true, pluginName, libPath);
+  PluginDef i360ScvpPlugin;
+  i360ScvpPlugin.pluginLibPath = NULL;
+  ret = dashSource->OpenMedia(url_live, cache, NULL, i360ScvpPlugin, true, true, pluginName, libPath);
   EXPECT_TRUE(ret == ERROR_NONE);
   dashSource->StartStreaming();
 
@@ -215,7 +223,9 @@ TEST_F(MediaSourceTest, OpenMedia_static_changeViewport) {
   int ret = dashSource->SetupHeadSetInfo(clientInfo);
   EXPECT_TRUE(ret == ERROR_NONE);
 
-  ret = dashSource->OpenMedia(url_static, cache, NULL, true, false, "", "");
+  PluginDef i360ScvpPlugin;
+  i360ScvpPlugin.pluginLibPath = NULL;
+  ret = dashSource->OpenMedia(url_static, cache, NULL, i360ScvpPlugin, true, false, "", "");
   EXPECT_TRUE(ret == ERROR_NONE);
   dashSource->StartStreaming();
 
@@ -250,7 +260,9 @@ TEST_F(MediaSourceTest, OpenMedia_live_changeViewport) {
   int ret = dashSource->SetupHeadSetInfo(clientInfo);
   EXPECT_TRUE(ret == ERROR_NONE);
 
-  ret = dashSource->OpenMedia(url_live, cache, NULL, true, false, "", "");
+  PluginDef i360ScvpPlugin;
+  i360ScvpPlugin.pluginLibPath = NULL;
+  ret = dashSource->OpenMedia(url_live, cache, NULL, i360ScvpPlugin, true, false, "", "");
   EXPECT_TRUE(ret == ERROR_NONE);
   dashSource->StartStreaming();
 

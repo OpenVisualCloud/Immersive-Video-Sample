@@ -40,6 +40,7 @@ SupplementalPropertyElement::SupplementalPropertyElement()
     m_srqr = nullptr;
     m_preselection = nullptr;
     m_sphRegionQuality = nullptr;
+    m_twoDRegionQuality = nullptr;
 }
 
 SupplementalPropertyElement::~SupplementalPropertyElement()
@@ -52,6 +53,8 @@ SupplementalPropertyElement::~SupplementalPropertyElement()
         SAFE_DELETE(m_preselection);
     }
     SAFE_DELETE(m_sphRegionQuality);
+    SAFE_DELETE(m_twoDRegionQuality);
+    m_twoDQualityInfos.clear();
 }
 
 
@@ -97,7 +100,6 @@ ODStatus SupplementalPropertyElement::ParseSchemeIdUriAndValue()
 
     }
 
-
     return OD_STATUS_SUCCESS;
 }
 
@@ -120,6 +122,18 @@ ODStatus SupplementalPropertyElement::SetSphereRegionQuality(SphRegionQualityEle
 
     auto quaInfos = m_sphRegionQuality->GetQualityInfos();
     m_srqr->srqr_quality_infos.insert(m_srqr->srqr_quality_infos.end(), quaInfos.begin(), quaInfos.end());
+
+    return OD_STATUS_SUCCESS;
+}
+
+ODStatus SupplementalPropertyElement::SetTwoDRegionQuality(TwoDRegionQualityElement* twoDRegionQuality)
+{
+    if (!twoDRegionQuality)
+        return OD_STATUS_INVALID;
+
+    m_twoDRegionQuality = twoDRegionQuality;
+
+    m_twoDQualityInfos = m_twoDRegionQuality->GetTwoDQualityInfos();
 
     return OD_STATUS_SUCCESS;
 }

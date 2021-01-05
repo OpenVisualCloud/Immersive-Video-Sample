@@ -168,13 +168,8 @@ int OmafAdaptationSet::Initialize(AdaptationSetElement* pAdaptationSet) {
 
       mType = MediaType_Audio;
   }
-  //mMimeType = mAdaptationSet->GetMimeType();
+
   mCodec = mAdaptationSet->GetCodecs();
-
-  //mType = MediaType_Video;
-  //if (GetSubstr(mRepresentation->GetMimeType(), '/', true) == "audio") mType = MediaType_Audio;
-
-  //JudgeMainAdaptationSet();
 
   return ERROR_NONE;
 }
@@ -192,7 +187,7 @@ void OmafAdaptationSet::JudgeMainAdaptationSet() {
   if (nullptr == mAdaptationSet || !mSRD) return;
 
   if (mType == MediaType_Video) {
-    if (this->mSRD->get_H() == 0 && mSRD->get_Y() == 0) {
+    if (this->mSRD->get_H() == 0 && mSRD->get_W() == 0) {
       m_bMain = true;
       return;
     }

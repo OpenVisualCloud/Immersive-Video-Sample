@@ -109,6 +109,8 @@ typedef enum {
  * enable_extractor: whether to enable extractor track mode for packed sub-picture
  * log_callback: external logging callback function pointer. Glog will be used
  *               if it is NULL
+ * plugin_def:   360SCVP library plugin set, now used for tiles selection for
+ *               planar video
  */
 typedef struct DASHSTREAMINGCLIENT {
   SourceType  source_type;
@@ -117,6 +119,7 @@ typedef struct DASHSTREAMINGCLIENT {
   const char* cache_path;
   bool        enable_extractor;
   void*       log_callback;
+  PluginDef   plugin_def;
 } DashStreamingClient;
 
 /*

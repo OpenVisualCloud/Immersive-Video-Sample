@@ -92,12 +92,15 @@ class OmafTilesStitch {
   //! \param  [in] projFmt
   //!         denote the projectin format of input source where tiles come
   //!         from
+  //! \param  [in] allSources
+  //!         map of <qualityRanking, SourceInfo> to denote all video
+  //!         sources
   //!
   //! \return int32_t
   //!         ERROR_NONE if success, else failed reason
   //!
   int32_t Initialize(std::map<uint32_t, MediaPacket *> &firstFramePackets, bool needParams,
-                     VCD::OMAF::ProjectionFormat projFmt);
+                     VCD::OMAF::ProjectionFormat projFmt, std::map<uint32_t, SourceInfo> allSources);
 
   //!
   //! \brief  Update the set of media packets of selected tiles for next frame
@@ -197,6 +200,29 @@ class OmafTilesStitch {
   //!
   vector<std::unique_ptr<RegionWisePacking>> CalculateMergedRwpkForCubeMap(QualityRank qualityRanking, bool hasPacketLost,
                                                    bool hasLayoutChanged);
+
+  //!
+  //! \brief  Calculate region wise packing information for
+  //!         tiles set with specified quality ranking when
+  //!         tiles come from planar projection
+  //!
+  //! \param  [in] qualityRanking
+  //!         the quality ranking information for the tiles
+  //!         set needed to be calculate region wise packing
+  //! \param  [in] hasPacketLost
+  //!         denote whether media packet is lost in packets
+  //!         set
+  //! \param  [in] hasLayoutChanged
+  //!         denote whether current tiles merge layout has
+  //!         changed compared to previous layout
+  //!
+  //! \return RegionWisePacking*
+  //!         the pointer to the calculated region wise packing
+  //!         information
+  //!
+  vector<std::unique_ptr<RegionWisePacking>> CalculateMergedRwpkForPlanar(QualityRank qualityRanking, bool hasPacketLost,
+                                                               bool hasLayoutChanged);
+
   //! \brief  Generate tiles merge layout information
   //!
   //! \return int32_t
@@ -219,13 +245,13 @@ private:
 
   int32_t IsArrChanged(QualityRank qualityRanking, vector<TilesMergeArrangement *> layOut, vector<TilesMergeArrangement *> initLayOut, bool *isArrChanged, bool *packetLost, bool *arrangeChanged);
 
-  int32_t GenerateMergedVideoHeaders(bool arrangeChanged, QualityRank qualityRanking, vector<TilesMergeArrangement *> layOut, vector<TilesMergeArrangement *> initLayOut);
+  int32_t GenerateMergedVideoHeaders(bool arrangeChanged, QualityRank qualityRanking, vector<TilesMergeArrangement *> layOut, vector<TilesMergeArrangement *> initLayOut, std::map<uint32_t, MediaPacket *> packets);
 
   vector<std::unique_ptr<RegionWisePacking>> GenerateMergedRWPK(QualityRank qualityRanking, bool packetLost, bool arrangeChanged);
 
-  int32_t UpdateMergedVideoHeadersForLowQualityRank(bool isEmptyHeaders, std::map<uint32_t, MediaPacket *> packets, QualityRank qualityRanking);
+  int32_t UpdateMergedVideoHeadersForLowQualityRank(bool isEmptyHeaders, std::map<uint32_t, MediaPacket *> packets, QualityRank qualityRanking, TilesMergeArrangement *layOut);
 
-  int32_t InitMergedDataAndRealSize(QualityRank qualityRanking, std::map<uint32_t, MediaPacket *> packets, char* mergedData, uint64_t* realSize, uint32_t index);
+  int32_t InitMergedDataAndRealSize(QualityRank qualityRanking, std::map<uint32_t, MediaPacket *> packets, char* mergedData, uint64_t* realSize, uint32_t index, TilesMergeArrangement *tilesArr);
 
   int32_t UpdateMergedDataAndRealSize(
       QualityRank qualityRanking, std::map<uint32_t, MediaPacket *> packets,
@@ -288,6 +314,8 @@ private:
   uint32_t m_maxStitchWidth; //<! max merged width for stitching
 
   uint32_t m_maxStitchHeight; //<! max merged height for stitching
+
+  std::map<uint32_t, SourceInfo> m_sources; //all video source information corresponding to different quality ranking <qualityRanking, SourceInfo>
 };
 
 VCD_OMAF_END;

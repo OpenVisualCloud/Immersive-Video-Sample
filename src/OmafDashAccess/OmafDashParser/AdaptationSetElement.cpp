@@ -189,6 +189,22 @@ OmafSrd* AdaptationSetElement::GetSRD()
     return nullptr;
 }
 
+map<int32_t, TwoDQualityInfo> AdaptationSetElement::GetTwoDQuality()
+{
+    map<int32_t, TwoDQualityInfo> twoDQualityInfos;
+    // it can also be in essential property
+    if(!m_supplementalProperties.size())
+        return twoDQualityInfos;
+
+    for(auto s : m_supplementalProperties)
+    {
+        twoDQualityInfos = s->GetTwoDRegionQualityInfos();
+        if(twoDQualityInfos.size()) return twoDQualityInfos;
+    }
+
+    return twoDQualityInfos;
+}
+
 RwpkType AdaptationSetElement::GetRwpkType()
 {
     RwpkType rt = RWPK_UNKNOWN;

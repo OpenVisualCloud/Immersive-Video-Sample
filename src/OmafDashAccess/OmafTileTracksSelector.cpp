@@ -201,7 +201,6 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
         }
 
         historySize = mPoseHistory.size();
-
     }
 
     // won't get viewport if pose hasn't changed
@@ -225,6 +224,7 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
         tracepoint(mthq_tp_provider, T1_select_tracks, "tiletracks");
 #endif
 #endif
+
     selectedTracks = SelectTileTracks(pStream, mPose);
     if (selectedTracks.size() && previousPose)
     {
@@ -251,7 +251,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     TracksMap selectedTracks;
 
     // to select tile tracks
-    int ret = I360SCVP_setViewPort(m360ViewPortHandle, pose->yaw, pose->pitch);
+    int ret = I360SCVP_setViewPortEx(m360ViewPortHandle, pose);
     if (ret)
         return selectedTracks;
 
@@ -265,6 +265,13 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     Param_ViewportOutput paramViewportOutput;
     int32_t selectedTilesNum = I360SCVP_getTilesInViewport(
             tilesInViewport, &paramViewportOutput, m360ViewPortHandle);
+
+    // in planar projection format
+    if (abs(pose->zoomFactor) < 1e-3 && mProjFmt == ProjectionFormat::PF_PLANAR)
+    {
+        return selectedTracks;
+    }
+
     if (selectedTilesNum <= 0 || selectedTilesNum > 1024)
     {
         OMAF_LOG(LOG_ERROR, "Failed to get tiles information in viewport !\n");
@@ -279,7 +286,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     uint32_t sqrtedSize = (uint32_t)sqrt(selectedTilesNum);
     while(sqrtedSize && selectedTilesNum%sqrtedSize) { sqrtedSize--; }
     bool needAddtionalTile = false;
-    if (sqrtedSize == 1) // selectedTilesNum is prime number
+    if ((selectedTilesNum > 4) && (sqrtedSize == 1)) // selectedTilesNum is prime number
     {
         OMAF_LOG(LOG_INFO,"need additional tile is true! original selected tile num of high quality is %d\n", selectedTilesNum);
         needAddtionalTile = true;
@@ -318,9 +325,6 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
             for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
             {
                 OmafAdaptationSet *adaptationSet = itAS->second;
-                //OmafSrd *srd = adaptationSet->GetSRD();
-                //int32_t tileLeft = srd->get_X();
-                //int32_t tileTop  = srd->get_Y();
                 uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
 
                 if (qualityRanking == HIGHEST_QUALITY_RANKING)
@@ -345,7 +349,61 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
             }
         }
     }
-    if (needAddtionalTile)
+    else if (mProjFmt == ProjectionFormat::PF_PLANAR)
+    {
+        uint32_t corresQualityRanking = 0;
+        for (int32_t index = 0; index < selectedTilesNum; index++)
+        {
+            int32_t left = tilesInViewport[index].x;
+            int32_t top  = tilesInViewport[index].y;
+            int32_t strId = tilesInViewport[index].streamId;
+            map<int32_t, int32_t>::iterator itStrQua;
+            itStrQua = mTwoDStreamQualityMap.find(strId);
+            if (itStrQua == mTwoDStreamQualityMap.end())
+            {
+                OMAF_LOG(LOG_ERROR, "Can't find corresponding quality ranking for stream index %d !\n", strId);
+                DELETE_ARRAY(tilesInViewport);
+                return selectedTracks;
+            }
+
+            corresQualityRanking = itStrQua->second;
+            OMAF_LOG(LOG_INFO, "Selected tile from stream %d with quality ranking %d\n", strId, corresQualityRanking);
+
+            for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+            {
+                OmafAdaptationSet *adaptationSet = itAS->second;
+                OmafSrd *srd = adaptationSet->GetSRD();
+                int32_t tileLeft = srd->get_X();
+                int32_t tileTop  = srd->get_Y();
+                uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
+
+                if ((qualityRanking == (uint32_t)(corresQualityRanking)) && (tileLeft == left) && (tileTop == top))
+                {
+                    int trackID = adaptationSet->GetID();
+                    OMAF_LOG(LOG_INFO, "Selected track %d\n", trackID);
+                    selectedTracks.insert(make_pair(trackID, adaptationSet));
+                    break;
+                }
+            }
+        }
+
+        if (needAddtionalTile)
+        {
+            for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+            {
+                OmafAdaptationSet *adaptationSet = itAS->second;
+                uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
+                int trackID = adaptationSet->GetID();
+                if (selectedTracks.find(trackID) == selectedTracks.end() && qualityRanking == corresQualityRanking)
+                {
+                    selectedTracks.insert(make_pair(trackID, adaptationSet));
+                    break;
+                }
+            }
+        }
+    }
+
+    if (needAddtionalTile && (mProjFmt != ProjectionFormat::PF_PLANAR))
     {
         for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
         {
@@ -359,15 +417,18 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
             }
         }
     }
-    // insert all tile tracks from low qulity video into selected tile tracks map
-    for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+    // insert all tile tracks from low qulity video into selected tile tracks map when projection type is not PF_PLANAR
+    if (mProjFmt != ProjectionFormat::PF_PLANAR)
     {
-        OmafAdaptationSet *adaptationSet = itAS->second;
-        uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
-        if (qualityRanking > HIGHEST_QUALITY_RANKING)
+        for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
         {
-            int trackID = adaptationSet->GetID();
-            selectedTracks.insert(make_pair(trackID, adaptationSet));
+            OmafAdaptationSet *adaptationSet = itAS->second;
+            uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
+            if (qualityRanking > HIGHEST_QUALITY_RANKING)
+            {
+                int trackID = adaptationSet->GetID();
+                selectedTracks.insert(make_pair(trackID, adaptationSet));
+            }
         }
     }
 

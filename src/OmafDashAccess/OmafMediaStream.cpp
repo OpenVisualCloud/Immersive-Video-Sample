@@ -942,7 +942,7 @@ int32_t OmafMediaStream::TilesStitching() {
 
         usleep((m_pStreamInfo->segmentDuration * 1000000) / waitTimes);
         currWaitTimes++;
-        OMAF_LOG(LOG_INFO, "To get packet %ld for track %d\n", currFramePTS, trackID);
+        //OMAF_LOG(LOG_INFO, "To get packet %ld for track %d\n", currFramePTS, trackID);
         ret = omaf_reader_mgr_->GetNextPacketWithPTS(trackID, currFramePTS, onePacket, m_needParams);
       }
 
@@ -1065,7 +1065,7 @@ int32_t OmafMediaStream::TilesStitching() {
 
     if (!isEOS && !(m_stitch->IsInitialized())) {
       ret = m_stitch->Initialize(selectedPackets, m_needParams,
-                                 (VCD::OMAF::ProjectionFormat)(m_pStreamInfo->mProjFormat));
+                                 (VCD::OMAF::ProjectionFormat)(m_pStreamInfo->mProjFormat), m_sources);
       if (ret) {
         OMAF_LOG(LOG_ERROR, "Failed to initialize stitch class !\n");
 	std::list<MediaPacket *> allPackets;

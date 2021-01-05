@@ -160,6 +160,34 @@ class QualityInfoElement : public OmafElementBase {
   //!
   MEMBER_SET_AND_GET_FUNC(int32_t, m_elevation_range, ElevationRange);
 
+  //!
+  //! \brief    Set and Get function for m_region_width member
+  //!
+  //! \param    [in] int32_t
+  //!           value to set
+  //! \param    [in] m_region_width
+  //!           m_region_width member in class
+  //! \param    [in] RegionWidth
+  //!           m_region_width name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(int32_t, m_region_width, RegionWidth);
+
+  //!
+  //! \brief    Set and Get function for m_region_height member
+  //!
+  //! \param    [in] int32_t
+  //!           value to set
+  //! \param    [in] m_region_height
+  //!           m_region_height member in class
+  //! \param    [in] RegionHeight
+  //!           m_region_height name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(int32_t, m_region_height, RegionHeight);
+
  private:
   int32_t m_quality_ranking;   //!< the quality_ranking attribute
   int32_t m_orig_width;        //!< the orig_width attribute
@@ -169,6 +197,8 @@ class QualityInfoElement : public OmafElementBase {
   int32_t m_centre_tilt;       //!< the centre_tilt attribute
   int32_t m_azimuth_range;     //!< the azimuth_range attribute
   int32_t m_elevation_range;   //!< the elevation_range attribute
+  int32_t m_region_width;      //!< the region_width attribute
+  int32_t m_region_height;     //!< the region_height attribute
 };
 
 VCD_OMAF_END;

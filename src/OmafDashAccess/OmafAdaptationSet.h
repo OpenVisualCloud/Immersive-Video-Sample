@@ -172,7 +172,9 @@ class OmafAdaptationSet {
         case 1:
           return HIGHEST_QUALITY_RANKING;
         case 2:
-          return NORMAL_QUALITY_RANKING;
+          return SECOND_QUALITY_RANKING;
+        case 3:
+          return THIRD_QUALITY_RANKING;
         default:
           return INVALID_QUALITY_RANKING;
       }
@@ -181,6 +183,17 @@ class OmafAdaptationSet {
       return INVALID_QUALITY_RANKING;
     }
   };
+
+  void SetTwoDQualityInfos() {
+    if ((mType == MediaType_Video) &&
+        (mPF == ProjectionFormat::PF_PLANAR) && m_bMain)
+    {
+      mTwoDQualityInfos = mAdaptationSet->GetTwoDQuality();
+    }
+  }
+
+  map<int32_t, TwoDQualityInfo> GetTwoDQualityInfos() { return mTwoDQualityInfos; };
+
   int Enable(bool bEnable) {
     mEnableRecord.push_back(bEnable);
     while (mEnableRecord.size() > recordSize) mEnableRecord.pop_front();
@@ -253,6 +266,8 @@ class OmafAdaptationSet {
 
   std::shared_ptr<OmafReaderManager> omaf_reader_mgr_;
   bool mIsExtractorTrack;
+
+  std::map<int32_t, TwoDQualityInfo> mTwoDQualityInfos; //<! map of <qualityRanking, TwoDQualityInfo> for all planar video sources
 };
 
 }  // namespace OMAF

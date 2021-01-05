@@ -186,6 +186,17 @@ public:
     virtual SphRegionQualityElement* BuildSphRegionQuality(OmafXMLElement* xmlSphRegionQuality);
 
     //!
+    //! \brief    Build 2D Region Quality Element according to XML element
+    //!
+    //! \param    [in] xmlTwoDRegionQuality
+    //!           2D Region Quality XML Element
+    //!
+    //! \return   TwoDRegionQualityElement
+    //!           OMAF 2D Region Quality Element
+    //!
+    virtual TwoDRegionQualityElement* BuildTwoDRegionQuality(OmafXMLElement* xmlTwoDRegionQuality);
+
+    //!
     //! \brief    Build Quality Info Element according to XML element
     //!
     //! \param    [in] xmlQualityInfo

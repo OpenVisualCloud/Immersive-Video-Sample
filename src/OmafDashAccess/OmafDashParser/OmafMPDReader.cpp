@@ -475,6 +475,11 @@ SupplementalPropertyElement* OmafMPDReader::BuildSupplementalProperty(OmafXMLEle
             // suppose supplementalProperty only have 1 SphRegionQuality now
             supplementalProperty->SetSphereRegionQuality(BuildSphRegionQuality(child));
         }
+        else if (child->GetName() == OMAF_TWOD_REGIONQUALITY)
+        {
+            supplementalProperty->SetTwoDRegionQuality(BuildTwoDRegionQuality(child));
+        }
+
         supplementalProperty->AddChildElement(child);
     }
 
@@ -515,6 +520,32 @@ SphRegionQualityElement* OmafMPDReader::BuildSphRegionQuality(OmafXMLElement* xm
     return sphRegionQuality;
 }
 
+TwoDRegionQualityElement* OmafMPDReader::BuildTwoDRegionQuality(OmafXMLElement* xmlTwoDRegionQuality)
+{
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlTwoDRegionQuality, "Failed to read sphere Region Quality element.\n", LOG_ERROR);
+
+    TwoDRegionQualityElement* twoDRegionQuality = new TwoDRegionQualityElement();
+    CheckNullPtr_PrintLog_ReturnNullPtr(twoDRegionQuality, "Failed to create sphere Region Quality node.\n", LOG_ERROR);
+
+    vector<OmafXMLElement*> childElement = xmlTwoDRegionQuality->GetChildElements();
+    for(auto child : childElement)
+    {
+        if(!child)
+        {
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in twoDRegionQuality Element.\n");
+            continue;
+        }
+
+        if(child->GetName() == OMAF_QUALITY_INFO)
+        {
+            twoDRegionQuality->AddQualityInfo(BuildQualityInfo(child));
+        }
+        twoDRegionQuality->AddChildElement(child);
+    }
+
+    return twoDRegionQuality;
+}
+
 QualityInfoElement* OmafMPDReader::BuildQualityInfo(OmafXMLElement* xmlQualityInfo)
 {
     CheckNullPtr_PrintLog_ReturnNullPtr(xmlQualityInfo, "Failed to read Quality Info element.\n", LOG_ERROR);
@@ -530,6 +561,8 @@ QualityInfoElement* OmafMPDReader::BuildQualityInfo(OmafXMLElement* xmlQualityIn
     qualityInfo->SetOrigHeight(StringToInt(xmlQualityInfo->GetAttributeVal(ORIG_HEIGHT)));
     qualityInfo->SetOrigWidth(StringToInt(xmlQualityInfo->GetAttributeVal(ORIG_WIDTH)));
     qualityInfo->SetQualityRanking(StringToInt(xmlQualityInfo->GetAttributeVal(QUALITY_RANKING)));
+    qualityInfo->SetRegionWidth(StringToInt(xmlQualityInfo->GetAttributeVal(REGION_WIDTH)));
+    qualityInfo->SetRegionHeight(StringToInt(xmlQualityInfo->GetAttributeVal(REGION_HEIGHT)));
 
     map<string, string> attributes = xmlQualityInfo->GetAttributes();
     qualityInfo->AddOriginalAttributes(attributes);
