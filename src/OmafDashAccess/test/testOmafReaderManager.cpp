@@ -66,7 +66,9 @@ class OmafReaderManagerTest : public testing::Test {
 
     std::string mpdUrl = "./segs_for_readertest/Test.mpd";
 
-    ret = m_source->OpenMedia(mpdUrl, "./cache", NULL, true, false);
+    PluginDef i360ScvpPlugin;
+    i360ScvpPlugin.pluginLibPath = NULL;
+    ret = m_source->OpenMedia(mpdUrl, "./cache", NULL, i360ScvpPlugin, true, false);
     if (ret) {
       printf("Failed to open media \n");
       return;

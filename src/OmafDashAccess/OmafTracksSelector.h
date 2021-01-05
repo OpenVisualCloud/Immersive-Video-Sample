@@ -97,6 +97,31 @@ class OmafTracksSelector {
 
   void SetProjectionFmt(ProjectionFormat projFmt) { mProjFmt = projFmt; };
 
+  //!
+  //! \brief  Set total video qualities number
+  //!
+  void SetVideoQualityRanksNum(uint32_t qualitiesNum) { mQualityRanksNum = qualitiesNum; };
+
+  //!
+  //! \brief  Set <qualityRanking, TwoDQualityInfo> map for all planar video sources
+  //!
+  void SetTwoDQualityInfos(std::map<int32_t, TwoDQualityInfo> twoDQualities) { mTwoDQualityInfos = std::move(twoDQualities); };
+
+  //!
+  //! \brief  Set segment duration in microsecond
+  //!
+  void SetSegmentDuration(uint32_t segDur) { mSegmentDur = segDur; };
+
+  //!
+  //! \brief  Set 360SCVP library plugin
+  //!
+  void SetI360SCVPPlugin(PluginDef i360scvp_plugin)
+  {
+      mI360ScvpPlugin.pluginType = i360scvp_plugin.pluginType;
+      mI360ScvpPlugin.pluginFormat = i360scvp_plugin.pluginFormat;
+      mI360ScvpPlugin.pluginLibPath = i360scvp_plugin.pluginLibPath;
+  };
+
 private:
     OmafTracksSelector& operator=(const OmafTracksSelector& other) { return *this; };
     OmafTracksSelector(const OmafTracksSelector& other) { /* do not create copies */ };
@@ -119,6 +144,11 @@ private:
   std::string mLibPath;
   std::map<std::string, ViewportPredictPlugin *> mPredictPluginMap;
   ProjectionFormat mProjFmt;
+  uint32_t         mQualityRanksNum;
+  map<int32_t, TwoDQualityInfo> mTwoDQualityInfos;
+  map<int32_t, int32_t>         mTwoDStreamQualityMap;
+  uint32_t                      mSegmentDur;
+  PluginDef                     mI360ScvpPlugin;
 };
 
 VCD_OMAF_END;

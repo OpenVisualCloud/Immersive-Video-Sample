@@ -35,6 +35,7 @@
 #include "OmafElementBase.h"
 #include "DescriptorElement.h"
 #include "SphRegionQualityElement.h"
+#include "TwoDRegionQualityElement.h"
 
 VCD_OMAF_BEGIN
 
@@ -71,6 +72,7 @@ public:
     //!
     ODStatus SetSphereRegionQuality(SphRegionQualityElement* sphRegionQuality);
 
+    ODStatus SetTwoDRegionQuality(TwoDRegionQualityElement* twoDRegionQuality);
     //!
     //! \brief    Get member m_srd
     //!
@@ -103,6 +105,8 @@ public:
     //!
     ContentCoverage* GetContentCoverage() {return m_sphRegionQuality ? m_sphRegionQuality->GetContentCoverage() : nullptr;}
 
+    map<int32_t, TwoDQualityInfo> GetTwoDRegionQualityInfos() { return m_twoDQualityInfos; }
+
 private:
     SupplementalPropertyElement& operator=(const SupplementalPropertyElement& other) { return *this; };
     SupplementalPropertyElement(const SupplementalPropertyElement& other) { /* do not create copies */ };
@@ -113,6 +117,9 @@ private:
     OmafSrd                      *m_srd;              //!< pointer of the OmafSrd child elements
     SphereQuality                *m_srqr;             //!< pointer of the SphereQuality child elements
     PreselValue                  *m_preselection;     //!< pointer of the PreselValue child elements
+    TwoDRegionQualityElement     *m_twoDRegionQuality;
+
+    map<int32_t, TwoDQualityInfo> m_twoDQualityInfos;
 };
 
 VCD_OMAF_END;

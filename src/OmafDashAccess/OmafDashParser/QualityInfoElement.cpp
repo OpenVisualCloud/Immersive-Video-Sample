@@ -44,6 +44,8 @@ QualityInfoElement::QualityInfoElement()
     m_centre_tilt = 0;
     m_azimuth_range = 0;
     m_elevation_range = 0;
+    m_region_width = 0;
+    m_region_height = 0;
 }
 
 QualityInfoElement::~QualityInfoElement()
@@ -56,6 +58,8 @@ QualityInfoElement::~QualityInfoElement()
     m_centre_tilt = 0;
     m_azimuth_range = 0;
     m_elevation_range = 0;
+    m_region_width = 0;
+    m_region_height = 0;
 }
 
 VCD_OMAF_END;

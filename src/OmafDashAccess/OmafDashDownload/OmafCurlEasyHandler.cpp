@@ -337,7 +337,7 @@ size_t OmafCurlEasyDownloader::curlBodyCallback(char *ptr, size_t size, size_t n
   size_t bsize = size * nmemb;
 
   try {
-    OMAF_LOG(LOG_INFO, "Receive bytes size= %lld\n", bsize);
+    //OMAF_LOG(LOG_INFO, "Receive bytes size= %lld\n", bsize);
     if (ptr == nullptr || bsize <= 0) {
       OMAF_LOG(LOG_ERROR, "The buffer from curl handler is empty!\n");
       return bsize;

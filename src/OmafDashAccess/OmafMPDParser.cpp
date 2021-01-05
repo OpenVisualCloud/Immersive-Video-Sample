@@ -42,10 +42,12 @@ OmafMPDParser::OmafMPDParser() {
   mPF = PF_UNKNOWN;
   this->mTmpAS = nullptr;
   this->mTmpStream = nullptr;
+  this->mQualityRanksNum = 0;
 }
 
 OmafMPDParser::~OmafMPDParser() {
   SAFE_DELETE(mParser);
+  mTwoDQualityInfos.clear();
   // SAFE_DELETE(mMpd);
   // SAFE_DELETE(mLock);
 }
@@ -190,6 +192,7 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
   int ret = ERROR_NONE;
   uint32_t allExtractorCnt = 0;
   uint32_t videoStrNum = 0;
+  std::set<QualityRank> allVideoQualities;
   std::map<std::string, OmafMediaStream*> streamsMap;
   for (auto it = mapAdaptationSets.begin(); it != mapAdaptationSets.end(); it++) {
     OMAFADAPTATIONSETS ASs = it->second;
@@ -220,6 +223,11 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
               pOmafAs->SetProjectionFormat(mPF);
               mTmpStream->SetMainAdaptationSet(pOmafAs);
               mainASit = as_it;
+              pOmafAs->SetTwoDQualityInfos();
+              mTwoDQualityInfos = pOmafAs->GetTwoDQualityInfos();
+            } else {
+              QualityRank oneQuality = pOmafAs->GetRepresentationQualityRanking();
+              allVideoQualities.insert(oneQuality);
             }
         }
         else if (strncmp(type.c_str(), "audio", 5) == 0)
@@ -246,8 +254,11 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
 
     streamsMap.insert(std::make_pair(type, mTmpStream));
   }
+
+  mQualityRanksNum = allVideoQualities.size();
   OMAF_LOG(LOG_INFO, "allExtractorCnt %u\n", allExtractorCnt);
   OMAF_LOG(LOG_INFO, "video streams num %u\n", videoStrNum);
+  OMAF_LOG(LOG_INFO, "video quality ranks num %u\n", mQualityRanksNum);
   //if (allExtractorCnt < mapAdaptationSets.size()) {
   if (allExtractorCnt < videoStrNum) {
     if (mExtractorEnabled) {

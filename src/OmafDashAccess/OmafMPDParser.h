@@ -100,6 +100,10 @@ class OmafMPDParser {
   void SetOmafDashParams(const OmafDashParams& params) { omaf_dash_params_ = params; }
   ProjectionFormat GetProjectionFmt() { return mPF; };
 
+  uint32_t GetVideoQualityRanksNum() { return mQualityRanksNum; };
+
+  std::map<int32_t, TwoDQualityInfo> GetTwoDQualityInfos() { return mTwoDQualityInfos; };
+
  private:
   //!
   //! \brief construct media streams.
@@ -151,6 +155,8 @@ private:
   OmafDashParams omaf_dash_params_;
   OmafAdaptationSet *mTmpAS;
   OmafMediaStream* mTmpStream;
+  uint32_t mQualityRanksNum;
+  std::map<int32_t, TwoDQualityInfo> mTwoDQualityInfos;
 };
 
 VCD_OMAF_END;

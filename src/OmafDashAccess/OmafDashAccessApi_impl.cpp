@@ -142,7 +142,7 @@ int OmafAccess_OpenMedia(Handler hdl, DashStreamingClient *pCtx, bool enablePred
   string cache_path = pCtx->cache_path;
   string s_predictPluginName = predictPluginName;
   string s_libPath = libPath;
-  return pSource->OpenMedia(media_url, cache_path, pCtx->log_callback, pCtx->enable_extractor, enablePredictor,
+  return pSource->OpenMedia(media_url, cache_path, pCtx->log_callback, pCtx->plugin_def, pCtx->enable_extractor, enablePredictor,
                             s_predictPluginName, s_libPath);
 }
 
@@ -197,9 +197,6 @@ int OmafAccess_GetPacket(Handler hdl, int stream_id, DashPacket *packet, int *si
       continue;
     }
     if (!(pPkt->GetEOS())) {
-      // int outSize = pPkt->Size();
-      // char *buf = (char *)malloc(outSize * sizeof(char));
-      // memcpy_s(buf, pPkt->Payload(), outSize);
       if (pPkt->GetMediaType() == MediaType_Video)
       {
           RegionWisePacking *newRwpk = new RegionWisePacking;
@@ -255,7 +252,6 @@ int OmafAccess_SetupHeadSetInfo(Handler hdl, HeadSetInfo *clientInfo) {
 
 int OmafAccess_ChangeViewport(Handler hdl, HeadPose *pose) {
   OmafMediaSource *pSource = (OmafMediaSource *)hdl;
-
   return pSource->ChangeViewport(pose);
 }
 

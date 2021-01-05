@@ -46,6 +46,7 @@ OmafTracksSelector::OmafTracksSelector(int size) {
   mPredictPluginName = "";
   mLibPath = "";
   mProjFmt = ProjectionFormat::PF_ERP;
+  mSegmentDur = 0;
 }
 
 OmafTracksSelector::~OmafTracksSelector() {
@@ -54,6 +55,14 @@ OmafTracksSelector::~OmafTracksSelector() {
     m360ViewPortHandle = nullptr;
   }
 
+  if (mParamViewport)
+  {
+    if (mParamViewport->pStreamInfo)
+    {
+      delete [] (mParamViewport->pStreamInfo);
+      mParamViewport->pStreamInfo = nullptr;
+    }
+  }
   SAFE_DELETE(mParamViewport);
 
   if (mPoseHistory.size()) {
@@ -80,17 +89,30 @@ OmafTracksSelector::~OmafTracksSelector() {
   mUsePrediction = false;
 
   SAFE_DELETE(mPose);
+
+  mTwoDQualityInfos.clear();
 }
 
 int OmafTracksSelector::SetInitialViewport(std::vector<Viewport *> &pView, HeadSetInfo *headSetInfo,
                                            OmafMediaStream *pStream) {
-  if (!headSetInfo || !headSetInfo->viewPort_hFOV || !headSetInfo->viewPort_vFOV || !headSetInfo->viewPort_Width ||
-      !headSetInfo->viewPort_Height) {
-    return ERROR_INVALID;
+  if (mProjFmt != ProjectionFormat::PF_PLANAR)
+  {
+    if (!headSetInfo || !headSetInfo->viewPort_hFOV || !headSetInfo->viewPort_vFOV || !headSetInfo->viewPort_Width ||
+        !headSetInfo->viewPort_Height) {
+      return ERROR_INVALID;
+    }
   }
+  else
+  {
+    if (!headSetInfo || !headSetInfo->viewPort_Width || !headSetInfo->viewPort_Height || !(mTwoDQualityInfos.size())) {
+      return ERROR_INVALID;
+    }
+  }
+
   mParamViewport = new param_360SCVP;
   mParamViewport->usedType = E_VIEWPORT_ONLY;
   mParamViewport->logFunction = (void*)logCallBack;
+  mParamViewport->pStreamInfo = NULL;
   if (mProjFmt == ProjectionFormat::PF_ERP) {
     mParamViewport->paramViewPort.viewportWidth = headSetInfo->viewPort_Width;
     mParamViewport->paramViewPort.viewportHeight = headSetInfo->viewPort_Height;
@@ -142,7 +164,55 @@ int OmafTracksSelector::SetInitialViewport(std::vector<Viewport *> &pView, HeadS
     mParamViewport->paramViewPort.paramVideoFP.faces[1][1].rotFace = NO_TRANSFORM;
     mParamViewport->paramViewPort.paramVideoFP.faces[1][2].idFace = 5;
     mParamViewport->paramViewPort.paramVideoFP.faces[1][2].rotFace = NO_TRANSFORM;
+  } else if (mProjFmt == ProjectionFormat::PF_PLANAR) {
+    mParamViewport->paramViewPort.viewportWidth = headSetInfo->viewPort_Width;
+    mParamViewport->paramViewPort.viewportHeight = headSetInfo->viewPort_Height;
+    mParamViewport->paramViewPort.geoTypeInput = E_SVIDEO_PLANAR;
+    mParamViewport->paramViewPort.geoTypeOutput = E_SVIDEO_VIEWPORT;
+    mParamViewport->paramViewPort.usageType = E_VIEWPORT_ONLY;
+    mParamViewport->sourceResolutionNum = mTwoDQualityInfos.size();
+    mParamViewport->accessInterval = (float)(mSegmentDur);
+    mParamViewport->pStreamInfo = new Stream_Info[mParamViewport->sourceResolutionNum];
+    if (!(mParamViewport->pStreamInfo))
+      return ERROR_NULL_PTR;
+
+    uint8_t strIdx = 0;
+    map<int32_t, TwoDQualityInfo>::iterator itQua;
+    for(itQua = mTwoDQualityInfos.begin(); itQua != mTwoDQualityInfos.end(); itQua++)
+    {
+      TwoDQualityInfo oneQuality = itQua->second;
+      if (oneQuality.quality_ranking == 1)
+      {
+        mParamViewport->paramViewPort.faceWidth = oneQuality.orig_width;
+        mParamViewport->paramViewPort.faceHeight = oneQuality.orig_height;
+      }
+      mParamViewport->pStreamInfo[strIdx].FrameWidth  = oneQuality.orig_width;
+      mParamViewport->pStreamInfo[strIdx].FrameHeight = oneQuality.orig_height;
+      mParamViewport->pStreamInfo[strIdx].TileWidth   = oneQuality.region_width;
+      mParamViewport->pStreamInfo[strIdx].TileHeight  = oneQuality.region_height;
+
+      OMAF_LOG(LOG_INFO, "Planar video %d\n", strIdx);
+      OMAF_LOG(LOG_INFO, "Width %d, Height %d\n", mParamViewport->pStreamInfo[strIdx].FrameWidth, mParamViewport->pStreamInfo[strIdx].FrameHeight);
+      OMAF_LOG(LOG_INFO, "Tile Width %d, Tile Height %d\n", mParamViewport->pStreamInfo[strIdx].TileWidth, mParamViewport->pStreamInfo[strIdx].TileHeight);
+
+      mTwoDStreamQualityMap.insert(std::make_pair(strIdx, oneQuality.quality_ranking));
+      OMAF_LOG(LOG_INFO, "Insert one pair of stream index %d and its corresponding quality rankding %d\n", strIdx, oneQuality.quality_ranking);
+
+      strIdx++;
+    }
+
+    mParamViewport->paramViewPort.paramVideoFP.cols = 1;
+    mParamViewport->paramViewPort.paramVideoFP.rows = 1;
+
+    mParamViewport->pluginDef = mI360ScvpPlugin;
+    if (mParamViewport->pluginDef.pluginLibPath == NULL)
+    {
+        OMAF_LOG(LOG_ERROR, "No assigned 360SCVP Plugin for planar video tiles selection, exit !\n");
+        return ERROR_NULL_PTR;
+    }
+    OMAF_LOG(LOG_INFO, "Used 360SCVP Plugin is %s\n", mParamViewport->pluginDef.pluginLibPath);
   }
+
   m360ViewPortHandle = I360SCVP_Init(mParamViewport);
   if (!m360ViewPortHandle) return ERROR_NULL_PTR;
 
@@ -159,7 +229,6 @@ int OmafTracksSelector::UpdateViewport(HeadPose *pose) {
   if (!pose) return ERROR_NULL_PTR;
 
   std::lock_guard<std::mutex> lock(mMutex);
-
   HeadPose* input_pose = new HeadPose;
 
   if (!(input_pose)) return ERROR_NULL_PTR;
@@ -171,6 +240,7 @@ int OmafTracksSelector::UpdateViewport(HeadPose *pose) {
     SAFE_DELETE(pit);
     mPoseHistory.pop_back();
   }
+
   // if using viewport prediction, set real time viewports.
   if (mUsePrediction && !mPredictPluginMap.empty())
   {
@@ -181,6 +251,7 @@ int OmafTracksSelector::UpdateViewport(HeadPose *pose) {
     angle->pts = pose->pts;
     plugin->SetViewport(angle);
   }
+
   return ERROR_NONE;
 }
 

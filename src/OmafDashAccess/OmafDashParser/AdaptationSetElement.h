@@ -222,6 +222,14 @@ public:
     SphereQuality* GetSphereQuality();
 
     //!
+    //! \brief    Get 2D quality information from member m_supplementalProperties
+    //!
+    //! \return   map<int32_t, TwoDQualityInfo>
+    //!           map of <qualityRanking, TwoDQualityInfo> for input planar
+    //!           video sources
+    map<int32_t, TwoDQualityInfo> GetTwoDQuality();
+
+    //!
     //! \brief    Get content converage from member m_supplementalProperties
     //!
     //! \return   OmafSrd*
