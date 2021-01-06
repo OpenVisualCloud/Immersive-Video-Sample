@@ -340,10 +340,15 @@ void DashInitSegmenter::FillOmafStructures(
         {
             hevcEntry.projFmt = VCD::MP4::OmniProjFormat::OMNI_ERP;
         }
-        else
+        else if (inMetaData.projection == OmafProjectionType::CUBEMAP)
         {
             hevcEntry.projFmt = VCD::MP4::OmniProjFormat::OMNI_Cubemap;
         }
+        else if (inMetaData.projection == OmafProjectionType::PLANAR)
+        {
+            hevcEntry.projFmt = VCD::MP4::OmniProjFormat::OMNI_Planar;
+        }
+
         if (m_config.packedSubPictures)
         {
             // viewport dependent

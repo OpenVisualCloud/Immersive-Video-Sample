@@ -131,8 +131,10 @@ public:
         memset_s(m_initInfo, sizeof(InitialInfo), 0);
         m_initInfo->bsNumVideo = 2;
         m_initInfo->bsNumAudio = 0;
-        m_initInfo->pluginPath = "/usr/local/lib";
-        m_initInfo->pluginName = "HighResPlusFullLowResPacking";
+        m_initInfo->packingPluginPath = "/usr/local/lib";
+        m_initInfo->packingPluginName = "HighResPlusFullLowResPacking";
+        m_initInfo->videoProcessPluginPath = "/usr/local/lib";
+        m_initInfo->videoProcessPluginName = "HevcVideoStreamProcess";
         m_initInfo->bsBuffers = new BSBuffer[2];
         if (!m_initInfo->bsBuffers)
         {

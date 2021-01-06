@@ -81,7 +81,8 @@ public:
         std::map<ExtractorTrack*, TrackSegmentCtx*> *extractorSegCtxs,
         SegmentationInfo *segInfo,
         VCD::OMAF::ProjectionFormat projType,
-        Rational frameRate);
+        Rational frameRate,
+        uint8_t  videoNum);
 
     MpdGenerator(const MpdGenerator& src);
 
@@ -190,6 +191,7 @@ private:
     Rational                                    m_frameRate;           //!< video stream frame rate
     uint16_t                                    m_timeScale;           //!< timescale of video stream
     XMLDocument                                 *m_xmlDoc;             //!< XML doc element for writting mpd file created using tinyxml2
+    uint8_t                                     m_vsNum;
 };
 
 VCD_NS_END;

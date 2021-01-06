@@ -110,6 +110,8 @@ VCD_OMAF_BEGIN
 #define HEIGHT                                  "height"
 #define ORIGWIDTH                               "orig_width"
 #define ORIGHEIGHT                              "orig_height"
+#define REGIONWIDTH                             "region_width"
+#define REGIONHEIGHT                            "region_height"
 #define FRAMERATE                               "frameRate"
 #define STARTWITHSAP                            "startWithSAP"
 #define TIMESCALE                               "timescale"
@@ -235,6 +237,7 @@ typedef enum{
     PF_UNKNOWN     = -1,
     PF_ERP         =  0,
     PF_CUBEMAP     =  1,
+    PF_PLANAR      =  2,
     PF_RESERVED,
 }ProjectionFormat;
 

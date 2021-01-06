@@ -908,14 +908,14 @@ int32_t ExtractorTrackGenerator::Initialize()
         if (m_fixedPackedPicRes)
         {
             ret = rwpkGen->Initialize(
-                 m_initInfo->pluginPath, m_initInfo->pluginName,
+                 m_initInfo->packingPluginPath, m_initInfo->packingPluginName,
                  m_streams, m_videoIdxInMedia,
                  selectedNum, maxSelectedNum, logCallBack);
         }
         else
         {
             ret = rwpkGen->Initialize(
-                 m_initInfo->pluginPath, m_initInfo->pluginName,
+                 m_initInfo->packingPluginPath, m_initInfo->packingPluginName,
                  m_streams, m_videoIdxInMedia,
                  selectedNum, selectedNum, logCallBack);
         }

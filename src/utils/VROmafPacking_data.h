@@ -182,20 +182,26 @@ typedef struct InputCubeMapInfo
 //!
 typedef struct InitialInfo
 {
-    uint8_t                 bsNumVideo;        //mandatory
-    uint8_t                 bsNumAudio;        //mandatory
+    uint8_t                 bsNumVideo;              //mandatory
+    uint8_t                 bsNumAudio;              //mandatory
+    BSBuffer                *bsBuffers;              //mandatory
 
-    const char              *pluginPath;       //needed if extractor track will be generated
-    const char              *pluginName;       //needed if extractor track will be generated
-    bool                    fixedPackedPicRes; //needed if extractor track will be generated
-    BSBuffer                *bsBuffers;        //mandatory
+    const char              *packingPluginPath;      //needed for region-wise packing information generation if extractor track will be generated, use default plugin if no set
+    const char              *packingPluginName;      //needed for region-wise packing information generation if extractor track will be generated, use default plugin if no set
+    bool                    fixedPackedPicRes;       //needed to set whether all extractor tracks have the same resolution if extractor track will be generated
 
-    ViewportInformation     *viewportInfo;     //mandatory
-    SegmentationInfo        *segmentationInfo; //mandatory
+    const char              *videoProcessPluginPath; //needed for video stream process, use default plugin if no set
+    const char              *videoProcessPluginName; //needed for video stream process, use default plugin if no set
+    const char              *audioProcessPluginPath; //needed for audio stream process, mandatory if there is audio input
+    const char              *audioProcessPluginName; //needed for audio stream process, mandatory if there is auido input
 
-    EGeometryType           projType;          //mandatory
-    InputCubeMapInfo        *cubeMapInfo;      //needed if projType is E_SVIDEO_CUBEMAP
-    void                    *logFunction;       //external log callback function pointer, NULL if external log is not used
+    ViewportInformation     *viewportInfo;           //mandatory
+    SegmentationInfo        *segmentationInfo;       //mandatory
+
+    EGeometryType           projType;                //mandatory
+    InputCubeMapInfo        *cubeMapInfo;            //needed if projType is E_SVIDEO_CUBEMAP
+
+    void                    *logFunction;            //external log callback function pointer, NULL if external log is not used
 }InitialInfo;
 
 //!

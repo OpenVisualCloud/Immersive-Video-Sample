@@ -264,6 +264,7 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                     break;
             }
             m_projType = (VCD::OMAF::ProjectionFormat)vs->GetProjType();
+            OMAF_LOG(LOG_INFO, "Get video source projection type %d\n", m_projType);
             m_videoSegInfo = vs->GetVideoSegInfo();
             Nalu *vpsNalu = vs->GetVPSNalu();
             if (!vpsNalu || !(vpsNalu->data) || !(vpsNalu->dataSize))
@@ -418,6 +419,10 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                 else if (m_projType == VCD::OMAF::ProjectionFormat::PF_CUBEMAP)
                 {
                     trackSegCtxs[i].codedMeta.projection = OmafProjectionType::CUBEMAP;
+                }
+                else if (m_projType == VCD::OMAF::ProjectionFormat::PF_PLANAR)
+                {
+                    trackSegCtxs[i].codedMeta.projection = OmafProjectionType::PLANAR;
                 }
                 else
                 {
@@ -619,6 +624,10 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             else if (m_projType == VCD::OMAF::ProjectionFormat::PF_CUBEMAP)
             {
                 trackSegCtx->codedMeta.projection = OmafProjectionType::CUBEMAP;
+            }
+            else if (m_projType == VCD::OMAF::ProjectionFormat::PF_PLANAR)
+            {
+                trackSegCtx->codedMeta.projection = OmafProjectionType::PLANAR;
             }
             else
             {
@@ -1278,7 +1287,8 @@ int32_t DefaultSegmentation::VideoSegmentation()
                     &m_extractorSegCtx,
                     m_segInfo,
                     m_projType,
-                    m_frameRate);
+                    m_frameRate,
+                    m_videosNum);
     if (!m_mpdGen)
         return OMAF_ERROR_NULL_PTR;
 
@@ -1717,7 +1727,8 @@ int32_t DefaultSegmentation::AudioSegmentation()
                         &m_extractorSegCtx,
                         m_segInfo,
                         m_projType,
-                        m_frameRate);
+                        m_frameRate,
+                        0);
         if (!m_mpdGen)
             return OMAF_ERROR_NULL_PTR;
 
