@@ -239,6 +239,9 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
     m_pViewportParam.m_usageType = pViewPortInfo->usageType;
     if (m_pViewportParam.m_input_geoType == E_SVIDEO_EQUIRECT)
     {
+        if (pViewPortInfo->paramVideoFP.rows != 1 || pViewPortInfo->paramVideoFP.cols != 1)
+            SCVP_LOG(LOG_WARNING, "Viewport rows and cols number is illegal!!! Set them to defaul 1x1 !!!\n");
+
         m_pViewportParam.m_paramVideoFP.cols = 1;
         m_pViewportParam.m_paramVideoFP.rows = 1;
         m_pViewportParam.m_paramVideoFP.faces[0][0].faceHeight = pViewPortInfo->faceHeight;
@@ -248,11 +251,18 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
     }
     else if (m_pViewportParam.m_input_geoType == E_SVIDEO_CUBEMAP)
     {
+        /* Check the paramVideoFP rows / cols exceeds the maximum array size for Cubemap projections */
+        if (pViewPortInfo->paramVideoFP.rows > 6 || pViewPortInfo->paramVideoFP.cols > 6) {
+            SCVP_LOG(LOG_ERROR, "Viewport rows and cols too big: rows is %d, col is %d\n", pViewPortInfo->paramVideoFP.rows, pViewPortInfo->paramVideoFP.cols);
+            return ERROR_BAD_PARAM;
+        }
         m_pViewportParam.m_paramVideoFP.cols = pViewPortInfo->paramVideoFP.cols;
         m_pViewportParam.m_paramVideoFP.rows = pViewPortInfo->paramVideoFP.rows;
     }
     else if (m_pViewportParam.m_input_geoType == E_SVIDEO_PLANAR)
     {
+        if (pViewPortInfo->paramVideoFP.rows != 1 || pViewPortInfo->paramVideoFP.cols != 1)
+            SCVP_LOG(LOG_WARNING, "Viewport rows and cols number is illegal!!! Set them to default 1x1 !!!\n");
         m_pViewportParam.m_paramVideoFP.cols = 1;
         m_pViewportParam.m_paramVideoFP.rows = 1;
     }
@@ -261,15 +271,9 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
         return ERROR_BAD_PARAM;
     }
 
-    /* Check the paramVideoFP rows / cols exceeds the maximum array size */
-    if (pViewPortInfo->paramVideoFP.rows > 6 || pViewPortInfo->paramVideoFP.cols > 6) {
-        SCVP_LOG(LOG_ERROR, "Viewport rows and cols too big: rows is %d, col is %d\n", pViewPortInfo->paramVideoFP.rows, pViewPortInfo->paramVideoFP.cols);
-        return -1;
-    }
-
-    for (int i = 0; i < pViewPortInfo->paramVideoFP.rows; i++)
+    for (int i = 0; i < m_pViewportParam.m_paramVideoFP.rows; i++)
     {
-        for (int j = 0; j < pViewPortInfo->paramVideoFP.cols; j++)
+        for (int j = 0; j < m_pViewportParam.m_paramVideoFP.cols; j++)
         {
             m_pViewportParam.m_paramVideoFP.faces[i][j].faceHeight = pViewPortInfo->paramVideoFP.faces[i][j].faceHeight;
             m_pViewportParam.m_paramVideoFP.faces[i][j].faceWidth = pViewPortInfo->paramVideoFP.faces[i][j].faceWidth;
@@ -278,7 +282,7 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
         }
     }
     m_pViewport = genViewport_Init(&m_pViewportParam);
-    return 0;
+    return ERROR_NONE;
 }
 
 int32_t TstitchStream::SetLogCallBack(LogFunction logFunction)
