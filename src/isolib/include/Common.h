@@ -181,7 +181,8 @@ struct COVIRegion
 enum class OmniProjFormat
 {
     OMNI_ERP = 0,
-    OMNI_Cubemap
+    OMNI_Cubemap,
+    OMNI_Planar
 };
 
 enum class VideoFramePackingType : uint8_t

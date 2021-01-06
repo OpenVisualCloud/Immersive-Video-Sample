@@ -124,7 +124,8 @@ enum OmafProjectionType
 {
     NoneProjection,
     EQUIRECTANGULAR,
-    CUBEMAP
+    CUBEMAP,
+    PLANAR
 };
 
 //!

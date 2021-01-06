@@ -181,7 +181,18 @@ int32_t OmafPackage::AddMediaStream(uint8_t streamIdx, BSBuffer *bs)
             it = m_streamPlugins.find(CODEC_ID_H265);
             if (it == m_streamPlugins.end())
             {
-                char hevcPluginName[1024] = "/usr/local/lib/libHevcVideoStreamProcess.so";
+                char hevcPluginName[1024] = { 0 };//"/usr/local/lib/libHevcVideoStreamProcess.so";
+                uint32_t videoPluginPathLen = strlen(m_initInfo->videoProcessPluginPath);
+                if (m_initInfo->videoProcessPluginPath[videoPluginPathLen - 1] == '/')
+                {
+                    snprintf(hevcPluginName, 1024, "%slib%s.so", m_initInfo->videoProcessPluginPath, m_initInfo->videoProcessPluginName);
+                }
+                else
+                {
+                    snprintf(hevcPluginName, 1024, "%s/lib%s.so", m_initInfo->videoProcessPluginPath, m_initInfo->videoProcessPluginName);
+                }
+                OMAF_LOG(LOG_INFO, "Used video stream process plugin is %s\n", hevcPluginName);
+
                 pluginHdl = dlopen(hevcPluginName, RTLD_LAZY);
                 const char *dlsymErr = dlerror();
                 if (!pluginHdl)
@@ -254,7 +265,18 @@ int32_t OmafPackage::AddMediaStream(uint8_t streamIdx, BSBuffer *bs)
             it = m_streamPlugins.find(CODEC_ID_AAC);
             if (it == m_streamPlugins.end())
             {
-                char aacPluginName[1024] = "/usr/local/lib/libAACAudioStreamProcess.so";
+                char aacPluginName[1024] = { 0 };//"/usr/local/lib/libAACAudioStreamProcess.so";
+                uint32_t audioPluginPathLen = strlen(m_initInfo->audioProcessPluginPath);
+                if (m_initInfo->audioProcessPluginPath[audioPluginPathLen - 1] == '/')
+                {
+                    snprintf(aacPluginName, 1024, "%slib%s.so", m_initInfo->audioProcessPluginPath, m_initInfo->audioProcessPluginName);
+                }
+                else
+                {
+                    snprintf(aacPluginName, 1024, "%s/lib%s.so", m_initInfo->audioProcessPluginPath, m_initInfo->audioProcessPluginName);
+                }
+                OMAF_LOG(LOG_INFO, "Used audio stream process plugin is %s\n", aacPluginName);
+
                 pluginHdl = dlopen(aacPluginName, RTLD_LAZY);
                 const char *dlsymErr = dlerror();
                 if (!pluginHdl)
@@ -352,6 +374,12 @@ int32_t OmafPackage::InitOmafPackage(InitialInfo *initInfo)
 
     if (!initInfo->bsBuffers)
         return OMAF_ERROR_NULL_PTR;
+
+    if (!initInfo->videoProcessPluginPath || !initInfo->videoProcessPluginName)
+        return OMAF_ERROR_NO_PLUGIN_SET;
+
+    if (initInfo->bsNumAudio && (!initInfo->audioProcessPluginPath || !initInfo->audioProcessPluginName))
+        return OMAF_ERROR_NO_PLUGIN_SET;
 
     m_initInfo = initInfo;
     if (initInfo->logFunction)

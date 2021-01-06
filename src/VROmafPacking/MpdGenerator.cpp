@@ -54,6 +54,7 @@ MpdGenerator::MpdGenerator()
     m_xmlDoc = NULL;
     m_frameRate.num = 0;
     m_frameRate.den = 0;
+    m_vsNum = 0;
 }
 
 MpdGenerator::MpdGenerator(
@@ -61,7 +62,8 @@ MpdGenerator::MpdGenerator(
     std::map<ExtractorTrack*, TrackSegmentCtx*> *extractorSegCtxs,
     SegmentationInfo *segInfo,
     VCD::OMAF::ProjectionFormat projType,
-    Rational frameRate)
+    Rational frameRate,
+    uint8_t  videoNum)
 {
     m_streamSegCtx = streamsSegCtxs;
     m_extractorSegCtx = extractorSegCtxs;
@@ -74,6 +76,7 @@ MpdGenerator::MpdGenerator(
     m_frameRate = frameRate;
     m_timeScale = 0;
     m_xmlDoc = NULL;
+    m_vsNum = videoNum;
 }
 
 MpdGenerator::MpdGenerator(const MpdGenerator& src)
@@ -90,6 +93,7 @@ MpdGenerator::MpdGenerator(const MpdGenerator& src)
     m_xmlDoc = std::move(src.m_xmlDoc);
     m_frameRate.num = src.m_frameRate.num;
     m_frameRate.den = src.m_frameRate.den;
+    m_vsNum         = src.m_vsNum;
 }
 
 MpdGenerator& MpdGenerator::operator=(MpdGenerator&& other)
@@ -106,6 +110,7 @@ MpdGenerator& MpdGenerator::operator=(MpdGenerator&& other)
     m_xmlDoc = std::move(other.m_xmlDoc);
     m_frameRate.num = other.m_frameRate.num;
     m_frameRate.den = other.m_frameRate.den;
+    m_vsNum         = other.m_vsNum;
 
     return *this;
 }
@@ -202,7 +207,8 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
     XMLElement *supplementalEle = m_xmlDoc->NewElement(SUPPLEMENTALPROPERTY);
     supplementalEle->SetAttribute(SCHEMEIDURI, SCHEMEIDURI_SRD);
     memset_s(string, 1024, 0);
-    if (m_projType == VCD::OMAF::ProjectionFormat::PF_ERP)
+    if ((m_projType == VCD::OMAF::ProjectionFormat::PF_ERP) ||
+        (m_projType == VCD::OMAF::ProjectionFormat::PF_PLANAR))
     {
         snprintf(string, 1024, "1,%d,%d,%d,%d", trackSegCtx.tileInfo->horizontalPos, trackSegCtx.tileInfo->verticalPos, trackSegCtx.tileInfo->tileWidth, trackSegCtx.tileInfo->tileHeight);
     }
@@ -584,30 +590,107 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
         viewportEle->SetAttribute(COMMON_VALUE, "vpl");
         asEle->InsertEndChild(viewportEle);
 
-        XMLElement *essentialEle1 = m_xmlDoc->NewElement(ESSENTIALPROPERTY);
-        essentialEle1->SetAttribute(SCHEMEIDURI, SCHEMEIDURI_SRD);
-        essentialEle1->SetAttribute(COMMON_VALUE, "1,0,0,0,0");
-        asEle->InsertEndChild(essentialEle1);
+        if (m_projType != VCD::OMAF::ProjectionFormat::PF_PLANAR)
+        {
+            XMLElement *essentialEle1 = m_xmlDoc->NewElement(ESSENTIALPROPERTY);
+            essentialEle1->SetAttribute(SCHEMEIDURI, SCHEMEIDURI_SRD);
+            essentialEle1->SetAttribute(COMMON_VALUE, "1,0,0,0,0");
+            asEle->InsertEndChild(essentialEle1);
 
-        XMLElement *repEle = m_xmlDoc->NewElement(REPRESENTATION);
-        repEle->SetAttribute(INDEX, 0);
-        repEle->SetAttribute(MIMETYPE, MIMETYPE_VALUE); //?
-        repEle->SetAttribute(CODECS, CODECS_VALUE);
-        repEle->SetAttribute(WIDTH, mainWidth);
-        repEle->SetAttribute(HEIGHT, mainHeight);
-        memset_s(string, 1024, 0);
-        snprintf(string, 1024, "%ld/%ld", m_frameRate.num, m_frameRate.den);
-        repEle->SetAttribute(FRAMERATE, string);
-        repEle->SetAttribute(SAR, "1:1");
-        repEle->SetAttribute(STARTWITHSAP, 1);
-        asEle->InsertEndChild(repEle);
+            XMLElement *repEle = m_xmlDoc->NewElement(REPRESENTATION);
+            repEle->SetAttribute(INDEX, 0);
+            repEle->SetAttribute(MIMETYPE, MIMETYPE_VALUE); //?
+            repEle->SetAttribute(CODECS, CODECS_VALUE);
+            repEle->SetAttribute(WIDTH, mainWidth);
+            repEle->SetAttribute(HEIGHT, mainHeight);
+            memset_s(string, 1024, 0);
+            snprintf(string, 1024, "%ld/%ld", m_frameRate.num, m_frameRate.den);
+            repEle->SetAttribute(FRAMERATE, string);
+            repEle->SetAttribute(SAR, "1:1");
+            repEle->SetAttribute(STARTWITHSAP, 1);
+            asEle->InsertEndChild(repEle);
 
-        XMLElement *segTleEle1 = m_xmlDoc->NewElement(SEGMENTTEMPLATE);
-        segTleEle1->SetAttribute(TIMESCALE, m_timeScale);
-        segTleEle1->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
-        segTleEle1->SetAttribute(MEDIA, "track0_$Number$.m4s");
-        segTleEle1->SetAttribute(STARTNUMBER, 1);
-        repEle->InsertEndChild(segTleEle1);
+            XMLElement *segTleEle1 = m_xmlDoc->NewElement(SEGMENTTEMPLATE);
+            segTleEle1->SetAttribute(TIMESCALE, m_timeScale);
+            segTleEle1->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
+            segTleEle1->SetAttribute(MEDIA, "track0_$Number$.m4s");
+            segTleEle1->SetAttribute(STARTNUMBER, 1);
+            repEle->InsertEndChild(segTleEle1);
+        }
+        else
+        {
+            XMLElement *essentialEle1 = m_xmlDoc->NewElement(ESSENTIALPROPERTY);
+            essentialEle1->SetAttribute(SCHEMEIDURI, SCHEMEIDURI_SRD);
+            essentialEle1->SetAttribute(COMMON_VALUE, "1,0,0,0,0");
+            asEle->InsertEndChild(essentialEle1);
+
+            XMLElement *supplementalEle = m_xmlDoc->NewElement(SUPPLEMENTALPROPERTY);
+            supplementalEle->SetAttribute(SCHEMEIDURI, SCHEMEIDURI_2DQR);
+            //supplementalEle->SetAttribute(COMMON_VALUE, "1,0,0,0,0");
+            asEle->InsertEndChild(supplementalEle);
+
+            XMLElement *twoDQualityEle = m_xmlDoc->NewElement(OMAF_TWOD_REGIONQUALITY);
+            //shpQualityEle->SetAttribute(SHAPE_TYPE, trackSegCtx.codedMeta.qualityRankCoverage.get().shapeType);
+            //shpQualityEle->SetAttribute(REMAINING_AREA_FLAG, trackSegCtx.codedMeta.qualityRankCoverage.get().remainingArea);
+            //shpQualityEle->SetAttribute(QUALITY_RANKING_LOCAL_FLAG, false);
+            //shpQualityEle->SetAttribute(QUALITY_TYPE, trackSegCtx.codedMeta.qualityRankCoverage.get().qualityType);
+            //shpQualityEle->SetAttribute(DEFAULT_VIEW_IDC, 0);
+            supplementalEle->InsertEndChild(twoDQualityEle);
+
+            uint32_t currQualityRanking = 1;
+            for (currQualityRanking = 1; currQualityRanking <= m_vsNum; currQualityRanking++)
+            {
+                std::map<MediaStream*, TrackSegmentCtx*>::iterator itStr;
+                for (itStr = m_streamSegCtx->begin(); itStr != m_streamSegCtx->end(); itStr++)
+                {
+                    MediaStream *stream = itStr->first;
+                    if (stream && (stream->GetMediaType() == VIDEOTYPE))
+                    {
+                        VideoStream *vs = (VideoStream*)stream;
+                        TrackSegmentCtx *segCtx = itStr->second;
+                        if (segCtx && (segCtx->qualityRanking == currQualityRanking))
+                        {
+                            uint16_t width = vs->GetSrcWidth();
+                            uint16_t height = vs->GetSrcHeight();
+                            uint8_t  tileRows = vs->GetTileInCol();
+                            uint8_t  tileCols = vs->GetTileInRow();
+                            uint16_t tileWidth = width / tileCols;
+                            uint16_t tileHeight = height / tileRows;
+
+                            XMLElement *qualityEle = m_xmlDoc->NewElement(OMAF_QUALITY_INFO);
+                            qualityEle->SetAttribute(QUALITY_RANKING, currQualityRanking);
+                            qualityEle->SetAttribute(ORIGWIDTH, width);
+                            qualityEle->SetAttribute(ORIGHEIGHT, height);
+                            qualityEle->SetAttribute(REGIONWIDTH, tileWidth);
+                            qualityEle->SetAttribute(REGIONHEIGHT, tileHeight);
+                            twoDQualityEle->InsertEndChild(qualityEle);
+
+                            break;
+                        }
+                    }
+                }
+            }
+
+            XMLElement *repEle = m_xmlDoc->NewElement(REPRESENTATION);
+            repEle->SetAttribute(INDEX, 0);
+            repEle->SetAttribute(MIMETYPE, MIMETYPE_VALUE); //?
+            repEle->SetAttribute(CODECS, CODECS_VALUE);
+            repEle->SetAttribute(WIDTH, mainWidth);
+            repEle->SetAttribute(HEIGHT, mainHeight);
+            memset_s(string, 1024, 0);
+            snprintf(string, 1024, "%ld/%ld", m_frameRate.num, m_frameRate.den);
+            repEle->SetAttribute(FRAMERATE, string);
+            repEle->SetAttribute(SAR, "1:1");
+            repEle->SetAttribute(STARTWITHSAP, 1);
+            asEle->InsertEndChild(repEle);
+
+            XMLElement *segTleEle1 = m_xmlDoc->NewElement(SEGMENTTEMPLATE);
+            segTleEle1->SetAttribute(TIMESCALE, m_timeScale);
+            segTleEle1->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
+            segTleEle1->SetAttribute(MEDIA, "track0_$Number$.m4s");
+            segTleEle1->SetAttribute(STARTNUMBER, 1);
+            repEle->InsertEndChild(segTleEle1);
+        }
     }
 
     std::map<MediaStream*, TrackSegmentCtx*>::iterator itTrackCtx;
