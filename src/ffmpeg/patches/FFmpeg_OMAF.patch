@@ -723,7 +723,7 @@ diff -urN FFmpeg/libavcodec/codec_id.h FFmpeg-patched/libavcodec/codec_id.h
 diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/distributed_encoder.c
 --- FFmpeg/libavcodec/distributed_encoder.c	1970-01-01 08:00:00.000000000 +0800
 +++ FFmpeg-patched/libavcodec/distributed_encoder.c	2020-09-27 13:35:13.193526565 +0800
-@@ -0,0 +1,695 @@
+@@ -0,0 +1,699 @@
 +/*
 +* Scalable Video Technology for distributed encoder library plugin
 +*
@@ -954,6 +954,10 @@ diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/dist
 +    else if (0 == strncmp(deCxt->proj_type, "Cube", 4))
 +    {
 +        projInfo.type = E_CUBEMAP_PROJECTION;
++    }
++    else if (0 == strncmp(deCxt->proj_type, "Planar", 6))
++    {
++        projInfo.enable = false;
 +    }
 +    else
 +    {
@@ -4793,7 +4797,7 @@ diff -urN FFmpeg/libavformat/Makefile FFmpeg-patched/libavformat/Makefile
 diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_packing_enc.c
 --- FFmpeg/libavformat/omaf_packing_enc.c	1970-01-01 08:00:00.000000000 +0800
 +++ FFmpeg-patched/libavformat/omaf_packing_enc.c	2020-09-27 13:35:13.543526537 +0800
-@@ -0,0 +1,691 @@
+@@ -0,0 +1,728 @@
 +/*
 + * Intel tile Dash muxer
 + *
@@ -4859,9 +4863,13 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +    int            window_size;
 +    int            extra_window_size;
 +    int            has_extractor;
-+    const char     *pluginPath;
-+    const char     *pluginName;
++    const char     *packingPluginPath;
++    const char     *packingPluginName;
 +    bool           fixedPackedPicRes;
++    const char     *videoPluginPath;
++    const char     *videoPluginName;
++    const char     *audioPluginPath;
++    const char     *audioPluginName;
 +    int            need_buffered_frames;
 +    uint16_t       extractors_per_thread;
 +    int64_t        seg_duration;
@@ -5003,16 +5011,37 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +        }
 +    }
 +
++    if (initInfo->bsNumVideo > 2)
++    {
++        c->has_extractor = 0;
++    }
++
++    initInfo->videoProcessPluginPath = c->videoPluginPath;
++    initInfo->videoProcessPluginName = c->videoPluginName;
++
++    if (initInfo->bsNumAudio)
++    {
++        if ((0 == strncmp(c->audioPluginPath, "NULL", 4)) ||
++            (0 == strncmp(c->audioPluginName, "NULL", 4)))
++        {
++            av_log(s, AV_LOG_ERROR, "No audio stream process plugin is set but there is indeed audio stream input !\n");
++            return AVERROR_INVALIDDATA;
++        }
++
++        initInfo->audioProcessPluginPath = c->audioPluginPath;
++        initInfo->audioProcessPluginName = c->audioPluginName;
++    }
++
 +    if (c->has_extractor)
 +    {
-+        initInfo->pluginPath = c->pluginPath;
++        initInfo->packingPluginPath = c->packingPluginPath;
 +        if (initInfo->bsNumVideo == 1)
 +        {
-+            initInfo->pluginName = "SingleVideoPacking";
++            initInfo->packingPluginName = "SingleVideoPacking";
 +        }
 +        else if (initInfo->bsNumVideo == 2)
 +        {
-+            initInfo->pluginName = c->pluginName;
++            initInfo->packingPluginName = c->packingPluginName;
 +        }
 +        else
 +        {
@@ -5023,8 +5052,8 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +    }
 +    else
 +    {
-+        initInfo->pluginPath = NULL;
-+        initInfo->pluginName = NULL;
++        initInfo->packingPluginPath = NULL;
++        initInfo->packingPluginName = NULL;
 +        initInfo->fixedPackedPicRes = false;
 +    }
 +
@@ -5067,6 +5096,10 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +    {
 +        initInfo->viewportInfo->inGeoType = E_SVIDEO_CUBEMAP;
 +    }
++    else if (0 == strncmp(c->proj_type, "Planar", 6))
++    {
++        initInfo->viewportInfo->inGeoType = E_SVIDEO_PLANAR;
++    }
 +
 +    initInfo->segmentationInfo = (SegmentationInfo*)malloc(sizeof(SegmentationInfo));
 +    if (!(initInfo->segmentationInfo))
@@ -5101,6 +5134,10 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +    else if (0 == strncmp(c->proj_type, "Cube", 4))
 +    {
 +        initInfo->projType = E_SVIDEO_CUBEMAP;
++    }
++    else if (0 == strncmp(c->proj_type, "Planar", 6))
++    {
++        initInfo->projType = E_SVIDEO_PLANAR;
 +    }
 +
 +    if (initInfo->projType == E_SVIDEO_CUBEMAP)
@@ -5455,8 +5492,12 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +    { "need_buffered_frames", "needed buffered frames number before packing starts", OFFSET(need_buffered_frames), AV_OPT_TYPE_INT, { .i64 = 15 }, 0, INT_MAX, E },
 +    { "extractors_per_thread", "extractor tracks per segmentation thread", OFFSET(extractors_per_thread), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, INT_MAX, E },
 +    { "has_extractor", "Enable/Disable OMAF extractor tracks", OFFSET(has_extractor), AV_OPT_TYPE_INT, { .i64 = 1 }, 0, INT_MAX, E },
-+    { "plugin_path", "OMAF Packing plugin path", OFFSET(pluginPath), AV_OPT_TYPE_STRING, {.str = "/usr/local/lib"}, 0, 0, E },
-+    { "plugin_name", "OMAF Packing plugin name", OFFSET(pluginName), AV_OPT_TYPE_STRING, {.str = "HighResPlusFullLowResPacking"}, 0, 0, E },
++    { "packing_plugin_path", "OMAF Packing plugin path", OFFSET(packingPluginPath), AV_OPT_TYPE_STRING, {.str = "/usr/local/lib"}, 0, 0, E },
++    { "packing_plugin_name", "OMAF Packing plugin name", OFFSET(packingPluginName), AV_OPT_TYPE_STRING, {.str = "HighResPlusFullLowResPacking"}, 0, 0, E },
++    { "video_plugin_path", "Video stream process plugin path", OFFSET(videoPluginPath), AV_OPT_TYPE_STRING, {.str = "/usr/local/lib"}, 0, 0, E },
++    { "video_plugin_name", "Video stream process plugin name", OFFSET(videoPluginName), AV_OPT_TYPE_STRING, {.str = "HevcVideoStreamProcess"}, 0, 0, E },
++    { "audio_plugin_path", "Audio stream process plugin path", OFFSET(audioPluginPath), AV_OPT_TYPE_STRING, {.str = "NULL"}, 0, 0, E },
++    { "audio_plugin_name", "Audio stream process plugin name", OFFSET(audioPluginName), AV_OPT_TYPE_STRING, {.str = "NULL"}, 0, 0, E },
 +    { "fixed_extractors_res", "whether extractor track needs the fixed resolution", OFFSET(fixedPackedPicRes), AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, E },
 +    { "need_external_log", "whether external log callback is needed", OFFSET(need_external_log), AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, E },
 +    { "min_log_level", "Minimal log level of output [0: INFO, 1: WARNING, 2: ERROR, 3: FATAL]", OFFSET(min_log_level), AV_OPT_TYPE_INT, { .i64 = 2 }, 0, 3, E },
