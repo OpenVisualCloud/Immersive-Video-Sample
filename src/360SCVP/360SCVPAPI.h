@@ -484,6 +484,9 @@ typedef struct PARAM_STREAMSTITCHINFO
 //! \param    paramPicInfo,       input,    the param for the picture,just used in the usedType=0 & 1
 //! \param    paramViewPort,      input,    the param for the viewport, just used in the usedType=1
 //! \param    paramStitchInfo,    input,    the param for the streamStitch, just used in the usedType=0
+//! \param    sourceResolutionNum,input,    the number of high res stream for usages of multi stream, Pan-zoom for instance
+//! \param    accessInterval,     input,    the time interval of every tile selection interface is called, expressed in milisecond
+//! \param    pStreamInfo,        input,    the param for the stream information of multi-stream usage
 //! \param    destWidth,          input,    the width for the destination output area, just used in the usedType=2
 //! \param    destHeight,         input,    the height for the destination output area, just used in the usedType=2
 //! \param    frameWidth,         input,    the width of the frame, just used in the usedType=E_MERGE_AND_VIEWPORT
@@ -507,6 +510,7 @@ typedef struct PARAM_360SCVP
     Param_ViewPortInfo     paramViewPort;
     param_streamStitchInfo paramStitchInfo;
     int32_t                sourceResolutionNum;
+    float                  accessInterval;
     Stream_Info           *pStreamInfo;
     int32_t                destWidth;
     int32_t                destHeight;
