@@ -38,12 +38,51 @@
 extern "C" {
 #endif
 
+//!
+//! \brief  This enum expresses the planar video viewport mode
+//!
+//! ORIENT_NONE,    no moving or scaling
+//! ORIENT_ZOOMIN,  zoom-in mode
+//! ORIENT_ZOOMOUT, zoom-out mode
+//! ORIENT_MOVE,    move viewport in parallel to the image surface
+//!
+typedef enum {
+  ORIENT_NONE = 0,
+  ORIENT_ZOOMIN = 1,
+  ORIENT_ZOOMOUT = 2,
+  ORIENT_MOVE = 3,
+} ViewOrientMode;
+
+//!
+//! \brief  This structure is for the planar video orientation
+//!
+//! \param    orientation,    input,     moving direction vector in angle counter clockwise. Zero is for the right
+//! \param    mode,           input,     orientation mode to indicate which viewport mode is currently applied
+//!
+typedef struct VIEWORIENT {
+  float orientation; //[0,2 * PI)
+  ViewOrientMode mode;
+} ViewOrient;
+
+//!
+//! \brief  This structure is for the head pose parameters
+//!
+//! \param    yaw,           input,     the viewing angle yaw in degree
+//! \param    pitch,         input,     the viewing angle yaw in degree
+//! \param    centerX,       input,     the viewport center X-axis coordinate
+//! \param    centerY,       input,     the viewport center Y-axis coordinate
+//! \param    zoomFactor,    input,     the viewport zoom factor calculated by the viewport area divided by the maximum frame area
+//! \param    ViewOrient,    input,     the viewport orientation mode and moving direction as defined
+//! \param    speed,         input,     the viewport moving speed expressed by the portion of the maximum frame width
+//!
 typedef struct HEADPOSE {
   float    yaw;
   float    pitch;
   int32_t  centerX;
   int32_t  centerY;
   float    zoomFactor;
+  ViewOrient viewOrient;
+  float    speed;
   uint64_t pts;
 } HeadPose;
 
