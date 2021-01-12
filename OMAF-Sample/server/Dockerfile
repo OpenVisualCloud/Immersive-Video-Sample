@@ -12,7 +12,7 @@ ARG WORKDIR=/home/immersive
 # Install denpendency
 RUN yum install -y centos-release-scl-rh && \
     yum install -y wget git bzip2 xz sudo devtoolset-7-gcc* && \
-    wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-12.noarch.rpm && \
+    wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-13.noarch.rpm && \
     rpm -Uvh epel-release*rpm && \
     yum install -y openssl centos-release-scl scl-utils gmp gmp-devel && \
     yum install -y mpfr mpfr-devel libmpc libmpc-devel patch autoconf && \
@@ -157,12 +157,13 @@ RUN wget -O - ${THRIFT_REPO} | tar xz && \
     cd ${WORKDIR} && rm -rf ./thrift-${THRIFT_VER}*
 
 # Install Server FFmpeg Dependency
-RUN wget http://ffmpeg.org/releases/ffmpeg-4.3.1.tar.xz && \
-    tar xf ffmpeg-4.3.1.tar.xz && \
-    mv ffmpeg-4.3.1 FFmpeg && cd FFmpeg  && \
+RUN git clone https://github.com/FFmpeg/FFmpeg.git && \
+    cd FFmpeg && \
     source /opt/rh/devtoolset-7/enable && \
-    patch -p1 < ../ffmpeg/patches/FFmpeg_OMAF.patch && \
-    cd - && mkdir -p external/FFmpeg && cd external/FFmpeg && \
+    git checkout release/4.1 && \
+    git checkout c2ac3b8e6a040e33d53fa13548848c8ba981a8e4 && \
+    cd - && patch -p1 < ffmpeg/patches/FFmpeg_OMAF.patch && \
+    mkdir -p external/FFmpeg && cd external/FFmpeg && \
     ../../FFmpeg/configure --prefix=/usr --libdir=/usr/local/lib --enable-static --enable-shared --enable-gpl --enable-nonfree --disable-optimizations --disable-vaapi && \
     make -j `nproc` && \
     make install && \
@@ -173,7 +174,7 @@ RUN git clone https://github.com/OpenHEVC/openHEVC.git && \
     cd openHEVC && \
     source /opt/rh/devtoolset-7/enable && \
     git checkout ffmpeg_update && \
-    git am --whitespace=fix ../external/Update-buffer-operation-and-fix-stream-loop-coredump.patch && \
+    patch -p1 < ../external/ffmpeg_update_add_circle_list_for_to_free_frame.patch && \
     ./configure --libdir=/usr/lib64 --disable-sdl2 && \
     make -j `nproc` && \
     make install && \

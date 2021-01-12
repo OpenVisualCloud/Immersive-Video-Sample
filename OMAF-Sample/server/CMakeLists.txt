@@ -1,12 +1,11 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-IF(${TARGET} STREQUAL "build")
-    ADD_CUSTOM_TARGET(build_server ALL
-                      ${CMAKE_CURRENT_SOURCE_DIR}/deploy.sh
-                      ${CMAKE_CURRENT_SOURCE_DIR} ${HTTP_PROXY})
-ENDIF()
+ADD_CUSTOM_TARGET(build ALL
+                  ${CMAKE_CURRENT_SOURCE_DIR}/deploy.sh
+                  ${CMAKE_CURRENT_SOURCE_DIR} ${HTTP_PROXY})
 
-IF(${TARGET} STREQUAL "start")
-    ADD_CUSTOM_TARGET(build_server ALL
-                      ${CMAKE_CURRENT_SOURCE_DIR}/start.sh ${NODEIP})
-ENDIF()
+ADD_CUSTOM_TARGET(start ALL
+                  ${CMAKE_CURRENT_SOURCE_DIR}/start.sh)
+
+ADD_CUSTOM_TARGET(stop ALL
+                  ${CMAKE_CURRENT_SOURCE_DIR}/stop.sh)
