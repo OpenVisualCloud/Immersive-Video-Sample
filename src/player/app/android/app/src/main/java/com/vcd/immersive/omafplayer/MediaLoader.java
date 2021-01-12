@@ -16,6 +16,8 @@ import android.util.Pair;
 import android.view.Surface;
 
 import com.vcd.immersive.omafplayer.MediaPlayer.NativeMediaPlayer;
+import com.vcd.immersive.omafplayer.Rendering.CubeMapMesh;
+import com.vcd.immersive.omafplayer.Rendering.ERPMesh;
 import com.vcd.immersive.omafplayer.Rendering.Mesh;
 import com.vcd.immersive.omafplayer.Rendering.SceneRenderer;
 import com.vcd.immersive.omafplayer.Rendering.Utils;
@@ -77,6 +79,9 @@ public class MediaLoader {
     /** The 360 x 180 sphere has 15 degree quads. Increase these if lines in your video look wavy. */
     private static final int DEFAULT_SPHERE_ROWS = 12;
     private static final int DEFAULT_SPHERE_COLUMNS = 24;
+
+    private static final int PF_ERP = 0;
+    private static final int PF_CUBEMAP = 1;
 
     private final Context context;
     // This can be replaced by any media player that renders to a Surface. In a real app, this
@@ -141,14 +146,7 @@ public class MediaLoader {
         @Override
         protected Void doInBackground(Intent... intent) {
 
-            int stereoFormat = Mesh.MEDIA_MONOSCOPIC;
-
-            mesh = Mesh.createUvSphere(
-                    SPHERE_RADIUS_METERS, DEFAULT_SPHERE_ROWS, DEFAULT_SPHERE_COLUMNS,
-                    DEFAULT_SPHERE_VERTICAL_DEGREES, DEFAULT_SPHERE_HORIZONTAL_DEGREES,
-                    stereoFormat);
-
-            mediaPlayer = new NativeMediaPlayer();
+            mediaPlayer = new NativeMediaPlayer(context);
             Log.i(TAG, "Create native media player!");
             int ret = mediaPlayer.Initialize();
             if (ret != 0)
@@ -212,17 +210,48 @@ public class MediaLoader {
                 decodeSurface[i] = decoder_surface.second;
                 Log.i(TAG, "decode id in java " + decoder_surface.first);
             }
-            // 2. create native player and get display width and height
+            // 2. create native player and get display width and height and projection format
             int ret = mediaPlayer.Create("./config.xml");
             if (ret != 0)
             {
                 Log.e(TAG, "native media player create failed!");
                 return;
             }
-            // 3. get width / height and create display surface and set it to native player
+            // 3. create mesh according to PF
+            int stereoFormat = Mesh.MEDIA_MONOSCOPIC;
+            Mesh.MeshParams params = new Mesh.MeshParams();
+            int projFormat = mediaPlayer.GetProjectionFormat();
+            Log.i(TAG, "pf is " + projFormat);
+            if (projFormat == PF_CUBEMAP) {
+                mesh = CubeMapMesh.Create(params, context);
+                Log.i(TAG, "Create cubemap mesh!");
+            }
+            else {
+                params.radius = SPHERE_RADIUS_METERS;
+                params.latitudes = DEFAULT_SPHERE_ROWS;
+                params.longitudes = DEFAULT_SPHERE_COLUMNS;
+                params.vFOV = DEFAULT_SPHERE_VERTICAL_DEGREES;
+                params.hFOV = DEFAULT_SPHERE_HORIZONTAL_DEGREES;
+                params.mediaFormat = stereoFormat;
+                mesh = ERPMesh.Create(params);
+                Log.i(TAG, "Create ERP mesh!");
+                if (projFormat != PF_ERP) {
+                    Log.e(TAG, "Projection format is invalid! Default is ERP format!");
+                }
+            }
+            // 4. get width / height and create display surface and set it to native player
             int displayWidth = mediaPlayer.GetWidth();
             int displayHeight = mediaPlayer.GetHeight();
-            sceneRenderer.displayTexId = Utils.glCreateTexture(mediaPlayer.GetWidth(), mediaPlayer.GetHeight());
+            if (projFormat == PF_ERP) {
+                sceneRenderer.displayTexId = Utils.glCreateTextureFor2D(mediaPlayer.GetWidth(), mediaPlayer.GetHeight());
+                Log.i(TAG, "ERP Display texture id is " + sceneRenderer.displayTexId);
+            }else if (projFormat == PF_CUBEMAP) {
+                sceneRenderer.displayTexId = Utils.glCreateTextureForCube(mediaPlayer.GetWidth(), mediaPlayer.GetHeight());
+                Log.i(TAG, "Cubemap Display texture id is " + sceneRenderer.displayTexId);
+            }else {
+                sceneRenderer.displayTexId = 0;
+                Log.e(TAG, "Projection format is invalid! displayer texture id is set to zero!");
+            }
             sceneRenderer.displayTexture = new SurfaceTexture(sceneRenderer.displayTexId);
             checkGlError();
             Log.i(TAG, "display width is " + displayWidth + " display height is " + displayHeight);

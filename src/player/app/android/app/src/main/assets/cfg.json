@@ -1,0 +1,19 @@
+{
+    "windowWidth": 960,
+    "windowHeight": 960,
+    "url": "http://xxx.xxx.xxx.xxx:xxx/OMAFLive_8k/Test.mpd",
+    "sourceType": 0,
+    "enableExtractor": false,
+    "viewportHFOV": 80,
+    "viewportVFOV": 80,
+    "viewportWidth": 960,
+    "viewportHeight": 960,
+    "cachePath": "sdcard/Android/data/tmp/",
+    "maxVideoDecodeWidth": 4096,
+    "maxVideoDecodeHeight": 2304,
+    "predict": {
+        "enable": false,
+        "name": "",
+        "path": ""
+    }
+}

@@ -117,6 +117,8 @@ public:
 
     uint32_t GetHeight() { return m_mediaSource->GetMediaInfo().mVideoInfo[0].height; };
 
+    int32_t GetProjectionFormat() { return m_mediaSource->GetMediaInfo().mVideoInfo[0].mProjFormat; };
+
     int UpdateDisplayTex(int render_count)
     {
         m_renderManager->UpdateFrames(render_count);
@@ -129,6 +131,8 @@ public:
     };
 
     void SetDisplaySurface(int tex_id) { m_renderManager->SetOutputTexture(tex_id); };
+
+    int* GetTransformType() { return m_renderManager->GetTransformTypeArray(); };
 
 private:
     MediaPlayer_Android& operator=(const MediaPlayer_Android& other) { return *this; };

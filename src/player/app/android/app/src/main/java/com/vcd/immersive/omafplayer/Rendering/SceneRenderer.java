@@ -78,6 +78,8 @@ public final class SceneRenderer {
     private Orientation controllerOrientation;
     // This is accessed on the binder & GL Threads.
     private final float[] controllerOrientationMatrix = new float[16];
+    boolean hasTransformTypeSent = false;
+    int[] transformType = null;
 
     /**
      * Constructs the SceneRenderer with the given values.
@@ -290,11 +292,15 @@ public final class SceneRenderer {
             ret = mediaPlayer.UpdateDisplayTex(renderCount);
             if (ret == 0) renderCount++;
             checkGlError();
+            if (ret == 0 && !hasTransformTypeSent) {
+                transformType = mediaPlayer.GetTransformType();
+                hasTransformTypeSent = true;
+            }
             long drawTimeEnd = System.currentTimeMillis();
             Log.e(TAG, "draw time is " + drawTimeEnd);
         }
         Log.i(TAG, "begin to draw mesh!");
-        displayMesh.glDraw(viewProjectionMatrix, eyeType);
+        displayMesh.glDraw(viewProjectionMatrix, eyeType, transformType);
         if (videoUiView != null) {
             canvasQuad.glDraw(viewProjectionMatrix, videoUiView.getAlpha());
         }

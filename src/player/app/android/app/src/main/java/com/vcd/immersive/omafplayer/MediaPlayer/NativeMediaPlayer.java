@@ -24,8 +24,20 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package com.vcd.immersive.omafplayer.MediaPlayer;
+import android.content.Context;
+import android.content.res.AssetManager;
 import android.util.Log;
 import android.view.Surface;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+
+import java.io.IOException;
+
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 
 
 public class NativeMediaPlayer {
@@ -35,6 +47,7 @@ public class NativeMediaPlayer {
     private int status = 0;
     public final int MAX_DECODE_WIDTH = 4096;
     public final int MAX_DECODE_HEIGHT = 2304;
+    private Context context;
 
     static {
         System.loadLibrary("MediaPlayer");
@@ -174,6 +187,11 @@ public class NativeMediaPlayer {
      */
     public native int GetHeight(long hdl);
     /**
+     * Original signature : <code>uint32_t GetProjectionFormat(Handler)</code><br>
+     * <i>native declaration : line 108</i>
+     */
+    public native int GetProjectionFormat(long hdl);
+    /**
      * Original signature : <code>void SetDecodeSurface(Handler, Surface, int, int)</code><br>
      * <i>native declaration : line 110</i>
      */
@@ -188,11 +206,18 @@ public class NativeMediaPlayer {
      * <i>native declaration : line 110</i>
      */
     public native int UpdateDisplayTex(long hdl, int render_count);
+    /**
+     * Original signature : <code>int GetTransformType(Handler)</code><br>
+     * <i>native declaration : line 110</i>
+     */
+    public native int[] GetTransformType(long hdl);
 
-    public NativeMediaPlayer()
+    public NativeMediaPlayer(Context text)
     {
         mHandler = 0;
         mConfig = null;
+        context = text;
+        ParseXmlConfig();
     }
 
     public int Initialize()
@@ -207,28 +232,59 @@ public class NativeMediaPlayer {
         return 0;
     }
 
-    private int ParseXmlConfig(String config_url)
+    private String GetCfgJson()
     {
-        mConfig = new RenderConfig();
-        mConfig.windowHeight = 960;
-        mConfig.windowWidth = 960;
-        mConfig.url = "http://192.168.43.166:8080/8kvod_1217/Test.mpd";
-        mConfig.sourceType = 0;
-        mConfig.viewportHFOV = 80;
-        mConfig.viewportVFOV = 80;
-        mConfig.viewportWidth = 960;
-        mConfig.viewportHeight = 960;
+        StringBuilder stringBuilder = new StringBuilder();
+        AssetManager assetManager = context.getAssets();
 
-        mConfig.cachePath = "sdcard/Android/data/tmp/";
-        mConfig.enableExtractor = false;
-        mConfig.enablePredictor = false;
-        mConfig.predictPluginName = "";
-        mConfig.libPath = "";
-        mConfig.projFormat = 0;
-        mConfig.renderInterval = 25;
-        mConfig.minLogLevel = 0;
-        mConfig.maxVideoDecodeWidth = MAX_DECODE_WIDTH;
-        mConfig.maxVideoDecodeHeight = MAX_DECODE_HEIGHT;
+        try {
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
+                    assetManager.open("cfg.json"), "utf-8"
+            ));
+            String jsonLines;
+            while ((jsonLines = bufferedReader.readLine()) != null) {
+                stringBuilder.append(jsonLines);
+            }
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return stringBuilder.toString();
+    }
+
+    private int ParseXmlConfig()
+    {
+        String cfgJsonStr = GetCfgJson();
+        JSONObject cfgJsonObject = null;
+        try {
+            cfgJsonObject = new JSONObject(cfgJsonStr);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        mConfig = new RenderConfig();
+        try {
+            mConfig.windowHeight = cfgJsonObject.getInt("windowHeight");
+            mConfig.windowWidth = cfgJsonObject.getInt("windowWidth");
+            mConfig.url = cfgJsonObject.getString("url");
+            mConfig.sourceType = cfgJsonObject.getInt("sourceType");
+            mConfig.viewportHFOV = cfgJsonObject.getInt("viewportHFOV");
+            mConfig.viewportVFOV = cfgJsonObject.getInt("viewportVFOV");
+            mConfig.viewportWidth = cfgJsonObject.getInt("viewportWidth");
+            mConfig.viewportHeight = cfgJsonObject.getInt("viewportHeight");
+
+            mConfig.cachePath = cfgJsonObject.getString("cachePath");
+            mConfig.enableExtractor = cfgJsonObject.getBoolean("enableExtractor");
+            String predictStr = cfgJsonObject.getString("predict");
+            JSONObject predictObj = new JSONObject(predictStr);
+            mConfig.enablePredictor = predictObj.getBoolean("enable");
+            mConfig.predictPluginName = predictObj.getString("name");
+            mConfig.libPath = predictObj.getString("path");
+            mConfig.maxVideoDecodeWidth = cfgJsonObject.getInt("maxVideoDecodeWidth");
+            mConfig.maxVideoDecodeHeight = cfgJsonObject.getInt("maxVideoDecodeHeight");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         return 0;
     }
 
@@ -237,11 +293,6 @@ public class NativeMediaPlayer {
         if (mHandler == 0)
         {
             Log.e(TAG, "Native media player is invalid!");
-            return -1;
-        }
-        if (ParseXmlConfig(config_url) != 0)
-        {
-            Log.e(TAG, "Failed to parse configuration xml file!");
             return -1;
         }
         return Create(mHandler, mConfig);
@@ -368,6 +419,16 @@ public class NativeMediaPlayer {
         return GetHeight(mHandler);
     }
 
+    public int GetProjectionFormat()
+    {
+        if (mHandler == 0)
+        {
+            Log.e(TAG, "Native media player is invalid!");
+            return -1;
+        }
+        return GetProjectionFormat(mHandler);
+    }
+
     public void SetDecodeSurface(Surface surface, int texId, int video_id)
     {
         if (mHandler == 0)
@@ -396,5 +457,15 @@ public class NativeMediaPlayer {
             return -1;
         }
         return UpdateDisplayTex(mHandler, count);
+    }
+
+    public int[] GetTransformType()
+    {
+        if (mHandler == 0)
+        {
+            Log.e(TAG, "Native media player is invalid!");
+            return null;
+        }
+        return GetTransformType(mHandler);
     }
 }
