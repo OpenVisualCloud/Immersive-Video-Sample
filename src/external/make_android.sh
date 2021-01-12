@@ -25,12 +25,13 @@ make -j && \
 sudo make install
 
 cd ../player/player_lib && \
-cmake ../../../../player/player_lib -DUSE_OMAF=ON -DANDROID_OS=ON -DDEBUG=NO -DCMAKE_TOOLCHAIN_FILE=${NDK_r18b_PATH}/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_TOOLCHAIN=aarch64-linux-android-4.9 -DANDROID_PLATFORM=android-21 -DANDROID_STD=c++_shared && \
+cmake ../../../../player/player_lib -DUSE_OMAF=ON -DANDROID_OS=ON -DDEBUG=NO -DCMAKE_TOOLCHAIN_FILE=../${NDK_r18b_PATH}/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_TOOLCHAIN=aarch64-linux-android-4.9 -DANDROID_PLATFORM=android-21 -DANDROID_STD=c++_shared && \
 make -j && \
 sudo make install
 
 cd ../../../../
 
+mkdir -p ./player/app/android/app/src/main/jniLibs/arm64-v8a/
 sudo cp /usr/local/lib/libcurl.so ./player/app/android/app/src/main/jniLibs/arm64-v8a/
 sudo cp /usr/local/lib/libsafestring_shared.so ./player/app/android/app/src/main/jniLibs/arm64-v8a/
 sudo cp /usr/local/lib/libssl.so ./player/app/android/app/src/main/jniLibs/arm64-v8a/

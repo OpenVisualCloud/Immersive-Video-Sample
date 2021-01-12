@@ -38,7 +38,10 @@
 #include "EGLRenderContext.h"
 #include "ERPRender.h"
 #include "ERPRenderTarget.h"
+#ifdef _ANDROID_OS_
 #include "ERPRenderTarget_hw.h"
+#include "CubeMapRenderTarget_android.h"
+#endif
 #ifdef _LINUX_OS_
 #include "../../app/linux/GLFWRenderContext.h"
 #endif
@@ -183,7 +186,12 @@ RenderStatus RenderManager::CreateRenderTarget(int32_t projFormat) {
     case PT_CUBEMAP:
 #endif
     {
+#ifdef _ANDROID_OS_
+      m_renderTarget = new CubeMapRenderTarget_android();
+#endif
+#ifdef _LINUX_OS_
       m_renderTarget = new CubeMapRenderTarget();
+#endif
       if (nullptr == m_renderTarget) {
         LOG(ERROR) << "CubeMap render target creation failed" << std::endl;
         return RENDER_ERROR;

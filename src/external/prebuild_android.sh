@@ -58,3 +58,4 @@ cd ../../../external
 ./openssl_arm64.sh
 ./curl_arm64.sh
 cd ../build/external/android && sudo cp ./curl-output/arm64-v8a/lib/libcurl.so /usr/local/lib/
+cp ./android-ndk-r14b/platforms/android-19/arch-arm/usr/include/sys/timeb.h ./android-ndk-r18b/sysroot/usr/include/sys/

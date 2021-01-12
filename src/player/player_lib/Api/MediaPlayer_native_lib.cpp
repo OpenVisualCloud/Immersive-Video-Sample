@@ -238,6 +238,13 @@ Java_com_vcd_immersive_omafplayer_MediaPlayer_NativeMediaPlayer_GetHeight(JNIEnv
     return (jint)pPlayer->GetHeight();
 }
 
+JNIEXPORT jint JNICALL
+Java_com_vcd_immersive_omafplayer_MediaPlayer_NativeMediaPlayer_GetProjectionFormat(JNIEnv *env, jobject thiz,
+                                                                          jlong hdl) {
+    VCD::VRVideo::MediaPlayer_Android* pPlayer = (VCD::VRVideo::MediaPlayer_Android* )hdl;
+    return (jint)pPlayer->GetProjectionFormat();
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_vcd_immersive_omafplayer_MediaPlayer_NativeMediaPlayer_SetDecodeSurface(JNIEnv *env,
@@ -270,6 +277,20 @@ Java_com_vcd_immersive_omafplayer_MediaPlayer_NativeMediaPlayer_UpdateDisplayTex
                                                                                  jint render_count) {
     VCD::VRVideo::MediaPlayer_Android* pPlayer = (VCD::VRVideo::MediaPlayer_Android* )hdl;
     return pPlayer->UpdateDisplayTex(render_count);
+}
+
+JNIEXPORT jintArray JNICALL
+Java_com_vcd_immersive_omafplayer_MediaPlayer_NativeMediaPlayer_GetTransformType(JNIEnv *env,
+                                                                                 jobject thiz,
+                                                                                 jlong hdl) {
+    VCD::VRVideo::MediaPlayer_Android* pPlayer = (VCD::VRVideo::MediaPlayer_Android* )hdl;
+    jintArray transform_type_arr;
+    int face_num = 6;
+    transform_type_arr = env->NewIntArray(face_num);
+    int* data = pPlayer->GetTransformType();
+    env->SetIntArrayRegion(transform_type_arr, 0, face_num, data);
+    SAFE_DELETE(data);
+    return transform_type_arr;
 }
 
 #ifdef __cplusplus

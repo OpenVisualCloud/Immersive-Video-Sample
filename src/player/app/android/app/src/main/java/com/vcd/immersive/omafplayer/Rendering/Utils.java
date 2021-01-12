@@ -91,6 +91,14 @@ public class Utils {
 
         return buffer;
     }
+    /** Allocates a ByteBuffer with the given data. */
+    public static ByteBuffer createByteBuffer(byte[] coords) {
+        ByteBuffer buffer = ByteBuffer.allocateDirect(coords.length);
+        buffer.order(ByteOrder.nativeOrder());
+        buffer.put(coords);
+        buffer.position(0);
+        return buffer;
+    }
 
     /**
      * Creates a GL_TEXTURE_EXTERNAL_OES with default configuration of GL_LINEAR filtering and
@@ -112,7 +120,7 @@ public class Utils {
         return texId[0];
     }
 
-    public static int glCreateTexture(int width, int height) {
+    public static int glCreateTextureFor2D(int width, int height) {
         int[] texId = new int[1];
         GLES20.glGenTextures(1, IntBuffer.wrap(texId));
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texId[0]);
@@ -125,6 +133,33 @@ public class Utils {
                 GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
         GLES20.glTexParameteri(
                 GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+        checkGlError();
+        return texId[0];
+    }
+
+    public static int glCreateTextureForCube(int width, int height) {
+        int[] texId = new int[1];
+        GLES20.glGenTextures(1, IntBuffer.wrap(texId));
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_CUBE_MAP, texId[0]);
+        //for cube map, face size is 6 (LEFT, FRONT, RIGHT, BACK, TOP, BOTTOM), and (row,col) = (2,3)
+        int face_size = 6;
+        int cube_map_col = 3;
+        int cube_map_row = 2;
+        width = width / cube_map_col;
+        height = height / cube_map_row;
+        Log.i(TAG, "face width is " + width + " face height is " + height);
+        for (int i = 0; i < face_size; i++){
+            GLES20.glTexImage2D(GLES20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GLES20.GL_RGB, width, height, 0, GLES20.GL_RGB, GLES20.GL_UNSIGNED_BYTE, null);
+        }
+        checkGlError();
+        GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_CUBE_MAP, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_CUBE_MAP, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_CUBE_MAP, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+        GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_CUBE_MAP, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
         checkGlError();
         return texId[0];
     }

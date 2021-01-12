@@ -139,6 +139,22 @@ public:
 
     void SetOutputTexture(uint32_t tex_id);
 
+    int* GetTransformTypeArray()
+    {
+        int face_num = 6;
+        int* data = new int[face_num];
+        std::map<uint32_t, uint8_t> transform_type = m_renderTarget->GetTransformType();
+
+        for (auto it : transform_type)
+        {
+            if (it.first >=0 && it.first < face_num)
+            {
+                data[it.first] = it.second;
+            }
+        }
+        return data;
+    };
+
 private:
     //!
     //! \brief  Create the SurfaceRender
