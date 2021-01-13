@@ -42,6 +42,7 @@
 #include "ERPRenderTarget_hw.h"
 #include "CubeMapRenderTarget_android.h"
 #endif
+#include "PlanarRender.h"
 #ifdef _LINUX_OS_
 #include "../../app/linux/GLFWRenderContext.h"
 #endif
@@ -134,6 +135,14 @@ RenderStatus RenderManager::Initialize(MediaSource *source, RenderSourceFactory 
 
   m_renderConfig.projFormat = vi.mProjFormat;
   m_renderConfig.renderInterval = 1000 * vi.framerate_den / vi.framerate_num;
+
+  if (m_renderContext != nullptr)
+  {
+    m_renderContext->SetProjectionFormat(m_renderConfig.projFormat);
+    m_renderContext->SetRenderInterval(m_renderConfig.renderInterval);
+    m_renderContext->SetRowAndColInfo(vi.sourceHighTileRow, vi.sourceHighTileCol);
+  }
+
 #ifdef _LINUX_OS_
   // initial SurfaceRender and shaders
   if (CreateRender(m_renderConfig.projFormat) != RENDER_STATUS_OK) {
@@ -164,6 +173,7 @@ RenderStatus RenderManager::CreateRenderTarget(int32_t projFormat) {
   switch (projFormat) {
 #ifndef LOW_LATENCY_USAGE
     case VCD::OMAF::PF_ERP:
+    case VCD::OMAF::PF_PLANAR:
 #else
     case PT_ERP:
 #endif
@@ -235,29 +245,33 @@ RenderStatus RenderManager::CreateRender(int32_t projFormat) {
       }
       break;
     }
-
+#ifndef LOW_LATENCY_USAGE
+    case VCD::OMAF::PF_PLANAR:
+    {
+      m_surfaceRender = new PlanarRender();
+      if (nullptr == m_surfaceRender) {
+        LOG(ERROR) << "ERPRender creation failed" << std::endl;
+        return RENDER_ERROR;
+      }
+      break;
+    }
     default:
       return RENDER_ERROR;
   }
+#endif
 #endif
   return RENDER_STATUS_OK;
 }
 
 bool RenderManager::IsEOS() { return m_mediaSource->IsEOS() || !(m_renderContext->isRunning()); }
 
-RenderStatus RenderManager::ChangeViewport(float yaw, float pitch, uint64_t pts) {
-  HeadPose pose = {0};
-  pose.yaw = yaw;
-  pose.pitch = pitch;
-  pose.pts = pts;
+RenderStatus RenderManager::ChangeViewport(HeadPose *pose, uint64_t pts) {
+  pose->pts = pts;
   m_mediaSource->ChangeViewport(pose);
   return RENDER_STATUS_OK;
 }
 
-RenderStatus RenderManager::SetViewport(float yaw, float pitch) {
-  HeadPose pose;
-  pose.yaw = yaw;
-  pose.pitch = pitch;
+RenderStatus RenderManager::SetViewport(HeadPose *pose) {
   ScopeLock lock(m_poseLock);
   m_viewPortManager->SetViewPort(pose);
 
@@ -276,8 +290,8 @@ struct RenderConfig RenderManager::GetRenderConfig() {
   return m_renderConfig;
 }
 
-void RenderManager::GetStatusAndPose(float *yaw, float *pitch, uint32_t *status) {
-  m_renderContext->GetStatusAndPose(yaw, pitch, status);
+void RenderManager::GetStatusAndPose(HeadPose *pose, uint32_t *status) {
+  m_renderContext->GetStatusAndPose(pose, status);
 }
 
 void RenderManager::SetOutputTexture(uint32_t texture)

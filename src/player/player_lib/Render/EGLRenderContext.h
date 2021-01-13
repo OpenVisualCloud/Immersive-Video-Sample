@@ -80,7 +80,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus GetStatusAndPose(float *yaw, float *pitch, uint32_t* status);
+    virtual RenderStatus GetStatusAndPose(HeadPose *pose, uint32_t* status);
     //! \brief initialize render context
     //!
     //! \return RenderStatus

@@ -118,7 +118,9 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   pCtxDashStreaming->omaf_params.synchronizer_params.segment_range_size = 20;  // 20
   pCtxDashStreaming->omaf_params.max_decode_width = renderConfig.maxVideoDecodeWidth;
   pCtxDashStreaming->omaf_params.max_decode_height = renderConfig.maxVideoDecodeHeight;
-
+  PluginDef def;
+  def.pluginLibPath = renderConfig.pathof360SCVPPlugin;
+  pCtxDashStreaming->plugin_def = def;
   m_handler = OmafAccess_Init(pCtxDashStreaming);
   if (NULL == m_handler) {
     LOG(ERROR) << "handler init failed!" << std::endl;
@@ -137,6 +139,12 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   }
   clientInfo.pose->yaw = 0;
   clientInfo.pose->pitch = 0;
+  clientInfo.pose->centerX = 0;
+  clientInfo.pose->centerY = 0;
+  clientInfo.pose->speed = 0.0f;
+  clientInfo.pose->zoomFactor = 1.0f;
+  clientInfo.pose->viewOrient.mode = ORIENT_NONE;
+  clientInfo.pose->viewOrient.orientation = 0.0f;
   clientInfo.pose->pts = 0;
   clientInfo.viewPort_hFOV = renderConfig.viewportHFOV;
   clientInfo.viewPort_vFOV = renderConfig.viewportVFOV;
@@ -250,6 +258,8 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo) {
         vi.sourceHighTileRow = dashMediaInfo->stream_info[i].tileRowNum;
         vi.sourceHighTileCol = dashMediaInfo->stream_info[i].tileColNum;
         vi.mPixFmt = PixelFormat::PIX_FMT_YUV420P;
+        vi.source_number = dashMediaInfo->stream_info[i].source_number;
+        vi.source_resolution = dashMediaInfo->stream_info[i].source_resolution;
         mMediaInfo.AddVideoInfo(vidx, vi);
         vidx++;
         break;
@@ -273,7 +283,8 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo) {
   mMediaInfo.GetActiveVideoInfo(vi);
 
   if (NULL != this->m_rsFactory) {
-    m_rsFactory->SetVideoSize(vi.width, vi.height);
+    m_rsFactory->SetSourceResolution(vi.source_number, vi.source_resolution);
+    m_rsFactory->SetProjectionFormat(vi.mProjFormat);
     m_rsFactory->SetHighTileRow(vi.sourceHighTileRow);
     m_rsFactory->SetHighTileCol(vi.sourceHighTileCol);
   }
@@ -314,8 +325,9 @@ bool DashMediaSource::IsEOS() {
   return false;  // vod return false or live always false
 }
 
-RenderStatus DashMediaSource::ChangeViewport(HeadPose pose) {
-  OmafAccess_ChangeViewport(m_handler, &pose);
+RenderStatus DashMediaSource::ChangeViewport(HeadPose *pose) {
+  LOG(INFO) << "ChangeViewport pose centX " << pose->centerX << " pose centY " << pose->centerY << endl;
+  OmafAccess_ChangeViewport(m_handler, pose);
   return RENDER_STATUS_OK;
 }
 

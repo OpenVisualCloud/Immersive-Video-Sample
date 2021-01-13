@@ -61,7 +61,7 @@ ERPRenderTarget::~ERPRenderTarget()
 {
     RenderBackend *renderBackend = RENDERBACKEND::GetInstance();
     renderBackend->DeleteFramebuffers(1, &m_fboOnScreenHandle);
-    renderBackend->DeleteTextures(1, &m_textureOfR2S);
+    renderBackend->DeleteTextures(1, m_textureOfR2S);
     std::cout<<"AVG CHANGED TIME COST : "<<m_avgChangedTime<<"ms"<<std::endl;
 }
 
@@ -82,35 +82,29 @@ RenderStatus ERPRenderTarget::CreateRenderTarget()
         return RENDER_NULL_HANDLE;
     }
 
-    int32_t width = m_rsFactory->getWidth();
-    int32_t height = m_rsFactory->getHeight();
+    uint32_t source_number = m_rsFactory->GetSourceNumber();
+    SourceResolution *source_resolution = m_rsFactory->GetSourceResolution();
 
     RenderBackend *renderBackend = RENDERBACKEND::GetInstance();
 
-    renderBackend->GenTextures(1, &m_textureOfR2S);
-    renderBackend->BindTexture(GL_TEXTURE_2D, m_textureOfR2S);
+    renderBackend->GenTextures(source_number, m_textureOfR2S);
+    for (uint32_t i = 0; i < source_number; i++)
+    {
+        uint32_t width = source_resolution[i].width;
+        uint32_t height = source_resolution[i].height;
+        // bind texture according to quality ranking (1,2,3...)
+        renderBackend->BindTexture(GL_TEXTURE_2D, m_textureOfR2S[source_resolution[i].qualityRanking - 1]);
+        renderBackend->PixelStorei(GL_UNPACK_ROW_LENGTH, width);
+        renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-    renderBackend->PixelStorei(GL_UNPACK_ROW_LENGTH, width);
-    renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    renderBackend->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-    renderBackend->TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        renderBackend->TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    }
 
     renderBackend->GenFramebuffers(1, &m_fboOnScreenHandle);
     renderBackend->BindFramebuffer(GL_FRAMEBUFFER, m_fboOnScreenHandle);
-    renderBackend->FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureOfR2S, 0);
-
-    if (renderBackend->CheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    {
-        LOG(ERROR) << "glCheckFramebufferStatus not complete" << endl;
-        return RENDER_ERROR;
-    }
-    else
-    {
-        LOG(INFO) << "glCheckFramebufferStatus complete" << endl;
-    }
 
     return RENDER_STATUS_OK;
 }
@@ -196,7 +190,16 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
                 TileInformation ti = *itq;
                 RenderSource* rs = mapRenderSources[ti.video_id];
                 renderBackend->BindFramebuffer(GL_READ_FRAMEBUFFER, rs->GetFboR2THandle());
-
+                int32_t projFormat = m_rsFactory->GetProjectionFormat();
+                // in ERP there is only highest texture to be rendered on screen
+                if (projFormat == VCD::OMAF::PF_ERP){
+                    m_activeTextureId = mQualityRankingInfo.mainQualityRanking - 1;
+                    renderBackend->FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureOfR2S[m_activeTextureId], 0);
+                }
+                else{ // in Planar there is serveral textures to be rendered on screen
+                    m_activeTextureId = it->first - 1; // quality ranking - 1 (quality ranking index from 1)
+                    renderBackend->FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureOfR2S[m_activeTextureId], 0);
+                }
                 glBlitFramebuffer( ti.packedRegLeft,
                                    ti.packedRegTop,
                                    ti.packedRegLeft + ti.packedRegWidth,
@@ -217,7 +220,8 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
         TileInformation ti = *itm;
         RenderSource* rs = mapRenderSources[ti.video_id];
         renderBackend->BindFramebuffer(GL_READ_FRAMEBUFFER, rs->GetFboR2THandle());
-        // renderBackend->Clear(GL_COLOR_BUFFER_BIT);
+        m_activeTextureId = mQualityRankingInfo.mainQualityRanking - 1;
+        renderBackend->FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureOfR2S[m_activeTextureId], 0);
         glBlitFramebuffer( ti.packedRegLeft,
                            ti.packedRegTop,
                            ti.packedRegLeft + ti.packedRegWidth,
@@ -438,8 +442,8 @@ RenderStatus ERPRenderTarget::GetTilesInViewport(float yaw, float pitch, float h
     region.centreAzimuth = uint32_t(yaw) << 16;
     region.centreElevation = uint32_t(pitch) << 16;
     struct SourceInfo info;
-    info.sourceWidth = m_rsFactory->getWidth();
-    info.sourceHeight = m_rsFactory->getHeight();
+    info.sourceWidth = m_rsFactory->GetSourceResolution()[0].width;
+    info.sourceHeight = m_rsFactory->GetSourceResolution()[0].height;
     info.tileRowNumber = row;
     info.tileColumnNumber = col;
     TilesInViewport = GetRegionTileId(&region, &info);

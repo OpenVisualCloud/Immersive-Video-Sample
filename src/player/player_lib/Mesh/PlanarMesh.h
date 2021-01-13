@@ -27,32 +27,51 @@
  */
 
 //!
-//! \file     ViewPortManager.cpp
-//! \brief    Implement class for ViewPortManager.
+//! \file     PlanarMesh.h
+//! \brief    Defines class for PlanarMesh.
 //!
+#ifndef _PLANARMESH_H_
+#define _PLANARMESH_H_
 
-#include "ViewPortManager.h"
+#include "Mesh.h"
 
 VCD_NS_BEGIN
 
-ViewPortManager::ViewPortManager()
+class PlanarMesh
+    : public Mesh
 {
-    m_pose.yaw   = 0;
-    m_pose.pitch = 0;
-}
+public:
+    PlanarMesh()=default;
+    ~PlanarMesh()=default;
 
-ViewPortManager::~ViewPortManager()
-{
-}
-HeadPose ViewPortManager::GetViewPort()
-{
-    return m_pose;
-}
-RenderStatus ViewPortManager::SetViewPort(HeadPose *pose)
-{
-    m_pose.yaw   = pose->yaw;
-    m_pose.pitch = pose->pitch;
-    return RENDER_STATUS_OK;
-}
+    //! \brief Create the Render2Texture Mesh
+    //!
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Create();
+
+    //! \brief Destroy the Render2Texture Mesh
+    //!
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Destroy();
+
+    //! \brief bind the  Mesh
+    //!
+    //! \param  [in] RenderBackend*
+    //!              renderBackendGL API
+    //!         [in] uint32_t
+    //!              vertex Attrib
+    //!         [in] uint32_t
+    //!              texCoord Attrib
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Bind(uint32_t vertexAttrib, uint32_t texCoordAttrib);
+};
 
 VCD_NS_END
+#endif /* _PLANARMESH_H_ */

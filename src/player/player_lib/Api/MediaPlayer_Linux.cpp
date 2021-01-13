@@ -118,12 +118,13 @@ RenderStatus MediaPlayer_Linux::Start(void *render_context)
     }
     m_status = PLAY;
 
+    m_renderContext->SetFullResolution(m_mediaInfo.mVideoInfo[0].width, m_mediaInfo.mVideoInfo[0].height);
+
     return RENDER_STATUS_OK;
 }
 
 RenderStatus MediaPlayer_Linux::Play()
 {
-    float poseYaw, posePitch;
     std::chrono::high_resolution_clock clock;
     uint64_t lastTime = 0;
     uint64_t prevLastTime = 0;
@@ -135,9 +136,10 @@ RenderStatus MediaPlayer_Linux::Play()
     uint64_t accumTimeDelay = 0;
     do
     {
-        m_renderManager->GetStatusAndPose(&poseYaw, &posePitch, &m_status);
-        m_renderManager->SetViewport(poseYaw, posePitch);
-        m_renderManager->ChangeViewport(poseYaw, posePitch, renderCount);
+        HeadPose *pose = new HeadPose;
+        m_renderManager->GetStatusAndPose(pose, &m_status);
+        m_renderManager->SetViewport(pose);
+        m_renderManager->ChangeViewport(pose, renderCount);
         if (0 == lastTime)
         {
             lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
@@ -188,6 +190,7 @@ RenderStatus MediaPlayer_Linux::Play()
             cout<<"Soon to quit player!"<<endl;
             quitFlag = true;
         }
+        SAFE_DELETE(pose);
     } while (!quitFlag);
     uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"-----------------------------"<<std::endl;

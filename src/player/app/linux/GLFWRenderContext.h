@@ -76,7 +76,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus GetStatusAndPose(float *yaw, float *pitch, uint32_t* status);
+    virtual RenderStatus GetStatusAndPose(HeadPose *pose, uint32_t* status);
     //! \brief initialize render context
     //!
     //! \return RenderStatus
@@ -105,9 +105,54 @@ public:
     //!
     RenderStatus GetMotionOptionParams();
 
+    //! \brief Set full resolution for calculating zoomFactor.
+    //!
+    //! \param  [in] uint32_t
+    //          full picture width
+    //!         [out] uint32_t
+    //!         full picture height
+    //!
+    virtual void SetFullResolution(uint32_t width, uint32_t height)
+    {
+        m_fullWidth = width;
+        m_fullHeight = height;
+        SetMaxSpeed();
+    };
+
 private:
+
+    //! \brief get pose and status according to inputs for 3D
+    //!
+    //! \param  [out] HeadPose
+    //          current pose
+    //!         [out] status
+    //!         player status
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus GetStatusAndPoseFor3D(HeadPose *pose, uint32_t* status);
+
+    //! \brief get pose and status according to inputs for 2D
+    //!
+    //! \param  [out] HeadPose
+    //          current pose
+    //!         [out] status
+    //!         player status
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus GetStatusAndPoseFor2D(HeadPose *pose, uint32_t* status);
+    //!
+    //! \brief Set max speed for key motion.
+    //!
+    void SetMaxSpeed();
+
     bool m_needMotionTest;              //<! need motion test or not
     struct MotionConfig m_motionConfig; //<! test params for motion to high quality test
+    float m_zoomCnt;                      //<! count for key event for zoom in/out.
+    uint32_t m_fullWidth;               //<! max picture width for calculating zoomFactor.
+    uint32_t m_fullHeight;              //<! max picture height for calculating zoomFactor.
+    float m_zoomFactor;                 //<! defined as window w * window h / (content in max picture w * content in max picture h)
 };
 
 VCD_NS_END

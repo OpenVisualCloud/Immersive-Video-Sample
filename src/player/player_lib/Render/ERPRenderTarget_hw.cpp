@@ -88,13 +88,13 @@ RenderStatus ERPRenderTarget_hw::CreateRenderTarget()
         return RENDER_NULL_HANDLE;
     }
 
-    int32_t width = m_rsFactory->getWidth();
-    int32_t height = m_rsFactory->getHeight();
+    int32_t width = m_rsFactory->GetSourceResolution()[0].width;
+    int32_t height = m_rsFactory->GetSourceResolution()[0].height;
 
     glGenFramebuffers(1, &m_fboOnScreenHandle);
     glBindFramebuffer(GL_FRAMEBUFFER, m_fboOnScreenHandle);
     // ANDROID_LOGD("display_surface_context_global.textureIds[0] %d", m_textureOfR2S);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureOfR2S, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureOfR2S[0], 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
         ANDROID_LOGD("glCheckFramebufferStatus not complete");
@@ -394,8 +394,8 @@ RenderStatus ERPRenderTarget_hw::GetTilesInViewport(float yaw, float pitch, floa
     region.centreAzimuth = uint32_t(yaw) << 16;
     region.centreElevation = uint32_t(pitch) << 16;
     struct SourceInfo info;
-    info.sourceWidth = m_rsFactory->getWidth();
-    info.sourceHeight = m_rsFactory->getHeight();
+    info.sourceWidth = m_rsFactory->GetSourceResolution()[0].width;
+    info.sourceHeight = m_rsFactory->GetSourceResolution()[0].height;
     info.tileRowNumber = row;
     info.tileColumnNumber = col;
     TilesInViewport = GetRegionTileId(&region, &info);

@@ -27,32 +27,49 @@
  */
 
 //!
-//! \file     ViewPortManager.cpp
-//! \brief    Implement class for ViewPortManager.
+//! \file     PlanarRender.h
+//! \brief    Defines base class for PlanarRender.
 //!
 
-#include "ViewPortManager.h"
+#ifdef _LINUX_OS_
+
+#ifndef _PLANARRENDER_H_
+#define _PLANARRENDER_H_
+
+#include "../Common/Common.h"
+#include "SurfaceRender.h"
+#include "VideoShader.h"
 
 VCD_NS_BEGIN
 
-ViewPortManager::ViewPortManager()
+class PlanarRender
+    : public SurfaceRender
 {
-    m_pose.yaw   = 0;
-    m_pose.pitch = 0;
-}
+public:
+    PlanarRender();
+    virtual ~PlanarRender();
 
-ViewPortManager::~ViewPortManager()
-{
-}
-HeadPose ViewPortManager::GetViewPort()
-{
-    return m_pose;
-}
-RenderStatus ViewPortManager::SetViewPort(HeadPose *pose)
-{
-    m_pose.yaw   = pose->yaw;
-    m_pose.pitch = pose->pitch;
-    return RENDER_STATUS_OK;
-}
+    //! \brief The render function
+    //!
+    //! \param  [in] RenderTarget *renderTarget
+    //!         [in] uint32_t width
+    //!         render width
+    //!         [in] uint32_t height
+    //!         render height
+    //!         glm::mat4
+    //!         ProjectionMatrix
+    //!         glm::mat4
+    //!         ViewModelMatrix
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    virtual RenderStatus Render(uint32_t onScreenTexHandle, uint32_t width, uint32_t height, glm::mat4 ProjectionMatrix, glm::mat4 ViewModelMatrix);
+
+    virtual void SetUniformFrameTex();
+
+private:
+};
 
 VCD_NS_END
+#endif /* _PLANARRENDER_H_ */
+#endif

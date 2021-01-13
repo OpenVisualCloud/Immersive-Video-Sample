@@ -81,7 +81,7 @@ bool EGLRenderContext::isRunning()
     return !glfwGetKey((GLFWwindow *)m_window, GLFW_KEY_ESCAPE) && !glfwWindowShouldClose((GLFWwindow *)m_window);
 }
 
-RenderStatus EGLRenderContext::GetStatusAndPose(float *yaw, float *pitch, uint32_t* status)
+RenderStatus EGLRenderContext::GetStatusAndPose(HeadPose *pose, uint32_t* status)
 {
     static glm::vec2 transfer(0, RENDER_PI);
     glm::vec3 direction(0.0f, 0.0f, 1.0f);
@@ -164,8 +164,8 @@ RenderStatus EGLRenderContext::GetStatusAndPose(float *yaw, float *pitch, uint32
     float latitude = asin(-direction[1] / r);
     float u = 0.5f - longitude / 2 / RENDER_PI;
     float v = 0.5f - latitude / RENDER_PI;
-    *yaw = (u - 0.5f) * 360;
-    *pitch = (0.5f - v) * 180;
+    pose->yaw = (u - 0.5f) * 360;
+    pose->pitch = (0.5f - v) * 180;
 
     return RENDER_STATUS_OK;
 }

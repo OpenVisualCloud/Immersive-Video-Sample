@@ -143,7 +143,7 @@ RenderStatus CubeMapRenderTarget_android::UpdateDisplayTex()
                 m_meshOfR2T->Bind(vertexAttribOfOnScreen, texCoordAttribOfOnScreen);
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_EXTERNAL_OES, rs->GetTextureOfR2T());
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + ti.face_id, m_textureOfR2S, 0);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + ti.face_id, m_textureOfR2S[0], 0);
                 glViewport(0, 0, ti.picWidth, ti.picHeight);
                 // ANDROID_LOGD("glviewport width %d, height %d\n", ti.picWidth, ti.picHeight);
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -166,7 +166,7 @@ RenderStatus CubeMapRenderTarget_android::UpdateDisplayTex()
         m_meshOfR2T->Bind(vertexAttribOfOnScreen, texCoordAttribOfOnScreen);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, rs->GetTextureOfR2T());
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + ti.face_id, m_textureOfR2S, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + ti.face_id, m_textureOfR2S[0], 0);
         // ANDROID_LOGD("viewport width %d, height %d", ti.picWidth, ti.picHeight);
         glViewport(0, 0, ti.picWidth, ti.picHeight);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -287,8 +287,8 @@ int32_t CubeMapRenderTarget_android::findQuality(RegionData *regionInfo, Rectang
             int32_t quality = findQuality(regionInfo, regionInfo->GetRegionWisePacking()->rectRegionPacking[idx], source_idx);
             tile_info.tile_id = (coord.first + 1) + m_rsFactory->GetHighTileCol() * coord.second;
             // 2. get face_id according to proj left/top
-            uint32_t cube_map_face_width = m_rsFactory->getWidth() / CUBE_MAP_COL;
-            uint32_t cube_map_face_height = m_rsFactory->getHeight() / CUBE_MAP_ROW;
+            uint32_t cube_map_face_width = m_rsFactory->GetSourceResolution()[0].width / CUBE_MAP_COL;
+            uint32_t cube_map_face_height = m_rsFactory->GetSourceResolution()[0].height / CUBE_MAP_ROW;
             uint32_t rowIdx = tile_info.projRegTop / cube_map_face_height;
             uint32_t colIdx = tile_info.projRegLeft / cube_map_face_width;
             uint32_t faceIDInOMAF = rowIdx * CUBE_MAP_COL + colIdx;
@@ -404,8 +404,8 @@ RenderStatus CubeMapRenderTarget_android::GetTilesInViewport(float yaw, float pi
     region.centreAzimuth = uint32_t(yaw) << 16;
     region.centreElevation = uint32_t(pitch) << 16;
     struct SourceInfo info;
-    info.sourceWidth = m_rsFactory->getWidth();
-    info.sourceHeight = m_rsFactory->getHeight();
+    info.sourceWidth = m_rsFactory->GetSourceResolution()[0].width;
+    info.sourceHeight = m_rsFactory->GetSourceResolution()[0].height;
     info.tileRowNumber = row;
     info.tileColumnNumber = col;
     TilesInViewport = GetRegionTileId(&region, &info);

@@ -41,6 +41,8 @@
 
 VCD_NS_BEGIN
 
+#define MAX_TEXTURE_NUM 5
+
 typedef struct QualityRankingInfo{
     int32_t mainQualityRanking;
     int32_t numQuality;
@@ -55,12 +57,12 @@ public:
         m_rsFactory = NULL;
         m_transformType.clear();
         m_fboOnScreenHandle = 0;
-        m_textureOfR2S = 0;
         m_avgChangedTime = 0;
         m_isAllHighQualityInView = true;
         mQualityRankingInfo.mainQualityRanking = 0;
         mQualityRankingInfo.numQuality = 0;
         mQualityRankingInfo.mapQualitySelection.clear();
+        m_activeTextureId = 0; // default to 0
     }
     virtual ~RenderTarget() = default;
 
@@ -101,11 +103,14 @@ public:
     //! \return uint32_t
     //!         return texture Of R2S
     //!
-    uint32_t GetTextureOfR2S(){ return m_textureOfR2S; };
+    uint32_t GetTextureOfR2S() { return m_textureOfR2S[m_activeTextureId]; };
 
     std::map<uint32_t, uint8_t> GetTransformType() { return m_transformType; };
 
-    void SetOutputTexture(uint32_t texture) { m_textureOfR2S = texture; };
+    void SetOutputTexture(uint32_t texture)
+    {
+        m_textureOfR2S[0] = texture;
+    }; // android setting - m_textureOfR2S
 
     virtual RenderStatus UpdateDisplayTex() = 0;
 
@@ -113,7 +118,8 @@ protected:
     RenderSourceFactory*   m_rsFactory;                 //!RenderSource Factory;
     std::map<uint32_t, uint8_t> m_transformType;       //!transformtype
     uint32_t               m_fboOnScreenHandle;         //!output
-    uint32_t               m_textureOfR2S;              //!render to screen
+    uint32_t               m_textureOfR2S[MAX_TEXTURE_NUM];//!render to screen
+    uint32_t               m_activeTextureId;           //! active texture id to be rendered on screen
     float                  m_avgChangedTime;            //!average time to change from blur to clear
     bool                   m_isAllHighQualityInView;    //!isAllHighResoInView
     QualityRankingInfo     mQualityRankingInfo;

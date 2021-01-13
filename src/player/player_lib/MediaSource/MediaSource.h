@@ -65,6 +65,8 @@ public:
         mime_type        = "";
         codec            = "";
         mPixFmt          = PixelFormat::PIX_FMT_YUV420P;
+        source_number    = 0;
+        source_resolution= nullptr;
     };
     ~VideoInfo()=default;
 
@@ -83,7 +85,8 @@ public:
     int32_t               mPixFmt;
     std::string           mime_type;
     std::string           codec;
-
+    int32_t               source_number;
+    SourceResolution     *source_resolution;
 };
 
 //! \brief audio information
@@ -255,7 +258,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus ChangeViewport(HeadPose pose) = 0;
+    virtual RenderStatus ChangeViewport(HeadPose *pose) = 0;
 
     //! \brief UpdateFrames
     //!

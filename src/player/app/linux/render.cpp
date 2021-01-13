@@ -268,6 +268,19 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       }
     }
 
+    // PathOf360SCVPPlugins
+    XMLElement* pathof360SCVPPlugin = info->FirstChildElement("PathOf360SCVPPlugins");
+    if (pathof360SCVPPlugin != NULL)
+    {
+      renderConfig.pathof360SCVPPlugin = new char[1024];
+      memcpy_s(renderConfig.pathof360SCVPPlugin, 1024, (char *)pathof360SCVPPlugin->GetText(), 1024);
+    }
+    else
+    {
+      renderConfig.pathof360SCVPPlugin = nullptr;
+      LOG(INFO) << " not settings for PathOf360SCVPPlugins! " << std::endl;
+    }
+
     return RENDER_STATUS_OK;
   } catch (const std::exception &ex) {
     LOG(ERROR) << "Exception when parse the file: " << xml_file << std::endl;
@@ -328,6 +341,9 @@ int main(int32_t argc, char *argv[]) {
   player->Play();
   delete player;
   player = NULL;
+  SAFE_DELETE(renderConfig.pathof360SCVPPlugin);
+  SAFE_DELETE(renderConfig.url);
+  SAFE_DELETE(renderConfig.cachePath);
   return 0;
 }
 #endif

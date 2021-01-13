@@ -77,7 +77,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus ChangeViewport(HeadPose pose);
+    virtual RenderStatus ChangeViewport(HeadPose *pose);
 
     //! \brief set region information
     //!

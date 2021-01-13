@@ -77,7 +77,7 @@ CubeMapRenderTarget::~CubeMapRenderTarget()
 {
     RenderBackend *renderBackend = RENDERBACKEND::GetInstance();
     renderBackend->DeleteFramebuffers(1, &m_fboOnScreenHandle);
-    renderBackend->DeleteTextures(1, &m_textureOfR2S);
+    renderBackend->DeleteTextures(1, m_textureOfR2S);
     std::cout<<"AVG CHANGED TIME COST : "<<m_avgChangedTime<<"ms"<<std::endl;
 }
 
@@ -94,16 +94,16 @@ RenderStatus CubeMapRenderTarget::CreateRenderTarget()
         return RENDER_NULL_HANDLE;
     }
 
-    int32_t width = m_rsFactory->getWidth() / CUBE_MAP_COL;// face width
-    int32_t height = m_rsFactory->getHeight() / CUBE_MAP_ROW; // face height // width and height need to be identical
+    int32_t width = m_rsFactory->GetSourceResolution()[0].width / CUBE_MAP_COL;// face width
+    int32_t height = m_rsFactory->GetSourceResolution()[0].height / CUBE_MAP_ROW; // face height // width and height need to be identical
 
     RenderBackend *renderBackend = RENDERBACKEND::GetInstance();
     // 1.generate FBO on screen
     renderBackend->GenFramebuffers(1, &m_fboOnScreenHandle);
     renderBackend->BindFramebuffer(GL_FRAMEBUFFER, m_fboOnScreenHandle);
     // 2.generate CUBE map texture
-    renderBackend->GenTextures(1, &m_textureOfR2S);
-    renderBackend->BindTexture(GL_TEXTURE_CUBE_MAP, m_textureOfR2S);
+    renderBackend->GenTextures(1, m_textureOfR2S);
+    renderBackend->BindTexture(GL_TEXTURE_CUBE_MAP, m_textureOfR2S[0]);
     for (uint32_t i=0; i<FACE_SIZE; i++)
     {
         renderBackend->TexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
@@ -202,7 +202,7 @@ RenderStatus CubeMapRenderTarget::Update( float yaw, float pitch, float hFOV, fl
                 TileInformation ti = *itq;
                 RenderSource* rs = mapRenderSources[ti.video_id];
                 renderBackend->BindFramebuffer(GL_READ_FRAMEBUFFER, rs->GetFboR2THandle());
-                glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + ti.face_id, m_textureOfR2S, 0);
+                glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + ti.face_id, m_textureOfR2S[0], 0);
                 glBlitFramebuffer( ti.packedRegLeft,
                                    ti.packedRegTop,
                                    ti.packedRegLeft + ti.packedRegWidth,
@@ -222,7 +222,7 @@ RenderStatus CubeMapRenderTarget::Update( float yaw, float pitch, float hFOV, fl
         TileInformation ti = *itm;
         RenderSource* rs = mapRenderSources[ti.video_id];
         renderBackend->BindFramebuffer(GL_READ_FRAMEBUFFER, rs->GetFboR2THandle());
-        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + ti.face_id, m_textureOfR2S, 0);
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + ti.face_id, m_textureOfR2S[0], 0);
         glBlitFramebuffer( ti.packedRegLeft,
                            ti.packedRegTop,
                            ti.packedRegLeft + ti.packedRegWidth,
@@ -352,8 +352,8 @@ int32_t CubeMapRenderTarget::findQuality(RegionData *regionInfo, RectangularRegi
             int32_t quality = findQuality(regionInfo, regionInfo->GetRegionWisePacking()->rectRegionPacking[idx], source_idx);
             tile_info.tile_id = (coord.first + 1) + m_rsFactory->GetHighTileCol() * coord.second;
             // 2. get face_id according to proj left/top
-            uint32_t cube_map_face_width = m_rsFactory->getWidth() / CUBE_MAP_COL;
-            uint32_t cube_map_face_height = m_rsFactory->getHeight() / CUBE_MAP_ROW;
+            uint32_t cube_map_face_width = m_rsFactory->GetSourceResolution()[0].width / CUBE_MAP_COL;
+            uint32_t cube_map_face_height = m_rsFactory->GetSourceResolution()[0].height / CUBE_MAP_ROW;
             uint32_t rowIdx = tile_info.projRegTop / cube_map_face_height;
             uint32_t colIdx = tile_info.projRegLeft / cube_map_face_width;
             uint32_t faceIDInOMAF = rowIdx * CUBE_MAP_COL + colIdx;
@@ -469,8 +469,8 @@ RenderStatus CubeMapRenderTarget::GetTilesInViewport(float yaw, float pitch, flo
     region.centreAzimuth = uint32_t(yaw) << 16;
     region.centreElevation = uint32_t(pitch) << 16;
     struct SourceInfo info;
-    info.sourceWidth = m_rsFactory->getWidth();
-    info.sourceHeight = m_rsFactory->getHeight();
+    info.sourceWidth = m_rsFactory->GetSourceResolution()[0].width;
+    info.sourceHeight = m_rsFactory->GetSourceResolution()[0].height;
     info.tileRowNumber = row;
     info.tileColumnNumber = col;
     TilesInViewport = GetRegionTileId(&region, &info);
