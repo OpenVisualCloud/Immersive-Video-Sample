@@ -52,7 +52,7 @@ public:
     RenderContext(){
          m_renderContextType = DEFAULT_CONTEXT;
          // Initial horizontal angle : toward -Z
-         m_horizontalAngle   = RENDER_PI;
+         m_horizontalAngle   = 0.0f;
          // Initial vertical angle : none
          m_verticalAngle     = 0.0f;
          // Initial Field of View
@@ -63,6 +63,7 @@ public:
          m_windowHeight      = 0;
          m_hFOV              = 0;
          m_vFOV              = 0;
+         m_projFormat        = VCD::OMAF::PF_UNKNOWN;
     };
 
     virtual ~RenderContext()=default;
@@ -80,16 +81,14 @@ public:
 
     //! \brief get pose and status according to inputs
     //!
-    //! \param  [out] yaw
-    //          current pose : yaw
-    //!         [out] pitch
-    //!         current pose : pitch
+    //! \param  [out] HeadPose
+    //          current pose
     //!         [out] status
     //!         player status
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus GetStatusAndPose(float *yaw, float *pitch, uint32_t* status) = 0;
+    virtual RenderStatus GetStatusAndPose(HeadPose *pose, uint32_t* status) = 0;
 
     //! \brief initialize render context
     //!
@@ -105,12 +104,43 @@ public:
     //!
     void *GetWindow() {return m_window;}
 
+    //! \brief Set projection format for setting up view/projection model for 3D/2D
+    //!
+    //! \param  [in] int32_t
+    //          projection format
+    //!
+    void SetProjectionFormat(int32_t projFormat) { m_projFormat = projFormat; };
+
     //! \brief check whether the render is running
     //!
     //! \return bool
     //!         isrunning or not
     //!
     virtual bool isRunning() = 0;
+
+    //! \brief Set full resolution for calculating zoomFactor.
+    //!
+    //! \param  [in] uint32_t
+    //          full picture width
+    //!         [out] uint32_t
+    //!         full picture height
+    //!
+    virtual void SetFullResolution(uint32_t width, uint32_t height) { return; };
+    //! \brief Set Row And Col Information of stream in high quality
+    //!
+    //! \param  [in] uint32_t
+    //          row
+    //!         [out] uint32_t
+    //!         col
+    //!
+    void SetRowAndColInfo(uint32_t row, uint32_t col) { m_row = row; m_col = col; };
+    //! \brief Set render interval of rendering
+    //!
+    //! \param  [in] uint32_t
+    //          render interval(ms)
+    //!
+    void SetRenderInterval(uint32_t interval) { m_renderInterval = interval; };
+
 #ifdef _LINUX_OS_
     //! \brief get render projection matrix
     //!
@@ -143,6 +173,12 @@ protected:
 
     float                   m_speed; // 3 units / second
     float                   m_mouseSpeed;
+
+    int32_t                 m_projFormat;    //<! projection format for setting up view/projection model for 3D/2D
+
+    uint32_t                m_row; //<! highest quality ranking stream row. utilized to determine the max speed of motion.
+    uint32_t                m_col; //<! highest quality ranking stream col. utilized to determine the max speed of motion.
+    uint32_t                m_renderInterval; //<! render interval
 };
 
 VCD_NS_END

@@ -47,8 +47,9 @@ RenderSourceFactory::RenderSourceFactory(void *window)
 {
     mMapRenderSource.clear();
     share_window = window;
-    mWidth       = 0;
-    mHeight      = 0;
+    m_sourceNumber = 0;
+    m_sourceResolution = nullptr;
+    m_projFormat = VCD::OMAF::PF_UNKNOWN;
     m_highTileCol= 0;
     m_highTileRow= 0;
 }

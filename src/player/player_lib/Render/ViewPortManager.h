@@ -58,7 +58,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus SetViewPort(HeadPose pose);
+    RenderStatus SetViewPort(HeadPose *pose);
 
 private:
     HeadPose m_pose;

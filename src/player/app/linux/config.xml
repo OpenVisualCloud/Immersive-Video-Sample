@@ -32,4 +32,5 @@
      <!-- <plugin>libViewportPredict_LR.so</plugin>
      <path>../plugins/ViewportPredict_Plugin/predict_LR/</path> -->
     </predict>
+    <!-- <PathOf360SCVPPlugins>/usr/local/lib/libPanZoomTileSelection.so</PathOf360SCVPPlugins> -->
 </info>

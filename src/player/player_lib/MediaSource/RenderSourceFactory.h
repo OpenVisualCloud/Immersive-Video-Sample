@@ -74,15 +74,32 @@ public:
      //!
      //! \param  [in]  width
      //!         [in]  height
-     virtual void SetVideoSize(int32_t width, int32_t height){
-          mWidth = width;
-          mHeight = height;
+     void SetSourceResolution(uint32_t number, SourceResolution *resolution){
+          m_sourceNumber = number;
+          m_sourceResolution = resolution;
+     };
+
+     SourceResolution* GetSourceResolution()
+     {
+          return m_sourceResolution;
+     };
+
+     uint32_t GetSourceNumber()
+     {
+          return m_sourceNumber;
+     };
+
+     void SetProjectionFormat(int32_t projFormat)
+     {
+          m_projFormat = projFormat;
+     };
+
+     int32_t GetProjectionFormat()
+     {
+          return m_projFormat;
      };
 
      std::map<uint32_t, RenderSource*> GetRenderSources(){return mMapRenderSource;};
-
-     int32_t getWidth(){return mWidth;};
-     int32_t getHeight(){return mHeight;};
 
      uint32_t GetHighTileRow(){return m_highTileRow;};
      void SetHighTileRow(uint32_t row) {m_highTileRow = row;};
@@ -92,10 +109,11 @@ public:
 
 private:
      std::map<uint32_t, RenderSource*> mMapRenderSource;    //! map for <video_id and handler>
-     int32_t                           mWidth;
-     int32_t                           mHeight;
+     SourceResolution                 *m_sourceResolution;
+     uint32_t                          m_sourceNumber;
      uint32_t                          m_highTileRow;
      uint32_t                          m_highTileCol;
+     int32_t                           m_projFormat;
      void                              *share_window;
 
 };

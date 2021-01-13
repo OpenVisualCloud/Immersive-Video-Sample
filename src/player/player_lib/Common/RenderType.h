@@ -155,6 +155,8 @@ struct RenderConfig {
   // for stitching
   uint32_t maxVideoDecodeWidth;
   uint32_t maxVideoDecodeHeight;
+  // for 360SCVP plugin path
+  char* pathof360SCVPPlugin;
 };
 
 typedef struct TileInformation{

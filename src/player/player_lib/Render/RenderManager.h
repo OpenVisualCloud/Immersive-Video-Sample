@@ -87,7 +87,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus ChangeViewport(float yaw, float pitch, uint64_t pts);
+    RenderStatus ChangeViewport(HeadPose *pose, uint64_t pts);
     //! \brief set yaw and pitch
     //!
     //! \param  [in] float
@@ -98,7 +98,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus SetViewport(float yaw, float pitch);
+    RenderStatus SetViewport(HeadPose *pose);
     //! \brief get yaw and pitch
     //!
     //! \param  [out] float
@@ -129,7 +129,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    void GetStatusAndPose(float *yaw, float *pitch, uint32_t *status);
+    void GetStatusAndPose(HeadPose *pose, uint32_t *status);
 
     RenderSourceFactory* getRenderSourceFactory(){return m_rsFactory;};
 
