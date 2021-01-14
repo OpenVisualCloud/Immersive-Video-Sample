@@ -34,7 +34,6 @@
 #include "360SCVPCommonDef.h"
 #include "360SCVPHevcEncHdr.h"
 #include "360SCVPLog.h"
-#include "TileSelectionPlugins_API.h"
 #include "360SCVPImpl.h"
 
 void* I360SCVP_Init(param_360SCVP* pParam360SCVP)
