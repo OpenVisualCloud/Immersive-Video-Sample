@@ -1,5 +1,41 @@
 # **Changelog**
 ---
+## [1.4.0] - 2021-1-14
+**Features & bug fix:**
+- OMAF Packing Library
+   + Support packing for cube-map projection in extractor track mode
+   + Support both fixed and dynamic sub-picture resolutions in extractor track mode
+   + Support packing for AAC audio stream
+   + Support packing for planar projection in late-binding mode
+   + Plugin mode to support customized media stream process
+   + bug fix: memory leak, hang / crash in some condition
+
+- OMAF Dash Access Library
+   + Support cube-map projection in extractor track mode
+   + Support maximum decodable picture width and height limitation in late-binding mode
+   + Support DASH de-packing for AAC audio stream segments
+   + Support planar projection in late-binding mode
+   + bug fix: memory leak, time out, tiles stitching disorder in some condition
+
+- 360SCVP (Stream Concatenation and Viewport Processing) Library
+   + code refactor: add plugin definition for tile selection
+   + optimization for tile selection to improve performance, accuracy and efficiency
+
+- Reference OMAF Player
+   + Android Player: with ERP and Cube-map support
+   + Android platform: extend DashAccess JNI library with MediaCodec decoder integrated.
+   + Linux Player: Support WebRTC source with multiple video stream decoding and rendering
+   + Linux Player: Support Planar Video
+   + Code refactor
+
+- FFmpeg Plugins & Encoder Library
+   + Encoder Library: Bug fix for memory leak
+   + FFmpeg Plugins: add option for fixed/dynamic sub-picture resolution for extractor track mode
+   + FFmpeg Plugins: add audio stream input process
+   + FFmpeg Plugins: add option for planar projection support
+   + FFmpeg Plugins: add option for customized packing plugin and media stream process plugin set
+
+---
 ## [1.2.0] - 2020-8-14
 **Features & bug fix:**
 - OMAF Packing Library
