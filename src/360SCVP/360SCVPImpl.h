@@ -27,6 +27,7 @@
 #define _360SCVP_IMPL_H_
 #include "360SCVPHevcTilestream.h"
 #include "../utils/data_type.h"
+#include "TileSelectionPlugins_API.h"
 
 class TstitchStream
 {

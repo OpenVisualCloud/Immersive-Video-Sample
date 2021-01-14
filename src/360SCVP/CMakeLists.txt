@@ -19,7 +19,7 @@ else()
 ADD_DEFINITIONS("-fPIE -fPIC -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wall -Werror -g -c -fPIC -std=c++11")
 endif()
 
-INCLUDE_DIRECTORIES(/usr/local/include ../utils ../plugins/360SCVP_Plugins/TileSelection_Plugins)
+INCLUDE_DIRECTORIES(/usr/local/include ./ ../utils ../plugins/360SCVP_Plugins/TileSelection_Plugins)
 LINK_DIRECTORIES(/usr/local/lib)
 
 ADD_LIBRARY(360SCVP SHARED  ${DIR_SRC} ../utils/Log.cpp ../utils/tinyxml2.cpp)
