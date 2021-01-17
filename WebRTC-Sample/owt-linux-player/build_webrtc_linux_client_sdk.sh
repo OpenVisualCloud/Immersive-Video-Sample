@@ -61,8 +61,13 @@ install_socket_io_client() {
     rm -rf socket.io-client-cpp
 
     git clone --recurse-submodules https://github.com/socketio/socket.io-client-cpp.git
-    cd socket.io-client-cpp/lib/websocketpp
+    cd socket.io-client-cpp
+    git reset --hard 6063cb1d612f6ca0232d4134a018053fb8faea20
+
+    cd lib/websocketpp
     git pull origin master
+    git reset --hard 1b11fd301531e6df35a6107c1e8665b1e77a2d8e
+
     cd ../..
 
     mkdir -p build
