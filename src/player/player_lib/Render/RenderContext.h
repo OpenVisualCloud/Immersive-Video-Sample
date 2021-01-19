@@ -64,6 +64,9 @@ public:
          m_hFOV              = 0;
          m_vFOV              = 0;
          m_projFormat        = VCD::OMAF::PF_UNKNOWN;
+         m_row               = 0;
+         m_col               = 0;
+         m_renderInterval    = 0;
     };
 
     virtual ~RenderContext()=default;

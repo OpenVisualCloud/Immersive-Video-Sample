@@ -180,24 +180,30 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       LOG(ERROR) << " invalid params for cachePath! " << std::endl;
       return RENDER_ERROR;
     }
-
-    renderConfig.maxVideoDecodeWidth =
-        atoi(info->FirstChildElement("maxVideoDecodeWidth")
-                 ->GetText());  // limited video decoder width of device.
+    XMLElement* maxWidthElement = info->FirstChildElement("maxVideoDecodeWidth");
+    XMLElement* maxHeightElement = info->FirstChildElement("maxVideoDecodeHeight");
+    if (nullptr == maxWidthElement || nullptr == maxHeightElement)
+    {
+      return RENDER_ERROR;
+    }
+    renderConfig.maxVideoDecodeWidth = atoi(maxWidthElement->GetText());  // limited video decoder width of device.
     if (renderConfig.maxVideoDecodeWidth <= 0 || renderConfig.maxVideoDecodeWidth >= UINT32_MAX) {
       LOG(ERROR) << "---INVALID maxVideoDecodeWidth input---" << std::endl;
       return RENDER_ERROR;
     }
-    renderConfig.maxVideoDecodeHeight =
-        atoi(info->FirstChildElement("maxVideoDecodeHeight")
-                 ->GetText());  // limited video decoder height of device.
+    renderConfig.maxVideoDecodeHeight = atoi(maxHeightElement->GetText());  // limited video decoder height of device.
     if (renderConfig.maxVideoDecodeHeight <= 0 || renderConfig.maxVideoDecodeHeight >= UINT32_MAX) {
       LOG(ERROR) << "---INVALID maxVideoDecodeHeight input---" << std::endl;
       return RENDER_ERROR;
     }
-
-    renderConfig.viewportHFOV = atoi(info->FirstChildElement("viewportHFOV")->GetText());
-    renderConfig.viewportVFOV = atoi(info->FirstChildElement("viewportVFOV")->GetText());
+    XMLElement* viewportHFOVElement = info->FirstChildElement("viewportHFOV");
+    XMLElement* viewportVFOVElement = info->FirstChildElement("viewportVFOV");
+    if (nullptr == viewportHFOVElement || nullptr == viewportVFOVElement)
+    {
+      return RENDER_ERROR;
+    }
+    renderConfig.viewportHFOV = atoi(viewportHFOVElement->GetText());
+    renderConfig.viewportVFOV = atoi(viewportVFOVElement->GetText());
     if (renderConfig.viewportHFOV < MINFOV || renderConfig.viewportHFOV > MAXFOV ||
         renderConfig.viewportVFOV < MINFOV || renderConfig.viewportVFOV > MAXFOV) {
       LOG(ERROR) << "---INVALID viewportHFOV or viewportVFOV input!---" << std::endl;
@@ -272,7 +278,7 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
     else
     {
       renderConfig.pathof360SCVPPlugin = nullptr;
-      LOG(INFO) << " not settings for PathOf360SCVPPlugins! " << std::endl;
+      // LOG(INFO) << " not settings for PathOf360SCVPPlugins! " << std::endl;
     }
 
     return RENDER_STATUS_OK;
@@ -295,6 +301,7 @@ RenderContext* InitRenderContext(struct RenderConfig config)
   if (window == nullptr)
   {
     LOG(ERROR) << "Failed to initial render context!" << endl;
+    SAFE_DELETE(context);
     return nullptr;
   }
   return context;
@@ -305,6 +312,9 @@ int main(int32_t argc, char *argv[]) {
   struct RenderConfig renderConfig;
   if (RENDER_STATUS_OK != parseRenderFromXml("config.xml", renderConfig)) {
     LOG(ERROR) << "Failed to parse the render xml config file!" << std::endl;
+    SAFE_DELETE_ARRAY(renderConfig.pathof360SCVPPlugin);
+    SAFE_DELETE_ARRAY(renderConfig.url);
+    SAFE_DELETE_ARRAY(renderConfig.cachePath);
     return RENDER_ERROR;
   }
   GlogWrapper m_glogWrapper((char*)"glogRender", renderConfig.minLogLevel);
@@ -317,6 +327,9 @@ int main(int32_t argc, char *argv[]) {
     LOG(INFO) << "Failed to open the cache path: " << cacheDir << " , create a folder with this path!" << endl;
     int checkdir = mkdir(cacheDir.c_str(), 0777);
     if (checkdir) {
+      SAFE_DELETE_ARRAY(renderConfig.pathof360SCVPPlugin);
+      SAFE_DELETE_ARRAY(renderConfig.url);
+      SAFE_DELETE_ARRAY(renderConfig.cachePath);
       LOG(ERROR) << "Uable to create cache path: " << cacheDir << endl;
       return RENDER_ERROR;
     }
@@ -335,9 +348,9 @@ int main(int32_t argc, char *argv[]) {
   player->Play();
   delete player;
   player = NULL;
-  SAFE_DELETE(renderConfig.pathof360SCVPPlugin);
-  SAFE_DELETE(renderConfig.url);
-  SAFE_DELETE(renderConfig.cachePath);
+  SAFE_DELETE_ARRAY(renderConfig.pathof360SCVPPlugin);
+  SAFE_DELETE_ARRAY(renderConfig.url);
+  SAFE_DELETE_ARRAY(renderConfig.cachePath);
   return 0;
 }
 #endif

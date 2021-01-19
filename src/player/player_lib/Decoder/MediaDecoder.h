@@ -44,6 +44,10 @@ public:
     MediaDecoder()
     {
         mbEOS = false;
+        mStartPts = 0;
+        m_status = STATUS_UNKNOWN;
+        m_nativeSurface = nullptr;
+        memset_s(&mDecodeInfo, sizeof(mDecodeInfo), 0);
     };
     virtual ~MediaDecoder(){};
 

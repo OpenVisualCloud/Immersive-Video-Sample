@@ -66,7 +66,7 @@ DashMediaSource::DashMediaSource() {
     {
       FILE* tmpFile = fopen(string("video" + to_string(i) + ".h265").c_str(), "wb");
       if (NULL == tmpFile) LOG(ERROR) << "Failed to open stream dumped file!" << endl;
-      m_dumpedFile.push_back(tmpFile);
+      m_dumpedFile.push_back(std::move(tmpFile));
     }
   }
 }

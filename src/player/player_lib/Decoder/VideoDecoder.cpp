@@ -596,7 +596,7 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts)
     //     SAFE_DELETE_ARRAY(buf_info->buffer[i]);
     // }
     // need future bug fix
-    // SAFE_DELETE(buf_info->regionInfo);
+    SAFE_DELETE(buf_info->regionInfo);
     buf_info->regionInfo = nullptr;
     SAFE_DELETE(buf_info);
 

@@ -490,6 +490,7 @@ RenderStatus GLFWRenderContext::GetStatusAndPose(HeadPose *pose, uint32_t* statu
     {
         return GetStatusAndPoseFor2D(pose, status);
     }
+    return RENDER_ERROR;
 }
 
 void* GLFWRenderContext::InitContext()
