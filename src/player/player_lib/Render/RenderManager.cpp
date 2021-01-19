@@ -59,6 +59,7 @@ RenderManager::RenderManager(struct RenderConfig config) {
 #ifdef _LINUX_OS_
   m_surfaceRender = nullptr;
 #endif
+  this->m_outputTexture = 0;
 }
 
 RenderManager::~RenderManager() {

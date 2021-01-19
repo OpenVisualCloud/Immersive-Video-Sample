@@ -57,6 +57,8 @@ MediaPlayer_Linux::MediaPlayer_Linux()
     m_mediaSource   = NULL;
     m_renderManager = NULL;
     m_rsFactory     = NULL;
+    memset_s(&m_renderConfig, sizeof(m_renderConfig), 0);
+    memset_s(&m_mediaInfo, sizeof(m_mediaInfo), 0);
 }
 
 MediaPlayer_Linux::~MediaPlayer_Linux()

@@ -34,9 +34,9 @@ cd ../../../../
 mkdir -p ./player/app/android/app/src/main/jniLibs/arm64-v8a/
 sudo cp /usr/local/lib/libcurl.so ./player/app/android/app/src/main/jniLibs/arm64-v8a/
 sudo cp /usr/local/lib/libsafestring_shared.so ./player/app/android/app/src/main/jniLibs/arm64-v8a/
-sudo cp /usr/local/lib/libssl.so ./player/app/android/app/src/main/jniLibs/arm64-v8a/
+sudo cp ./build/external/android/openssl-output/lib/libssl.so ./player/app/android/app/src/main/jniLibs/arm64-v8a/
 sudo cp /usr/local/lib/libglog.so ./player/app/android/app/src/main/jniLibs/arm64-v8a/
-sudo cp /usr/local/lib/libcrypto.so ./player/app/android/app/src/main/jniLibs/arm64-v8a/
+sudo cp ./build/external/android/openssl-output/lib/libcrypto.so ./player/app/android/app/src/main/jniLibs/arm64-v8a/
 sudo cp /usr/local/lib/lib360SCVP.so ./player/app/android/app/src/main/jniLibs/arm64-v8a/
 sudo cp /usr/local/lib/libOmafDashAccess.so ./player/app/android/app/src/main/jniLibs/arm64-v8a/
 sudo cp /usr/local/lib/libdashparser.a ./player/app/android/app/src/main/jniLibs/arm64-v8a/

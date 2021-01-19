@@ -52,6 +52,7 @@ DecoderManager::DecoderManager()
     this->m_mapVideoDecoder.clear();
     m_surfaces.resize(MAX_DECODER_NUM);
     m_textures.resize(MAX_DECODER_NUM);
+    memset_s(&m_decodeInfo, sizeof(m_decodeInfo), 0);
 }
 
 DecoderManager::~DecoderManager()
