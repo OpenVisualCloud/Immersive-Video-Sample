@@ -241,7 +241,7 @@ public class VrVideoActivity extends GvrActivity {
         public void onDrawEye(Eye eye) {
             Matrix.multiplyMM(
                     viewProjectionMatrix, 0, eye.getPerspective(Z_NEAR, Z_FAR), 0, eye.getEyeView(), 0);
-            scene.glDrawFrame(viewProjectionMatrix, eye.getType());
+            scene.glDrawFrame(viewProjectionMatrix, eye.getType(), 0, 0);
         }
 
         @Override

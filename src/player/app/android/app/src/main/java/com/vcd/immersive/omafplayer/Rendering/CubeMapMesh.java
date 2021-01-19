@@ -219,7 +219,6 @@ public final class CubeMapMesh extends Mesh {
         positionHandle = GLES20.glGetAttribLocation(program, "aPosition");
         transpositionHandle = GLES20.glGetAttribLocation(program, "transPosition");
         textureHandle = GLES20.glGetUniformLocation(program, "uTexture");
-        GLES20.glUniform1i(textureHandle, 0);
 
         checkGlError();
         Log.e(TAG, "Cubemap Mesh " + positionHandle + textureHandle);
@@ -231,11 +230,11 @@ public final class CubeMapMesh extends Mesh {
      * @param mvpMatrix The Model View Projection matrix.
      * @param eyeType An {@link Eye.Type} value.
      */
-    /* package */ void glDraw(float[] mvpMatrix, int eyeType, int[] transformType) {
+    /* package */ void glDraw(float[] mvpMatrix, int eyeType, int[] transformType, int width, int height) {
         // Configure shader.
         GLES20.glUseProgram(program);
         checkGlError();
-        GLES20.glViewport(0,0,VIEWPORT_HFOV, VIEWPORT_VFOV);
+        GLES20.glViewport(0,0, width, height);
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_CUBE_MAP, textureId);
 

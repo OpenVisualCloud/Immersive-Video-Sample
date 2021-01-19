@@ -131,15 +131,19 @@ public final class MonoscopicView extends GLSurfaceView {
                     remappedPhoneMatrix);
             SensorManager.getOrientation(remappedPhoneMatrix, angles);
             float yaw = (float)(angles[0] * 180 / Math.PI);
-            if (yaw < 0) yaw += 360;
-            yaw -= 180;
+            if (yaw < 0) yaw += 360;//[0, 360]
             float pitch = (float)(angles[1] * 180 / Math.PI);
             float roll = angles[2];
             touchTracker.setRoll(roll);
             NativeMediaPlayer.HeadPose pose = new NativeMediaPlayer.HeadPose();
-            pose.yaw = yaw;
-            pose.pitch = pitch;
+            float tmpYaw = yaw - renderer.touchYaw;
+            tmpYaw = tmpYaw % 360 > 0 ? tmpYaw % 360 : tmpYaw % 360 + 360;//[0, 360]
+            pose.yaw = tmpYaw - 180;//[-180, 180]
 
+            pose.pitch = pitch - renderer.touchPitch;
+            if (pose.pitch < -90) pose.pitch = -90.0f;
+            if (pose.pitch > 90) pose.pitch = 90.0f;
+//            Log.e(TAG, "YAW is " + pose.yaw + " PITCH is " + pose.pitch);
             renderer.scene.SetCurrentPosition(pose);
 
             // Rotate from Android coordinates to OpenGL coordinates. Android's coordinate system
@@ -181,7 +185,7 @@ public final class MonoscopicView extends GLSurfaceView {
         static final float PX_PER_DEGREES = 25;
         // Touch input won't change the pitch beyond +/- 45 degrees. This reduces awkward situations
         // where the touch-based pitch and gyro-based pitch interact badly near the poles.
-        static final float MAX_PITCH_DEGREES = 45;
+        static final float MAX_PITCH_DEGREES = 90;
         // With every touch event, update the accumulated degrees offset by the new pixel amount.
         private final PointF previousTouchPointPx = new PointF();
         private final PointF accumulatedTouchOffsetDegrees = new PointF();
@@ -268,7 +272,11 @@ public final class MonoscopicView extends GLSurfaceView {
         private final float[] touchPitchMatrix = new float[16];
         private final float[] touchYawMatrix = new float[16];
         private float touchPitch;
+        private float touchYaw;
         private float deviceRoll;
+
+        private int screenWidth;
+        private int screenHeight;
 
         // viewMatrix = touchPitch * deviceOrientation * touchYaw.
         private final float[] viewMatrix = new float[16];
@@ -296,9 +304,11 @@ public final class MonoscopicView extends GLSurfaceView {
 
         @Override
         public void onSurfaceChanged(GL10 gl, int width, int height) {
+            screenWidth = width;
+            screenHeight = height;
             GLES20.glViewport(0, 0, width, height);
             Matrix.perspectiveM(
-                    projectionMatrix, 0, FIELD_OF_VIEW_DEGREES_V, (float) FIELD_OF_VIEW_DEGREES_H / FIELD_OF_VIEW_DEGREES_V, Z_NEAR, Z_FAR);
+                    projectionMatrix, 0, mediaLoader.mediaPlayer.mConfig.viewportVFOV, (float) width / height, Z_NEAR, Z_FAR);
         }
 
         @Override
@@ -312,7 +322,7 @@ public final class MonoscopicView extends GLSurfaceView {
             }
 
             Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
-            scene.glDrawFrame(viewProjectionMatrix, Type.MONOCULAR);
+            scene.glDrawFrame(viewProjectionMatrix, Type.MONOCULAR, screenWidth, screenHeight);
         }
 
         /** Adjusts the GL camera's rotation based on device rotation. Runs on the sensor thread. */
@@ -346,6 +356,7 @@ public final class MonoscopicView extends GLSurfaceView {
         /** Set the yaw offset matrix. */
         @UiThread
         public synchronized void setYawOffset(float yawDegrees) {
+            touchYaw = yawDegrees;
             Matrix.setRotateM(touchYawMatrix, 0, -yawDegrees, 0, 1, 0);
         }
     }

@@ -43,10 +43,8 @@ import java.io.UnsupportedEncodingException;
 public class NativeMediaPlayer {
     private final String TAG = "NATIVE_MEDIA_PLAYER";
     private long mHandler;
-    private RenderConfig mConfig;
+    public RenderConfig mConfig;
     private int status = 0;
-    public final int MAX_DECODE_WIDTH = 4096;
-    public final int MAX_DECODE_HEIGHT = 2304;
     private Context context;
 
     static {

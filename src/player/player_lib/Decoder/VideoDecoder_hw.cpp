@@ -79,8 +79,8 @@ RenderStatus VideoDecoder_hw::Initialize(int32_t id, Codec_Type codec, FrameHand
     this->mVideoId = id;
     switch(codec){
         case VideoCodec_HEVC:
-            // mDecCtx->mMediaCodec = AMediaCodec_createDecoderByType("video/hevc");
-            mDecCtx->mMediaCodec = AMediaCodec_createCodecByName("OMX.hisi.video.decoder.hevc");
+            mDecCtx->mMediaCodec = AMediaCodec_createDecoderByType("video/hevc");
+            // mDecCtx->mMediaCodec = AMediaCodec_createCodecByName("OMX.hisi.video.decoder.hevc");
             break;
         case VideoCodec_AVC:
             mDecCtx->mMediaCodec = AMediaCodec_createDecoderByType("video/avc");
