@@ -254,7 +254,7 @@ public final class SceneRenderer {
      * @param viewProjectionMatrix 16 element GL matrix.
      * @param eyeType an {@link com.google.vr.sdk.base.Eye.Type} value
      */
-    public void glDrawFrame(float[] viewProjectionMatrix, int eyeType) {
+    public void glDrawFrame(float[] viewProjectionMatrix, int eyeType, int width, int height) {
         Log.i(TAG, "begin to draw frame !");
         if (mediaPlayer != null) {
             mediaPlayer.SetCurrentStatus(1);
@@ -300,7 +300,7 @@ public final class SceneRenderer {
             Log.e(TAG, "draw time is " + drawTimeEnd);
         }
         Log.i(TAG, "begin to draw mesh!");
-        displayMesh.glDraw(viewProjectionMatrix, eyeType, transformType);
+        displayMesh.glDraw(viewProjectionMatrix, eyeType, transformType, width, height);
         if (videoUiView != null) {
             canvasQuad.glDraw(viewProjectionMatrix, videoUiView.getAlpha());
         }

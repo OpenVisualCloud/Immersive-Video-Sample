@@ -83,7 +83,7 @@ public class Mesh {
      * @param mvpMatrix The Model View Projection matrix.
      * @param eyeType An {@link Eye.Type} value.
      */
-    /* package */ void glDraw(float[] mvpMatrix, int eyeType, int[] transformType) {}
+    /* package */ void glDraw(float[] mvpMatrix, int eyeType, int[] transformType, int width, int height) {}
 
     /** Cleans up the GL resources. */
     /* package */ void glShutdown() {}

@@ -15,10 +15,6 @@ import com.google.vr.sdk.base.Eye;
  */
 public final class ERPMesh extends Mesh {
 
-    private static final int VIEWPORT_HFOV = 1920;
-
-    private static final int VIEWPORT_VFOV = 1920;
-
     // Basic vertex & fragment shaders to render a mesh with 3D position & 2D texture data.
     private static final String[] VERTEX_SHADER_CODE =
             new String[] {
@@ -187,12 +183,12 @@ public final class ERPMesh extends Mesh {
      * @param mvpMatrix The Model View Projection matrix.
      * @param eyeType An {@link Eye.Type} value.
      */
-    /* package */ void glDraw(float[] mvpMatrix, int eyeType, int[] transformType) {
+    /* package */ void glDraw(float[] mvpMatrix, int eyeType, int[] transformType, int width, int height) {
         // Configure shader.
         GLES20.glUseProgram(program);
         checkGlError();
 
-        GLES20.glViewport(0,0, VIEWPORT_HFOV,VIEWPORT_VFOV);
+        GLES20.glViewport(0,0, width, height);
 
         GLES20.glEnableVertexAttribArray(positionHandle);
         GLES20.glEnableVertexAttribArray(texCoordsHandle);

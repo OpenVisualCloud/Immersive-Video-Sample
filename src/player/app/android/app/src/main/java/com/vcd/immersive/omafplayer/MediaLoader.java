@@ -203,7 +203,7 @@ public class MediaLoader {
             // 1. create decode surfaces and set them to native player.
             for (int i=0;i<MAX_SURFACE_NUM;i++){
                 Pair<Integer, Surface> decoder_surface = sceneRenderer.createDecodeSurface(
-                    mediaPlayer.MAX_DECODE_WIDTH, mediaPlayer.MAX_DECODE_HEIGHT, i);
+                    mediaPlayer.mConfig.maxVideoDecodeWidth, mediaPlayer.mConfig.maxVideoDecodeHeight, i);
                 Log.i(TAG, "Complete to create one decode surface! surface id is " + i);
                 mediaPlayer.SetDecodeSurface(decoder_surface.second, decoder_surface.first, i);//set surface
                 Log.i(TAG, "ready to set decode surface!");
