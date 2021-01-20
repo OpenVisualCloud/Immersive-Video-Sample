@@ -819,7 +819,7 @@ int32_t OmafMediaStream::TilesStitching() {
           OMAF_LOG(LOG_INFO, "For current PTS %ld :\n", currFramePTS);
           OMAF_LOG(LOG_INFO, "Outdated PTS %ld from track %d\n", pts, trackID);
           hasPktOutdated = true;
-          if (samplesNumPerSeg == aveSamplesNumPerSeg)
+          if (samplesNumPerSeg == aveSamplesNumPerSeg && samplesNumPerSeg != 0)
           {
               if (pts % samplesNumPerSeg)
               {
@@ -854,7 +854,7 @@ int32_t OmafMediaStream::TilesStitching() {
               {
                   OMAF_LOG(LOG_INFO, "After wait for a moment, outdated PTS %ld from track %d\n", pts, trackID);
                   hasPktOutdated = true;
-                  if (samplesNumPerSeg == aveSamplesNumPerSeg)
+                  if (samplesNumPerSeg == aveSamplesNumPerSeg && samplesNumPerSeg != 0)
                   {
                       if (pts % samplesNumPerSeg)
                       {
@@ -876,7 +876,7 @@ int32_t OmafMediaStream::TilesStitching() {
                   {
                       OMAF_LOG(LOG_INFO, "After wait for a moment, outdated PTS %ld from track %d\n", pts, trackID);
                       hasPktOutdated = true;
-                      if (samplesNumPerSeg == aveSamplesNumPerSeg)
+                      if (samplesNumPerSeg == aveSamplesNumPerSeg && samplesNumPerSeg != 0)
                       {
                           if (pts % samplesNumPerSeg)
                           {
@@ -907,7 +907,7 @@ int32_t OmafMediaStream::TilesStitching() {
               {
                   OMAF_LOG(LOG_INFO, "After wait for a moment, outdated PTS %ld from track %d\n", pts, trackID);
                   hasPktOutdated = true;
-                  if (samplesNumPerSeg == aveSamplesNumPerSeg)
+                  if (samplesNumPerSeg == aveSamplesNumPerSeg && samplesNumPerSeg != 0)
                   {
                       if (pts % samplesNumPerSeg)
                       {
@@ -1009,7 +1009,7 @@ int32_t OmafMediaStream::TilesStitching() {
           {
               OMAF_LOG(LOG_INFO, "Frame %ld can't be stitched, move to next segment !\n", currFramePTS);
 
-              if (samplesNumPerSeg == aveSamplesNumPerSeg)
+              if (samplesNumPerSeg == aveSamplesNumPerSeg && samplesNumPerSeg != 0)
               {
                   currFramePTS = ((currFramePTS / samplesNumPerSeg) + 1) * samplesNumPerSeg;
               }
