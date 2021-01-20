@@ -678,7 +678,7 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
             trackSegCtx->tileIdx          = 0;
             trackSegCtx->extractorTrackIdx = 0;
             trackSegCtx->extractors        = NULL;
-            trackSegCtx->trackIdx          = (uint64_t)(DEFAULT_AUDIOTRACK_TRACKIDBASE + audioId);
+            trackSegCtx->trackIdx          = DEFAULT_AUDIOTRACK_TRACKIDBASE + (uint64_t)audioId;
 
             TrackConfig trackConfig{};
             trackConfig.meta.trackId = trackSegCtx->trackIdx;
@@ -691,7 +691,7 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
             trackSegCtx->dashInitCfg.packedSubPictures = true;
             trackSegCtx->dashInitCfg.mode = OperatingMode::OMAF;
             trackSegCtx->dashInitCfg.streamIds.push_back(trackConfig.meta.trackId.GetIndex());
-            snprintf(trackSegCtx->dashInitCfg.initSegName, 1024, "%s%s_track%ld.init.mp4", m_segInfo->dirName, m_segInfo->outName, (uint64_t)(DEFAULT_AUDIOTRACK_TRACKIDBASE + audioId));
+            snprintf(trackSegCtx->dashInitCfg.initSegName, 1024, "%s%s_track%ld.init.mp4", m_segInfo->dirName, m_segInfo->outName, (DEFAULT_AUDIOTRACK_TRACKIDBASE + (uint64_t)audioId));
 
             //set GeneralSegConfig
             trackSegCtx->dashCfg.sgtDuration = VCD::MP4::FractU64(m_segInfo->segDuration, 1); //?
@@ -706,7 +706,7 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
 
             trackSegCtx->dashCfg.useSeparatedSidx = false;
             trackSegCtx->dashCfg.streamsIdx.push_back(strId);
-            snprintf(trackSegCtx->dashCfg.trackSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, (uint64_t)(DEFAULT_AUDIOTRACK_TRACKIDBASE + audioId));
+            snprintf(trackSegCtx->dashCfg.trackSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, (DEFAULT_AUDIOTRACK_TRACKIDBASE + (uint64_t)audioId));
 
             //setup DashInitSegmenter
             trackSegCtx->initSegmenter = new DashInitSegmenter(&(trackSegCtx->dashInitCfg));
@@ -1511,7 +1511,10 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
                         for (uint16_t num = 0; num < m_aveETPerSegThread; num++)
                         {
-                            itExtractorTrack++;
+                            if (itExtractorTrack != extractorTracks->end())
+                            {
+                                itExtractorTrack++;
+                            }
                         }
                     }
                     else
@@ -1524,7 +1527,10 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
                             for (uint16_t num = 0; num < m_aveETPerSegThread; num++)
                             {
-                                itExtractorTrack++;
+                                if (itExtractorTrack != extractorTracks->end())
+                                {
+                                    itExtractorTrack++;
+                                }
                             }
                         }
                         else
