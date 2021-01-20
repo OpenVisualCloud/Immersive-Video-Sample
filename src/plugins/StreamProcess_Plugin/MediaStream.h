@@ -52,6 +52,7 @@ public:
     MediaStream()
     {
         m_mediaType = VIDEOTYPE;
+        m_codecId   = CODEC_ID_H265;
     };
 
     //!

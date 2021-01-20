@@ -305,6 +305,7 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
             if (!oneTilesSet)
             {
                 DELETE_ARRAY(tilesInView);
+                DELETE_MEMORY(outCC);
                 return OMAF_ERROR_NULL_PTR;
             }
 
@@ -315,6 +316,7 @@ int32_t ExtractorTrackGenerator::SelectTilesInView(
                 if (!oneTile)
                 {
                     DELETE_ARRAY(tilesInView);
+                    DELETE_MEMORY(outCC);
                     return OMAF_ERROR_NULL_PTR;
                 }
 
@@ -894,6 +896,11 @@ int32_t ExtractorTrackGenerator::Initialize()
         allSelectedNums.insert(selectedNum);
     }
     std::set<uint16_t>::reverse_iterator numIter = allSelectedNums.rbegin();
+    if (numIter == allSelectedNums.rend())
+    {
+        OMAF_LOG(LOG_ERROR, "ERROR in all selected tiles numbers !\n");
+        return OMAF_ERROR_INVALID_DATA;
+    }
     uint16_t maxSelectedNum = *numIter;
     OMAF_LOG(LOG_INFO, "Maxmum selected tiles number in viewport is %d\n", maxSelectedNum);
 
