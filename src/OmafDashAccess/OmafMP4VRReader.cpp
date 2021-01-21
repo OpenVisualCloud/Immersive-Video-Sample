@@ -252,8 +252,12 @@ int32_t OmafMP4VRReader::getTrackInformations(std::vector<VCD::OMAF::TrackInform
     trackInfos.push_back(trackInfo);
   }
 
-  if (!Infos)
+  if (Infos)
+  {
       delete Infos;
+      Infos = NULL;
+  }
+
   dResult = (double)(clock() - lBefore) * 1000 / CLOCKS_PER_SEC;
   OMAF_LOG(LOG_INFO, "Total Time for OmafMP4VRReader GetTrackInformation is %f ms\n", dResult);
 #else

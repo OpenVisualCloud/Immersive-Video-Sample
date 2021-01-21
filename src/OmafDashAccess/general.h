@@ -61,6 +61,11 @@
     delete (x);        \
     (x) = NULL;        \
   };
+#define SAFE_DELARRAY(x) \
+  if (NULL != (x)) {     \
+    delete [] (x);       \
+    (x) = NULL;          \
+  };
 #define SAFE_FREE(x) \
   if (NULL != (x)) { \
     free((x));       \

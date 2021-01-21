@@ -1038,13 +1038,13 @@ int32_t OmafMediaStream::TilesStitching() {
       std::list<MediaPacket *> allPackets;
       for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end();) {
         MediaPacket* pkt = it1->second;
-	std::list<MediaPacket *>::iterator pktIter;
+	    std::list<MediaPacket *>::iterator pktIter;
         pktIter = std::find(allPackets.begin(), allPackets.end(), pkt);
-	if (pktIter == allPackets.end())
+	    if (pktIter == allPackets.end())
         {
           allPackets.push_back(pkt);
           SAFE_DELETE(pkt);
-	}
+	    }
         selectedPackets.erase(it1++);
       }
       selectedPackets.clear();
@@ -1068,19 +1068,19 @@ int32_t OmafMediaStream::TilesStitching() {
                                  (VCD::OMAF::ProjectionFormat)(m_pStreamInfo->mProjFormat), m_sources);
       if (ret) {
         OMAF_LOG(LOG_ERROR, "Failed to initialize stitch class !\n");
-	std::list<MediaPacket *> allPackets;
+	    std::list<MediaPacket *> allPackets;
         for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end();) {
           MediaPacket* pkt = it1->second;
-	  std::list<MediaPacket *>::iterator pktIter;
+	      std::list<MediaPacket *>::iterator pktIter;
           pktIter = std::find(allPackets.begin(), allPackets.end(), pkt);
           if (pktIter == allPackets.end())
           {
             allPackets.push_back(pkt);
             SAFE_DELETE(pkt);
-	  }
+	      }
           selectedPackets.erase(it1++);
         }
-	allPackets.clear();
+	    allPackets.clear();
         selectedPackets.clear();
         return ret;
       }
@@ -1089,19 +1089,19 @@ int32_t OmafMediaStream::TilesStitching() {
         ret = m_stitch->UpdateSelectedTiles(selectedPackets, m_needParams);
         if (ret) {
           OMAF_LOG(LOG_ERROR, "Failed to update media packets for tiles merge !\n");
-	  std::list<MediaPacket *> allPackets;
+	      std::list<MediaPacket *> allPackets;
           for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end();) {
             MediaPacket* pkt = it1->second;
-	    std::list<MediaPacket *>::iterator pktIter;
+	        std::list<MediaPacket *>::iterator pktIter;
             pktIter = std::find(allPackets.begin(), allPackets.end(), pkt);
             if (pktIter == allPackets.end())
             {
-	      allPackets.push_back(pkt);
+	          allPackets.push_back(pkt);
               SAFE_DELETE(pkt);
             }
             selectedPackets.erase(it1++);
           }
-	  allPackets.clear();
+	      allPackets.clear();
           selectedPackets.clear();
           return ret;
         }
@@ -1136,7 +1136,22 @@ int32_t OmafMediaStream::TilesStitching() {
       m_mergedPackets.push_back(mergedPackets);
     }
     std::list<MediaPacket*>::iterator it = mergedPackets.begin();
-    MediaPacket *one = *it;
+    if (it == mergedPackets.end())
+    {
+        OMAF_LOG(LOG_ERROR, "Failed to generate tiles stitched media packet !\n");
+        selectedPackets.clear();
+        return ERROR_INVALID;
+    }
+
+    MediaPacket *one = NULL;
+    one = *it;
+    if (!one)
+    {
+        OMAF_LOG(LOG_ERROR, "Tiles stitched media packet is NULL !\n");
+        selectedPackets.clear();
+        return ERROR_NULL_PTR;
+    }
+
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
     // trace

@@ -46,6 +46,7 @@ ViewportPredictPlugin::ViewportPredictPlugin()
     m_predictFunc     = NULL;
     m_initFunc        = NULL;
     m_setViewportFunc = NULL;
+    m_destroyFunc     = NULL;
 }
 
 ViewportPredictPlugin::~ViewportPredictPlugin()

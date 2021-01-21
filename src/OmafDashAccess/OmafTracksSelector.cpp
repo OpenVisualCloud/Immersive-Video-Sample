@@ -47,6 +47,8 @@ OmafTracksSelector::OmafTracksSelector(int size) {
   mLibPath = "";
   mProjFmt = ProjectionFormat::PF_ERP;
   mSegmentDur = 0;
+  mQualityRanksNum = 0;
+  memset_s(&(mI360ScvpPlugin), sizeof(PluginDef), 0);
 }
 
 OmafTracksSelector::~OmafTracksSelector() {
@@ -66,8 +68,15 @@ OmafTracksSelector::~OmafTracksSelector() {
   SAFE_DELETE(mParamViewport);
 
   if (mPoseHistory.size()) {
-    for (auto pose : mPoseHistory) {
-      SAFE_DELETE(pose);
+    //for (auto pose : mPoseHistory) {
+    //  SAFE_DELETE(pose);
+    //}
+    std::list<HeadPose*>::iterator itPose;
+    for (itPose = mPoseHistory.begin(); itPose != mPoseHistory.end(); )
+    {
+        HeadPose *onePose = *itPose;
+        SAFE_DELETE(onePose);
+        mPoseHistory.erase(itPose++);
     }
 
     mPoseHistory.clear();

@@ -44,7 +44,10 @@ public:
     //!
     //! \brief Constructor
     //!
-    AudioChannelConfigurationElement(){};
+    AudioChannelConfigurationElement()
+    {
+        m_chlCfg = 0;
+    };
 
     //!
     //! \brief Destructor
