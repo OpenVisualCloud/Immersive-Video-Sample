@@ -108,11 +108,11 @@ class OmafAudioPacketParams : public VCD::NonCopyable {
 
   std::vector<uint8_t> params_;
 
-  uint32_t             objType_;
+  uint32_t             objType_ = 0;
 
-  uint32_t             frequencyIdx_;
+  uint32_t             frequencyIdx_ = 0;
 
-  uint32_t             channelCfg_;
+  uint32_t             channelCfg_ = 0;
 
   int32_t              curr_bit_pos_ = 0;
 

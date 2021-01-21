@@ -532,7 +532,7 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
         }
     }
     SAFE_DELETE(previousPose);
-    SAFE_DELETE(predictPose);
+    SAFE_DELARRAY(predictPose);
     predict_angles.clear();
     return predictedTracks;
 }

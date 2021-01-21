@@ -1589,7 +1589,14 @@ int32_t OmafTilesStitch::UpdateMergedDataAndRealSize(
     if (itPacket == packets.end())
     {
         if (needPacketSize[layoutNum-1] > packets.size())
+        {
             itPacket = packets.begin();
+        }
+        else
+        {
+            OMAF_LOG(LOG_ERROR, "ERROR in selected media packets for tiles stitching !\n");
+            return OMAF_ERROR_INVALID_DATA;
+        }
     }
 
     uint32_t packetSize = index == 0 ? needPacketSize[index] : needPacketSize[index] - needPacketSize[index - 1];
@@ -1602,7 +1609,18 @@ int32_t OmafTilesStitch::UpdateMergedDataAndRealSize(
       }
       cnt++;
       if (cnt > packetSize) break;
-      MediaPacket *onePacket = itPacket->second;
+      if (itPacket == packets.end())
+      {
+          OMAF_LOG(LOG_ERROR, "There is mismatch in needed packets size and actually selected media packets !\n");
+          return OMAF_ERROR_INVALID_DATA;
+      }
+      MediaPacket *onePacket = NULL;
+      onePacket = itPacket->second;
+      if (!onePacket)
+      {
+          OMAF_LOG(LOG_ERROR, "Selected media packet is NULL !\n");
+          return OMAF_ERROR_NULL_PTR;
+      }
       //if (qualityRanking == HIGHEST_QUALITY_RANKING) {
       std::map<uint32_t, SourceInfo>::iterator itSrc;
       itSrc = m_sources.find(qualityRanking);
@@ -1630,9 +1648,20 @@ int32_t OmafTilesStitch::UpdateMergedDataAndRealSize(
         // LOG(INFO)<<"New ctuIdx  "<<ctuIdx<<endl;
         char *data = onePacket->Payload();
         int32_t dataSize = onePacket->Size();
+        if (!data || !dataSize)
+        {
+            OMAF_LOG(LOG_ERROR, "Invalid data in selected media packet !\n");
+            return OMAF_ERROR_INVALID_DATA;
+        }
+
         if (onePacket->GetHasVideoHeader()) {
           data += (onePacket->GetVPSLen() + onePacket->GetSPSLen() + onePacket->GetPPSLen());
           dataSize -= (onePacket->GetVPSLen() + onePacket->GetSPSLen() + onePacket->GetPPSLen());
+        }
+        if (!data || !dataSize)
+        {
+            OMAF_LOG(LOG_ERROR, "After video headers (VPS/SPS/PPS) are moved, invalid data in selected media packet !\n");
+            return OMAF_ERROR_INVALID_DATA;
         }
 
         Nalu *nalu = new Nalu;
@@ -1664,9 +1693,20 @@ int32_t OmafTilesStitch::UpdateMergedDataAndRealSize(
       } else {
         char *data = onePacket->Payload();
         int32_t dataSize = onePacket->Size();
+        if (!data || !dataSize)
+        {
+            OMAF_LOG(LOG_ERROR, "Invalid data in selected media packet !\n");
+            return OMAF_ERROR_INVALID_DATA;
+        }
+
         if (onePacket->GetHasVideoHeader()) {
           data += onePacket->GetVideoHeaderSize();
           dataSize -= onePacket->GetVideoHeaderSize();
+        }
+        if (!data || !dataSize)
+        {
+            OMAF_LOG(LOG_ERROR, "After video headers (VPS/SPS/PPS) are moved, invalid data in selected media packet !\n");
+            return OMAF_ERROR_INVALID_DATA;
         }
         memcpy_s(mergedData + *realSize, dataSize, data, dataSize);
         *realSize += dataSize;
