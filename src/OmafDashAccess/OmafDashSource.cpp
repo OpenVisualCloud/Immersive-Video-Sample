@@ -468,6 +468,8 @@ int OmafDashSource::GetMediaInfo(DashMediaInfo* media_info) {
     media_info->stream_info[i].tileColNum = pStreamInfo->tileColNum;
     memcpy_s(const_cast<char*>(media_info->stream_info[i].codec), 1024, pStreamInfo->codec, 1024);
     memcpy_s(const_cast<char*>(media_info->stream_info[i].mime_type), 1024, pStreamInfo->mime_type, 1024);
+    DELETE_ARRAY(pStreamInfo->codec);
+    DELETE_ARRAY(pStreamInfo->mime_type);
   }
 
   return ERROR_NONE;
