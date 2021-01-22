@@ -45,6 +45,9 @@ VCD_NS_BEGIN
 
 #define VERTEX_NUM 36
 
+#define MAXVTX  1.0f
+#define MINVTX -1.0f
+
 CubeMapMesh::CubeMapMesh()
 {
 }
@@ -67,47 +70,47 @@ RenderStatus CubeMapMesh::Create()
     float skyboxVertices[] = {
         // vertex postion         transform position
         // right- z (for flip)
-         1.0f, -1.0f, -1.0f,      1.0f, -1.0f,  1.0f,
-         1.0f, -1.0f,  1.0f,      1.0f, -1.0f, -1.0f,
-         1.0f,  1.0f,  1.0f,      1.0f,  1.0f, -1.0f,
-         1.0f,  1.0f,  1.0f,      1.0f,  1.0f, -1.0f,
-         1.0f,  1.0f, -1.0f,      1.0f,  1.0f,  1.0f,
-         1.0f, -1.0f, -1.0f,      1.0f, -1.0f,  1.0f,
+        MAXVTX, MINVTX, MINVTX,     MAXVTX, MINVTX, MAXVTX,
+        MAXVTX, MINVTX, MAXVTX,     MAXVTX, MINVTX, MINVTX,
+        MAXVTX, MAXVTX, MAXVTX,     MAXVTX, MAXVTX, MINVTX,
+        MAXVTX, MAXVTX, MAXVTX,     MAXVTX, MAXVTX, MINVTX,
+        MAXVTX, MAXVTX, MINVTX,     MAXVTX, MAXVTX, MAXVTX,
+        MAXVTX, MINVTX, MINVTX,     MAXVTX, MINVTX, MAXVTX,
         // left- z (for flip)
-        -1.0f, -1.0f,  1.0f,     -1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,     -1.0f, -1.0f,  1.0f,
-        -1.0f,  1.0f, -1.0f,     -1.0f,  1.0f,  1.0f,
-        -1.0f,  1.0f, -1.0f,     -1.0f,  1.0f,  1.0f,
-        -1.0f,  1.0f,  1.0f,     -1.0f,  1.0f, -1.0f,
-        -1.0f, -1.0f,  1.0f,     -1.0f, -1.0f, -1.0f,
+        MINVTX, MINVTX, MAXVTX,     MINVTX, MINVTX, MINVTX,
+        MINVTX, MINVTX, MINVTX,     MINVTX, MINVTX, MAXVTX,
+        MINVTX, MAXVTX, MINVTX,     MINVTX, MAXVTX, MAXVTX,
+        MINVTX, MAXVTX, MINVTX,     MINVTX, MAXVTX, MAXVTX,
+        MINVTX, MAXVTX, MAXVTX,     MINVTX, MAXVTX, MINVTX,
+        MINVTX, MINVTX, MAXVTX,     MINVTX, MINVTX, MINVTX,
         // top- z (for flip)
-        -1.0f,  1.0f, -1.0f,     -1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f, -1.0f,      1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,      1.0f,  1.0f, -1.0f,
-         1.0f,  1.0f,  1.0f,      1.0f,  1.0f, -1.0f,
-        -1.0f,  1.0f,  1.0f,     -1.0f,  1.0f, -1.0f,
-        -1.0f,  1.0f, -1.0f,     -1.0f,  1.0f,  1.0f,
+        MINVTX, MAXVTX, MINVTX,     MINVTX, MAXVTX, MAXVTX,
+        MAXVTX, MAXVTX, MINVTX,     MAXVTX, MAXVTX, MAXVTX,
+        MAXVTX, MAXVTX, MAXVTX,     MAXVTX, MAXVTX, MINVTX,
+        MAXVTX, MAXVTX, MAXVTX,     MAXVTX, MAXVTX, MINVTX,
+        MINVTX, MAXVTX, MAXVTX,     MINVTX, MAXVTX, MINVTX,
+        MINVTX, MAXVTX, MINVTX,     MINVTX, MAXVTX, MAXVTX,
         // bottom- z (for flip)
-        -1.0f, -1.0f, -1.0f,     -1.0f, -1.0f,  1.0f,
-        -1.0f, -1.0f,  1.0f,     -1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,      1.0f, -1.0f,  1.0f,
-         1.0f, -1.0f, -1.0f,      1.0f, -1.0f,  1.0f,
-        -1.0f, -1.0f,  1.0f,     -1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f,  1.0f,      1.0f, -1.0f, -1.0f,
+        MINVTX, MINVTX, MINVTX,     MINVTX, MINVTX, MAXVTX,
+        MINVTX, MINVTX, MAXVTX,     MINVTX, MINVTX, MINVTX,
+        MAXVTX, MINVTX, MINVTX,     MAXVTX, MINVTX, MAXVTX,
+        MAXVTX, MINVTX, MINVTX,     MAXVTX, MINVTX, MAXVTX,
+        MINVTX, MINVTX, MAXVTX,     MINVTX, MINVTX, MINVTX,
+        MAXVTX, MINVTX, MAXVTX,     MAXVTX, MINVTX, MINVTX,
         // back- x (for flip)
-        -1.0f, -1.0f,  1.0f,      1.0f, -1.0f,  1.0f,
-        -1.0f,  1.0f,  1.0f,      1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,     -1.0f,  1.0f,  1.0f,
-         1.0f,  1.0f,  1.0f,     -1.0f,  1.0f,  1.0f,
-         1.0f, -1.0f,  1.0f,     -1.0f, -1.0f,  1.0f,
-        -1.0f, -1.0f,  1.0f,      1.0f, -1.0f,  1.0f,
+        MINVTX, MINVTX, MAXVTX,     MAXVTX, MINVTX, MAXVTX,
+        MINVTX, MAXVTX, MAXVTX,     MAXVTX, MAXVTX, MAXVTX,
+        MAXVTX, MAXVTX, MAXVTX,     MINVTX, MAXVTX, MAXVTX,
+        MAXVTX, MAXVTX, MAXVTX,     MINVTX, MAXVTX, MAXVTX,
+        MAXVTX, MINVTX, MAXVTX,     MINVTX, MINVTX, MAXVTX,
+        MINVTX, MINVTX, MAXVTX,     MAXVTX, MINVTX, MAXVTX,
         // front- x (for flip)
-        -1.0f,  1.0f, -1.0f,      1.0f,  1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,      1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,     -1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f, -1.0f,     -1.0f, -1.0f, -1.0f,
-         1.0f,  1.0f, -1.0f,     -1.0f,  1.0f, -1.0f,
-        -1.0f,  1.0f, -1.0f,      1.0f,  1.0f, -1.0f,
+        MINVTX, MAXVTX, MINVTX,     MAXVTX, MAXVTX, MINVTX,
+        MINVTX, MINVTX, MINVTX,     MAXVTX, MINVTX, MINVTX,
+        MAXVTX, MINVTX, MINVTX,     MINVTX, MINVTX, MINVTX,
+        MAXVTX, MINVTX, MINVTX,     MINVTX, MINVTX, MINVTX,
+        MAXVTX, MAXVTX, MINVTX,     MINVTX, MAXVTX, MINVTX,
+        MINVTX, MAXVTX, MINVTX,     MAXVTX, MAXVTX, MINVTX,
     };
     for (uint32_t i=0; i<m_vertexNum * 6; i++)
     {

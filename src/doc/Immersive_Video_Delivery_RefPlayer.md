@@ -1,17 +1,21 @@
 # Immersive Video Delivery Reference Player
 
 ## Introduction
-The reference 360 player is used to play the mixed-resolution stream video transmitted from the server. Linux and Android platform are both supported, in which android player development is based on google VR android SDK.(https://github.com/googlevr/gvr-android-sdk)
+The reference 360 player is used to play the mixed-resolution stream video transmitted from the server. Linux and Android platform are both supported.
 
 Based on the current viewport, corresponding regions are rendered on the window. The workflow is as follows:
 
 <IMG src="img/OMAF_Compliant-Video-Delivery-RefPlayer_workflow.png" height="450">
  
-The 360 player supports streams in both Equirectangle and Cubemap geometry. After getting encoded packet from Dash Access Library, FFmpeg software decoder is used to decode frames. Decoded frame is bind to a 2D texture and the texture would be updated every frame. And then according to Region-wise Packing information, there exists tiles copy between packed frame buffer and output frame buffer. The last step is to render the output frame buffer to sphere.
+The 360 player supports streams in both Equirectangle and Cubemap geometry. In Linux player, after getting encoded packet from Dash Access Library, FFmpeg software decoder is used to decode frames. Decoded frame is bind to a 2D texture and the texture would be updated every frame. And then according to Region-wise Packing information, there exists tiles copy between packed frame buffer and output frame buffer. The last step is to render the output frame buffer to sphere or skybox.
 
-Except for extractor-track path, later-binding strategy is supported in the latest version. Thus, there may be multiple videos of different quality rankings in one input stream. Decoder manager is created to support multi-decoder process. Decoders will be destroyed, restarted or reset if the number of videos, resolution or codec format changes.
+In Android player, MediaCodec decoder is ultilized to decode packets from Dash Access Library and deliver the output to decoded surfaces. And then, Draw tile by tile from decoded surfaces to display surface according to Region-wise Packing information. The last step is to render the output frame buffer to sphere or skybox.
 
-The key technical step in render is how to correctly remap the mixed-resolution decoded frame to the sphere texture in space. Region-wise Packing (RWPK) information would be obtained from Omaf Dash Access library together with an encoded packet, which represents the mapping space relationship between decoded frame and sphere texture. The RWPK schematic diagram is shown as follows:
+Except for 3D projection media contents, planar format is supported in late binding mode.
+
+Extractor-track and later-binding strategy are both supported. Thus, there may be multiple videos of different quality rankings in one input stream. Decoder manager is created to support multi-decoder process. Decoders will be destroyed, restarted or reset if the number of videos, resolution or codec format changes.
+
+The very important step in render is how to correctly remap the mixed-resolution decoded frame to the display texture in space. Region-wise Packing (RWPK) information would be obtained from Omaf Dash Access library together with an encoded packet, which represents the mapping space relationship between decoded frame and sphere texture. The RWPK schematic diagram is shown as follows:
 
 <IMG src="img/OMAF_Compliant-Video-Delivery-rwpk.png" height="250">
 
@@ -41,11 +45,14 @@ The configuration file, config.xml, is used to config parameters for 360 linux p
 | url | The resource URL path | Remote URL |
 | sourceType | Source type | 0 is for Dash Source |
 | enableExtractor | extractor track path or later binding path | 1 is for extractor track and 0 is for later binding |
+| StreamDumpedOption | dump packet streams or not | 0 for false, 1 for true |
 | viewportHFOV | Viewport horizon FOV degree | 80 |
 | viewportVFOV | Viewport vertical FOV degree | 80 |
 | viewportWidth | Viewport width | 960 for 4k, 1920 for 8k |
 | viewportHeight | Viewport height | 960 for 4k, 1920 for 8k |
-| cachePath | Cache path | /home/media/cache |
-| predict | viewport prediction plugin | 0 is disable and 1 is enable
-
-**Note**: So far, some parameters settings are limited. URL need to be a remote dash source URL. The parameter sourceType must set to 0, which represents dash source.
+| cachePath | Cache path | /tmp/cache |
+| minLogLevel | min log level | INFO / WARNING / ERROR / FATAL |
+| maxVideoDecodeWidth | max video decoded width | decoded width that is supported |
+| maxVideoDecodeHeight | max video decoded height | decoded height that is supported |
+| predict | viewport prediction plugin | 0 is disable and 1 is enable |
+| PathOf360SCVPPlugins | path of 360SCVP plugins | needed for planar format rendering |
