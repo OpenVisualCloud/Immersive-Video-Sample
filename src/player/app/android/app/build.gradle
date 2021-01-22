@@ -46,8 +46,6 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     implementation 'com.google.vr:sdk-base:1.160.0'
     implementation 'com.google.vr:sdk-controller:1.160.0'
-    implementation 'com.google.android.exoplayer:exoplayer:2.6.1'
-    implementation 'com.google.android.exoplayer:extension-gvr:2.6.1'
 
     implementation files('libs/jna.jar')
 }

@@ -33,6 +33,7 @@ Android Gradle Plugion version = 3.5.1
 Android Gradle version = 5.4.1
 Compile SDK version = API 29: Android 10.0(Q)
 Build Tools verion = 29.0.3
+Install and configure NDK in android studio
 
 arm processer: arm64-v8a
 ```
@@ -41,5 +42,5 @@ arm processer: arm64-v8a
 
 > 1. Once the required libs and the tools mentioned above are installed, you can open the "player/app/android" project with Android Studio.
 > 2. Check the android cellphone is recognized as running device.
-> 3. Check input parameters in NativeMediaPlayer.java.
+> 3. Check input parameters in assets/cfg.json.
 > 4. Click 'green triangle' run button.
