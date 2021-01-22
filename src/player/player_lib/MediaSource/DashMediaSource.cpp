@@ -61,12 +61,13 @@ DashMediaSource::DashMediaSource() {
   m_handler = NULL;
   m_DecoderManager = NULL;
   GetStreamDumpedOptionParams();
+  m_singleFile = NULL;
   if (m_needStreamDumped) {
     for (uint32_t i = 0; i < MAX_DUMP_FILE_NUM; i++)
     {
-      FILE* tmpFile = fopen(string("video" + to_string(i) + ".h265").c_str(), "wb");
-      if (NULL == tmpFile) LOG(ERROR) << "Failed to open stream dumped file!" << endl;
-      m_dumpedFile.push_back(std::move(tmpFile));
+      m_singleFile = fopen(string("video" + to_string(i) + ".h265").c_str(), "wb");
+      if (NULL == m_singleFile) LOG(ERROR) << "Failed to open stream dumped file!" << endl;
+      m_dumpedFile.push_back(std::move(m_singleFile));
     }
   }
 }
@@ -81,6 +82,11 @@ DashMediaSource::~DashMediaSource() {
       file = NULL;
     }
     m_dumpedFile.clear();
+  }
+  if (m_singleFile)
+  {
+    fclose(m_singleFile);
+    m_singleFile = NULL;
   }
   OmafAccess_CloseMedia(m_handler);
   OmafAccess_Close(m_handler);
@@ -197,6 +203,8 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   pCtxDashStreaming = NULL;
   free(clientInfo.pose);
   clientInfo.pose = NULL;
+  SAFE_DELETE_ARRAY(mediaInfo.stream_info[0].codec);
+  SAFE_DELETE_ARRAY(mediaInfo.stream_info[0].mime_type);
   return RENDER_STATUS_OK;
 }
 

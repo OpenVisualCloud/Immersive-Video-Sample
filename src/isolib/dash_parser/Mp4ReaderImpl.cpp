@@ -2789,7 +2789,7 @@ int32_t Mp4Reader::GetTrackInformation(VarLenArray<TrackInformation>& outTrackIn
     }
 
     size_t totalSize = m_initSegProps.size();
-    outTrackInfos               = VarLenArray<TrackInformation>(totalSize);
+    outTrackInfos = std::move(VarLenArray<TrackInformation>(totalSize));
     uint32_t basicTrackId       = 0;
     size_t offset               = 0;
     for (auto const& initSegment : m_initSegProps)

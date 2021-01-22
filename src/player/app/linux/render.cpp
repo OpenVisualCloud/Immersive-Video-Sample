@@ -330,6 +330,8 @@ int main(int32_t argc, char *argv[]) {
       SAFE_DELETE_ARRAY(renderConfig.pathof360SCVPPlugin);
       SAFE_DELETE_ARRAY(renderConfig.url);
       SAFE_DELETE_ARRAY(renderConfig.cachePath);
+      SAFE_DELETE_ARRAY(renderConfig.libPath);
+      SAFE_DELETE_ARRAY(renderConfig.predictPluginName);
       LOG(ERROR) << "Uable to create cache path: " << cacheDir << endl;
       return RENDER_ERROR;
     }

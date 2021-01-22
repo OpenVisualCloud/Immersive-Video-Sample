@@ -164,6 +164,7 @@ private:
     ThreadLock                          m_Lock;
     bool                                m_needStreamDumped;
     vector<FILE*>                       m_dumpedFile;
+    FILE*                               m_singleFile;
 };
 
 VCD_NS_END
