@@ -8,6 +8,7 @@
    + Support packing for AAC audio stream
    + Support packing for planar projection in late-binding mode
    + Plugin mode to support customized media stream process
+   + Support external log callback
    + bug fix: memory leak, hang / crash in some condition
 
 - OMAF Dash Access Library
@@ -20,16 +21,18 @@
 - 360SCVP (Stream Concatenation and Viewport Processing) Library
    + code refactor: add plugin definition for tile selection
    + optimization for tile selection to improve performance, accuracy and efficiency
+   + Support external log callback
 
 - Reference OMAF Player
    + Android Player: with ERP and Cube-map support
    + Android platform: extend DashAccess JNI library with MediaCodec decoder integrated.
-   + Linux Player: Support WebRTC source with multiple video stream decoding and rendering
+   + Linux Player: Support WebRTC source with multiple video stream decoding, rendering; and RTCP FOV feedback
    + Linux Player: Support Planar Video
    + Code refactor
 
 - FFmpeg Plugins & Encoder Library
    + Encoder Library: Bug fix for memory leak
+   + FFmpeg Plugins: add option for external log callback and log level set
    + FFmpeg Plugins: add option for fixed/dynamic sub-picture resolution for extractor track mode
    + FFmpeg Plugins: add audio stream input process
    + FFmpeg Plugins: add option for planar projection support
