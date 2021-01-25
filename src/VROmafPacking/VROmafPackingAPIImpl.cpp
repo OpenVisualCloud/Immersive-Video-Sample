@@ -34,6 +34,9 @@
 #include "VROmafPackingAPI.h"
 #include "OmafPackage.h"
 #include "Log.h"
+#ifdef _USE_TRACE_
+#include "../trace/E2E_latency_tp.h"
+#endif
 
 VCD_USE_VRVIDEO;
 
@@ -78,6 +81,14 @@ int32_t VROmafPackingWriteSegment(Handler hdl, uint8_t streamIdx, FrameBSInfo *f
     OmafPackage *omafPackage = (OmafPackage*)hdl;
     if (!omafPackage)
         return OMAF_ERROR_NULL_PTR;
+
+#ifdef _USE_TRACE_
+    string tag = "StremIdx:" + to_string(streamIdx);
+    tracepoint(E2E_latency_tp_provider,
+               pre_op_info,
+               frameInfo->pts,
+               tag.c_str());
+#endif
 
     int32_t ret = omafPackage->OmafPacketStream(streamIdx, frameInfo);
     if (ret)

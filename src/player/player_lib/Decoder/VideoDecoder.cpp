@@ -33,6 +33,7 @@
 #include <chrono>
 #ifdef _USE_TRACE_
 #include "../../../trace/MtHQ_tp.h"
+#include "../../../trace/E2E_latency_tp.h"
 #endif
 
 #define DECODE_THREAD_COUNT 16
@@ -303,6 +304,11 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id, uint64_
 #ifdef _USE_TRACE_
     // trace
     tracepoint(mthq_tp_provider, T10_decode_time_cost, data->pts, video_id, end-start, mDecCtx->codec_ctx->width, mDecCtx->codec_ctx->height);
+    string tag = "videoIdx:" + to_string(video_id);
+    tracepoint(E2E_latency_tp_provider,
+               pre_rd_info,
+               frame->pts,
+               tag.c_str());
 #endif
     SAFE_DELETE(data);
     }

@@ -3,7 +3,7 @@
 TARGET=$1
 PREBUILD_FLAG=$2
 EX_PATH=${PWD}
-FFMPEG_PATH=${PWD}/../../..
+SRC_PATH=${PWD}/..
 GIT_SHORT_HEAD=`git rev-parse --short HEAD`
 
 parameters_usage(){
@@ -119,173 +119,69 @@ build_test(){
     mkdir -p build/test/VROmafPacking
     mkdir -p build/test/distributed_encoder
 
+    BASIC_CONFIG="-I${SRC_PATH}/google_test -std=c++11 -I../util/ "`
+                `"-I${SRC_PATH}/utils -D_GLIBCXX_USE_CXX11_ABI=0 -g -c"
+    SHARED_CONFIG="-L/usr/local/lib -I/usr/local/include/ "`
+                 `"../googletest/googletest/build/libgtest.a "`
+                 `"-lstdc++ -lpthread -lglog -lm -l360SCVP -lsafestring_shared "
+
     # Compile 360SCVP test
     cd build/test/360SCVP && \
-        g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
-          ../../../360SCVP/test/testI360SCVP.cpp \
-          -D_GLIBCXX_USE_CXX11_ABI=0 && \
-        g++ -L/usr/local/lib testI360SCVP.o \
-          ../googletest/googletest/build/libgtest.a -o \
-          testI360SCVP -I/usr/local/include/ -l360SCVP -lglog \
-          -lstdc++ -lpthread -lsafestring_shared -lm -L/usr/local/lib
+        g++ ${BASIC_CONFIG} ${EX_PATH}/../360SCVP/test/testI360SCVP.cpp && \
+        g++ testI360SCVP.o ${SHARED_CONFIG} -o testI360SCVP
 
     # Compile OmafDashAccess test
+    DA_TEST_PATH="${SRC_PATH}/OmafDashAccess/test"
+    DA_SHARED_CONFIG="${SHARED_CONFIG} -lOmafDashAccess"
     cd ../OmafDashAccess && \
-        g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
-          ../../../OmafDashAccess/test/testMediaSource.cpp \
-          -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
-        g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
-          ../../../OmafDashAccess/test/testMPDParser.cpp \
-          -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
-        g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
-          ../../../OmafDashAccess/test/testOmafReader.cpp \
-          -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
-        g++ -I../../../google_test -std=c++11 -I../util/ -g -c \
-          ../../../OmafDashAccess/test/testOmafReaderManager.cpp \
-          -I../../../utils -D_GLIBCXX_USE_CXX11_ABI=0 && \
-        g++ -L/usr/local/lib testMediaSource.o \
-          ../googletest/googletest/build/libgtest.a -o \
-          testMediaSource -I/usr/local/include/ -lOmafDashAccess -lsafestring_shared \
-          -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib && \
-        g++ -L/usr/local/lib testMPDParser.o \
-          ../googletest/googletest/build/libgtest.a -o \
-          testMPDParser -I/usr/local/include/ -lOmafDashAccess -lsafestring_shared \
-          -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib && \
-        g++ -L/usr/local/lib testOmafReader.o \
-          ../googletest/googletest/build/libgtest.a -o \
-          testOmafReader -I/usr/local/include/ -lOmafDashAccess -lsafestring_shared \
-          -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib && \
-        g++ -L/usr/local/lib testOmafReaderManager.o \
-          ../googletest/googletest/build/libgtest.a -o \
-          testOmafReaderManager -I/usr/local/include/ -lOmafDashAccess -lsafestring_shared\
-          -lstdc++ -lpthread -lglog -l360SCVP -lm -L/usr/local/lib
+        g++ ${BASIC_CONFIG} ${DA_TEST_PATH}/testMediaSource.cpp && \
+        g++ ${BASIC_CONFIG} ${DA_TEST_PATH}/testMPDParser.cpp && \
+        g++ ${BASIC_CONFIG} ${DA_TEST_PATH}/testOmafReader.cpp && \
+        g++ ${BASIC_CONFIG} ${DA_TEST_PATH}/testOmafReaderManager.cpp && \
+        g++ testMediaSource.o ${DA_SHARED_CONFIG} -o testMediaSource && \
+        g++ testMPDParser.o ${DA_SHARED_CONFIG} -o testMPDParser && \
+        g++ testOmafReader.o ${DA_SHARED_CONFIG} -o testOmafReader && \
+        g++ testOmafReaderManager.o ${DA_SHARED_CONFIG} -o testOmafReaderManager
 
     # Compile VROmafPacking test
-    cd ../ && \
-    cd ../../VROmafPacking/test/ && \
-    mkdir -p vs_plugin && \
-    cd vs_plugin && \
-    cp ../../../plugins/StreamProcess_Plugin/VideoStream_Plugin/common/NaluParser.h ./ && \
-    cp ../../../plugins/StreamProcess_Plugin/VideoStream_Plugin/HevcVideoStream/HevcNaluParser.h ./ && \
-    cp ../../../utils/VROmafPacking_def.h ./ && \
-    cp ../../../utils/OmafPackingLog.h ./ && \
-    cd ../../../build/test && \
-    cd ./VROmafPacking && \
-        g++ -I../../../VROmafPacking/test/vs_plugin -I../../../google_test -std=c++11 -g -c \
-          ../../../VROmafPacking/test/testHevcNaluParser.cpp \
-          -D_GLIBCXX_USE_CXX11_ABI=0 && \
-        g++ -I../../../VROmafPacking/test/vs_plugin -I../../../google_test -std=c++11 -g -c \
-          ../../../VROmafPacking/test/testVideoStream.cpp \
-          -D_GLIBCXX_USE_CXX11_ABI=0 && \
-        g++ -I../../../VROmafPacking/test/vs_plugin -I../../../google_test -std=c++11 -g -c \
-          ../../../VROmafPacking/test/testExtractorTrack.cpp \
-          -D_GLIBCXX_USE_CXX11_ABI=0 && \
-        g++ -I../../../VROmafPacking/test/vs_plugin -I../../../google_test -std=c++11 -g -c \
-        ../../../VROmafPacking/test/testDefaultSegmentation.cpp \
-          -D_GLIBCXX_USE_CXX11_ABI=0 && \
-        g++ -L/usr/local/lib testHevcNaluParser.o \
-          ../googletest/googletest/build/libgtest.a -o \
-          testHevcNaluParser -I/usr/local/include -lVROmafPacking \
-          -lHevcVideoStreamProcess -l360SCVP -lsafestring_shared -ldl -lstdc++ -lpthread -lm \
-          -L/usr/local/lib && \
-        g++ -L/usr/local/lib testVideoStream.o \
-          ../googletest/googletest/build/libgtest.a -o \
-          testVideoStream -I/usr/local/include -lVROmafPacking \
-          -lHevcVideoStreamProcess -l360SCVP -lsafestring_shared -ldl -lstdc++ -lpthread -lm \
-          -L/usr/local/lib && \
-        g++ -L/usr/local/lib testExtractorTrack.o \
-          ../googletest/googletest/build/libgtest.a -o \
-          testExtractorTrack -I/usr/local/include -lVROmafPacking \
-          -lHevcVideoStreamProcess -l360SCVP -lsafestring_shared -ldl -lstdc++ -lpthread -lm \
-          -L/usr/local/lib && \
-        g++ -L/usr/local/lib testDefaultSegmentation.o \
-          ../googletest/googletest/build/libgtest.a -o \
-          testDefaultSegmentation -I/usr/local/include -lVROmafPacking \
-          -lHevcVideoStreamProcess -l360SCVP -lsafestring_shared -ldl -lstdc++ -lpthread -lm \
-          -L/usr/local/lib
+    OP_TEST_PATH="${SRC_PATH}/VROmafPacking/test"
+    OP_VS_CONFIG="-I${SRC_PATH}/plugins/StreamProcess_Plugin/VideoStream_Plugin/common/ "`
+                `"-I${SRC_PATH}/plugins/StreamProcess_Plugin/VideoStream_Plugin/HevcVideoStream/"
+    OP_SHARED_CONFIG="${SHARED_CONFIG} -lVROmafPacking -lHevcVideoStreamProcess -ldl"
+    cd ../VROmafPacking && \
+        g++ ${OP_VS_CONFIG} ${BASIC_CONFIG} ${OP_TEST_PATH}/testHevcNaluParser.cpp && \
+        g++ ${OP_VS_CONFIG} ${BASIC_CONFIG} ${OP_TEST_PATH}/testVideoStream.cpp && \
+        g++ ${OP_VS_CONFIG} ${BASIC_CONFIG} ${OP_TEST_PATH}/testExtractorTrack.cpp && \
+        g++ ${OP_VS_CONFIG} ${BASIC_CONFIG} ${OP_TEST_PATH}/testDefaultSegmentation.cpp && \
+        g++ testHevcNaluParser.o ${OP_SHARED_CONFIG} -o testHevcNaluParser && \
+        g++ testVideoStream.o ${OP_SHARED_CONFIG} -o testVideoStream && \
+        g++ testExtractorTrack.o ${OP_SHARED_CONFIG} -o testExtractorTrack && \
+        g++ testDefaultSegmentation.o ${OP_SHARED_CONFIG} -o testDefaultSegmentation
 
     if [ "$1" == "oss" ] ; then
         # Compile distributed_encoder test
+        DE_TEST_PATH="${SRC_PATH}/distributed_encoder/test"
+        DE_BASIC_CONFIG="${BASIC_CONFIG} -I/usr/local/include/svt-hevc "`
+                       `"-I../../../distributed_encoder/util/"
+        DE_SHARED_CONFIG="${SHARED_CONFIG} -lDistributedEncoder -lEncoder -pthread "`
+                        `"-I/usr/local/include/thrift -I/usr/local/include/svt-hevc "`
+                        `"-lthrift -lthriftnb -lSvtHevcEnc -lopenhevc -levent -lz "`
+                        `"-lavutil -lavdevice -lavfilter -lavformat -lavcodec "`
+                        `"-lswscale -lswresample -lva-drm -lva-x11 -lva -lXv -lX11 "`
+                        `"-lXext -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -llzma "
         cd ../distributed_encoder && \
-            g++ -I../../../google_test -std=c++11 \
-              -I/usr/local/include/svt-hevc \
-              -I../../../distributed_encoder/util/ -g -c \
-              ../../../distributed_encoder/test/testMainEncoder.cpp \
-              -D_GLIBCXX_USE_CXX11_ABI=0 && \
-            g++ -I../../../google_test -std=c++11 \
-              -I../../../distributed_encoder/util/ -g -c \
-              ../../../distributed_encoder/test/testWorkSession.cpp \
-              -D_GLIBCXX_USE_CXX11_ABI=0 && \
-            g++ -I../../../google_test -std=c++11 \
-              -I../../../distributed_encoder/util/ -g -c \
-              ../../../distributed_encoder/test/testDecoder.cpp \
-              -D_GLIBCXX_USE_CXX11_ABI=0 && \
-            g++ -I../../../google_test -std=c++11 \
-              -I../../../distributed_encoder/util/ -g -c \
-              ../../../distributed_encoder/test/testSubEncoder.cpp \
-              -D_GLIBCXX_USE_CXX11_ABI=0 -I/usr/local/include/svt-hevc && \
-            g++ -I../../../google_test -std=c++11 \
-              -I../../../distributed_encoder/util/ -g -c \
-              ../../../distributed_encoder/test/testSubEncoderManager.cpp \
-              -D_GLIBCXX_USE_CXX11_ABI=0 && \
-            g++ -I../../../google_test -std=c++11 \
-              -I../../../distributed_encoder/util/ -g -c \
-              ../../../distributed_encoder/test/testEncoder.cpp \
-              -D_GLIBCXX_USE_CXX11_ABI=0 && \
-            g++ -L/usr/local/lib testMainEncoder.o \
-              ../googletest/googletest/build/libgtest.a -o testMainEncoder \
-              -I/usr/local/include/thrift -I/usr/local/include/svt-hevc \
-              -lDistributedEncoder -lEncoder -lstdc++ -lpthread -lthrift \
-              -lSvtHevcEnc -lopenhevc -lthriftnb -levent -lglog -pthread \
-              -lavdevice -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -lavfilter \
-              -lswscale -lavformat -lavcodec -llzma -lz -lswresample -lavutil \
-              -lva-drm -lva-x11 -lm -lva -lXv -lX11 -lXext -l360SCVP \
-              -L/usr/local/lib && \
-            g++ -L/usr/local/lib testWorkSession.o \
-              ../googletest/googletest/build/libgtest.a -o testWorkSession \
-              -I/usr/local/include/thrift -I/usr/local/include/svt-hevc \
-              -lDistributedEncoder -lEncoder -lstdc++ -lpthread -lthrift \
-              -lSvtHevcEnc -lopenhevc -lthriftnb -levent -lglog -pthread \
-              -lavdevice -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -lavfilter \
-              -lswscale -lavformat -lavcodec -llzma -lz -lswresample -lavutil \
-              -lva-drm -lva-x11 -lm -lva -lXv -lX11 -lXext -l360SCVP \
-              -L/usr/local/lib && \
-            g++ -L/usr/local/lib testDecoder.o \
-              ../googletest/googletest/build/libgtest.a -o testDecoder \
-              -I/usr/local/include/thrift -I/usr/local/include/svt-hevc \
-              -lDistributedEncoder -lEncoder -lstdc++ -lpthread -lthrift \
-              -lSvtHevcEnc -lopenhevc -lthriftnb -levent -lglog -pthread \
-              -lavdevice -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -lavfilter \
-              -lswscale -lavformat -lavcodec -llzma -lz -lswresample -lavutil \
-              -lva-drm -lva-x11 -lm -lva -lXv -lX11 -lXext -l360SCVP \
-              -L/usr/local/lib && \
-            g++ -L/usr/local/lib testSubEncoder.o \
-              ../googletest/googletest/build/libgtest.a -o testSubEncoder \
-              -I/usr/local/include/thrift -I/usr/local/include/svt-hevc \
-              -lDistributedEncoder -lEncoder -lstdc++ -lpthread -lthrift \
-              -lSvtHevcEnc -lopenhevc -lthriftnb -levent -lglog -pthread \
-              -lavdevice -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -lavfilter \
-              -lswscale -lavformat -lavcodec -llzma -lz -lswresample -lavutil \
-              -lva-drm -lva-x11 -lm -lva -lXv -lX11 -lXext -l360SCVP \
-              -L/usr/local/lib && \
-            g++ -L/usr/local/lib testEncoder.o \
-              ../googletest/googletest/build/libgtest.a -o testEncoder \
-              -I/usr/local/include/thrift -I/usr/local/include/svt-hevc \
-              -lDistributedEncoder -lEncoder -lstdc++ -lpthread -lthrift \
-              -lSvtHevcEnc -lopenhevc -lthriftnb -levent -lglog -pthread \
-              -lavdevice -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -lavfilter \
-              -lswscale -lavformat -lavcodec -llzma -lz -lswresample -lavutil \
-              -lva-drm -lva-x11 -lm -lva -lXv -lX11 -lXext -l360SCVP \
-              -L/usr/local/lib && \
-            g++ -L/usr/local/lib testSubEncoderManager.o \
-              ../googletest/googletest/build/libgtest.a -o testSubEncoderManager \
-              -I/usr/local/include/thrift -I/usr/local/include/svt-hevc \
-              -lDistributedEncoder -lEncoder -lstdc++ -lpthread -lthrift \
-              -lSvtHevcEnc -lopenhevc -lthriftnb -levent -lglog -pthread \
-              -lavdevice -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -lavfilter \
-              -lswscale -lavformat -lavcodec -llzma -lz -lswresample -lavutil \
-              -lva-drm -lva-x11 -lm -lva -lXv -lX11 -lXext -l360SCVP \
-              -L/usr/local/lib
+            g++ ${DE_BASIC_CONFIG} ${DE_TEST_PATH}/testMainEncoder.cpp && \
+            g++ ${DE_BASIC_CONFIG} ${DE_TEST_PATH}/testWorkSession.cpp && \
+            g++ ${DE_BASIC_CONFIG} ${DE_TEST_PATH}/testDecoder.cpp && \
+            g++ ${DE_BASIC_CONFIG} ${DE_TEST_PATH}/testEncoder.cpp && \
+            g++ ${DE_BASIC_CONFIG} ${DE_TEST_PATH}/testSubEncoder.cpp && \
+            g++ ${DE_BASIC_CONFIG} ${DE_TEST_PATH}/testSubEncoderManager.cpp && \
+            g++ testMainEncoder.o ${DE_SHARED_CONFIG} -o testMainEncoder && \
+            g++ testWorkSession.o ${DE_SHARED_CONFIG} -o testWorkSession && \
+            g++ testDecoder.o ${DE_SHARED_CONFIG} -o testDecoder && \
+            g++ testEncoder.o ${DE_SHARED_CONFIG} -o testEncoder && \
+            g++ testSubEncoder.o ${DE_SHARED_CONFIG} -o testSubEncoder && \
+            g++ testSubEncoderManager.o ${DE_SHARED_CONFIG} -o testSubEncoderManager
     fi
 }
 

@@ -38,6 +38,7 @@
 #include <sys/time.h>
 #include "../trace/Bandwidth_tp.h"
 #include "../trace/MtHQ_tp.h"
+#include "../trace/E2E_latency_tp.h"
 #endif
 #endif
 
@@ -508,6 +509,15 @@ int OmafDashSource::TimedDownloadSegment(bool bFirst) {
     }
     pStream->DownloadSegments();
   }
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+  string tag = "sgmtIdx:" + to_string(dcount);
+  tracepoint(E2E_latency_tp_provider,
+             pre_da_info,
+             -1,
+             tag.c_str());
+#endif
+#endif
   OMAF_LOG(LOG_INFO, "Start to download segments and id is %d\n", dcount++);
 
 #if 0
