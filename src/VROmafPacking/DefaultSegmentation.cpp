@@ -43,6 +43,7 @@
 
 #ifdef _USE_TRACE_
 #include "../trace/Bandwidth_tp.h"
+#include "../trace/E2E_latency_tp.h"
 #endif
 
 VCD_NS_BEGIN
@@ -1386,6 +1387,10 @@ int32_t DefaultSegmentation::VideoSegmentation()
         OMAF_LOG(LOG_INFO, "The last thread involves %d Extractor Tracks !\n", m_lastETPerSegThread);
     }
 
+#ifdef _USE_TRACE_
+    int64_t trackIdxTag = 0;
+#endif
+
     while (1)
     {
         if (m_segNum == 1)
@@ -1612,6 +1617,11 @@ int32_t DefaultSegmentation::VideoSegmentation()
                 if (removeCnt > 0)
                 {
                     std::map<VCD::MP4::TrackId, TrackConfig>::iterator itOneTrack;
+#ifdef _USE_TRACE_
+                    auto itOneTrackTag = m_allTileTracks.begin();
+                    trackIdxTag = itOneTrackTag->first.GetIndex();
+#endif
+
                     for (itOneTrack = m_allTileTracks.begin();
                         itOneTrack != m_allTileTracks.end();
                         itOneTrack++)
@@ -1711,6 +1721,13 @@ int32_t DefaultSegmentation::VideoSegmentation()
             OMAF_LOG(LOG_INFO, "Totally write %ld frames into video tracks!\n", m_framesNum);
             break;
         }
+#ifdef _USE_TRACE_
+        string tag = "trackIdx:" + to_string(trackIdxTag);
+        tracepoint(E2E_latency_tp_provider,
+                   post_op_info,
+                   m_framesNum,
+                   tag.c_str());
+#endif
         m_framesNum++;
     }
 

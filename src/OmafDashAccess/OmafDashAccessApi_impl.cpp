@@ -43,6 +43,7 @@
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
 #include "../trace/Bandwidth_tp.h"
+#include "../trace/E2E_latency_tp.h"
 #endif
 #endif
 
@@ -222,6 +223,16 @@ int OmafAccess_GetPacket(Handler hdl, int stream_id, DashPacket *packet, int *si
           packet[i].tileRowNum = pPkt->GetVideoTileRowNum();
           packet[i].tileColNum = pPkt->GetVideoTileColNum();
           packet[i].bEOS = pPkt->GetEOS();
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+          string tag = "sgmtIdx:" + to_string(pPkt->GetSegID());
+          tag += ";videoIdx:" + to_string(pPkt->GetVideoID());
+          tracepoint(E2E_latency_tp_provider,
+                     post_da_info,
+                     pPkt->GetPTS(),
+                     tag.c_str());
+#endif
+#endif
       }
       else if (pPkt->GetMediaType() == MediaType_Audio)
       {

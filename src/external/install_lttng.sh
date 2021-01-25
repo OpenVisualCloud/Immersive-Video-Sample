@@ -18,22 +18,28 @@ sudo make install
 sudo ldconfig
 cd ../
 
-# Install uuid and popt libraries
+# Install uuid, popt and other dependencies
 if [ "${OS}" == \""Ubuntu"\" ];then
     echo "Ubuntu OS"
     sudo apt-get install uuid-dev -y
     sudo apt-get install libpopt-dev -y
+    sudo apt-get install libxml2-dev -y
+    sudo apt-get install libdw-dev -y
 elif [ "${OS}" == \""CentOS Linux"\" ];then
     echo "CentOS OS"
     sudo yum install uuid.x86_64 -y
+    sudo yum install libuuid -y
+    sudo yum install libuuid-devel -y
     sudo yum install uuid-devel.x86_64 -y
     sudo yum install popt-devel.x86_64 -y
+    sudo yum install glib2-devel -y
+    sudo yum install elfutils-devel -y
 fi
 
 # Install numactl
 if [ "${OS}" == \""Ubuntu"\" ];then
-    sudo apt-get install numactl-devel -y
-    sudo apt-get install numactl-libs -y
+    sudo apt-get install numactl -y
+    sudo apt-get install libnuma-dev -y
 elif [ "${OS}" == \""CentOS Linux"\" ];then
     sudo yum install numactl.x86_64 -y
     sudo yum install numactl-devel.x86_64 -y
@@ -52,3 +58,25 @@ sudo make install
 sudo ldconfig
 cd ../
 
+# Install lttng-tools
+if [ ! -f "./lttng-tools-latest-2.11.tar.bz2" ];then
+    wget -c http://lttng.org/files/lttng-tools/lttng-tools-latest-2.11.tar.bz2
+    tar -xjf lttng-tools-latest-2.11.tar.bz2
+fi
+cd lttng-tools-2.11.*
+./configure
+make -j $(nproc)
+sudo make install
+sudo ldconfig
+cd ../
+
+# Install babeltrace2
+if [ ! -f "./babeltrace-2.0.0.tar.bz2" ];then
+    wget -c https://www.efficios.com/files/babeltrace/babeltrace-2.0.0.tar.bz2
+    tar -xjf babeltrace-2.0.0.tar.bz2
+fi
+cd babeltrace-2.0.0
+./configure
+make -j $(nproc)
+sudo make install
+cd ../

@@ -41,6 +41,7 @@
 #include "../../app/linux/GLFWRenderContext.h"
 #ifdef _USE_TRACE_
 #include "../../../trace/MtHQ_tp.h"
+#include "../../../trace/E2E_latency_tp.h"
 #endif
 #include "../MediaSource/DashMediaSource.h"
 #include "../MediaSource/WebRTCMediaSource.h"
@@ -192,6 +193,11 @@ RenderStatus MediaPlayer_Linux::Play()
 #ifdef _USE_TRACE_
             //trace
             tracepoint(mthq_tp_provider, T13_render_time, renderCount);
+            string tag = "";
+            tracepoint(E2E_latency_tp_provider,
+                       post_rd_info,
+                       renderCount,
+                       tag.c_str());
 #endif
             if (renderStatus != RENDER_NO_FRAME){
                 renderCount += needDropFrames + 1;

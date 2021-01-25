@@ -36,6 +36,11 @@
 #include "OmafAdaptationSet.h"
 #include "OmafReaderManager.h"
 
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+#include "../trace/E2E_latency_tp.h"
+#endif
+#endif
 #include <sys/time.h>
 //#include <sys/timeb.h>
 
@@ -524,6 +529,13 @@ int OmafAdaptationSet::UpdateStartNumberByTime(uint64_t nAvailableStartTime) {
 
   OMAF_LOG(LOG_INFO, "Current time= %lld and available time= %lld.\n", current, nAvailableStartTime);
   OMAF_LOG(LOG_INFO, "Set start segment index= %d\n", mActiveSegNum);
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+  tracepoint(E2E_latency_tp_provider,
+             da_ssi_info,
+             mActiveSegNum);
+#endif
+#endif
   return mActiveSegNum;
 }
 
