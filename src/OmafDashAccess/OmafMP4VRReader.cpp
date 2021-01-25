@@ -49,49 +49,55 @@ class SegmentStream : public VCD::MP4::StreamIO {
   ~SegmentStream() { mSegment = nullptr; };
 
  public:
-  /** Returns the number of bytes read. The value of 0 indicates end
-      of file.
-      @param [buffer] The buffer to write the data into
-      @param [size]   The number of bytes to read from the stream
-      @returns The number of bytes read, or 0 on EOF.
-  */
+  //!
+  //! \brief  Read the stream according to the offset
+  //!
+  //! \param  [in] buffer
+  //!         The buffer to be written the data into
+  //! \param  [in] size
+  //!         The number of bytes to be read from the stream
+  //!
+  //! \return offset_t
+  //!         the actual number of bytes read from the stream
   virtual offset_t ReadStream(char* buffer, offset_t size) {
     if (nullptr == mSegment) return -1;
 
     return mSegment->ReadStream(buffer, size);
   };
 
-  /** Seeks to the given offset. Should the offset be erronous we'll
-      find it out also by the next read that will signal EOF.
-
-      Seeking to the point after the last input byte is permissable;
-      so seeking to offset 0 of an empty file should be OK as well
-      as seeking to offset 1 of a 1-byte file. The next read would
-      indicate EOF, though.
-
-      @param [offset] Offset to seek into
-      @returns true if the seek was successful
-   */
+  //!
+  //! \brief  Seek to the given offset. Seeking to offset 0 of an empty
+  //!         file is OK and seeking to offset 1 of a 1-byte file is also
+  //!         OK.
+  //!
+  //! \param  [in] offset
+  //!         offset to seek into
+  //!
+  //! \return bool
+  //!         true if the seeking is successful
   virtual bool SeekAbsoluteOffset(offset_t offset) {
     if (nullptr == mSegment) return false;
 
     return mSegment->SeekAbsoluteOffset(offset);
   };
 
-  /** Retrieve the current offset of the file.
-      @returns The current offset of the file.
-   */
+  //!
+  //! \brief  Get the current offset position of the read file
+  //!
+  //! \return offset_t
+  //!         the actual current offset of the read file
   virtual offset_t TellOffset() {
     if (nullptr == mSegment) return -1;
 
     return mSegment->TellOffset();
   };
 
-  /** Retrieve the size of the current file.
-
-      @returns The current size of the file. Return
-      StreamIO::IndeterminateSize if the file size cannot be determined.
-   */
+  //!
+  //! \brief Get the size of current read file
+  //!
+  //! \return offset_t
+  //!         the size of the file, or StreamIO::IndeterminateSize if the
+  //!         size can't be determined
   virtual offset_t GetStreamSize() {
     if (nullptr == mSegment) return -1;
 

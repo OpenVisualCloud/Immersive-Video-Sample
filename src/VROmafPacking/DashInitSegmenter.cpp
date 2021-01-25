@@ -166,12 +166,12 @@ void DashInitSegmenter::AddAACTrack(VCD::MP4::TrackId trackId, CodedMeta& inMeta
     trackFileInfo.modificationTime = 0;
     VCD::MP4::MP4AudioSampleEntry sampleEntry;
 
-    sampleEntry.sampleSize = 16;
-    sampleEntry.channelCount = inMetaData.channelCfg;
-    sampleEntry.sampleRate = inMetaData.samplingFreq;
-    sampleEntry.esId = 1;
-    sampleEntry.dependsOnEsId = 0;
-    sampleEntry.bufferSize = 0;
+    sampleEntry.sizeOfSample = 16;
+    sampleEntry.cntOfChannels = inMetaData.channelCfg;
+    sampleEntry.rateOfSample = inMetaData.samplingFreq;
+    sampleEntry.idOfES = 1;
+    sampleEntry.esIdOfDepends = 0;
+    sampleEntry.sizeOfBuf = 0;
     sampleEntry.maxBitrate = inMetaData.bitrate.maxBitrate;
     sampleEntry.avgBitrate = inMetaData.bitrate.avgBitrate;
     for (auto byte : audioSpecInfo)

@@ -185,26 +185,7 @@ UniquePtr<T> CloneAtom(const T& srcAtom)
     dstAtom->FromStream(bs);
     return dstAtom;
 }
-/*
-void GenMediaHeaderAtom(
-    UniquePtr<MediaHeaderAtom> box,
-    FileInfo inFileInfo,
-    FractU64 timeScale)
-{
-    //UniquePtr<MediaHeaderAtom> box = MakeUnique<MediaHeaderAtom, MediaHeaderAtom>();
 
-    uint64_t creationTime     = inFileInfo.creationTime;
-    uint64_t modificationTime = inFileInfo.modificationTime;
-    FractU64 duration           = inFileInfo.duration;
-    box->SetTimeScale(uint32_t(timeScale.per1().asDouble()));
-    box->SetCreationTime(creationTime);
-    box->SetModificationTime(modificationTime);
-    box->SetDuration(uint32_t((duration / timeScale).asDouble()));
-
-    return;
-    //return MakeUnique<MediaHeaderBoxWrapper>(move(box));
-}
-*/
 void FillTrackHeaderAtom(TrackHeaderAtom& theaAtom, const FileInfo& fileInfo)
 {
     uint64_t creationTime     = fileInfo.creationTime;
@@ -697,94 +678,94 @@ FrameBuf HevcExtractorTrackPackedData::GenFrameData() const
 unique_ptr<SampleEntryBoxWrapper> MP4AudioSampleEntry::GenSampleEntryBox() const
 {
     ISO_LOG(LOG_INFO, "Gen sample entry box for MP4AudioSampleEntry \n");
-    auto box = MakeUnique<MP4AudioSampleEntryAtom, SampleEntryAtom>();
-    ElementaryStreamDescriptorAtom& esdBox = box->GetESDAtom();
-    ElementaryStreamDescriptorAtom::ES_Params esd{};
-    box->SetSampleSize(sampleSize);
-    box->SetChannelCount(channelCount);
-    box->SetSampleRate(sampleRate);
-    box->SetDataReferenceIndex(1);
-    esd.descrFlag       = 3;
-    esd.flags           = dependsOnEsId ? 0x80 : 0;
-    esd.id              = esId;
-    esd.depend          = dependsOnEsId;
-    if (url.size())
+    auto audioAtom = MakeUnique<MP4AudioSampleEntryAtom, SampleEntryAtom>();
+    ElementaryStreamDescriptorAtom& esdAtom = audioAtom->GetESDAtom();
+    ElementaryStreamDescriptorAtom::ES_Params esParams{};
+    audioAtom->SetSampleSize(sizeOfSample);
+    audioAtom->SetChannelCount(cntOfChannels);
+    audioAtom->SetSampleRate(rateOfSample);
+    audioAtom->SetDataReferenceIndex(1);
+    esParams.descrFlag       = 3;
+    esParams.flags           = esIdOfDepends ? 0x80 : 0;
+    esParams.id              = idOfES;
+    esParams.depend          = esIdOfDepends;
+    if (strUrl.size())
     {
-        esd.URLlen = static_cast<uint8_t>(url.size());
-        esd.URL    = {url.begin(), url.end()};
+        esParams.URLlen = static_cast<uint8_t>(strUrl.size());
+        esParams.URL    = {strUrl.begin(), strUrl.end()};
     }
 
-    esd.decConfig.flag = 4;
-    esd.decConfig.strType = 0x05;
-    esd.decConfig.idc = 0x40;
-    esd.decConfig.bufferSizeDB = bufferSize;
-    esd.decConfig.avgBitrate = avgBitrate;
-    esd.decConfig.maxBitrate = maxBitrate;
-    esd.decConfig.info.flag = 5;
-    esd.decConfig.info.size = static_cast<uint32_t>(decSpecificInfo.size());
-    esd.decConfig.info.info.resize(decSpecificInfo.size());
+    esParams.decConfig.flag = 4;
+    esParams.decConfig.strType = 0x05;
+    esParams.decConfig.idc = 0x40;
+    esParams.decConfig.bufferSizeDB = sizeOfBuf;
+    esParams.decConfig.avgBitrate = avgBitrate;
+    esParams.decConfig.maxBitrate = maxBitrate;
+    esParams.decConfig.info.flag = 5;
+    esParams.decConfig.info.size = static_cast<uint32_t>(decSpecificInfo.size());
+    esParams.decConfig.info.info.resize(decSpecificInfo.size());
     for (size_t i = 0; i < decSpecificInfo.size(); ++i)
     {
-        esd.decConfig.info.info[i] = static_cast<uint8_t>(decSpecificInfo[i]);
+        esParams.decConfig.info.info[i] = static_cast<uint8_t>(decSpecificInfo[i]);
     }
 
-    esdBox.SetESDescriptor(esd);
+    esdAtom.SetESDescriptor(esParams);
 
-    if (nonDiegetic)
+    if (isNonDiegetic)
     {
-        box->SetNonDiegeticAudioAtom(NonDiegeticAudioAtom());
+        audioAtom->SetNonDiegeticAudioAtom(NonDiegeticAudioAtom());
     }
-    if (ambisonic)
+    if (ambisonicItem)
     {
-        const auto& amb = *ambisonic;
-        SpatialAudioAtom sab;
-        sab.SetAmbisonicType(amb.type);
-        sab.SetAmbisonicOrder(amb.order);
-        sab.SetAmbisonicChannelOrdering(amb.channelOrdering);
-        sab.SetAmbisonicNormalization(amb.normalization);
-        sab.SetChannelMap(vector<uint32_t>{amb.channelMap.begin(), amb.channelMap.end()});
-        box->SetSpatialAudioAtom(sab);
+        const auto& cfgOfAmb = *ambisonicItem;
+        SpatialAudioAtom spaAudioAtom;
+        spaAudioAtom.SetAmbisonicType(cfgOfAmb.type);
+        spaAudioAtom.SetAmbisonicOrder(cfgOfAmb.order);
+        spaAudioAtom.SetAmbisonicChannelOrdering(cfgOfAmb.channelOrdering);
+        spaAudioAtom.SetAmbisonicNormalization(cfgOfAmb.normalization);
+        spaAudioAtom.SetChannelMap(vector<uint32_t>{cfgOfAmb.channelMap.begin(), cfgOfAmb.channelMap.end()});
+        audioAtom->SetSpatialAudioAtom(spaAudioAtom);
     }
 
-    if (channelLayout)
+    if (chnLayoutItem)
     {
-        const ChannelLayout& chnl = *channelLayout;
-        ChannelLayoutAtom b;
+        const ChannelLayout& chlLayout = *chnLayoutItem;
+        ChannelLayoutAtom chlLayoutAtom;
 
-        b.SetChannelNumber(channelCount);
-        if (chnl.streamStructure & 1)  // stream structured
+        chlLayoutAtom.SetChannelNumber(cntOfChannels);
+        if (chlLayout.streamStructure & 1)
         {
-            b.SetDefinedLayout(static_cast<uint8_t>(chnl.layout));
-            if (chnl.layout == 0)
+            chlLayoutAtom.SetDefinedLayout(static_cast<uint8_t>(chlLayout.layout));
+            if (chlLayout.layout == 0)
             {
-                for (ChannelPosition pos : chnl.positions)
+                for (ChannelPosition oneChlPosition : chlLayout.positions)
                 {
-                    ChannelLayoutAtom::ChannelLayout layout{};
-                    layout.speakerPosition = static_cast<uint8_t>(pos.speakerPosition);
-                    layout.azimuthAngle    = static_cast<int16_t>(pos.azimuth);
-                    layout.elevationAngle  = static_cast<int8_t>(pos.elevation);
-                    b.AddChannelLayout(layout);
+                    ChannelLayoutAtom::ChannelLayout oneLayOut{};
+                    oneLayOut.speakerPosition = static_cast<uint8_t>(oneChlPosition.speakerPosition);
+                    oneLayOut.azimuthAngle    = static_cast<int16_t>(oneChlPosition.azimuth);
+                    oneLayOut.elevationAngle  = static_cast<int8_t>(oneChlPosition.elevation);
+                    chlLayoutAtom.AddChannelLayout(oneLayOut);
                 }
             }
             else
             {
-                uint64_t omittedChannelsMap{};
-                for (auto omitted : chnl.omitted)
+                uint64_t chlsMap{0};
+                for (auto omitted : chlLayout.omitted)
                 {
-                    omittedChannelsMap = omittedChannelsMap | (1ull << omitted);
+                    chlsMap = chlsMap | (1ull << omitted);
                 }
-                b.SetOmittedChannelsMap(omittedChannelsMap);
+                chlLayoutAtom.SetOmittedChannelsMap(chlsMap);
             }
         }
-        if (chnl.streamStructure & 2)  // object structured
+        if (chlLayout.streamStructure & 2)  // object structured
         {
-            b.SetObjectCount(static_cast<uint8_t>(chnl.objectCount));
+            chlLayoutAtom.SetObjectCount(static_cast<uint8_t>(chlLayout.objectCount));
         }
 
-        box->SetChannelLayoutAtom(b);
+        audioAtom->SetChannelLayoutAtom(chlLayoutAtom);
     }
 
-    return MakeUnique<SampleEntryBoxWrapper>(StaticCast<SampleEntryAtom>(move(box)));
+    return MakeUnique<SampleEntryBoxWrapper>(StaticCast<SampleEntryAtom>(move(audioAtom)));
 }
 
 unique_ptr<HandlerBoxWrapper> MP4AudioSampleEntry::GenHandlerBox() const
@@ -824,7 +805,7 @@ TrackDescription::TrackDescription(TrackMeta inTrackMeta,
     box->SetDuration(uint32_t((duration / timeScale).asDouble()));
     mediaHeaderBox = move(MakeUnique<MediaHeaderBoxWrapper>(move(box)));//GenMediaHeaderAtom(inFileInfo, inTrackMeta.timescale);
 
-    handlerBox     = inSmpEty.GenHandlerBox();
+    handlerBox     = move(inSmpEty.GenHandlerBox());
 
     UniquePtr<TrackHeaderAtom> thead = MakeUnique<TrackHeaderAtom, TrackHeaderAtom>();
     trackHeaderBox = move(MakeUnique<TrackHeaderBoxWrapper>(move(thead)));

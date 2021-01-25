@@ -327,20 +327,20 @@ struct ChannelLayout
 
 struct MP4AudioSampleEntry : public OmniSampleEntry
 {
-    uint16_t sampleSize;
-    uint16_t channelCount;
-    uint32_t sampleRate;
-    uint16_t esId;
-    uint16_t dependsOnEsId;
-    string url;
-    uint32_t bufferSize;
+    uint16_t sizeOfSample;
+    uint16_t cntOfChannels;
+    uint32_t rateOfSample;
+    uint16_t idOfES;
+    uint16_t esIdOfDepends;
+    string strUrl;
+    uint32_t sizeOfBuf;
     uint32_t maxBitrate;
     uint32_t avgBitrate;
     string decSpecificInfo;  // tag 5
 
-    bool nonDiegetic;
-    DataItem<Ambisonic> ambisonic;
-    DataItem<ChannelLayout> channelLayout;
+    bool isNonDiegetic;
+    DataItem<Ambisonic> ambisonicItem;
+    DataItem<ChannelLayout> chnLayoutItem;
 
     unique_ptr<SampleEntryBoxWrapper> GenSampleEntryBox() const override;
     unique_ptr<HandlerBoxWrapper> GenHandlerBox() const override;
