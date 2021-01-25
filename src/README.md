@@ -3,7 +3,7 @@
 [![Stable release](https://img.shields.io/badge/latest_release-v1.0.0-green.svg)](CHANGELOG.md)
 [![Contributions](https://img.shields.io/badge/contributions-welcome-blue.svg)](https://github.com/OpenVisualCloud/Immersive-Video-Sample/wiki)
 
-The Immersive Video Delivery solution provides basic components for OMAF-Compliant Tiled 360 Video Delivery, including MCTS-based HEVC transcoding, OMAF-compliant streaming packing, client OMAF dash access library; and FFMPEG plugins for quick trial for these components to setup E2E OMAF-Compliant 360 video streaming. The project is a reference solution for those want to build up tiled-based 360 video delivery based on Intel Platform 
+The Immersive Video Delivery solution provides basic components for OMAF-Compliant Tiled 360 Video Delivery, including MCTS-based HEVC transcoding, OMAF-compliant streaming packing, client OMAF dash access library; and FFMPEG plugins for quick trial for these components to setup E2E OMAF-Compliant 360 video streaming. The project is a reference solution for those want to build up tiled-based 360 video delivery based on Intel Platform.
 
 # License
 The Immersive Video Delivery solution is licensed under the BSD 3-Clause "New" or "Revised" License, except that "FFMPEG Plugins" is under the LGPLv2.0 license. See [LICENSE](LICENSE) for details. 
