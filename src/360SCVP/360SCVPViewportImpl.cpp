@@ -1038,7 +1038,7 @@ int32_t TgenViewport::CubemapCalcTilesGrid()
                 pTileGrid -= m_tileNumCol + 2;
                 pTileGridCMP++;
             }
-    SAFE_DELETE(gridPoint3D);
+    SAFE_DELETE_ARRAY(gridPoint3D);
     return 0;
 }
 

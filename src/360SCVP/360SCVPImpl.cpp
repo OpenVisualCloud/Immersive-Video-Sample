@@ -272,8 +272,8 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
     }
 
     /* Make Klockwork Happy */
-    int rows = m_pViewportParam.m_paramVideoFP.rows > 6 ? m_pViewportParam.m_paramVideoFP.rows : 6;
-    int cols = m_pViewportParam.m_paramVideoFP.cols > 6 ? m_pViewportParam.m_paramVideoFP.cols : 6;
+    int rows = m_pViewportParam.m_paramVideoFP.rows <= 6 ? m_pViewportParam.m_paramVideoFP.rows : 6;
+    int cols = m_pViewportParam.m_paramVideoFP.cols <= 6 ? m_pViewportParam.m_paramVideoFP.cols : 6;
 
     for (int i = 0; i < rows; i++)
     {
