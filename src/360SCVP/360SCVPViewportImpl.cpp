@@ -2038,17 +2038,7 @@ int32_t TgenViewport::CubemapIsInsideFaces()
     /* Calculate top/bottom point position */
     topPoint.thita = fPitch + vFOV / 2;
     bottomPoint.thita = fPitch - vFOV / 2;
-    if (fPitch + vFOV / 2 > ERP_VERT_ANGLE / 2) {
-        topPoint.alpha = fYaw + ERP_HORZ_ANGLE / 2;
-        bottomPoint.alpha = fYaw;
-    }
-    else if (fPitch - vFOV / 2 < -ERP_VERT_ANGLE / 2) {
-        topPoint.alpha = fYaw;
-        bottomPoint.alpha = fYaw + ERP_HORZ_ANGLE / 2;
-    }
-    else {
-        topPoint.alpha = bottomPoint.alpha = fYaw;
-    }
+    topPoint.alpha = bottomPoint.alpha = fYaw;
     CubemapPolar2Cartesian(&topPoint);
     CubemapPolar2Cartesian(&bottomPoint);
 
