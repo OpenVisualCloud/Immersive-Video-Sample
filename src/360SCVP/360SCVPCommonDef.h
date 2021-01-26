@@ -34,6 +34,7 @@ extern "C" {
 
 #define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
 #define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
+#define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete[] (x); (x)=NULL; };
 
 typedef enum SLICE_TYPE {
     SLICE_B = 0,
