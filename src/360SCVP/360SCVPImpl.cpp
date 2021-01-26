@@ -184,38 +184,15 @@ TstitchStream::TstitchStream(TstitchStream& other)
 
 TstitchStream::~TstitchStream()
 {
-    if (m_pOutTile) {
-        delete []m_pOutTile;
-        m_pOutTile = nullptr;
-    }
-    if (m_pUpLeft) {
-        delete []m_pUpLeft;
-        m_pUpLeft = nullptr;
-    }
-    if (m_pDownRight) {
-        delete []m_pDownRight;
-        m_pDownRight = nullptr;
-    }
-    if (m_pNalInfo[0]) {
-        delete []m_pNalInfo[0];
-        m_pNalInfo[0] = nullptr;
-    }
-    if (m_pNalInfo[1]) {
-        delete []m_pNalInfo[1];
-        m_pNalInfo[1] = nullptr;
-    }
-    if (m_hevcState) {
-        delete m_hevcState;
-        m_hevcState = nullptr;
-    }
-    if (m_specialInfo[0]) {
-        delete []m_specialInfo[0];
-        m_specialInfo[0] = nullptr;
-    }
-    if (m_specialInfo[1]) {
-        delete []m_specialInfo[1];
-        m_specialInfo[1] = nullptr;
-    }
+    SAFE_DELETE_ARRAY(m_pOutTile);
+    SAFE_DELETE_ARRAY(m_pUpLeft);
+    SAFE_DELETE_ARRAY(m_pDownRight);
+    SAFE_DELETE_ARRAY(m_pNalInfo[0]);
+    SAFE_DELETE_ARRAY(m_pNalInfo[1]);
+
+    SAFE_DELETE(m_hevcState);
+    SAFE_DELETE_ARRAY(m_specialInfo[0]);
+    SAFE_DELETE_ARRAY(m_specialInfo[1]);
 }
 
 int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t tilecolCount, int32_t tilerowCount)
@@ -727,35 +704,17 @@ int32_t TstitchStream::uninit()
         ret |= genViewport_unInit(m_pViewport);
     if (m_pSteamStitch)
         ret |= genTiledStream_unInit(m_pSteamStitch);
-    if (m_pOutTile)
-        delete[]m_pOutTile;
-    m_pOutTile = NULL;
-    if (m_pUpLeft)
-        delete[]m_pUpLeft;
-    m_pUpLeft = NULL;
-    if (m_pDownRight)
-        delete[]m_pDownRight;
-    m_pDownRight = NULL;
-    if(m_pNalInfo[0])
-        delete[]m_pNalInfo[0];
-    m_pNalInfo[0] = NULL;
-    if(m_pNalInfo[1])
-        delete[]m_pNalInfo[1];
-    m_pNalInfo[1] = NULL;
+    SAFE_DELETE_ARRAY(m_pOutTile);
+    SAFE_DELETE_ARRAY(m_pUpLeft);
+    SAFE_DELETE_ARRAY(m_pDownRight);
+    SAFE_DELETE_ARRAY(m_pNalInfo[0]);
+    SAFE_DELETE_ARRAY(m_pNalInfo[1]);
 
-    if (m_hevcState)
-        delete m_hevcState;
-    m_hevcState = NULL;
-    if (m_specialInfo[0])
-         delete[]m_specialInfo[0];
-    m_specialInfo[0] = NULL;
-    if (m_specialInfo[1])
-         delete[]m_specialInfo[1];
-    m_specialInfo[1] = NULL;
+    SAFE_DELETE(m_hevcState);
+    SAFE_DELETE_ARRAY(m_specialInfo[0]);
+    SAFE_DELETE_ARRAY(m_specialInfo[1]);
 
-    if (m_dstRwpk.rectRegionPacking)
-        delete[]m_dstRwpk.rectRegionPacking;
-    m_dstRwpk.rectRegionPacking = NULL;
+    SAFE_DELETE_ARRAY(m_dstRwpk.rectRegionPacking);
 
     if (m_pTileSelection) {
         ret = m_pTileSelection->UnInit();

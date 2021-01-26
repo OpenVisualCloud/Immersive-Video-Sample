@@ -67,8 +67,7 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
 
     /* Check the paramVideoFP rows / cols exceeds the maximum array size */
     if (pParamGenViewport->m_paramVideoFP.rows > 6 || pParamGenViewport->m_paramVideoFP.cols > 6) {
-        delete cTAppConvCfg;
-        cTAppConvCfg = NULL;
+        SAFE_DELETE(cTAppConvCfg);
         return NULL;
     }
 
@@ -96,16 +95,14 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
     cTAppConvCfg->m_iInputHeight = pParamGenViewport->m_iInputHeight;
     if (cTAppConvCfg->create(pParamGenViewport->m_tileNumRow / cTAppConvCfg->m_paramVideoFP.rows, pParamGenViewport->m_tileNumCol / cTAppConvCfg->m_paramVideoFP.cols) < 0)
     {
-        delete cTAppConvCfg;
-        cTAppConvCfg = NULL;
+        SAFE_DELETE(cTAppConvCfg);
         return NULL;
     }
 
     //calculate the max tile num if the source project is cube map
     cTAppConvCfg->m_maxTileNum = 0;
     if (pParamGenViewport->m_tileNumCol == 0 || pParamGenViewport->m_tileNumRow == 0) {
-        delete cTAppConvCfg;
-        cTAppConvCfg = NULL;
+        SAFE_DELETE(cTAppConvCfg);
         return NULL;
     }
 
@@ -727,27 +724,10 @@ TgenViewport::TgenViewport()
 
 TgenViewport::~TgenViewport()
 {
-    if(m_pUpLeft)
-    {
-        delete[] m_pUpLeft;
-        m_pUpLeft = NULL;
-    }
-    if(m_pDownRight)
-    {
-        delete[] m_pDownRight;
-        m_pDownRight = NULL;
-    }
-    if(m_srd)
-    {
-        delete [] m_srd;
-        m_srd = NULL;
-    }
-
-    if (m_pViewportHorizontalBoudaryPoints)
-    {
-        delete[] m_pViewportHorizontalBoudaryPoints;
-        m_pViewportHorizontalBoudaryPoints = NULL;
-    }
+    SAFE_DELETE_ARRAY(m_pUpLeft);
+    SAFE_DELETE_ARRAY(m_pDownRight);
+    SAFE_DELETE_ARRAY(m_srd);
+    SAFE_DELETE_ARRAY(m_pViewportHorizontalBoudaryPoints);
 }
 
 TgenViewport& TgenViewport::operator=(const TgenViewport& src)
@@ -800,26 +780,10 @@ int32_t TgenViewport::create(uint32_t tileNumRow, uint32_t tileNumCol)
 
 void TgenViewport::destroy()
 {
-    if(m_pUpLeft)
-    {
-        delete [] m_pUpLeft;
-        m_pUpLeft = NULL;
-    }
-    if(m_pDownRight)
-    {
-        delete [] m_pDownRight;
-        m_pDownRight = NULL;
-    }
-    if(m_srd)
-    {
-        delete [] m_srd;
-        m_srd = NULL;
-    }
-    if (m_pViewportHorizontalBoudaryPoints)
-    {
-        delete[] m_pViewportHorizontalBoudaryPoints;
-        m_pViewportHorizontalBoudaryPoints = NULL;
-    }
+    SAFE_DELETE_ARRAY(m_pUpLeft);
+    SAFE_DELETE_ARRAY(m_pDownRight);
+    SAFE_DELETE_ARRAY(m_srd);
+    SAFE_DELETE_ARRAY(m_pViewportHorizontalBoudaryPoints);
 }
 
 
@@ -1560,12 +1524,8 @@ int32_t  TgenViewport::convert()
         return -1;
     }
     pcCodingGeomtry = Geometry::create(m_codingSVideoInfo);
-    if (!pcCodingGeomtry)
-    {
-        delete pcInputGeomtry;
-        pcInputGeomtry = NULL;
-        return -1;
-    }
+    if (pcCodingGeomtry == NULL)
+        return ERROR_INVALID;
 
     // starting time
     double dResult;
@@ -1600,16 +1560,8 @@ int32_t  TgenViewport::convert()
     dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
     SCVP_LOG(LOG_INFO, "Total Time: %f second. \n", dResult);
 
-    if(pcInputGeomtry)
-    {
-        delete pcInputGeomtry;
-        pcInputGeomtry=NULL;
-    }
-    if(pcCodingGeomtry)
-    {
-        delete pcCodingGeomtry;
-        pcCodingGeomtry=NULL;
-    }
+    SAFE_DELETE(pcInputGeomtry);
+    SAFE_DELETE(pcCodingGeomtry);
     return 0;
 }
 bool TgenViewport::isInside(int32_t x, int32_t y, int32_t width, int32_t height, int32_t faceId)
