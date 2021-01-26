@@ -25,6 +25,7 @@ The below table shows the five key data structures, which are param_360SCVP, par
 | param_oneStream_info |	  The structure provides the horizontal and vertical tile number, tile index, bitstream data buffer and data length in each input bitstream. It is input parameter when the use type is E_STREAM_STITCH_ONLY |
 | param_360SCVP 	      |   The structure is the main data structure, which provides all of the input and output parameters used in the library. So, it contains the above four data structures |
 | Param_VideoFPStruct 	  |   The structure describes the face property of the input geometry, including tile row/col number, width/height of each face, etc. |
+| PluginDef               |   The structure is the plugin definition which provides plugin information. |
 
 ## Cubemap support
 - The following picture and face index table[<sup>1</sup>](#refer-anchor) show the coordinates definition for cubemap.
