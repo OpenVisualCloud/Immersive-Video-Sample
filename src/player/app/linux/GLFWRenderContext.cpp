@@ -288,8 +288,7 @@ RenderStatus GLFWRenderContext::GetStatusAndPoseFor2D(HeadPose *pose, uint32_t* 
     // front is always against z axis
     glm::vec3 front(0.0f, 0.0f, -1.0f);
     double xpos, ypos;
-    bool isStopZoomOut = false;
-    static bool isZoomOut = false;
+    // bool isStopZoomOut = false;
     if (m_needMotionTest)
     {
         AutoChangePos(&transfer.x, &transfer.y);
@@ -310,42 +309,41 @@ RenderStatus GLFWRenderContext::GetStatusAndPoseFor2D(HeadPose *pose, uint32_t* 
     {
         position_x = -1.0f + halfXLenInMesh;
         m_horizontalAngle = position_x - RENDER_PI / 2;
-        isStopZoomOut = true;
+        // isStopZoomOut = true;
     }
     // if (position_x + halfXLenInMesh >= 1.0f)
     if ((position_x + halfXLenInMesh > 1.0f) && fabs(position_x + halfXLenInMesh - 1.0f) > 1e-6 || fabs(position_x + halfXLenInMesh - 1.0f) <= 1e-6)
     {
         position_x = 1.0f - halfXLenInMesh;
         m_horizontalAngle = position_x - RENDER_PI / 2;
-        isStopZoomOut = true;
+        // isStopZoomOut = true;
     }
     // if (position_y - halfYLenInMesh <= -1.0f)
     if ((position_y - halfYLenInMesh < -1.0f) && fabs(position_y - halfYLenInMesh + 1.0f) > 1e-6 || fabs(position_y - halfYLenInMesh + 1.0f) <= 1e-6)
     {
         position_y = -1.0f + halfYLenInMesh;
         m_verticalAngle = position_y;
-        isStopZoomOut = true;
+        // isStopZoomOut = true;
     }
     // if (position_y + halfYLenInMesh >= 1.0f)
     if ((position_y + halfYLenInMesh > 1.0f) && fabs(position_y + halfYLenInMesh - 1.0f) > 1e-6 || fabs(position_y + halfYLenInMesh - 1.0f) <= 1e-6)
     {
         position_y = 1.0f - halfYLenInMesh;
         m_verticalAngle = position_y;
-        isStopZoomOut = true;
+        // isStopZoomOut = true;
     }
 
     glm::vec3 right = glm::cross( front, glm::vec3(0.0,1.0,0.0));
     glm::vec3 up = glm::cross(right, front);
 
     // 1. get aspect.
-    float aspect = atan(float(m_windowWidth) / m_fullWidth) / atan(float(m_windowHeight) / m_fullHeight);
-    //tanHalAspect = tanHalfFovx / tanHalfFovy = (w/W) / (h/H)
+    //tanHalAspect = tanHalfFovx / tanHalfFovy = (w/W) / (h/H) is a constant.
     float tanHalAspect = float(m_windowWidth) / m_fullWidth / (float(m_windowHeight) / m_fullHeight);
     // 2. set fov( in degrees )
     if (isInitialSetting) // initial to set zoom factor is 1
     {
         m_vFOV = 2 * atan(float(m_windowHeight) / m_fullHeight) * 180 / RENDER_PI;
-        m_hFOV = m_vFOV * aspect;
+        m_hFOV = 2 * atan(tan(m_vFOV * RENDER_PI / 180.0f / 2) * tanHalAspect) * 180 / RENDER_PI;
         m_zoomFactor = 1.0f;
         m_zoomCnt = tan(m_vFOV * RENDER_PI / 180.0f - RENDER_PI / 2) / 0.05;
         isInitialSetting = false;
@@ -354,24 +352,24 @@ RenderStatus GLFWRenderContext::GetStatusAndPoseFor2D(HeadPose *pose, uint32_t* 
     {
         float v_tmpFOV = 180.0 / RENDER_PI * (atan(0.05 * m_zoomCnt) + 0.5 * RENDER_PI);
         v_tmpFOV = v_tmpFOV >= 90.0f ? 90.0f : v_tmpFOV;
-
-        if (aspect >= 1)// h >= v
+        float aspectHV = m_hFOV / m_vFOV;
+        if (aspectHV >= 1)// h >= v
         {
-            if (v_tmpFOV * aspect >= 90.0f) // vFOV is greater than 90.0f
+            m_hFOV = 2 * atan(tan(v_tmpFOV * RENDER_PI / 180.0f / 2) * tanHalAspect) * 180 / RENDER_PI;
+            if (m_hFOV > 90.0f) // vFOV is greater than 90.0f
             {
                 m_hFOV = 90.0f;
-                m_vFOV = m_hFOV / aspect;
+                m_vFOV = 2 * atan(tan(m_hFOV * RENDER_PI / 180.0f / 2) / tanHalAspect) * 180 / RENDER_PI;
             }
             else
             {
                 m_vFOV = v_tmpFOV;
-                m_hFOV = m_vFOV * aspect;
             }
         }
         else // h < v
         {
             m_vFOV = v_tmpFOV;
-            m_hFOV = m_vFOV * aspect;
+            m_hFOV = 2 * atan(tan(m_vFOV * RENDER_PI / 180.0f / 2) * tanHalAspect) * 180 / RENDER_PI;
         }
     }
 
@@ -422,7 +420,8 @@ RenderStatus GLFWRenderContext::GetStatusAndPoseFor2D(HeadPose *pose, uint32_t* 
 
     if (glfwGetKey((GLFWwindow *)m_window, GLFW_KEY_S) == GLFW_PRESS) // zoom out
     {
-        if (!isStopZoomOut)
+        // if (!isStopZoomOut)
+        if (m_vFOV < 90.0f && m_hFOV < 90.0f)
         {
             m_zoomCnt = m_zoomCnt + 1;
             pose->viewOrient.orientation = 0;
