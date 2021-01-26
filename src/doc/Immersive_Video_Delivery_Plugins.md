@@ -3,10 +3,18 @@
 ## Introduction
 Immersive Video Delivery libraries provide plugin mechanism for customized process.
 Now there are totally four types plugins supported:
-- ViewportPredict_Plugin :
+- ViewportPredict_Plugin : plugin for predicting user viewport in next segment to reduce the latency of motion to high quality in OmafDashAccess library.
 - OMAFPacking_Plugin : plugin for region-wise packing information generation for extractor track used in VROmafPacking library.
 - StreamProcess_Plugin : plugin for media stream process, including both video stream and audio strem, also used in VROmafPacking library.
 - 360SCVP_Plugin/TileSelection_Plugins:
+
+## ViewportPredict_Plugin
+The main function of ViewportPredict_Plugin is to predict viewport angles with linear regression model using trajectory feedback in real time.
+The plugin provides C APIs for user.
+- `ViewportPredict_Init`: It is the initialization function with input parameter `PredictOption`. It is called only once in initialization process.
+- `ViewportPredict_SetViewport`: It need to be called to set viewport each frame. The structure of viewport information is `ViewportAngle`, including (yaw, pitch, roll, pts, priority);
+- `ViewportPredict_PredictPose`: It is called before timely downloading segment to obtain the predicted pose. Linear regression model is applied in the plugin, and an adaptive correction based on real-time feedback of the viewing trajectory is adopted to further improve the accuracy of prediction.
+- `ViewportPredict_unInit`: It is the uninitialization function to be called in the end of the process.
 
 ## OMAFPacking_Plugin
 The main function of OMAFPacking_Plugin is to generate HEVC tiles layout for each specific extractor track and then generate the region-wise packing information for tiles stitched sub-picture.
