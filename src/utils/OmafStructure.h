@@ -76,10 +76,10 @@ VCD_OMAF_BEGIN
 #define SCHEMEIDURI_PRESELECTION                "urn:mpeg:dash:preselection:2016"
 #define SCHEMEIDURI_AUDIO                       "urn:mpeg:dash:23003:3:audio_channel_configuration:2011"
 #define OMAF_XMLNS_VALUE                        "urn:mpeg:mpegI:omaf:2017"
-#define XSI_XMLNS_VALUE                         "http://www.w3.org/2001/XMLSchema-instance"
+#define XSI_XMLNS_VALUE                         "null"
 #define XMLNS_VALUE                             "urn:mpeg:dash:schema:mpd:2011"
-#define XLINK_XMLNS_VALUE                       "http://www.w3.org/1999/xlink"
-#define XSI_SCHEMALOCATION_VALUE                "urn:mpeg:dash:schema:mpd:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd"
+#define XLINK_XMLNS_VALUE                       "null"
+#define XSI_SCHEMALOCATION_VALUE                "urn:mpeg:dash:schema:mpd:2011"
 #define PROFILE_LIVE                            "urn:mpeg:dash:profile:isoff-live:2011"
 #define PROFILE_ONDEMOND                        "urn:mpeg:dash:profile:isoff-on-demand:2011"
 

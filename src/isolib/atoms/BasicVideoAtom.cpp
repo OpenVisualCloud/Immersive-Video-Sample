@@ -180,8 +180,8 @@ void SphericalVideoV1Atom::ToStream(Stream& str)
     WriteAtomHeader(str);
     std::string header =
         "<?xml "
-        "version=\"1.0\"?><rdf:SphericalVideo\nxmlns:rdf=\"http://www.w3.org/1999/02/"
-        "22-rdf-syntax-ns#\"\nxmlns:GSpherical=\"http://ns.google.com/videos/1.0/spherical/\">";
+        "version=\"1.0\"?><rdf:SphericalVideo\nxmlns:rdf=\""
+        "22-rdf-syntax-ns#\"\nxmlns:GSpherical=\">";
     str.WriteString(header);
 
     WriteTag(str, "GSpherical:Spherical", true);  // must be true on v1.0
