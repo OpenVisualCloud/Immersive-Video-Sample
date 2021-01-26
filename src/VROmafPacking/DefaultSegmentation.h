@@ -73,6 +73,7 @@ public:
         m_prevSegedFrmNum = 0;
         m_currSegedFrmNum = 0;
         m_currProcessedFrmNum = 0;
+        m_isMpdGenInit = false;
     };
 
     //!
@@ -108,6 +109,7 @@ public:
         m_prevSegedFrmNum = 0;
         m_currSegedFrmNum = 0;
         m_currProcessedFrmNum = 0;
+        m_isMpdGenInit = false;
     };
 
     DefaultSegmentation(const DefaultSegmentation& src)
@@ -131,6 +133,7 @@ public:
         m_prevSegedFrmNum = src.m_prevSegedFrmNum;
         m_currSegedFrmNum = src.m_currSegedFrmNum;
         m_currProcessedFrmNum = src.m_currProcessedFrmNum;
+        m_isMpdGenInit = src.m_isMpdGenInit;
     };
 
     DefaultSegmentation& operator=(DefaultSegmentation&& other)
@@ -154,6 +157,7 @@ public:
         m_prevSegedFrmNum = other.m_prevSegedFrmNum;
         m_currSegedFrmNum = other.m_currSegedFrmNum;
         m_currProcessedFrmNum = other.m_currProcessedFrmNum;
+        m_isMpdGenInit = other.m_isMpdGenInit;
         return *this;
     };
 
@@ -420,6 +424,7 @@ private:
     uint64_t                                       m_prevSegedFrmNum;    //!< previous number of frames which have been segmented for their tile tracks
     uint64_t                                       m_currSegedFrmNum;    //!< newest number of frames which have been segmented for their tile tracks
     uint64_t                                       m_currProcessedFrmNum;//!< newest number of frames which have been segmented for both tiles tracks and extractor tracks
+    bool                                           m_isMpdGenInit;       //!< flag for whether MPD generator has been initialized
 };
 
 VCD_NS_END;

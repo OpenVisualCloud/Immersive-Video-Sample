@@ -176,8 +176,6 @@ private:
 private:
     std::map<MediaStream*, TrackSegmentCtx*>    *m_streamSegCtx;    //!< map of media stream and its track segmentation context
     std::map<ExtractorTrack*, TrackSegmentCtx*> *m_extractorSegCtx; //!< map of extractor track and its track segmentation context
-    //std::map<uint8_t, MediaStream*>       *m_streamMap;          //!< media streams map set up in OmafPackage
-    //ExtractorTrackManager                 *m_extractorTrackMan;  //!< pointer to the extractor track manager created in OmafPackage
     SegmentationInfo                            *m_segInfo;            //!< pointer to the segmentation information
     uint32_t                                    m_miniUpdatePeriod;    //!< minimum update period of mpd file, in the unit of second
     VCD::OMAF::ProjectionFormat                 m_projType;            //!< projection type of the video frame
@@ -185,8 +183,6 @@ private:
     char                                        *m_publishTime;        //!< publish time for mpd file
     char                                        *m_presentationDur;    //!< presentation duration of dash segments
 
-    //std::map<uint8_t, RegionWisePacking*> m_rwpk;                //!< region wise packing information map for all extractor tracks
-    //std::map<uint8_t, ContentCoverage*>   m_covi;                //!< content coverage information map for all extractor tracks
     char                                        m_mpdFileName[1024];   //!< file name of MPD file
     Rational                                    m_frameRate;           //!< video stream frame rate
     uint16_t                                    m_timeScale;           //!< timescale of video stream

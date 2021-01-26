@@ -253,7 +253,7 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
             //TrackSegmentCtx *trackSegCtxs = vs->GetAllTrackSegCtxs();
             TileInfo *tilesInfo = vs->GetAllTilesInfo();
             Rational frameRate = vs->GetFrameRate();
-            m_frameRate = frameRate;
+            //m_frameRate = frameRate;
             uint64_t bitRate = vs->GetBitRate();
             uint8_t qualityLevel = bitRateRanking.size();
             std::set<uint64_t>::iterator itBitRate;
@@ -1281,23 +1281,46 @@ int32_t DefaultSegmentation::VideoSegmentation()
             OMAF_LOG(LOG_ERROR, "Constructing segmentation context for audio stream takes too long time !\n");
             return OMAF_ERROR_TIMED_OUT;
         }
+
+        {
+            std::lock_guard<std::mutex> lock(m_audioMutex);
+            m_mpdGen = new MpdGenerator(
+                        &m_streamSegCtx,
+                        &m_extractorSegCtx,
+                        m_segInfo,
+                        m_projType,
+                        m_frameRate,
+                        m_videosNum);
+            if (!m_mpdGen)
+                return OMAF_ERROR_NULL_PTR;
+
+            ret = m_mpdGen->Initialize();
+
+            if (ret)
+                return ret;
+
+            m_isMpdGenInit = true;
+        }
     }
+    else
+    {
+        m_mpdGen = new MpdGenerator(
+                        &m_streamSegCtx,
+                        &m_extractorSegCtx,
+                        m_segInfo,
+                        m_projType,
+                        m_frameRate,
+                        m_videosNum);
+        if (!m_mpdGen)
+            return OMAF_ERROR_NULL_PTR;
 
-    m_mpdGen = new MpdGenerator(
-                    &m_streamSegCtx,
-                    &m_extractorSegCtx,
-                    m_segInfo,
-                    m_projType,
-                    m_frameRate,
-                    m_videosNum);
-    if (!m_mpdGen)
-        return OMAF_ERROR_NULL_PTR;
+        ret = m_mpdGen->Initialize();
 
-    ret = m_mpdGen->Initialize();
+        if (ret)
+            return ret;
 
-    if (ret)
-        return ret;
-
+        m_isMpdGenInit = true;
+    }
 
     std::map<MediaStream*, TrackSegmentCtx*>::iterator itStreamTrack;
     for (itStreamTrack = m_streamSegCtx.begin(); itStreamTrack != m_streamSegCtx.end(); itStreamTrack++)
@@ -1741,7 +1764,7 @@ int32_t DefaultSegmentation::AudioSegmentation()
     int32_t ret = ConstructAudioTrackSegCtx();
     if (ret)
         return ret;
-    //OMAF_LOG(LOG_INFO, "Construction for audio track segmentation context DONE !\n");
+    OMAF_LOG(LOG_INFO, "Construction for audio track segmentation context DONE !\n");
     bool onlyAudio = OnlyAudio();
     if (onlyAudio)
     {
@@ -1759,6 +1782,25 @@ int32_t DefaultSegmentation::AudioSegmentation()
 
         if (ret)
             return ret;
+
+        m_isMpdGenInit = true;
+    }
+    else
+    {
+        bool mpdGenInitialized = false;
+        while(!mpdGenInitialized)
+        {
+            {
+                std::lock_guard<std::mutex> lock(m_audioMutex);
+                if (m_isMpdGenInit)
+                {
+                    mpdGenInitialized = true;
+                    break;
+                }
+            }
+
+            usleep(50);
+        }
     }
 
     std::map<MediaStream*, TrackSegmentCtx*>::iterator itStreamTrack;
@@ -1780,9 +1822,9 @@ int32_t DefaultSegmentation::AudioSegmentation()
         }
     }
 
-    //OMAF_LOG(LOG_INFO, "Done audio initial segment !\n");
+    OMAF_LOG(LOG_INFO, "Done audio initial segment !\n");
     m_audioPrevSegNum = m_audioSegNum;
-    //OMAF_LOG(LOG_INFO, "Initial audio segment num %ld\n", m_audioSegNum);
+    OMAF_LOG(LOG_INFO, "Initial audio segment num %ld\n", m_audioSegNum);
 
     bool nowEOS = false;
     bool eosWritten = false;
