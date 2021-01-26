@@ -44,7 +44,7 @@ void* I360SCVP_Init(param_360SCVP* pParam360SCVP)
 
     if(pStitchstream->init(pParam360SCVP) < 0)
     {
-        delete(pStitchstream);
+        SAFE_DELETE(pStitchstream);
         return NULL;
     }
     return (void*)pStitchstream;
@@ -129,8 +129,7 @@ int32_t   I360SCVP_unInit(void* p360SCVPHandle)
     if (!pStitch)
         return -1;
     ret = pStitch->uninit();
-    delete pStitch;
-    pStitch = NULL;
+    SAFE_DELETE(pStitch);
     return ret;
 }
 

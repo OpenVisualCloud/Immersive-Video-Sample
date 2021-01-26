@@ -889,11 +889,7 @@ uint32_t writeCubeProjectionSEINal(GTS_BitStream *bs, CubemapProjectionSEI& proj
 
      uint32_t ret = writeRwpkSEINal(stream, packing, temporalIdPlus1);
 
-     if (packing.pRegions != NULL)
-     {
-         delete []packing.pRegions;
-         packing.pRegions = NULL;
-     }
+     SAFE_DELETE_ARRAY(packing.pRegions);
      return ret;
  }
 
@@ -959,10 +955,6 @@ uint32_t writeCubeProjectionSEINal(GTS_BitStream *bs, CubemapProjectionSEI& proj
          pViewportInput++;
      }
      uint32_t ret = writeRotationSEINal(stream, viewPort, temporalIdPlus1);
-     if (viewPort.pViewports)
-     {
-         delete []viewPort.pViewports;
-         viewPort.pViewports = NULL;
-     }
+     SAFE_DELETE_ARRAY(viewPort.pViewports);
      return ret;
  }

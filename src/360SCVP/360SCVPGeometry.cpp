@@ -77,8 +77,8 @@ void Geometry::geoInit(SVideoInfo& sVideoInfo)
 
 void Geometry::geoUnInit()
 {
-    delete[] m_upLeft;
-    delete[] m_downRight;
+    SAFE_DELETE_ARRAY(m_upLeft);
+    SAFE_DELETE_ARRAY(m_downRight);
 
 }
 
