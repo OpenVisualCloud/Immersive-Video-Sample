@@ -57,8 +57,8 @@ Segmentation::Segmentation(
 
     m_mpdGen = NULL;
     m_trackIdStarter = 1;
-    m_frameRate.num = 0;
-    m_frameRate.den = 0;
+    m_frameRate.num = initInfo->bsBuffers[0].frameRate.num;
+    m_frameRate.den = initInfo->bsBuffers[0].frameRate.den;
 }
 
 Segmentation::Segmentation(const Segmentation& src)

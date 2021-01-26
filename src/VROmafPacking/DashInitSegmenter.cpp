@@ -315,7 +315,10 @@ int32_t DashInitSegmenter::GenerateInitSegment(
 
                 FILE *fp = fopen(trackSegCtx->dashInitCfg.initSegName, "wb+");
                 if (!fp)
+                {
+                    OMAF_LOG(LOG_ERROR, "Failed to open %s\n", trackSegCtx->dashInitCfg.initSegName);
                     return OMAF_ERROR_NULL_PTR;
+                }
 
                 m_initSegSize = frameString.size();
                 fwrite(frameString.c_str(), 1, frameString.size(), fp);
