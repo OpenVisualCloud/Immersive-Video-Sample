@@ -6,7 +6,7 @@ Now there are totally four types plugins supported:
 - ViewportPredict_Plugin : plugin for predicting user viewport in next segment to reduce the latency of motion to high quality in OmafDashAccess library.
 - OMAFPacking_Plugin : plugin for region-wise packing information generation for extractor track used in VROmafPacking library.
 - StreamProcess_Plugin : plugin for media stream process, including both video stream and audio strem, also used in VROmafPacking library.
-- 360SCVP_Plugin/TileSelection_Plugins:
+- 360SCVP_Plugin/TileSelection_Plugins: plugins with multiple tile selection methods for 2D/3D videos under different using scenarios in 360SCVP library.
 
 ## ViewportPredict_Plugin
 The main function of ViewportPredict_Plugin is to predict viewport angles with linear regression model using trajectory feedback in real time.
@@ -41,3 +41,14 @@ This plugin is used to parse auido stream headers, like ADTS header for AAC audi
 - Secondly, when one frame from one audio stream comes, API AddFrameInfo should be called to copy this frame information defined by structure 'FrameBSInfo' and then add new created frame information into frames list managed inside the plugin prepared for DASH segmentation.
 - Then, in DASH segmentation process which may be in another thread, APIs SetCurrFrameInfo is called firstly to set the front frame in frames list as the current frame to be processed, then API GetCurrFrameInfo is used to get it in segmentation process thread. After getting new frame, call GetHeaderDataSize to update and get header size for the frame, then raw audio data in this frame can be obtained. Like video stream process plugin, lower library for segmentation will generate one segment when all frames included in the segment are ready, so API AddFrameToSegment should be called to hold the frame before the segment is generated. And after the segment has been written, API DestroyCurrSegmentFrames will be called to release all frames data.
 - At last, when all audio frames have been written into segments, call API SetEOS to set EOS status, and DASH segmentation process will get this status by API GetEOS, then to stop the process.
+
+## 360SCVP_Plugins
+The 360SCVP plugins will provide mulitiple functions on different types of videos. Though we support tile selection for multiple now, it is able to extend to other functions.
+There is a structure for plugin definition which is defined in 360SCVPAPI.h. The PluginDef has three element for user to define their plugin type, format and library path.
+
+TileSelection_Plugins
+This is one kind of 360SCVP Plugins which can support 2D Planar video but also could be easy extended to 3D projection videos like ERP or cubemap. The TileSelectionPlugins_API.h has defined a base class 'TileSelection' and users can define their own child-class in the implementation. Below is an example process for Tile Selection on planar videos.
+- Firstly, The base class has a constructor, a deconstructor and an initilaization function. When users want to execute tile selection, the initialization function should be called with proper configuration in the param_360SCVP struct. The param 'sourceResolutionNum' is the number of the high resolution streams. The struct 'pStreamInfo' is used to set the resolution and tile width and height of each stream. Do not forget to set the 'PluginDef' with the plugin type, format and library path.
+- Then the API 'SetViewportInfo' is called to pass down the headpose information, which includes the viewport center point coordinates, the tile selection mode, and the moving direction and speed.
+- Now the API 'GetTilesInViewport' can be called to get tile selection results based on the initial configurations and headpose information. The output struct array element stores the selected tile information including the upleft point coordinate, the streamId which indicates the resolution this tile is.
+- When the playback finished, the unInit API will be called to release internal dynamic memory and reset internal variables.
