@@ -182,6 +182,90 @@ TstitchStream::TstitchStream(TstitchStream& other)
     m_bNeedPlugin = false;
 }
 
+TstitchStream& TstitchStream::operator=(const TstitchStream& other)
+{
+    if (&other == this)
+        return *this;
+
+    m_pOutTile = new TileDef[1000];
+    memcpy_s(m_pOutTile, 1000 * sizeof(TileDef), other.m_pOutTile, 1000 * sizeof(TileDef));
+    m_pUpLeft = new point[6];
+    memcpy_s(m_pUpLeft, 6 * sizeof(point), other.m_pUpLeft, 6 * sizeof(point));
+    m_pDownRight = new point[6];
+    memcpy_s(m_pDownRight, 6 * sizeof(point), other.m_pDownRight, 6 * sizeof(point));
+    m_pNalInfo[0] = new nal_info[1000];
+    memcpy_s(m_pNalInfo[0], 1000 * sizeof(nal_info), other.m_pNalInfo[0], 1000 * sizeof(nal_info));
+    m_pNalInfo[1] = new nal_info[1000];
+    memcpy_s(m_pNalInfo[1], 1000 * sizeof(nal_info), other.m_pNalInfo[1], 1000 * sizeof(nal_info));
+    m_hevcState = new HEVCState;
+    if (m_hevcState)
+    {
+        memcpy_s(m_hevcState, sizeof(HEVCState), other.m_hevcState, sizeof(HEVCState));
+    }
+
+    memcpy_s(&m_pViewportParam, sizeof(generateViewPortParam), &(other.m_pViewportParam), sizeof(generateViewPortParam));
+    memcpy_s(&m_mergeStreamParam, sizeof(param_mergeStream), &(other.m_mergeStreamParam), sizeof(param_mergeStream));
+    memcpy_s(&m_streamStitch, sizeof(param_gen_tiledStream), &(other.m_streamStitch), sizeof(param_gen_tiledStream));
+    m_pViewport = NULL;
+    m_pMergeStream = NULL;
+    m_pSteamStitch = NULL;
+    m_seiFramePacking_enable = other.m_seiFramePacking_enable;
+    m_seiPayloadType = other.m_seiPayloadType;
+    m_seiProj_enable = other.m_seiProj_enable;
+    m_seiSphereRot_enable = other.m_seiSphereRot_enable;
+    m_seiRWPK_enable = other.m_seiRWPK_enable;
+    m_seiViewport_enable = other.m_seiViewport_enable;
+    m_projType = other.m_projType;
+    m_specialDataLen[0] = other.m_specialDataLen[0];
+    m_specialDataLen[1] = other.m_specialDataLen[1];
+    m_hrTilesInRow = other.m_hrTilesInRow;
+    m_hrTilesInCol = other.m_hrTilesInCol;
+    m_lrTilesInRow = other.m_lrTilesInRow;
+    m_lrTilesInCol = other.m_lrTilesInCol;
+    m_bSPSReady = other.m_bSPSReady;
+    m_bPPSReady = other.m_bPPSReady;
+    m_tileWidthCountSel[0] = other.m_tileWidthCountSel[0];
+    m_tileWidthCountSel[1] = other.m_tileWidthCountSel[1];
+    m_tileHeightCountSel[0] = other.m_tileHeightCountSel[0];
+    m_tileHeightCountSel[1] = other.m_tileHeightCountSel[1];
+    m_tileWidthCountOri[0] = other.m_tileWidthCountOri[0];
+    m_tileWidthCountOri[1] = other.m_tileWidthCountOri[1];
+    m_tileHeightCountOri[0] = other.m_tileHeightCountOri[0];
+    m_tileHeightCountOri[1] = other.m_tileHeightCountOri[1];
+    m_specialInfo[0] = new unsigned char[200];
+    memcpy_s(m_specialInfo[0], 200 * sizeof(unsigned char), other.m_specialInfo[0], 200 * sizeof(unsigned char));
+    m_specialInfo[1] = new unsigned char[200];
+    memcpy_s(m_specialInfo[1], 200 * sizeof(unsigned char), other.m_specialInfo[1], 200 * sizeof(unsigned char));
+    m_sliceHeaderLen = other.m_sliceHeaderLen;
+    m_dstWidthNet = other.m_dstWidthNet;
+    m_dstHeightNet = other.m_dstHeightNet;
+    m_maxSelTiles = other.m_maxSelTiles;
+    m_pRWPK = NULL;
+    m_pSeiViewport = other.m_pSeiViewport;
+    m_pFramePacking = other.m_pFramePacking;
+    m_pSphereRot = other.m_pSphereRot;
+    m_pSeiViewport = other.m_pSeiViewport;
+    m_viewportDestWidth = other.m_viewportDestWidth;
+    m_viewportDestHeight = other.m_viewportDestHeight;
+    m_dataSize = 0;
+    m_data = NULL;
+    m_startCodesSize = other.m_startCodesSize;
+    m_nalType = other.m_nalType;
+    memcpy_s(&m_sliceType, sizeof(SliceType), &(other.m_sliceType), sizeof(SliceType));
+    m_usedType = other.m_usedType;
+    m_xTopLeftNet = other.m_xTopLeftNet;
+    m_yTopLeftNet = other.m_yTopLeftNet;
+    m_dstRwpk = RegionWisePacking();
+    m_dstRwpk = other.m_dstRwpk;
+    m_pTileSelection = NULL;
+    m_pluginLibHdl = NULL;
+    m_createPlugin = NULL;
+    m_destroyPlugin = NULL;
+    m_bNeedPlugin = false;
+
+    return *this;
+}
+
 TstitchStream::~TstitchStream()
 {
     SAFE_DELETE_ARRAY(m_pOutTile);
@@ -229,12 +313,23 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
     else if (m_pViewportParam.m_input_geoType == E_SVIDEO_CUBEMAP)
     {
         /* Check the paramVideoFP rows / cols exceeds the maximum array size for Cubemap projections */
-        if (pViewPortInfo->paramVideoFP.rows > 6 || pViewPortInfo->paramVideoFP.cols > 6) {
-            SCVP_LOG(LOG_ERROR, "Viewport rows and cols too big: rows is %d, col is %d\n", pViewPortInfo->paramVideoFP.rows, pViewPortInfo->paramVideoFP.cols);
+        if (pViewPortInfo->paramVideoFP.rows > 6 || pViewPortInfo->paramVideoFP.cols > 6
+           || pViewPortInfo->paramVideoFP.rows <= 0 || pViewPortInfo->paramVideoFP.cols <= 0 ) {
+            SCVP_LOG(LOG_ERROR, "Viewport rows and cols is not suitable for Cubemap: rows is %d, col is %d\n", pViewPortInfo->paramVideoFP.rows, pViewPortInfo->paramVideoFP.cols);
             return ERROR_BAD_PARAM;
         }
-        m_pViewportParam.m_paramVideoFP.cols = pViewPortInfo->paramVideoFP.cols;
-        m_pViewportParam.m_paramVideoFP.rows = pViewPortInfo->paramVideoFP.rows;
+        else {
+            m_pViewportParam.m_paramVideoFP.cols = pViewPortInfo->paramVideoFP.cols;
+            m_pViewportParam.m_paramVideoFP.rows = pViewPortInfo->paramVideoFP.rows;
+            for (int i = 0; i < pViewPortInfo->paramVideoFP.rows; i++) {
+                for (int j = 0; j < pViewPortInfo->paramVideoFP.cols; j++) {
+                     m_pViewportParam.m_paramVideoFP.faces[i][j].faceHeight = pViewPortInfo->paramVideoFP.faces[i][j].faceHeight;
+                     m_pViewportParam.m_paramVideoFP.faces[i][j].faceWidth = pViewPortInfo->paramVideoFP.faces[i][j].faceWidth;
+                     m_pViewportParam.m_paramVideoFP.faces[i][j].idFace = pViewPortInfo->paramVideoFP.faces[i][j].idFace;
+                     m_pViewportParam.m_paramVideoFP.faces[i][j].rotFace = pViewPortInfo->paramVideoFP.faces[i][j].rotFace;
+                }
+            }
+        }
     }
     else if (m_pViewportParam.m_input_geoType == E_SVIDEO_PLANAR)
     {
@@ -242,26 +337,16 @@ int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t t
             SCVP_LOG(LOG_WARNING, "Viewport rows and cols number is illegal!!! Set them to default 1x1 !!!\n");
         m_pViewportParam.m_paramVideoFP.cols = 1;
         m_pViewportParam.m_paramVideoFP.rows = 1;
+        m_pViewportParam.m_paramVideoFP.faces[0][0].faceHeight = pViewPortInfo->paramVideoFP.faces[0][0].faceHeight;
+        m_pViewportParam.m_paramVideoFP.faces[0][0].faceWidth = pViewPortInfo->paramVideoFP.faces[0][0].faceWidth;
+        m_pViewportParam.m_paramVideoFP.faces[0][0].idFace = pViewPortInfo->paramVideoFP.faces[0][0].idFace;
+        m_pViewportParam.m_paramVideoFP.faces[0][0].rotFace = NO_TRANSFORM;
     }
     else {
         SCVP_LOG(LOG_ERROR, "The Input GeoType %d is not supported by viewport implementation!\n", m_pViewportParam.m_input_geoType);
         return ERROR_BAD_PARAM;
     }
 
-    /* Make Klockwork Happy */
-    int rows = m_pViewportParam.m_paramVideoFP.rows <= 6 ? m_pViewportParam.m_paramVideoFP.rows : 6;
-    int cols = m_pViewportParam.m_paramVideoFP.cols <= 6 ? m_pViewportParam.m_paramVideoFP.cols : 6;
-
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < cols; j++)
-        {
-            m_pViewportParam.m_paramVideoFP.faces[i][j].faceHeight = pViewPortInfo->paramVideoFP.faces[i][j].faceHeight;
-            m_pViewportParam.m_paramVideoFP.faces[i][j].faceWidth = pViewPortInfo->paramVideoFP.faces[i][j].faceWidth;
-            m_pViewportParam.m_paramVideoFP.faces[i][j].idFace = pViewPortInfo->paramVideoFP.faces[i][j].idFace;
-            m_pViewportParam.m_paramVideoFP.faces[i][j].rotFace = pViewPortInfo->paramVideoFP.faces[i][j].rotFace;
-        }
-    }
     m_pViewport = genViewport_Init(&m_pViewportParam);
     return ERROR_NONE;
 }
