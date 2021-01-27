@@ -739,7 +739,13 @@ TgenViewport::TgenViewport(TgenViewport& src)
     m_iFrameRate = src.m_iFrameRate;
     m_iInputWidth = src.m_iInputWidth;
     m_iInputHeight = src.m_iInputHeight;
+    m_maxTileNum = src.m_maxTileNum;
     m_usageType = src.m_usageType;
+    m_numFaces = src.m_numFaces;
+    m_srd = NULL;
+    m_pViewportHorizontalBoudaryPoints = NULL;
+    m_paramVideoFP.cols = src.m_paramVideoFP.cols;
+    m_paramVideoFP.rows = src.m_paramVideoFP.rows;
 }
 
 TgenViewport::~TgenViewport()
