@@ -2032,11 +2032,21 @@ int32_t TgenViewport::CubemapIsInsideFaces()
     float phi = sacos(ssin(thita * DEG2RAD_FACTOR) / ssin((vFOV / 2) * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR;
     /* Calculate the topLeft/topRight point position with current pitch */
     topLeftPoint.thita = topRightPoint.thita = sasin(scos(phi * DEG2RAD_FACTOR) * ssin((fPitch + vFOV / 2) * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR;
-    topLeftPoint.alpha = cal_yaw - fabs(sasin(ssin(phi * DEG2RAD_FACTOR) / scos(topLeftPoint.thita * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR);
-    topRightPoint.alpha = cal_yaw + fabs(sasin(ssin(phi * DEG2RAD_FACTOR) / scos(topLeftPoint.thita * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR);
+    float tempValue = ssin(phi * DEG2RAD_FACTOR) / scos(topLeftPoint.thita * DEG2RAD_FACTOR);
+    if (tempValue > 1)
+        tempValue = 1;
+    else if (tempValue < -1)
+        tempValue = -1;
+    topLeftPoint.alpha = cal_yaw - fabs(sasin(tempValue) * RAD2DEG_FACTOR);
+    topRightPoint.alpha = cal_yaw + fabs(sasin(tempValue) * RAD2DEG_FACTOR);
     bottomLeftPoint.thita = bottomRightPoint.thita = sasin(scos(phi * DEG2RAD_FACTOR) * ssin((fPitch - vFOV / 2) * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR;
-    bottomLeftPoint.alpha = cal_yaw - fabs(sasin(ssin(phi * DEG2RAD_FACTOR) / scos(bottomLeftPoint.thita * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR);
-    bottomRightPoint.alpha = cal_yaw + fabs(sasin(ssin(phi * DEG2RAD_FACTOR) / scos(bottomLeftPoint.thita * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR);
+    tempValue = ssin(phi * DEG2RAD_FACTOR) / scos(bottomLeftPoint.thita * DEG2RAD_FACTOR);
+    if (tempValue > 1)
+        tempValue = 1;
+    else if (tempValue < -1)
+        tempValue = -1;
+    bottomLeftPoint.alpha = cal_yaw - fabs(sasin(tempValue) * RAD2DEG_FACTOR);
+    bottomRightPoint.alpha = cal_yaw + fabs(sasin(tempValue) * RAD2DEG_FACTOR);
 
     /* Calculate coordinates of each viewport vertex on the cube faces */
     if (fPitch + vFOV / 2 >= ERP_VERT_ANGLE / 2) {
