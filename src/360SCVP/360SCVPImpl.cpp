@@ -186,17 +186,22 @@ TstitchStream& TstitchStream::operator=(const TstitchStream& other)
 {
     if (&other == this)
         return *this;
-
+    SAFE_DELETE_ARRAY(m_pOutTile);
     m_pOutTile = new TileDef[1000];
     memcpy_s(m_pOutTile, 1000 * sizeof(TileDef), other.m_pOutTile, 1000 * sizeof(TileDef));
+    SAFE_DELETE_ARRAY(m_pUpLeft);
     m_pUpLeft = new point[6];
     memcpy_s(m_pUpLeft, 6 * sizeof(point), other.m_pUpLeft, 6 * sizeof(point));
+    SAFE_DELETE_ARRAY(m_pDownRight);
     m_pDownRight = new point[6];
     memcpy_s(m_pDownRight, 6 * sizeof(point), other.m_pDownRight, 6 * sizeof(point));
+    SAFE_DELETE_ARRAY(m_pNalInfo[0]);
     m_pNalInfo[0] = new nal_info[1000];
     memcpy_s(m_pNalInfo[0], 1000 * sizeof(nal_info), other.m_pNalInfo[0], 1000 * sizeof(nal_info));
+    SAFE_DELETE_ARRAY(m_pNalInfo[1]);
     m_pNalInfo[1] = new nal_info[1000];
     memcpy_s(m_pNalInfo[1], 1000 * sizeof(nal_info), other.m_pNalInfo[1], 1000 * sizeof(nal_info));
+    SAFE_DELETE(m_hevcState);
     m_hevcState = new HEVCState;
     if (m_hevcState)
     {
@@ -232,8 +237,10 @@ TstitchStream& TstitchStream::operator=(const TstitchStream& other)
     m_tileWidthCountOri[1] = other.m_tileWidthCountOri[1];
     m_tileHeightCountOri[0] = other.m_tileHeightCountOri[0];
     m_tileHeightCountOri[1] = other.m_tileHeightCountOri[1];
+    SAFE_DELETE_ARRAY(m_specialInfo[0]);
     m_specialInfo[0] = new unsigned char[200];
     memcpy_s(m_specialInfo[0], 200 * sizeof(unsigned char), other.m_specialInfo[0], 200 * sizeof(unsigned char));
+    SAFE_DELETE_ARRAY(m_specialInfo[1]);
     m_specialInfo[1] = new unsigned char[200];
     memcpy_s(m_specialInfo[1], 200 * sizeof(unsigned char), other.m_specialInfo[1], 200 * sizeof(unsigned char));
     m_sliceHeaderLen = other.m_sliceHeaderLen;
