@@ -250,10 +250,8 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
         if (stream->GetMediaType() == VIDEOTYPE)
         {
             VideoStream *vs = (VideoStream*)stream;
-            //TrackSegmentCtx *trackSegCtxs = vs->GetAllTrackSegCtxs();
             TileInfo *tilesInfo = vs->GetAllTilesInfo();
             Rational frameRate = vs->GetFrameRate();
-            //m_frameRate = frameRate;
             uint64_t bitRate = vs->GetBitRate();
             uint8_t qualityLevel = bitRateRanking.size();
             std::set<uint64_t>::iterator itBitRate;
@@ -1948,6 +1946,17 @@ int32_t DefaultSegmentation::AudioSegmentation()
         //OMAF_LOG(LOG_INFO, "NOW eos %d \n", nowEOS);
         if (nowEOS && eosWritten)
         {
+            std::map<uint8_t, MediaStream*>::iterator itStr = m_streamMap->begin();
+            for ( ; itStr != m_streamMap->end(); itStr++)
+            {
+                MediaStream *stream = itStr->second;
+                if (stream && (stream->GetMediaType() == AUDIOTYPE))
+                {
+                    AudioStream *as = (AudioStream*)stream;
+                    WriteSegmentForEachAudio(as, NULL, false, true);
+                }
+            }
+
             break;
         }
     }
