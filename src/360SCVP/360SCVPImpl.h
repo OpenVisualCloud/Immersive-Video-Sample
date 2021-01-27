@@ -96,6 +96,7 @@ public:
 
     TstitchStream();
     TstitchStream(TstitchStream& other);
+    TstitchStream& operator=(const TstitchStream& other);
     virtual ~TstitchStream();
     int32_t  init(param_360SCVP* pParamStitchStream);
     int32_t  uninit();

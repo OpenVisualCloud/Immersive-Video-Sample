@@ -133,6 +133,7 @@ public:
 
 public:
     TgenViewport();
+    TgenViewport(TgenViewport& src);
     virtual ~TgenViewport();
     TgenViewport& operator=(const TgenViewport& src);
 

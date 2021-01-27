@@ -696,7 +696,6 @@ int32_t   genViewport_unInit(void* pGenHandle)
     return 0;
 }
 
-
 TgenViewport::TgenViewport()
 {
     m_faceSizeAlignment = 8;
@@ -720,6 +719,27 @@ TgenViewport::TgenViewport()
     m_pViewportHorizontalBoudaryPoints = NULL;
     m_paramVideoFP.cols = 0;
     m_paramVideoFP.rows = 0;
+}
+
+TgenViewport::TgenViewport(TgenViewport& src)
+{
+    m_faceSizeAlignment = src.m_faceSizeAlignment;
+    m_pUpLeft = new SPos[FACE_NUMBER];
+    m_pDownRight = new SPos[FACE_NUMBER];
+    memcpy_s(m_pUpLeft, sizeof(SPos), src.m_pUpLeft, sizeof(SPos));
+    memcpy_s(m_pDownRight, sizeof(SPos), src.m_pDownRight, sizeof(SPos));
+    m_codingSVideoInfo = src.m_codingSVideoInfo;
+    m_sourceSVideoInfo = src.m_sourceSVideoInfo;
+    m_iCodingFaceWidth = src.m_iCodingFaceHeight;
+    m_iCodingFaceHeight = src.m_iCodingFaceHeight;
+    m_iSourceWidth = src.m_iSourceWidth;
+    m_iSourceHeight = src.m_iSourceHeight;
+    m_tileNumCol = src.m_tileNumCol;
+    m_tileNumRow = src.m_tileNumRow;
+    m_iFrameRate = src.m_iFrameRate;
+    m_iInputWidth = src.m_iInputWidth;
+    m_iInputHeight = src.m_iInputHeight;
+    m_usageType = src.m_usageType;
 }
 
 TgenViewport::~TgenViewport()
@@ -1524,8 +1544,10 @@ int32_t  TgenViewport::convert()
         return -1;
     }
     pcCodingGeomtry = Geometry::create(m_codingSVideoInfo);
-    if (pcCodingGeomtry == NULL)
+    if (pcCodingGeomtry == NULL) {
+        SAFE_DELETE(pcInputGeomtry);
         return ERROR_INVALID;
+    }
 
     // starting time
     double dResult;
