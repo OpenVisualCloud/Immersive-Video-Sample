@@ -4,7 +4,6 @@ TARGET=$1
 PREBUILD_FLAG=$2
 EX_PATH=${PWD}
 SRC_PATH=${PWD}/..
-GIT_SHORT_HEAD=`git rev-parse --short HEAD`
 
 parameters_usage(){
     echo 'Usage: 1. <target>:           [ server, client, test ]'
@@ -53,6 +52,7 @@ build_client(){
 build_ci(){
     source /opt/rh/devtoolset-7/enable
     PREBUILD_FLAG="n"
+    GIT_SHORT_HEAD=`git rev-parse --short HEAD`
 
     # Build server
     if [ "$1" == "oss" ] ; then
