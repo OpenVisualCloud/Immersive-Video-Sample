@@ -68,6 +68,7 @@ DashMediaSource::DashMediaSource() {
       m_singleFile = fopen(string("video" + to_string(i) + ".h265").c_str(), "wb");
       if (NULL == m_singleFile) LOG(ERROR) << "Failed to open stream dumped file!" << endl;
       m_dumpedFile.push_back(std::move(m_singleFile));
+      m_singleFile = nullptr;
     }
   }
 }
@@ -78,8 +79,11 @@ DashMediaSource::~DashMediaSource() {
   if (m_needStreamDumped && !m_dumpedFile.empty()) {
     for (FILE* file : m_dumpedFile)
     {
-      fclose(file);
-      file = NULL;
+      if (file)
+      {
+        fclose(file);
+        file = NULL;
+      }
     }
     m_dumpedFile.clear();
   }
