@@ -156,25 +156,14 @@ RUN wget -O - ${THRIFT_REPO} | tar xz && \
     make install && \
     cd ${WORKDIR} && rm -rf ./thrift-${THRIFT_VER}*
 
-# Install Server FFmpeg Dependency
-RUN git clone https://github.com/FFmpeg/FFmpeg.git && \
-    cd FFmpeg && \
-    source /opt/rh/devtoolset-7/enable && \
-    git checkout release/4.1 && \
-    git checkout c2ac3b8e6a040e33d53fa13548848c8ba981a8e4 && \
-    cd - && patch -p1 < ffmpeg/patches/FFmpeg_OMAF.patch && \
-    mkdir -p external/FFmpeg && cd external/FFmpeg && \
-    ../../FFmpeg/configure --prefix=/usr --libdir=/usr/local/lib --enable-static --enable-shared --enable-gpl --enable-nonfree --disable-optimizations --disable-vaapi && \
-    make -j `nproc` && \
-    make install && \
-    cd ${WORKDIR} && rm -rf ./external/FFmpeg
-
 # Install openHEVC
 RUN git clone https://github.com/OpenHEVC/openHEVC.git && \
     cd openHEVC && \
     source /opt/rh/devtoolset-7/enable && \
+    git config --global user.email "you@example.com" && \
+    git config --global user.name "Your Name" && \
     git checkout ffmpeg_update && \
-    patch -p1 < ../external/ffmpeg_update_add_circle_list_for_to_free_frame.patch && \
+    git am --whitespace=fix ../external/Update-buffer-operation-and-fix-stream-loop-coredump.patch && \
     ./configure --libdir=/usr/lib64 --disable-sdl2 && \
     make -j `nproc` && \
     make install && \
@@ -208,14 +197,12 @@ RUN git clone https://github.com/intel/safestringlib.git && \
 COPY nginx_conf /usr/local/nginx/conf
 
 # Build Server
-RUN mkdir -p build/server && cd build/server && \
+RUN cd external && \
     source /opt/rh/devtoolset-7/enable && \
-    export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server ../.. && \
-    make -j `nproc` && \
-    make install && \
-    mv ffmpeg/ffmpeg ../../Sample-Videos && \
-    cd ../.. && rm -rf `ls | grep -v Sample-Videos`
+    ./install_FFmpeg.sh server && \
+    ./build.sh server n && \
+    mv ../build/server/ffmpeg/ffmpeg ../Sample-Videos && \
+    cd .. && rm -rf `ls | grep -v Sample-Videos`
 
 COPY run.sh ${WORKDIR}/Sample-Videos
 
