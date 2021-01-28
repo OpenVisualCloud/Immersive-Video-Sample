@@ -4797,7 +4797,7 @@ diff -urN FFmpeg/libavformat/Makefile FFmpeg-patched/libavformat/Makefile
 diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_packing_enc.c
 --- FFmpeg/libavformat/omaf_packing_enc.c	1970-01-01 08:00:00.000000000 +0800
 +++ FFmpeg-patched/libavformat/omaf_packing_enc.c	2020-09-27 13:35:13.543526537 +0800
-@@ -0,0 +1,728 @@
+@@ -0,0 +1,730 @@
 +/*
 + * Intel tile Dash muxer
 + *
@@ -4887,6 +4887,7 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +    int            bufferedFramesNum;
 +    bool           need_external_log;
 +    int            min_log_level;
++    bool           first_audio_input;
 +} OMAFContext;
 +
 +static uint8_t convert_face_index(char *face_name)
@@ -5286,7 +5287,7 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +            memcpy(c->initInfo->bsBuffers[i].data, pkt->side_data->data, c->initInfo->bsBuffers[i].dataSize);
 +
 +        }
-+        else if ((st->codecpar->codec_id == AV_CODEC_ID_AAC) && (pkt->pts == -1024))
++        else if ((st->codecpar->codec_id == AV_CODEC_ID_AAC) && !c->first_audio_input)
 +        {
 +            c->initInfo->bsBuffers[i].dataSize = pkt->size;
 +
@@ -5338,9 +5339,10 @@ diff -urN FFmpeg/libavformat/omaf_packing_enc.c FFmpeg-patched/libavformat/omaf_
 +        {
 +            c->inStreamsNum++;
 +        }
-+        else if ((st->codecpar->codec_id == AV_CODEC_ID_AAC) && (pkt->pts == -1024))
++        else if ((st->codecpar->codec_id == AV_CODEC_ID_AAC) && !c->first_audio_input)
 +        {
 +            c->inStreamsNum++;
++            c->first_audio_input = true;
 +        }
 +
 +        FrameBSInfo* frameInfo = (FrameBSInfo*)malloc(sizeof(FrameBSInfo));
