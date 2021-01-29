@@ -124,7 +124,8 @@ class WebRTCMediaSource : public MediaSource, public WebRTCVideoPacketListener {
   //! \return RenderStatus
   //!         RENDER_STATUS_OK if success, else fail reason
   //!
-  virtual RenderStatus ChangeViewport(float yaw, float pitch) override;
+  virtual RenderStatus ChangeViewport(HeadPose* pose) override;
+  virtual RenderStatus Start() override;
 
   //! \brief UpdateFrames
   //!
