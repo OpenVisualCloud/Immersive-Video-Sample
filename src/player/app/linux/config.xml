@@ -24,7 +24,7 @@
     <maxVideoDecodeHeight>2560</maxVideoDecodeHeight>
     <!-- for WebRTC parameters -->
     <resolution>8k</resolution>
-    <server_url>http://10.67.112.207:3001</server_url>
+    <server_url>http://xxx.xxx.xxx.xxx:xxx</server_url>
     <ProjectionType>ERP</ProjectionType>
     <frameRate>30</frameRate>
     <frameNum>100</frameNum>

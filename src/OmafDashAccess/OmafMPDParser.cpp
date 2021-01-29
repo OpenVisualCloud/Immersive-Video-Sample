@@ -88,7 +88,8 @@ int OmafMPDParser::ParseMPD(std::string mpd_file, OMAFSTREAMS& listStream) {
 
   ret = ParseStreams(listStream);
   if (ret != ERROR_NONE) {
-    OMAF_LOG(LOG_ERROR, "Failed to parse media streams from MPD file: %s\n", mpd_file.c_str());
+    if (ret != OMAF_INVALID_EXTRACTOR_ENABLEMENT)
+      OMAF_LOG(LOG_ERROR, "Failed to parse media streams from MPD file: %s\n", mpd_file.c_str());
     return ret;
   }
 
