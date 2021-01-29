@@ -33,7 +33,7 @@
 #ifdef _ENABLE_WEBRTC_SOURCE_
 
 #include "WebRTCMediaSource.h"
-#include "../Common.h"
+#include "../Common/Common.h"
 
 #include <algorithm>
 
@@ -252,6 +252,9 @@ WebRTCMediaSource::WebRTCMediaSource()
 WebRTCMediaSource::~WebRTCMediaSource() {
   LOG(INFO) << __FUNCTION__ << std::endl;
 
+  SourceResolution *source_resolution = m_rsFactory->GetSourceResolution();
+  SAFE_DELETE_ARRAY(source_resolution);
+
   if (m_parserRWPKHandle) {
     I360SCVP_unInit(m_parserRWPKHandle);
     m_parserRWPKHandle = nullptr;
@@ -320,7 +323,12 @@ void WebRTCMediaSource::setMediaInfo() {
   mMediaInfo.GetActiveVideoInfo(vi);
 
   if (NULL != this->m_rsFactory) {
-    m_rsFactory->SetVideoSize(vi.width, vi.height);
+    SourceResolution* source_resolution = new SourceResolution[1];
+    source_resolution[0].quality = HIGHEST_QUALITY_RANKING;
+    source_resolution[0].width = vi.width;
+    source_resolution[0].height = vi.height;
+    m_rsFactory->SetSourceResolution(1, source_resolution);
+
     m_rsFactory->SetHighTileRow(vi.sourceHighTileRow);
     m_rsFactory->SetHighTileCol(vi.sourceHighTileCol);
   }
@@ -397,14 +405,14 @@ bool WebRTCMediaSource::IsEOS() {
   return false;
 }
 
-RenderStatus WebRTCMediaSource::ChangeViewport(float yaw, float pitch) {
-  if ((int)yaw == m_yaw && (int)pitch == m_pitch)
+RenderStatus WebRTCMediaSource::ChangeViewport(HeadPose* pose) {
+  if ((int)pose->yaw == m_yaw && (int)pose->pitch == m_pitch)
     return RENDER_STATUS_OK;
 
-  LOG(INFO) << "yaw: " << yaw << ", pitch: " << pitch << std::endl;
+  LOG(INFO) << "yaw: " << pose->yaw << ", pitch: " << pose->pitch << std::endl;
 
-  m_yaw = yaw;
-  m_pitch = pitch;
+  m_yaw = pose->yaw;
+  m_pitch = pose->pitch;
 
   int yawValue = m_yaw + 180;
   int pitchValue = m_pitch + 90;
@@ -415,6 +423,12 @@ RenderStatus WebRTCMediaSource::ChangeViewport(float yaw, float pitch) {
 
   return RENDER_STATUS_OK;
 }
+
+RenderStatus WebRTCMediaSource::Start() {
+
+  return RENDER_STATUS_OK;
+}
+
 
 RenderStatus WebRTCMediaSource::UpdateFrames(uint64_t pts) {
   if (NULL == m_DecoderManager)
