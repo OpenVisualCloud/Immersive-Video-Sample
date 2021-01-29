@@ -37,7 +37,7 @@ install_openssl() {
     tar -zxvf openssl-1.1.0l.tar.gz
     cd openssl-1.1.0l
 
-    ./config no-shared -m64 --prefix=${PREFIX} --openssldir=${PREFIX}
+    ./config shared -m64 --prefix=${PREFIX} --openssldir=${PREFIX}
     make -j
     make install
 }
@@ -52,7 +52,7 @@ install_boost() {
     cd boost_1_67_0
 
     ./bootstrap.sh
-    ./b2 -j`nproc` variant=release link=static runtime-link=shared --with-system --with-random --with-date_time --with-regex --with-thread --with-filesystem --with-chrono --with-atomic
+    ./b2 -j`nproc` variant=release link=shared runtime-link=shared --with-system --with-random --with-date_time --with-regex --with-thread --with-filesystem --with-chrono --with-atomic
 }
 
 install_socket_io_client() {
@@ -140,7 +140,7 @@ install_ffmpeg(){
   rm -fr ${DIR}
   tar xf ${SRC}
   cd ${DIR}
-  ./configure --prefix=${PREFIX} --disable-shared --enable-static --disable-vaapi
+  ./configure --prefix=${PREFIX} --enable-shared --disable-static --disable-vaapi
   make -j
   make install
 }
