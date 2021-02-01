@@ -144,6 +144,19 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
             pUpLeft++;
             pDownRight++;
         }
+
+        int32_t sqrtSize = (int32_t)sqrt(maxTileNum);
+        int32_t minTileNumDiff = maxTileNum;
+        for (int32_t i = sqrtSize; i <= sqrtSize+1; i++) {
+            for (int32_t j = i; j <= sqrtSize+1; j++) {
+                int32_t tileNumDiff = i * j - maxTileNum;
+                if ((tileNumDiff < minTileNumDiff) && (tileNumDiff >= 0)) {
+                    pParamGenViewport->m_viewportDestWidth = i * cTAppConvCfg->m_srd[0].tilewidth;
+                    pParamGenViewport->m_viewportDestHeight = j * cTAppConvCfg->m_srd[0].tileheight;
+                    minTileNumDiff = tileNumDiff;
+                }
+            }
+        }
         //cTAppConvCfg->m_maxTileNum = tiles_num;
         //pParamGenViewport->m_viewportDestWidth = tiles_num_row * cTAppConvCfg->m_srd[0].tilewidth;
         //pParamGenViewport->m_viewportDestHeight = tiles_num_row * cTAppConvCfg->m_srd[0].tileheight;
@@ -395,7 +408,7 @@ int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile)
     int32_t pos = 0;
     for (int32_t i = 0; i < additionalTilesNum; i++)
     {
-        for (uint32_t j = pos; j < cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow; j++)
+        for (uint32_t j = pos; j < cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow*cTAppConvCfg->m_numFaces; j++)
         {
             if (cTAppConvCfg->m_srd[j].isOccupy == 0)
             {
@@ -418,7 +431,7 @@ int32_t genViewport_getFixedNumTiles(void* pGenHandle, TileDef* pOutTile)
     {
         tileNum = tileNum + additionalTilesNum;
     }
-    if (cTAppConvCfg->m_srd[cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow-1].isOccupy == 1)
+    if (cTAppConvCfg->m_srd[cTAppConvCfg->m_tileNumCol*cTAppConvCfg->m_tileNumRow*cTAppConvCfg->m_numFaces-1].isOccupy == 1)
     {
         for (int32_t idFace = 0; idFace < faceNum; idFace++)
         {

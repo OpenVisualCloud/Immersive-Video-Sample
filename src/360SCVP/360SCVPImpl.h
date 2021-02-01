@@ -28,6 +28,22 @@
 #include "360SCVPHevcTilestream.h"
 #include "../utils/data_type.h"
 #include "TileSelectionPlugins_API.h"
+#include "360SCVPViewportImpl.h"
+
+#define MAX_TILE_NUM 1000
+//!
+//! \struct: MapFaceInfo
+//! \brief:  define the information of one face from input
+//!          multiple face which may not be the standard Cube-3x2
+//!          defined in OMAF. The information includes mapped
+//!          face id in standard Cube-3x2 and the transfrom
+//!          type of the face
+//!
+typedef struct MapFaceInfo
+{
+    uint8_t mappedStandardFaceId; //the corresponding face id in standard Cube-3x2 projection
+    E_TransformType transformType; //face transform type
+}MapFaceInfo;
 
 class TstitchStream
 {
@@ -136,12 +152,16 @@ protected:
     int32_t initMerge(param_360SCVP* pParamStitchStream, int32_t sliceSize);
     int32_t initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t tilecolCount, int32_t tilerowCount);
     int32_t merge_partstream_into1bitstream(int32_t totalInputLen);
+    int32_t ConvertTilesIdx(uint16_t tilesNum);
+    int32_t initTileInfo(param_360SCVP* pParamStitchStream);
 
 private:
     void* m_pluginLibHdl;
     void* m_createPlugin;
     void* m_destroyPlugin;
     bool  m_bNeedPlugin;
+    ITileInfo* m_tilesInfo;
+    MapFaceInfo* m_mapFaceInfo;
 };// END CLASS DEFINITION
 
 #endif // _360SCVP_IMPL_H_

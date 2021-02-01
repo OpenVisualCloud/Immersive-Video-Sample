@@ -44,6 +44,21 @@ extern "C" {
 #define ID_SCVP_RWPK_INFO                  1008
 #define DEFAULT_REGION_NUM                 1000
 
+/*!
+ *
+ * The enum type is defined followed with OMAF cubemap face ID order.
+ *
+ */
+typedef enum OMAF_CUBE_FACE
+{
+    OMAF_FACE_PY = 0,
+    OMAF_FACE_PX,
+    OMAF_FACE_NY,
+    OMAF_FACE_NZ,
+    OMAF_FACE_NX,
+    OMAF_FACE_PZ,
+}OmafCubeFace;
+
 typedef enum SliceType {
     E_SLICE_B   = 0,
     E_SLICE_P   = 1,
@@ -355,6 +370,15 @@ typedef enum
     ROTATION_270_ANTICLOCKWISE,
 }E_TransformType;
 
+//!
+//! \brief  This structure is for the face property setting of an input video
+//!
+//! \param    faceWidth,      input,     the width of current face
+//! \param    faceHeight,     input,     the height of current face
+//! \param    idFace,         input,     the assigned index of current face. use 0 for the only face of ERP projection, use the enum OmafCubeFace defined in this header file under cubemap projection
+//! \param    rotFace,        input,     the rotation mode of current face, use the enum type E_TransformType definition
+//!
+//!
 typedef struct PARAM_FACEPPROPERTY
 {
     int faceWidth;
@@ -363,6 +387,14 @@ typedef struct PARAM_FACEPPROPERTY
     E_TransformType rotFace;
 }Param_FaceProperty;
 
+//!
+//! \brief  This structure is for the face property setting of an input video
+//!
+//! \param    rows,       input,     the maximum row number of the faces for the video
+//! \param    cols,       input,     the maximum column number of the faces for the video
+//! \param    faces,      input,     the face property of the faces of the video. the maximum area is a 6x6 rectangular
+//!
+//!
 typedef struct PARAM_VIDEOFPSTRUCT
 {
     int rows;
@@ -417,6 +449,7 @@ typedef struct PARAM_VIEWPORT_OUTPUT
 //! \param    faceHeight,         input,    the height of the face
 //! \param    tileNumRow,         input,    the number of tile rows
 //! \param    tileNumCol,         input,    the number of tile columns
+//! \param    paramVideoFP,       input,    the face properties under the projection mode
 typedef struct PARAM_VIEWPORT
 {
     int32_t                viewportWidth;
@@ -482,7 +515,7 @@ typedef struct PARAM_STREAMSTITCHINFO
 //! \param    pOutputBitstream,   output,   the buffer for the output frame
 //! \param    outputBitstreamLen, output,   the length of the stitched bitstream
 //! \param    paramPicInfo,       input,    the param for the picture,just used in the usedType=0 & 1
-//! \param    paramViewPort,      input,    the param for the viewport, just used in the usedType=1
+//! \param    paramViewPort,      input,    the param for the viewport, just used in the usedType=1.
 //! \param    paramStitchInfo,    input,    the param for the streamStitch, just used in the usedType=0
 //! \param    sourceResolutionNum,input,    the number of high res stream for usages of multi stream, Pan-zoom for instance
 //! \param    accessInterval,     input,    the time interval of every tile selection interface is called, expressed in milisecond

@@ -114,8 +114,12 @@ build_test(){
 
     # Compile 360SCVP test
     cd build/test/360SCVP && \
-        g++ ${BASIC_CONFIG} ${EX_PATH}/../360SCVP/test/testI360SCVP.cpp && \
-        g++ testI360SCVP.o ${SHARED_CONFIG} -o testI360SCVP
+        g++ ${BASIC_CONFIG} ${EX_PATH}/../360SCVP/test/testI360SCVP_common.cpp && \
+        g++ ${BASIC_CONFIG} ${EX_PATH}/../360SCVP/test/testI360SCVP_erp.cpp && \
+        g++ ${BASIC_CONFIG} ${EX_PATH}/../360SCVP/test/testI360SCVP_cubemap.cpp && \
+        g++ testI360SCVP_common.o ${SHARED_CONFIG} -o testI360SCVP_common && \
+        g++ testI360SCVP_erp.o ${SHARED_CONFIG} -o testI360SCVP_erp && \
+        g++ testI360SCVP_cubemap.o ${SHARED_CONFIG} -o testI360SCVP_cubemap
 
     # Compile OmafDashAccess test
     DA_TEST_PATH="${SRC_PATH}/OmafDashAccess/test"
