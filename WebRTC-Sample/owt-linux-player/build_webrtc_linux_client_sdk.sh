@@ -72,7 +72,7 @@ install_socket_io_client() {
 
     mkdir -p build
     cd build
-    cmake -DBOOST_ROOT:STRING=${DEPS}/boost_1_67_0 -DOPENSSL_ROOT_DIR:STRING=${PREFIX} ../
+    cmake -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fPIC" -DBOOST_ROOT:STRING=${DEPS}/boost_1_67_0 -DOPENSSL_ROOT_DIR:STRING=${PREFIX} ../
     make -j
     make install
 
@@ -119,7 +119,11 @@ install_owt_client_native () {
     sed -i 's/2fa91a1fc71b324ab46483777d7e6da90c57d3c6/28f5c7fd13db33267dcd7ad18851e9750c59d69a/g' DEPS
 
     gclient sync --no-history
+    cd third_party/webrtc
+    patch -p1 < ${PATCHES}/webrtc-Implement-FOV-RTCP-feedback.patch
+    cd -
 
+    patch -p1 < ${PATCHES}/sdk-Implement-FOV-RTCP-feedback.patch
     sed -i 's/rtc_use_h264=true/rtc_use_h264=false/g' scripts/build_linux.py
 
     python scripts/build_linux.py --gn_gen --sdk --arch x64 --ssl_root ${PREFIX} --scheme release --output_path "out"
