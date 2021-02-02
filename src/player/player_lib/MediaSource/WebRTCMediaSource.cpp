@@ -324,7 +324,7 @@ void WebRTCMediaSource::setMediaInfo() {
 
   if (NULL != this->m_rsFactory) {
     SourceResolution* source_resolution = new SourceResolution[1];
-    source_resolution[0].quality = HIGHEST_QUALITY_RANKING;
+    source_resolution[0].qualityRanking = HIGHEST_QUALITY_RANKING;
     source_resolution[0].width = vi.width;
     source_resolution[0].height = vi.height;
     m_rsFactory->SetSourceResolution(1, source_resolution);
