@@ -1,0 +1,78 @@
+From 2dbf35985d047749b0396d960864f21240d1e2b0 Mon Sep 17 00:00:00 2001
+From: Jianhui Dai <jianhui.j.dai@intel.com>
+Date: Wed, 30 Sep 2020 13:08:08 +0800
+Subject: [PATCH] Implement FOV RTCP feedback
+
+---
+ .../sdk/base/customizedvideodecoderproxy.cc   | 21 ++++++++++++++++++-
+ .../cpp/owt/base/videodecoderinterface.h      | 10 +++++++++
+ 2 files changed, 30 insertions(+), 1 deletion(-)
+
+diff --git a/talk/owt/sdk/base/customizedvideodecoderproxy.cc b/talk/owt/sdk/base/customizedvideodecoderproxy.cc
+index 6fef4ee..f2ba857 100644
+--- a/talk/owt/sdk/base/customizedvideodecoderproxy.cc
++++ b/talk/owt/sdk/base/customizedvideodecoderproxy.cc
+@@ -9,7 +9,9 @@ namespace base {
+
+ CustomizedVideoDecoderProxy::CustomizedVideoDecoderProxy(VideoCodecType type,
+   VideoDecoderInterface* external_video_decoder)
+-  : codec_type_(type), decoded_image_callback_(nullptr), external_decoder_(external_video_decoder) {}
++  : codec_type_(type), decoded_image_callback_(nullptr), external_decoder_(external_video_decoder) {
++      external_decoder_->SetCustomizedVideoDecoderProxy(this);
++  }
+
+ CustomizedVideoDecoderProxy::~CustomizedVideoDecoderProxy() {
+   if (external_decoder_) {
+@@ -88,5 +90,22 @@ CustomizedVideoDecoderProxy::Create(VideoCodecType type,
+     VideoDecoderInterface* external_video_decoder) {
+   return absl::make_unique<CustomizedVideoDecoderProxy>(type, external_video_decoder);
+ }
++
++void VideoDecoderInterface::SetCustomizedVideoDecoderProxy(void *customized_video_decoder_proxy)
++{
++    customized_video_decoder_proxy_ = customized_video_decoder_proxy;
++}
++
++void *VideoDecoderInterface::GetCustomizedVideoDecoderProxy(void)
++{
++    return customized_video_decoder_proxy_;
++}
++
++void VideoDecoderInterface::SendFOVFeedback(uint16_t yaw, uint16_t pitch)
++{
++    if (customized_video_decoder_proxy_)
++        static_cast<CustomizedVideoDecoderProxy *>(customized_video_decoder_proxy_)->SendFOVFeedback(yaw, pitch);
++}
++
+ }
+ }
+diff --git a/talk/owt/sdk/include/cpp/owt/base/videodecoderinterface.h b/talk/owt/sdk/include/cpp/owt/base/videodecoderinterface.h
+index dced0fe..02cc35b 100644
+--- a/talk/owt/sdk/include/cpp/owt/base/videodecoderinterface.h
++++ b/talk/owt/sdk/include/cpp/owt/base/videodecoderinterface.h
+@@ -26,6 +26,8 @@ struct VideoEncodedFrame {
+ */
+ class VideoDecoderInterface {
+  public:
++  VideoDecoderInterface() : customized_video_decoder_proxy_(nullptr) {}
++
+   /**
+    @brief Destructor
+    */
+@@ -51,6 +53,14 @@ class VideoDecoderInterface {
+    @brief This function generates the customized decoder for each peer connection
+    */
+   virtual VideoDecoderInterface* Copy() = 0;
++
++  void SetCustomizedVideoDecoderProxy(void *customized_video_decoder_proxy);
++  void *GetCustomizedVideoDecoderProxy(void);
++
++  void SendFOVFeedback(uint16_t yaw, uint16_t pitch);
++
++ private:
++  void *customized_video_decoder_proxy_;
+ };
+ }
+ }
+--
+2.17.1
