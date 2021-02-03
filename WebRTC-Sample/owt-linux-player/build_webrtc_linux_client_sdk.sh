@@ -76,7 +76,7 @@ install_socket_io_client() {
     make -j
     make install
 
-    cp -v lib/Release/* ${PREFIX}/lib
+    cp -v lib/Release/libsioclient* ${PREFIX}/lib
     cp -v include/* ${PREFIX}/include
 }
 

@@ -10,8 +10,11 @@ PLAYER_LIB_BUILD=${ROOT}/player/player_lib_build
 mkdir -p ${PLAYER_LIB_BUILD}
 cd ${PLAYER_LIB_BUILD}
 cmake -DLINUX_OS=ON -DUSE_OMAF=OFF -DUSE_WEBRTC=ON -DWEBRTC_LINUX_SDK=${WEBRTC_LINUX_CLIENT_SDK} ${PLAYER_LIB_SRC}
+make -j
 
-rm -v ${WEBRTC_LINUX_CLIENT_SDK}/lib/libMediaPlayer.so
+if [ -f ${WEBRTC_LINUX_CLIENT_SDK}/lib/libMediaPlayer.so ]; then
+    rm -v ${WEBRTC_LINUX_CLIENT_SDK}/lib/libMediaPlayer.so
+fi
 cp -v ${PLAYER_LIB_BUILD}/libMediaPlayer.so ${WEBRTC_LINUX_CLIENT_SDK}/lib/
 
 # player app configure
