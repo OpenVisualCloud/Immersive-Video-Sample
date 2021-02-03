@@ -26,10 +26,7 @@ ENDIF()
 
 IF(${TARGET} STREQUAL "server")
   SET(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} \
-                               -z noexecstack -z relro -z now \
-                               -fstack-protector-strong -fPIE -fPIC -pie -g \
-                               -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security \
-                               -Wl,-S -Wall -std=c++11 -lpthread -lsafestring_shared \
+                               -std=c++11 -lpthread -lsafestring_shared \
                                -D_GLIBCXX_USE_CXX11_ABI=0")
   SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} \
                                -z noexecstack -z relro -z now \
@@ -81,10 +78,7 @@ IF(${TARGET} STREQUAL "server")
 
 ELSEIF(${TARGET} STREQUAL "client")
   SET(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} \
-                               -z noexecstack -z relro -z now \
-                               -fstack-protector-strong -fPIE -fPIC -pie -g \
-                               -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security \
-                               -Wl,-S -Wall -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 \
+                               -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 \
                                -I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP")
   SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} \
                                -z noexecstack -z relro -z now \
