@@ -85,7 +85,7 @@ calc_time()
 
 get_target_timestamp(){
     lines=$1
-    attri=$3
+    attri=$2
     field=`echo "$2" | awk -F '.' '{print $1}'`
     tail_flag=`echo "$2" | awk -F '.' '{print $2}'`
     TS=`echo "${lines}" | grep "${field}"`
@@ -207,9 +207,9 @@ frames_results_rough(){
             T1=`get_target_timestamp "${server_lines}" "${f_list[1]}"`
             T1H=`get_target_timestamp "${server_lines}" "${f_list[1]}" ${high_port}`
             T1L=`get_target_timestamp "${server_lines}" "${f_list[1]}" ${low_port}`
-            T2=`get_target_timestamp "${server_lines}" "${f_list[2]}.tail"`
-            T2H=`get_target_timestamp "${server_lines}" "${f_list[2]}.tail" ${high_port}`
-            T2L=`get_target_timestamp "${server_lines}" "${f_list[2]}.tail" ${low_port}`
+            T2=`get_target_timestamp "${server_lines}" "${f_list[2]}"`
+            T2H=`get_target_timestamp "${server_lines}" "${f_list[2]}" ${high_port}`
+            T2L=`get_target_timestamp "${server_lines}" "${f_list[2]}" ${low_port}`
             T3=`get_target_timestamp "${server_lines}" "${f_list[3]}"`
             T4=`get_target_timestamp "${server_lines}" "${f_list[4]}"`
             if [[ -n "${T1}" ]] ; then
@@ -253,7 +253,7 @@ frames_results_rough(){
             let target=${index}+${gap}
             server_lines=`cat ${tracefile_name} | grep "idx_field = \b${target}\b"`
             client_lines=`cat ${tracefile_name} | grep "idx_field = \b${index}\b"`
-            T4=`get_target_timestamp "${server_lines}" "${f_list[4]}.tail"`
+            T4=`get_target_timestamp "${server_lines}" "${f_list[4]}"`
             # T5=`get_target_timestamp "${client_lines}" "${f_list[5]}"`
             T6=`get_target_timestamp "${client_lines}" "${f_list[6]}"`
             T7=`get_target_timestamp "${client_lines}" "${f_list[7]}"`
@@ -293,7 +293,7 @@ frames_results_rough(){
             server_lines=`cat ${tracefile_name} | grep "idx_field = \b${target}\b"`
             client_lines=`cat ${tracefile_name} | grep "idx_field = \b${index}\b"`
             T1=`get_target_timestamp "${server_lines}" "${f_list[1]}"`
-            T4=`get_target_timestamp "${server_lines}" "${f_list[4]}".tail`
+            T4=`get_target_timestamp "${server_lines}" "${f_list[4]}"`
             T8=`get_target_timestamp "${client_lines}" "${f_list[8]}"`
             if [[ -n "${T1}" ]] && [[ -n "${T8}" ]] ; then
                 D_T8T1=`awk 'BEGIN{printf "%.9f\n", '${T8}-${T1}'}'`
@@ -323,7 +323,7 @@ frames_results_rough(){
 # frames_results_rough ./4K_sample.log 30 1 10 client
 # frames_results_rough ./4K_sample.log 30 1 10 overall
 
-trace_files=`ls ./copy/n01*.log`
+trace_files=`ls ./copy/*.log`
 output_path="./trace_output"
 mkdir -p ${output_path}
 for tracefile in ${trace_files}
@@ -332,13 +332,8 @@ do
     outputfile="${output_path}/${outputname}_results.log"
     echo "------------------------"
     echo "${outputfile}"
-    resolution=`echo ${outputname} | awk -F_ '{print $2}'`
-
-    if [ "${resolution}" == "4k" ] ; then
-        fps=25
-    elif [ "${resolution}" == "8k" ] ; then
-        fps=30
-    fi
+    resolution=`echo ${outputname} | awk -F_ '{print $1}'`
+    fps=`echo ${outputname} | awk -F_ '{print $2}'`
 
     for category in ${c_list[*]}
     do
@@ -348,7 +343,7 @@ do
     done
 done
 
-files=`ls ./${output_path}/n01*_results.log`
+files=`ls ./${output_path}/*_results.log`
 for file in ${files}
 do
     echo "------------------------ ${file}"
