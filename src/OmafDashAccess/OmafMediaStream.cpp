@@ -694,6 +694,7 @@ int32_t OmafMediaStream::TilesStitching() {
   std::map<int, OmafAdaptationSet*> mapSelectedAS;
   bool isEOS = false;
   uint32_t waitTimes = 1000;
+  uint32_t waitTimes_GetPacket = 100;
   uint32_t selectionWaitTimes = 10000;
   bool prevPoseChanged = false;
   std::map<int, OmafAdaptationSet*> prevSelectedAS;
@@ -938,9 +939,9 @@ int32_t OmafMediaStream::TilesStitching() {
       OMAF_LOG(LOG_INFO, "Get next packet !\n");
       currWaitTimes = 0;
 
-      while ((ret == ERROR_NULL_PACKET) && (currWaitTimes < waitTimes) && m_status != STATUS_STOPPED) {
+      while ((ret == ERROR_NULL_PACKET) && (currWaitTimes < waitTimes_GetPacket) && m_status != STATUS_STOPPED) {
 
-        usleep((m_pStreamInfo->segmentDuration * 1000000) / waitTimes);
+        usleep((m_pStreamInfo->segmentDuration * 1000000 / 2) / waitTimes_GetPacket);
         currWaitTimes++;
         //OMAF_LOG(LOG_INFO, "To get packet %ld for track %d\n", currFramePTS, trackID);
         ret = omaf_reader_mgr_->GetNextPacketWithPTS(trackID, currFramePTS, onePacket, m_needParams);
