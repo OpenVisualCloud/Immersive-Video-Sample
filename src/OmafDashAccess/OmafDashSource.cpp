@@ -237,6 +237,7 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
       params.mode_ = OmafDashMode::LATER_BINDING;
     }
     params.proj_fmt_ = projFmt;
+    params.segment_timeout_ms_ = mMPDinfo->max_segment_duration;
 
     OMAF_LOG(LOG_INFO, "media stream type=%s\n", mMPDinfo->type.c_str());
     OMAF_LOG(LOG_INFO, "media stream duration=%lld\n", mMPDinfo->media_presentation_duration);
