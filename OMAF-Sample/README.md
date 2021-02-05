@@ -31,7 +31,7 @@
     mkdir build && cd build
     cmake .. -DHTTP_PROXY=<proxy> # proxy is optional
     make build -j $(nproc)
-    docker image ls        # [REPOSITORY:immersive_server, TAG:v1.2]
+    docker image ls        # [REPOSITORY:immersive_server, TAG:v1.4]
 ```
 
 - Client :
@@ -43,7 +43,7 @@
 
 - Server :
 ```bash
-    docker run --privileged -p 30001:443 -p 30002:8080 -it immersive_server:v1.2 bash  # Map the port.
+    docker run --privileged -p 30001:443 -p 30002:8080 -it immersive_server:v1.4 bash  # Map the port.
     cd /usr/local/nginx/conf/
     ./configure.sh CN Shanghai A B C D E@F.com                                     # './configure.sh -h' for details.
     /usr/local/nginx/sbin/nginx                                                    # Start nginx.
