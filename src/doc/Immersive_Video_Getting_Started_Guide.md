@@ -122,7 +122,6 @@ sudo ssh-copy-id root@<server ip>
 Modify the config.xml; please refer to [Reference Player Configuration](Immersive_Video_Delivery_RefPlayer.md) for detailed information.
 ```bash
 cd /path/to/Immersive-Video-Sample/src/build/client/player
-```bash
 export LD_LIBRARY_PATH=/usr/local/lib/:$LD_LIBRARY_PATH
 vim config.xml  # Set up configuration, details in following table
 ./render        # Located at the same path with config.xml above
