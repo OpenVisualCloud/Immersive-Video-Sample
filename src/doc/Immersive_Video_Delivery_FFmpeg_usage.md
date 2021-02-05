@@ -12,7 +12,7 @@
       -c:v:1 distributed_encoder -s:1 1024x640 -tile_row:1 2 -tile_column:1 4 \
       -config_file:1 config_low.txt -g:1 15 -b:1 5M -map 0:v \
       -f omaf_packing -is_live 0 -split_tile 1 -seg_duration 1 -window_size 20 -extra_window_size 30 \
-      -base_url http://[server ip]]/OMAFStatic_4k/ -out_name Test /usr/local/nginx/html/OMAFStatic_4k/
+      -base_url http://[server ip]/OMAFStatic_4k/ -out_name Test /usr/local/nginx/html/OMAFStatic_4k/
 ```
 
 ## OMAF Packing Plugin
@@ -54,14 +54,14 @@ OMAF Packing Plugin is a multiplexer in the pipeline to use OMAF packing library
 
 Sample command line for cube-map projected input source is as follows:
 ``` bash
-    numactl -c 1 ./ffmpeg -stream_loop -1 -i cubemap_6k.mp4 -input_type 1 -proj_type Cubemap -rc 1 \
+    numactl -c 1 ./ffmpeg -stream_loop -1 -i [file] -input_type 1 -proj_type Cubemap -rc 1 \
         -c:v:0 distributed_encoder -s:0 5760x3840 -tile_row:0 6 -tile_column:0 9 \
         -config_file:0 config_high.txt -la_depth:0 25 -r:0 25 -g:0 25 -b:0 80M -map 0:v \
         -c:v:1 distributed_encoder -s:1 960x640 -sws_flags neighbor -tile_row:1 2 -tile_column:1 3 \
         -config_file:1 config_low.txt -la_depth:1 25 -r:1 25 -g:1 25 -b:1 1500K -map 0:v \
         -vframes 3000 -f omaf_packing -packing_proj_type Cubemap -cubemap_face_file 6kcube_face_info.txt \
         -is_live 0 -split_tile 1 -seg_duration 1 -has_extractor 0 \
-        -base_url http://xx.xx.xx.xx:8080/8kcubevod/ -out_name Test /usr/local/nginx/html/8kcubevod/
+        -base_url http://[server ip]:8080/8kcubevod/ -out_name Test /usr/local/nginx/html/8kcubevod/
 ```
 The file "6kcube_face_info.txt" is to configure input cube-map face relation to face layout defined in OMAF spec for cube-3x2.
 The content of "6kcube_face_info.txt" is as follows:
@@ -90,7 +90,7 @@ First, `config_file` is a must-have parameter containing "ip" and "port" pair, c
 | input_codec | Input bitstream type, only work when input type is 0-encoded, 1-yuv | int | 0 | 0, 1 | NO |
 | vui | Enable vui info | int | 0 | 0, 1 | NO |
 | aud | Include AUD | int | 0 | 0, 1 | NO |
-| hielevel | Hierarchical prediction levels setting [0: flat, 1: 2level, 2: 3level, 3: 4level] | int | 3 | [0, 1] | NO |
+| hielevel | Hierarchical prediction levels setting [0: flat, 1: 2level, 2: 3level, 3: 4level] | int | 3 | [0, 4] | NO |
 | la_depth | Look ahead distance | int | -1 | [-1, 256] | NO |
 | preset | Encoding preset (e,g, for subjective quality tuning mode and >=4k resolution), [0, 10] (for >= 1080p resolution), [0, 9] (for all resolution and modes) | int | 9 | [0, 12] | NO |
 | profile | Profile setting, Main Still Picture Profile not supported | int | 2 | [1, 4] | NO |

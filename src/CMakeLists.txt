@@ -136,7 +136,7 @@ ELSEIF(${TARGET} STREQUAL "client")
               mkdir -p ../../${PLAYER_APP_DIR} && cd ../../${PLAYER_APP_DIR} &&
               cmake -DLINUX_OS=ON
                     -DUSE_TRACE=${USE_TRACE}
-                    ${PLAYER_LIB_FLAGS}
+                    ${PLAYER_APP_FLAGS}
                     ${CMAKE_CURRENT_SOURCE_DIR}/${PLAYER_APP_DIR} &&
               make -j $(nproc)
       COMMENT "Building player..."

@@ -42,11 +42,11 @@ ffmpeg_4K_LIVE(){
         -la_depth:0 0 -r:0 30 -g:0 15 \
         -b:0 30M -map 0:v \
         -c:v:1 distributed_encoder \
-        -s:1 1024x640 \
+        -s:1 1024x640 -sws_flags neighbor \
         -tile_row:1 2 -tile_column:1 2 \
         -config_file:1 config_low.txt \
         -la_depth:1 0 -r:1 30 -g:1 15 \
-        -b:1 5M -map 0:v \
+        -b:1 5M -map 0:v -vframes 1000000 \
         -f omaf_packing \
         -is_live 1 -split_tile 1 -seg_duration 1 \
         -window_size 20 -extra_window_size 30 \
@@ -89,7 +89,7 @@ ffmpeg_8K_LIVE(){
         -tile_row:1 2 -tile_column:1 2 \
         -config_file:1 config_low.txt \
         -la_depth:1 0 -r:1 25 -g:1 25 \
-        -b:1 2M -map 0:v \
+        -b:1 2M -map 0:v -vframes 1000000 \
         -f omaf_packing \
         -is_live 1 -split_tile 1 -seg_duration 1 \
         -extractors_per_thread 4 \
