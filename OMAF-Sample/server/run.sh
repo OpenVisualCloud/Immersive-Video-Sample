@@ -27,9 +27,9 @@ if [ "${TYPE}" != "LIVE" ] && [ "${TYPE}" != "VOD" ] ; then
 fi
 
 if [ "${PROTOCOL}" = "HTTPS" ] ; then
-    URLBASE="https://$2:443/LIVE4K"
+    URLBASE="https://$2:443"
 elif [ "${PROTOCOL}" = "HTTP" ] ; then
-    URLBASE="http://$2:8080/LIVE4K"
+    URLBASE="http://$2:8080"
 fi
 
 ffmpeg_4K_LIVE(){
@@ -55,7 +55,7 @@ ffmpeg_4K_LIVE(){
 }
 
 ffmpeg_4K_VOD(){
-    ./ffmpeg -re -stream_loop -1 \
+    ./ffmpeg -stream_loop -1 \
         -i $1 -input_type 1 -rc 1 \
         -c:v:0 distributed_encoder \
         -s:0 3840x1920 \
@@ -71,7 +71,7 @@ ffmpeg_4K_VOD(){
         -b:1 2M -map 0:v -vframes 500 \
         -f omaf_packing \
         -is_live 0 -split_tile 1 -seg_duration 1 \
-        -base_url ${URLBASE}/LIVE4K/ \
+        -base_url ${URLBASE}/VOD4K/ \
         -out_name Test /usr/local/nginx/html/VOD4K/
 }
 
@@ -93,12 +93,12 @@ ffmpeg_8K_LIVE(){
         -f omaf_packing \
         -is_live 1 -split_tile 1 -seg_duration 1 \
         -extractors_per_thread 4 \
-        -base_url ${URLBASE}/LIVE4K/ \
+        -base_url ${URLBASE}/LIVE8K/ \
         -out_name Test /usr/local/nginx/html/LIVE8K/
 }
 
 ffmpeg_8K_VOD(){
-    numactl -c 1 ./ffmpeg -re -stream_loop -1 \
+    numactl -c 1 ./ffmpeg -stream_loop -1 \
         -i $1 -input_type 1 -rc 1 \
         -c:v:0 distributed_encoder \
         -s:0 7680x3840 \
@@ -114,7 +114,7 @@ ffmpeg_8K_VOD(){
         -b:1 2M -map 0:v -vframes 500 \
         -f omaf_packing \
         -is_live 0 -split_tile 1 -seg_duration 1 \
-        -base_url ${URLBASE}/LIVE4K/ \
+        -base_url ${URLBASE}/VOD8K/ \
         -out_name Test /usr/local/nginx/html/VOD8K/
 }
 
