@@ -25,6 +25,11 @@ IF(ANDROID_OS)
 ENDIF()
 
 IF(LINUX_OS)
+  IF(DEFINED WEBRTC_LINUX_SDK)
+      INCLUDE_DIRECTORIES("${WEBRTC_LINUX_SDK}/include")
+      LINK_DIRECTORIES("${WEBRTC_LINUX_SDK}/lib")
+  ENDIF()
+
   INCLUDE_DIRECTORIES(/usr/local/include ../../utils)
   LINK_DIRECTORIES(/usr/local/lib)
 ENDIF()
@@ -33,17 +38,17 @@ AUX_SOURCE_DIRECTORY(. DIR_SRC)
 AUX_SOURCE_DIRECTORY(android ANDROID_SRC)
 AUX_SOURCE_DIRECTORY(linux LINUX_SRC)
 IF(LINUX_OS)
-set(DIR_SRC
-    ${DIR_SRC}
-    ${LINUX_SRC}
-    )
+  SET(DIR_SRC
+      ${DIR_SRC}
+      ${LINUX_SRC}
+      )
 ENDIF()
 
 IF(ANDROID_OS)
-set(DIR_SRC
-    ${DIR_SRC}
-    ${ANDROID_SRC}
-    )
+  SET(DIR_SRC
+      ${DIR_SRC}
+      ${ANDROID_SRC}
+      )
 ENDIF()
 
 ADD_EXECUTABLE(render ${DIR_SRC})
