@@ -1,6 +1,5 @@
 FROM centos:7.6.1810
 
-# Set proxy if necessary
 RUN if [ -n "${http_proxy}" ] ; then \
     echo "proxy=${http_proxy}" >> /etc/yum.conf && \
     echo "http_proxy=${http_proxy}" >> /etc/wgetrc && \
@@ -13,7 +12,7 @@ ARG WORKDIR=/home/immersive
 # Install denpendency
 RUN yum install -y centos-release-scl-rh && \
     yum install -y wget git bzip2 xz sudo devtoolset-7-gcc* && \
-    wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-12.noarch.rpm && \
+    wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-13.noarch.rpm && \
     rpm -Uvh epel-release*rpm && \
     yum install -y openssl centos-release-scl scl-utils gmp gmp-devel && \
     yum install -y mpfr mpfr-devel libmpc libmpc-devel patch autoconf && \
@@ -49,7 +48,7 @@ RUN wget -O - ${ZILB_REPO} | tar xz && \
     cd zlib-${ZLIB_VER} && \
     source /opt/rh/devtoolset-7/enable && \
     ./configure && \
-    make -j $(nproc) && \
+    make -j$(nproc) && \
     make install && \
     cd ${WORKDIR} && rm -rf ./*
 
@@ -60,7 +59,7 @@ RUN wget -O - ${CMAKE_REPO}/v${CMAKE_VER%.*}/cmake-${CMAKE_VER}.tar.gz | tar xz 
     cd cmake-${CMAKE_VER} && \
     source /opt/rh/devtoolset-7/enable && \
     ./bootstrap --prefix="/usr" --system-curl && \
-    make -j $(nproc) && \
+    make -j$(nproc) && \
     make install && \
     cd ${WORKDIR} && rm -rf ./*
 
@@ -72,7 +71,7 @@ RUN  wget -O - ${YASM_REPO} | tar xz && \
      sed -i "s/) ytasm.*/)/" Makefile.in && \
      source /opt/rh/devtoolset-7/enable && \
      ./configure --prefix="/usr" --libdir=/usr/lib/x86_64-linux-gnu && \
-     make -j $(nproc) && \
+     make -j$(nproc) && \
      make install && \
      cd ${WORKDIR} && rm -rf ./*
 
@@ -85,7 +84,7 @@ RUN wget ${CURL_REPO} && \
     cd curl-${CURL_VER} && \
     source /opt/rh/devtoolset-7/enable && \
     ./configure --with-darwinssl && \
-    make -j $(nproc) && \
+    make -j$(nproc) && \
     make install && \
     cd ${WORKDIR} && rm -rf ./*
 
@@ -95,26 +94,9 @@ RUN wget -O - ${BOOST_REPO} | tar xz && \
     cd boost_1_63_0 && \
     source /opt/rh/devtoolset-7/enable && \
     ./bootstrap.sh --without-libraries=python && \
-    ./b2 -a cxxflags="-D_GLIBCXX_USE_CXX11_ABI=0" -j $(nproc) && \
+    ./b2 -a cxxflags="-D_GLIBCXX_USE_CXX11_ABI=0" -j`nproc` && \
     ./b2 cxxflags="-D_GLIBCXX_USE_CXX11_ABI=0" install && \
     cd ${WORKDIR} && rm -rf ./boost_1_63_0*
-
-# Directory to save libraries and binary
-RUN mkdir -p save
-
-# Copy patch and install thrift
-COPY ./Disable_cxx11_abi_for_thrift.patch ${WORKDIR}/save
-ARG THRIFT_VER=0.12.0
-ARG THRIFT_REPO=http://apache.osuosl.org/thrift/${THRIFT_VER}/thrift-${THRIFT_VER}.tar.gz
-RUN wget -O - ${THRIFT_REPO} | tar xz && \
-    cd thrift-${THRIFT_VER} && \
-    source /opt/rh/devtoolset-7/enable && \
-    patch configure ../save/Disable_cxx11_abi_for_thrift.patch && \
-    sed -i '21 a #  include <unistd.h>' ./lib/cpp/src/thrift/transport/PlatformSocket.h && \
-    ./configure --with-boost=/usr/local --with-boost-libdir=/usr/local/lib --with-libevent=/usr --with-java=0 && \
-    make -j $(nproc) && \
-    make install && \
-    cd ${WORKDIR} && rm -rf ./thrift-${THRIFT_VER}*
 
 # Install SVT
 RUN git clone https://github.com/OpenVisualCloud/SVT-HEVC.git && \
@@ -127,18 +109,6 @@ RUN git clone https://github.com/OpenVisualCloud/SVT-HEVC.git && \
     make install && \
     cd ${WORKDIR} && rm -rf ./SVT-HEVC
 
-# Copy patch and Install openHEVC
-COPY ./Update-buffer-operation-and-fix-stream-loop-coredump.patch ${WORKDIR}/save
-RUN git clone https://github.com/OpenHEVC/openHEVC.git && \
-    cd openHEVC && \
-    source /opt/rh/devtoolset-7/enable && \
-    git checkout ffmpeg_update && \
-    git am --whitespace=fix ../save/Update-buffer-operation-and-fix-stream-loop-coredump.patch && \
-    ./configure --libdir=/usr/lib64 --disable-sdl2 && \
-    make -j $(nproc) && \
-    make install && \
-    cd ${WORKDIR} && rm -rf ./openHEVC
-
 # Install glog
 RUN git clone https://github.com/google/glog.git && \
     cd glog && \
@@ -147,16 +117,7 @@ RUN git clone https://github.com/google/glog.git && \
     cmake -H. -Bbuild -G "Unix Makefiles" && \
     cmake --build build && \
     cmake --build build --target install && \
-    cd ${WORKDIR} && rm -rf *
-
-# Install LIBVA
-RUN git clone https://github.com/intel/libva.git && \
-    cd libva && \
-    source /opt/rh/devtoolset-7/enable && \
-    ./autogen.sh && \
-    make -j $(nproc) && \
-    make install && \
-    cd ${WORKDIR} && rm -rf *
+    cd ${WORKDIR} && rm -rf ./glog
 
 # Install lttng
 RUN source /opt/rh/devtoolset-7/enable && \
@@ -174,6 +135,50 @@ RUN source /opt/rh/devtoolset-7/enable && \
     make -j $(nproc) && \
     make install && ldconfig && \
     cd ../ && rm -rf lttng-ust-2.11.*
+
+# Copy source
+RUN mkdir -p save
+COPY ./Update-buffer-operation-and-fix-stream-loop-coredump.patch ${WORKDIR}/save
+COPY ./Disable_cxx11_abi_for_thrift.patch ${WORKDIR}/save
+
+# Install Thrift
+ARG THRIFT_VER=0.12.0
+ARG THRIFT_REPO=http://apache.osuosl.org/thrift/${THRIFT_VER}/thrift-${THRIFT_VER}.tar.gz
+RUN wget -O - ${THRIFT_REPO} | tar xz && \
+    cd thrift-${THRIFT_VER} && \
+    source /opt/rh/devtoolset-7/enable && \
+    patch configure ../save/Disable_cxx11_abi_for_thrift.patch && \
+    sed -i '21 a #  include <unistd.h>' ./lib/cpp/src/thrift/transport/PlatformSocket.h && \
+    ./configure --with-boost=/usr/local --with-boost-libdir=/usr/local/lib --with-libevent=/usr --with-java=0 && \
+    make -j`nproc` && \
+    make install && \
+    cd ${WORKDIR} && rm -rf ./thrift-${THRIFT_VER}*
+
+# Install openHEVC
+RUN git clone https://github.com/OpenHEVC/openHEVC.git && \
+    cd openHEVC && \
+    source /opt/rh/devtoolset-7/enable && \
+    git config --global user.email "you@example.com" && \
+    git config --global user.name "Your Name" && \
+    git checkout ffmpeg_update && \
+    git am --whitespace=fix ../save/Update-buffer-operation-and-fix-stream-loop-coredump.patch && \
+    ./configure --libdir=/usr/lib64 --disable-sdl2 && \
+    make -j `nproc` && \
+    make install && \
+    cd ${WORKDIR} && rm -rf ./openHEVC
+
+# Build Nginx
+ARG NGINX_VER=1.13.1
+ARG NGINX_REPO=http://nginx.org/download/nginx-${NGINX_VER}.tar.gz
+RUN wget -O - ${NGINX_REPO} | tar xz && \
+    cd nginx-${NGINX_VER} && \
+    source /opt/rh/devtoolset-7/enable && \
+    ./configure --with-http_ssl_module && \
+    make -j `nproc` && \
+    make install && \
+    cd ${WORKDIR} && rm -rf ./nginx*
+EXPOSE 443
+EXPOSE 8080
 
 # Unset proxy if necessary
 RUN if [ -n "${http_proxy}" ]; then \
