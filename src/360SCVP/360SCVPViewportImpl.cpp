@@ -2021,6 +2021,7 @@ int32_t TgenViewport::CubemapIsInsideFaces()
 
     int32_t selectedTilesNum = 0;
     int32_t idx;
+    std::list<SpherePoint> referencePoints;
 
     double dResult;
     clock_t lBefore = clock();
@@ -2096,6 +2097,28 @@ int32_t TgenViewport::CubemapIsInsideFaces()
     centerPoint.alpha = fYaw;
     CubemapPolar2Cartesian(&centerPoint);
 
+    /* Get viewport horizontal boundary points */
+    SpherePoint* pHorzBoundaryPoint = m_pViewportHorizontalBoudaryPoints;
+    for (float offsetAngle = vFOV / 2; offsetAngle >= -vFOV / 2; offsetAngle -= HORZ_BOUNDING_STEP)
+    {
+        float instantThita = calculateLatti(offsetAngle, hFOV);
+        float instantPhi;
+        if (fabs(offsetAngle) <= 1e-9)
+            instantPhi = hFOV / 2;
+        else
+            instantPhi = sacos(ssin(instantThita * DEG2RAD_FACTOR) / ssin((fabs(offsetAngle)) * DEG2RAD_FACTOR)) * RAD2DEG_FACTOR;
+        pHorzBoundaryPoint->thita = calculateLattitudeFromPhi(instantPhi, fPitch + offsetAngle);
+        pHorzBoundaryPoint->alpha = calculateLongitudeFromThita(pHorzBoundaryPoint->thita, instantPhi, hFOV / 2);
+        pHorzBoundaryPoint->alpha = fYaw + pHorzBoundaryPoint->alpha;
+        CubemapPolar2Cartesian(pHorzBoundaryPoint);
+        referencePoints.push_back(*pHorzBoundaryPoint);
+        pHorzBoundaryPoint->alpha -= fYaw;
+        pHorzBoundaryPoint->alpha = fYaw - pHorzBoundaryPoint->alpha;
+        CubemapPolar2Cartesian(pHorzBoundaryPoint);
+        referencePoints.push_back(*pHorzBoundaryPoint);
+        pHorzBoundaryPoint++;
+    }
+
     /* Reset viewport area */
     for (int32_t i = 0; i < FACE_NUMBER; i++) {
         m_pUpLeft[i].faceIdx = -1;
@@ -2109,7 +2132,6 @@ int32_t TgenViewport::CubemapIsInsideFaces()
     /* Calculate the crossing points on     *
      * each face if the neighbor reference  *
      * points are not in the same face      */
-    std::list<SpherePoint> referencePoints;
     CubemapGetFaceBoundaryCrossingPoints(&topLeftPoint,    &topPoint,         faceWidth, faceHeight, &referencePoints);
     CubemapGetFaceBoundaryCrossingPoints(&topPoint,        &topRightPoint,    faceWidth, faceHeight, &referencePoints);
     CubemapGetFaceBoundaryCrossingPoints(&topLeftPoint,    &leftPoint,        faceWidth, faceHeight, &referencePoints);
