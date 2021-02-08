@@ -36,3 +36,6 @@ if [ ! -f ${PLAYER_BUILD}/config.xml ]; then
     sed 's|<server_url>.*</server_url>|<server_url>http://owt-server-ip:3001</server_url>|g' -i ${PLAYER_BUILD}/config.xml
 fi
 
+if [ ! -f ${PLAYER_BUILD}/setupvars.sh ]; then
+    echo "export LD_LIBRARY_PATH=${WEBRTC_LINUX_CLIENT_SDK}/lib:\$LD_LIBRARY_PATH" > ${PLAYER_BUILD}/setupvars.sh
+fi
