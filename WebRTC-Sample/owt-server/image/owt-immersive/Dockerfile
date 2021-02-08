@@ -208,8 +208,8 @@ ARG LICODE_REPO=https://github.com/lynckia/licode.git
 ARG LICODE_PATCH_REPO=https://github.com/open-webrtc-toolkit/owt-server/tree/master/scripts/patches/licode/
 ARG SAFESTRINGLIB_COMMIT="245c4b8cff1d2e7338b7f3a82828fc8e72b29549"
 ARG SAFESTRINGLIB_REPO=https://github.com/intel/safestringlib.git
-ARG SCVP_VER="1.2.0"
-ARG SCVP_REPO=https://github.com/OpenVisualCloud/Immersive-Video-Sample/archive/v${SCVP_VER}.tar.gz
+ARG SCVP_VER="9ce286edf4d5976802bf488b4dd90a16ecc28c36"
+ARG SCVP_REPO=https://github.com/OpenVisualCloud/Immersive-Video-Sample
 ARG WEBRTC_REPO=https://github.com/open-webrtc-toolkit/owt-deps-webrtc.git
 ARG SERVER_PATH=/home/owt-server
 ARG OWT_SDK_REPO=https://github.com/open-webrtc-toolkit/owt-client-javascript.git
@@ -239,8 +239,9 @@ RUN cd /home && \
     mkdir -p /usr/local/include/safestringlib && \
     cp -rf ../include/* /usr/local/include/safestringlib/
 RUN cd /home && \
-    wget -O - ${SCVP_REPO} | tar xz && mv Immersive-Video-Sample-${SCVP_VER} Immersive-Video-Sample && \
+    git clone ${SCVP_REPO} && \
     cd Immersive-Video-Sample/src/360SCVP && \
+    git reset --hard ${SCVP_VER} && \
     mkdir build && \
     cd build && \
     source /opt/rh/devtoolset-7/enable && \
