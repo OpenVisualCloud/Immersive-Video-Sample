@@ -1,3 +1,10 @@
+
+---
+
+### <b>Join Hackathon [Open Your Mind to Endless Possibilities](https://software.seek.intel.com/OpenVisualCloudHackathon-contest?cid=diad&source=github_display_int&campid=ww_q1_2021_ovc_iotg&content=cont-reg_all)<br>Registration: Jan 11 - March 12, 2021</b>
+
+---
+
 # Open Visual Cloud Immersive Video Samples
 [![Travis Build Status](https://travis-ci.com/OpenVisualCloud/Immersive-Video-Sample.svg?branch=master)](https://travis-ci.com/OpenVisualCloud/Immersive-Video-Sample)
 [![Stable release](https://img.shields.io/badge/latest_release-v1.4.0-green.svg)](https://github.com/OpenVisualCloud/Immersive-Video-Sample/releases/latest)
