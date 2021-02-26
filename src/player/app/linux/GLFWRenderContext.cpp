@@ -37,6 +37,8 @@
 #include "../../../utils/tinyxml2.h"
 #include <math.h>
 
+#define SPEED_CNT_THRESHOLD 150
+
 VCD_NS_BEGIN
 using namespace tinyxml2;
 
@@ -125,6 +127,22 @@ void GLFWRenderContext::AutoChangePos(float *hPos, float *vPos)
             rightOrient = 1;
         }
         *hPos += 2 * RENDER_PI / m_motionConfig.freq * rightOrient;
+    }
+    else if (!strcmp(m_motionConfig.mode, "dynamicSpeed"))
+    {
+        static int speedCnt = 0;
+        static bool isTurn = false;
+        if (speedCnt >= SPEED_CNT_THRESHOLD) isTurn = true;
+        if (!isTurn)
+        {
+            speedCnt+=4;
+        }
+        else
+        {
+            speedCnt--;
+        }
+        if (speedCnt > 0)
+            *hPos -= 2 * RENDER_PI / m_motionConfig.freq * speedCnt;
     }
     else //xml input check
     {
@@ -472,6 +490,11 @@ void GLFWRenderContext::SetMaxSpeed()
     float x_speed = 1 / (float)m_col;
     float y_speed = (float)m_fullHeight / m_fullWidth /  (float)m_row;
     m_speed = x_speed < y_speed ? x_speed : y_speed;
+    if (m_projFormat == VCD::OMAF::PF_ERP || m_projFormat == VCD::OMAF::PF_CUBEMAP)
+    {
+        uint32_t slow_times = 5;
+        m_speed /= slow_times;
+    }
 }
 
 RenderStatus GLFWRenderContext::GetStatusAndPose(HeadPose *pose, uint32_t* status)

@@ -493,8 +493,11 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
     // 2. predict process
     ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);
     std::map<uint64_t, ViewportAngle*> predict_angles;
+    float possibilityOfHalting = 0;
     OMAF_LOG(LOG_INFO, "first_predict_pts %ld\n", first_predict_pts);
-    plugin->Predict(first_predict_pts, predict_angles);
+    plugin->Predict(first_predict_pts, predict_angles, &possibilityOfHalting);
+    // possibility of halting
+    OMAF_LOG(LOG_INFO, "Possibility of halting is %f\n", possibilityOfHalting);
     if (predict_angles.empty())
     {
         OMAF_LOG(LOG_INFO,"predictPose_func return an invalid value!\n");

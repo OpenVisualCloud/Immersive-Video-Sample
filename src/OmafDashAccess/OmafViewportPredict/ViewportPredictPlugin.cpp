@@ -123,9 +123,9 @@ int ViewportPredictPlugin::SetViewport(ViewportAngle *angle)
     return m_setViewportFunc(m_predictHandler, angle);
 }
 
-int ViewportPredictPlugin::Predict(uint64_t pre_first_pts, std::map<uint64_t, ViewportAngle*>& predict_viewport_list)
+int ViewportPredictPlugin::Predict(uint64_t pre_first_pts, std::map<uint64_t, ViewportAngle*>& predict_viewport_list, float *possibilityOfHalting)
 {
-    return m_predictFunc(m_predictHandler, pre_first_pts, predict_viewport_list);
+    return m_predictFunc(m_predictHandler, pre_first_pts, predict_viewport_list, possibilityOfHalting);
 }
 
 int ViewportPredictPlugin::Destroy()
