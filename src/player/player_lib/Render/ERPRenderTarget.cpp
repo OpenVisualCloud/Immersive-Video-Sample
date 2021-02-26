@@ -172,7 +172,7 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
         totalChangedTime += end - start;
         changedCount++;
         m_avgChangedTime = (float)totalChangedTime / changedCount;
-
+        LOG(INFO) << "total change time " << changedCount << std::endl;
     }
     m_isAllHighQualityInView = isAllHighFlag;
 

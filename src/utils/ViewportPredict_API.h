@@ -70,7 +70,7 @@ int32_t ViewportPredict_SetViewport(Handler hdl, ViewportAngle *angle);
 //!         [out] std::map<uint64_t, ViewportAngle*>&
 //!              predicted viewport map
 //!
-int32_t ViewportPredict_PredictPose(Handler hdl, uint64_t pre_first_pts, std::map<uint64_t, ViewportAngle*>& predict_viewport_list);
+int32_t ViewportPredict_PredictPose(Handler hdl, uint64_t pre_first_pts, std::map<uint64_t, ViewportAngle*>& predict_viewport_list, float *possibilityOfHalting);
 
 //!
 //! \brief uninit the viewport prediction algorithm
