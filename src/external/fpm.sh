@@ -17,7 +17,7 @@ package(){
     if [ ${ITEM} = "server" ] ; then
         echo 'sudo cp /usr/lib64/immersive-server/libHighResPlusFullLowResPacking.so /usr/local/lib' > post
         echo 'sudo cp /usr/lib64/immersive-server/libHevcVideoStreamProcess.so /usr/local/lib' > post
-        #echo 'sudo cp /usr/lib64/immersive-server/libSingleVideoPacking.so /usr/local/lib' >> post
+        # echo 'sudo cp /usr/lib64/immersive-server/libSingleVideoPacking.so /usr/local/lib' >> post
         echo 'sudo ldconfig && sudo cp /usr/bin/immersive-server/WorkerServer /root' >> post
     elif [ ${ITEM} = "client" ] ; then
         echo 'sudo ldconfig' > post
@@ -60,8 +60,8 @@ if [ ${ITEM} = "server" ] ; then
     cp external/ffmpeg_server_so/libpostproc.so.55                    ${LIBDIR}
     cp /usr/local/lib/libHighResPlusFullLowResPacking.so              ${LIBDIR}
     cp /usr/local/lib/libHevcVideoStreamProcess.so                    ${LIBDIR}
-    #cp /usr/local/lib/libSingleVideoPacking.so                        ${LIBDIR}
-    cp /usr/local/lib/libglog.so.0                                    ${LIBDIR}
+    # cp /usr/local/lib/libSingleVideoPacking.so                        ${LIBDIR}
+    cp /usr/local/lib64/libglog.so.0                                  ${LIBDIR}
     cp /usr/local/lib/libsafestring_shared.so                         ${LIBDIR}
     cp /usr/local/lib/libthrift-0.12.0.so                             ${LIBDIR}
     cp /usr/local/lib/libthriftnb-0.12.0.so                           ${LIBDIR}

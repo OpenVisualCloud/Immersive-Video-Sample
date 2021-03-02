@@ -63,7 +63,6 @@ IF(${TARGET} STREQUAL "server")
       COMMAND export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/:${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/main_encoder/:${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/:$PKG_CONFIG_PATH &&
               mkdir -p ${FFMPEG_DIR} && cd ${FFMPEG_DIR} &&
               ${CMAKE_CURRENT_SOURCE_DIR}/FFmpeg/configure ${FFMPEG_FLAG}
-                  --extra-cflags="-lstdc++"
                   --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking/"
                   --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/360SCVP/"
                   --extra-cflags="-I${CMAKE_CURRENT_SOURCE_DIR}/distributed_encoder/main_encoder/"
