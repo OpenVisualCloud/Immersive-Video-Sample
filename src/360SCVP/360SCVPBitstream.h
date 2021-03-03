@@ -70,6 +70,8 @@ size_t gts_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 
 uint64_t gts_fseek(FILE *fp, int64_t offset, int32_t whence);
 
+uint32_t gts_get_bit_size(uint32_t MaxVal);
+
 enum
 {
     GTS_BITSTREAM_READ = 0,
