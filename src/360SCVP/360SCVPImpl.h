@@ -68,6 +68,7 @@ protected:
     point          *m_pUpLeft;
     point          *m_pDownRight;
     int32_t         m_maxSelTiles;
+    int32_t         m_bVPSReady; //used in the usetype = E_PARSER_ONENAL
     int32_t         m_bSPSReady; //used in the usetype = E_PARSER_ONENAL
     int32_t         m_bPPSReady; //used in the usetype = E_PARSER_ONENAL
     HEVCState      *m_hevcState;

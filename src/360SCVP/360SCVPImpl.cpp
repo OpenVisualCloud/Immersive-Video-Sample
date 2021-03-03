@@ -69,6 +69,7 @@ TstitchStream::TstitchStream()
     m_hrTilesInCol = 1;
     m_lrTilesInRow = 1;
     m_lrTilesInCol = 1;
+    m_bVPSReady = 0;
     m_bSPSReady = 0;
     m_bPPSReady = 0;
     m_tileWidthCountSel[0] = 0;
@@ -140,6 +141,7 @@ TstitchStream::TstitchStream(TstitchStream& other)
     m_hrTilesInCol = other.m_hrTilesInCol;
     m_lrTilesInRow = other.m_lrTilesInRow;
     m_lrTilesInCol = other.m_lrTilesInCol;
+    m_bVPSReady = other.m_bVPSReady;
     m_bSPSReady = other.m_bSPSReady;
     m_bPPSReady = other.m_bPPSReady;
     m_tileWidthCountSel[0] = other.m_tileWidthCountSel[0];
@@ -227,6 +229,7 @@ TstitchStream& TstitchStream::operator=(const TstitchStream& other)
     m_hrTilesInCol = other.m_hrTilesInCol;
     m_lrTilesInRow = other.m_lrTilesInRow;
     m_lrTilesInCol = other.m_lrTilesInCol;
+    m_bVPSReady = other.m_bVPSReady;
     m_bSPSReady = other.m_bSPSReady;
     m_bPPSReady = other.m_bPPSReady;
     m_tileWidthCountSel[0] = other.m_tileWidthCountSel[0];
@@ -891,11 +894,13 @@ int32_t TstitchStream::parseNals(param_360SCVP* pParamStitchStream, int32_t pars
             return -1;
         }
         oneStream_info * pSlice = pGenTilesStream->pTiledBitstreams[0];
-        if (((pGenTilesStream->parseType == E_PARSER_ONENAL)) && m_bSPSReady && m_bPPSReady)
+        if (((pGenTilesStream->parseType == E_PARSER_ONENAL)) && m_bVPSReady && m_bSPSReady && m_bPPSReady)
         {
-            memcpy_s(pSlice->hevcSlice->sps, 6 * sizeof(HEVC_SPS), m_hevcState->sps,  6 * sizeof(HEVC_SPS));
+            memcpy_s(pSlice->hevcSlice->vps, 16 * sizeof(HEVC_VPS), m_hevcState->vps, 16 * sizeof(HEVC_VPS));
+            pSlice->hevcSlice->last_parsed_vps_id = m_hevcState->last_parsed_vps_id;
+            memcpy_s(pSlice->hevcSlice->sps, 16 * sizeof(HEVC_SPS), m_hevcState->sps, 16 * sizeof(HEVC_SPS));
             pSlice->hevcSlice->last_parsed_sps_id = m_hevcState->last_parsed_sps_id;
-            memcpy_s(pSlice->hevcSlice->pps, 16 * sizeof(HEVC_PPS), m_hevcState->pps, 16 * sizeof(HEVC_PPS));
+            memcpy_s(pSlice->hevcSlice->pps, 64 * sizeof(HEVC_PPS), m_hevcState->pps, 64 * sizeof(HEVC_PPS));
             pSlice->hevcSlice->last_parsed_pps_id = m_hevcState->last_parsed_pps_id;
         }
 
@@ -905,15 +910,24 @@ int32_t TstitchStream::parseNals(param_360SCVP* pParamStitchStream, int32_t pars
             memcpy_s(m_hevcState, sizeof(HEVCState), pSlice->hevcSlice, sizeof(HEVCState));
         else
         {
+            if (GenStreamParam.nalType == GTS_HEVC_NALU_VID_PARAM)
+            {
+                memcpy_s(m_hevcState->vps, 16 * sizeof(HEVC_VPS), pSlice->hevcSlice->vps, 16 * sizeof(HEVC_VPS));
+                m_hevcState->last_parsed_vps_id = pSlice->hevcSlice->last_parsed_vps_id;
+                m_bVPSReady = 1;
+            }
+
             if (GenStreamParam.nalType == GTS_HEVC_NALU_SEQ_PARAM)
             {
+                //memcpy_s(m_hevcState->vps, 16 * sizeof(HEVC_VPS), pSlice->hevcSlice->vps, 16 * sizeof(HEVC_VPS));
+                //m_hevcState->last_parsed_vps_id = pSlice->hevcSlice->last_parsed_vps_id;
                 memcpy_s(m_hevcState->sps, 16 * sizeof(HEVC_SPS), pSlice->hevcSlice->sps, 16 * sizeof(HEVC_SPS));
                 m_hevcState->last_parsed_sps_id = pSlice->hevcSlice->last_parsed_sps_id;
                 m_bSPSReady = 1;
             }
             if (GenStreamParam.nalType == GTS_HEVC_NALU_PIC_PARAM)
             {
-                memcpy_s(m_hevcState->pps, 16 * sizeof(HEVC_SPS), pSlice->hevcSlice->pps, 16 * sizeof(HEVC_PPS));
+                memcpy_s(m_hevcState->pps, 64 * sizeof(HEVC_SPS), pSlice->hevcSlice->pps, 64 * sizeof(HEVC_PPS));
                 m_hevcState->last_parsed_pps_id = pSlice->hevcSlice->last_parsed_pps_id;
                 m_bPPSReady = 1;
             }
