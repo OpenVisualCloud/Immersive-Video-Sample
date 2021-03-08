@@ -164,6 +164,7 @@ typedef struct ENCODERPARAM{
     uint32_t la_depth;                  //!< the number of frames that used for look ahead
     uint32_t enc_mode;                  //!< the preset for quality and performance balance,
                                         //!< [0-12], 0 is best quality, 12 is best performance
+    uint32_t pred_structure;            //!< [0-2], 0 is IPPP..., 1 is IBBB...(B is low-delay B), and 2 is IBBB...(B is normal bi-directional B)
     uint32_t rc_mode;                   //!< rate control mode, 0 is CQP mode and 1 is VBR mode
     uint32_t qp;                        //!< quantization value under CQP mode
     uint32_t bit_rate;                  //!< bitrate value under VBR mode
