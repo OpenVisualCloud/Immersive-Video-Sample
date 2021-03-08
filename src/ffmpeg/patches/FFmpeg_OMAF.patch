@@ -723,7 +723,7 @@ diff -urN FFmpeg/libavcodec/codec_id.h FFmpeg-patched/libavcodec/codec_id.h
 diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/distributed_encoder.c
 --- FFmpeg/libavcodec/distributed_encoder.c	1970-01-01 08:00:00.000000000 +0800
 +++ FFmpeg-patched/libavcodec/distributed_encoder.c	2020-09-27 13:35:13.193526565 +0800
-@@ -0,0 +1,705 @@
+@@ -0,0 +1,712 @@
 +/*
 +* Scalable Video Technology for distributed encoder library plugin
 +*
@@ -840,6 +840,7 @@ diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/dist
 +    int                      profile;
 +    int                      tier;
 +    int                      level;
++    int                      gop_pred_structure;
 +    int                      base_layer_switch_mode;
 +    int                      tile_row;
 +    int                      tile_column;
@@ -871,6 +872,7 @@ diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/dist
 +    params.tune = deCxt->tune;
 +    params.qp = deCxt->qp;
 +    params.profile = deCxt->profile;
++    params.pred_structure = deCxt->gop_pred_structure;
 +    params.base_layer_switch_mode = deCxt->base_layer_switch_mode;
 +    params.bit_rate = avctx->bit_rate;
 +    params.intra_refresh_type = 1;
@@ -1191,7 +1193,6 @@ diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/dist
 +    pkt->size = size;
 +    pkt->pts  = pts;
 +    pkt->dts = dts;
-+
 +    int gop = deCxt->encode_params.encoderParams.intra_period + 1;
 +    if(pkt->pts % gop == 0)
 +    {
@@ -1359,6 +1360,12 @@ diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/dist
 +          AV_OPT_TYPE_CONST, { .i64 = 1 },  INT_MIN, INT_MAX, VE, "tune" },
 +        { "vmaf", "VMAF optimized mode", 0,
 +          AV_OPT_TYPE_CONST, { .i64 = 2 },  INT_MIN, INT_MAX, VE, "tune" },
++
++    { "pred_struct", "Prediction structure used to construct GOP", OFFSET(gop_pred_structure),
++      AV_OPT_TYPE_INT, { .i64 = 0 }, 0, 2, VE, "pred_struct" },
++        { "IPPP", "P is low delay P", 0, AV_OPT_TYPE_CONST, { .i64 = 0 }, INT_MIN, INT_MAX, VE, "pred_struct" },
++        { "Ibbb", "b is low delay B", 1, AV_OPT_TYPE_CONST, { .i64 = 1 }, INT_MIN, INT_MAX, VE, "pred_struct" },
++        { "IBBB", "B is normal bi-directional B", 2, AV_OPT_TYPE_CONST, { .i64 = 2 }, INT_MIN, INT_MAX, VE, "pred_struct" },
 +
 +    { "bl_mode", "Random Access Prediction Structure type setting", OFFSET(base_layer_switch_mode),
 +      AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, VE },
