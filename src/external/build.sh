@@ -32,6 +32,7 @@ build_server(){
     fi
     make -j $(nproc)
     sudo make install
+    cp ../../ffmpeg/dependency/*.xml ffmpeg
 }
 
 build_client(){

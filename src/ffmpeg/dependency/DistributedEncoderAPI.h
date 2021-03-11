@@ -39,6 +39,8 @@
 
 #define DATA_NUM 8
 #define GUARD_BAND_TYPE 4
+#define IP_ADDRESS_LEN 16
+#define MAX_SESSION_COUNT 32
 
 //!
 //! \enum   DispatchType
@@ -132,6 +134,19 @@ typedef struct HEADERS
 }Headers;
 
 //!
+//! \struct: SessionInfo
+//! \brief:  Information of work session
+//!
+typedef struct SESSIONINFO
+{
+    bool    isNative;                  //!< Native or remote mode
+    char    ipAddress[IP_ADDRESS_LEN]; //!< IP address of worker
+    int32_t port;                      //!< Port of worker
+    int32_t targetSocket;              //!< Target CPU group
+    int32_t gpuNode;                   //!< Assigned GPU node
+}SessionInfo;
+
+//!
 //! \struct: StreamInfo
 //! \brief:  Information of input stream
 //! \details: the structure only supports uniform segmentation
@@ -189,7 +204,7 @@ typedef struct ENCODERPARAM{
     uint8_t  tile_rowCnt;               //!< tile row count when tile is enabled
     int8_t   target_socket;             //!< Target socket to run on
     bool     in_parallel;               //!< multiple tiles encoding in parallel
-    bool     local_mode;                //!< flag of local mode for encoder
+    bool     native_mode;                //!< flag of native mode for encoder
 }EncoderParam;
 
 typedef struct INPUTFRAME{
@@ -267,12 +282,14 @@ typedef struct CODECAPPOPTION{
 //! \brief:   parameters for distributed encoder library
 //!
 typedef struct DISTRIBUTEDENCODERPARAM{
-    StreamInfo                  streamInfo;         //!< Information of input stream
-    EncoderParam                encoderParams;      //!< Parameters for encoding
-    DispatchType                type;               //!< Task dispatch type
-    SupplementalEnhancementInfo suppleEnhanceInfo;  //!< Supplemental Enhancement Information
-    CodecAppOption              codecOption;        //!< Choice and the settings of decoder/encoder
-    bool                        glogInitialized;    //!< Whether glog has been initialized
+    StreamInfo                  streamInfo;                      //!< Information of input stream
+    EncoderParam                encoderParams;                   //!< Parameters for encoding
+    DispatchType                type;                            //!< Task dispatch type
+    SupplementalEnhancementInfo suppleEnhanceInfo;               //!< Supplemental Enhancement Information
+    CodecAppOption              codecOption;                     //!< Choice and the settings of decoder/encoder
+    bool                        glogInitialized;                 //!< Whether glog has been initialized
+    SessionInfo                 *sessionList[MAX_SESSION_COUNT]; //!< Session info list
+    uint8_t                     sessionCount;                    //!< Session info count
 }DistributedEncoderParam;
 
 #ifdef __cplusplus
@@ -280,17 +297,28 @@ extern "C" {
 #endif
 
 //!
+//! \brief  Parse the input config file and fulfill its defined session info into param
+//!
+//! \param  [in] configFilePath
+//!         Path of configure file
+//! \param  [in] param
+//!         DistributedEncoderParam
+//!
+//! \return DEStatus
+//!         DE_STATUS_SUCCESS if success, else fail reason
+//!
+DEStatus DistributedEncoder_ParseConfigFile(const char* configFilePath, DistributedEncoderParam *param);
+
+//!
 //! \brief  Initialize resources and get distributed encoder library handle
 //!
 //! \param  [in] param
 //!         DistributedEncoderParam
-//! \param  [in] configFilePath
-//!         Path of configure file
 //!
 //! \return DEHandle
 //!         Distributed encoder library handle
 //!
-DEHandle DistributedEncoder_Init(DistributedEncoderParam param, char *configFilePath);
+DEHandle DistributedEncoder_Init(DistributedEncoderParam *param);
 
 //!
 //! \brief  Process input frame

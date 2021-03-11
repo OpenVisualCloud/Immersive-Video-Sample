@@ -8,9 +8,9 @@
 ```bash
   ffmpeg -i [file] -input_type 1 \
       -c:v:0 distributed_encoder -s:0 3840x1920 -tile_row:0 6 -tile_column:0 10 \
-      -config_file:0 config_high.txt -g:0 15 -b:0 30M -map 0:v \
+      -config_file:0 config_high.xml -g:0 15 -b:0 30M -map 0:v \
       -c:v:1 distributed_encoder -s:1 1024x640 -tile_row:1 2 -tile_column:1 4 \
-      -config_file:1 config_low.txt -g:1 15 -b:1 5M -map 0:v \
+      -config_file:1 config_low.xml -g:1 15 -b:1 5M -map 0:v \
       -f omaf_packing -is_live 0 -split_tile 1 -seg_duration 1 -window_size 20 -extra_window_size 30 \
       -base_url http://[server ip]/OMAFStatic_4k/ -out_name Test /usr/local/nginx/html/OMAFStatic_4k/
 ```
@@ -56,9 +56,9 @@ Sample command line for cube-map projected input source is as follows:
 ``` bash
     numactl -c 1 ./ffmpeg -stream_loop -1 -i [file] -input_type 1 -proj_type Cubemap -rc 1 \
         -c:v:0 distributed_encoder -s:0 5760x3840 -tile_row:0 6 -tile_column:0 9 \
-        -config_file:0 config_high.txt -la_depth:0 25 -r:0 25 -g:0 25 -b:0 80M -map 0:v \
+        -config_file:0 config_high.xml -la_depth:0 25 -r:0 25 -g:0 25 -b:0 80M -map 0:v \
         -c:v:1 distributed_encoder -s:1 960x640 -sws_flags neighbor -tile_row:1 2 -tile_column:1 3 \
-        -config_file:1 config_low.txt -la_depth:1 25 -r:1 25 -g:1 25 -b:1 1500K -map 0:v \
+        -config_file:1 config_low.xml -la_depth:1 25 -r:1 25 -g:1 25 -b:1 1500K -map 0:v \
         -vframes 3000 -f omaf_packing -packing_proj_type Cubemap -cubemap_face_file 6kcube_face_info.txt \
         -is_live 0 -split_tile 1 -seg_duration 1 -has_extractor 0 \
         -base_url http://[server ip]:8080/8kcubevod/ -out_name Test /usr/local/nginx/html/8kcubevod/
@@ -84,7 +84,7 @@ First, `config_file` is a must-have parameter containing "ip" and "port" pair, c
 
 | **Parameters** | **Descriptions** | **Type** | **Default Value** | **Range** | **Must-Have** |
 | --- | --- | --- | --- | --- | --- |
-| config_file | Configure file path for workers information | string | N/A | N/A | YES |
+| config_file | Configure xml file path for workers information | string | N/A | N/A | YES |
 | proj_type | Input source projection type, ERP or Cubemap | string | "ERP" | "ERP" or "Cubemap" | NO |
 | input_type | Input stream type, 0 - encoded, 1 - raw | int | 0 | 0, 1 | NO |
 | input_codec | Input bitstream type, only work when input type is 0-encoded, 1-yuv | int | 0 | 0, 1 | NO |
@@ -103,8 +103,8 @@ First, `config_file` is a must-have parameter containing "ip" and "port" pair, c
 | bl_mode | Random Access Prediction Structure type setting | int | 0 | 0, 1 | NO |
 | hdr | High dynamic range input | int | 0 | 0, 1 | NO |
 | asm_type | Assembly instruction set type [0: C Only, 1: Auto] | int | 0 | 0, 1 | NO |
-| tile_column | Tile column count number | int | 1 | [1, 256] | NO |
-| tile_row | Tile row count number | int | 1 | [1, 256] | NO |
+| tile_column | Tile column count number | int | 1 | [1, 20] | NO |
+| tile_row | Tile row count number | int | 1 | [1, 20] | NO |
 | in_parallel | Multiple encoders running in parallel [0: Off, 1: On] | int | 0 | 0,1 | NO |
 | need_external_log | Whether external log callback is needed | bool | 0 | 0, 1 | NO |
 | min_log_level | Minimal log level of output [0: INFO, 1: WARNING, 2: ERROR, 3: FATAL] | int | 2 | [0, 3] | NO |
