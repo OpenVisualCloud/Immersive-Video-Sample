@@ -723,7 +723,7 @@ diff -urN FFmpeg/libavcodec/codec_id.h FFmpeg-patched/libavcodec/codec_id.h
 diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/distributed_encoder.c
 --- FFmpeg/libavcodec/distributed_encoder.c	1970-01-01 08:00:00.000000000 +0800
 +++ FFmpeg-patched/libavcodec/distributed_encoder.c	2020-09-27 13:35:13.193526565 +0800
-@@ -0,0 +1,706 @@
+@@ -0,0 +1,712 @@
 +/*
 +* Scalable Video Technology for distributed encoder library plugin
 +*
@@ -896,7 +896,7 @@ diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/dist
 +    params.tile_columnCnt = deCxt->tile_column;
 +    params.tile_rowCnt = deCxt->tile_row;
 +    params.target_socket = -1;
-+    params.local_mode = false;
++    params.native_mode = false;
 +    params.MCTS_enable = (params.tile_columnCnt * params.tile_rowCnt) > 1 ? 1 : 0;
 +
 +    if(deCxt->in_parallel && params.MCTS_enable)
@@ -1033,7 +1033,13 @@ diff -urN FFmpeg/libavcodec/distributed_encoder.c FFmpeg-patched/libavcodec/dist
 +    if(ret)
 +        return ret;
 +
-+    deCxt->handle = DistributedEncoder_Init(deCxt->encode_params, deCxt->configFile);
++    ret = DistributedEncoder_ParseConfigFile(deCxt->configFile, &(deCxt->encode_params));
++    if (ret != DE_STATUS_SUCCESS)
++    {
++        return AVERROR(EINVAL);
++    }
++
++    deCxt->handle = DistributedEncoder_Init(&(deCxt->encode_params));
 +    if(!deCxt->handle)
 +    {
 +        return AVERROR(EINVAL);

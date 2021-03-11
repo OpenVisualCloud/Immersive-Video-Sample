@@ -72,9 +72,6 @@ if [ "${REPO}" = "oss" ] ; then
 
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
     export LD_LIBRARY_PATH=/usr/local/lib64:$LD_LIBRARY_PATH
-    echo "ip= 127.0.0.1 port= 9090" > config_localhost.txt
-    echo "ip= 127.0.0.1 port= 9090" > config.txt
-    echo "ip= 10.67.118.197 port= 9090" >> config.txt
 
     destroy_worker
     ./testMainEncoder
