@@ -13,7 +13,7 @@ PATCHES=${ROOT}/../patches
 
 install_dependencies() {
     ${SUDO} apt-get update
-    ${SUDO} apt install -y git build-essential wget python cmake pkg-config libglib2.0-dev libgtk-3-dev libasound2-dev libpulse-dev
+    ${SUDO} apt install -y git build-essential wget python cmake pkg-config libglib2.0-dev libgtk-3-dev libasound2-dev libpulse-dev libboost-regex-dev libboost-thread-dev libboost-system-dev libboost-random-dev libboost-test-dev
 
     # player
     ${SUDO} apt install -y yasm libgoogle-glog-dev libva-dev libglm-dev libglfw3-dev libgles2-mesa-dev libglu1-mesa-dev liblzma-dev
