@@ -27,9 +27,9 @@ if [ "${TYPE}" != "LIVE" ] && [ "${TYPE}" != "VOD" ] ; then
 fi
 
 if [ "${PROTOCOL}" = "HTTPS" ] ; then
-    URLBASE="https://$2:443"
+    URLBASE="https://${IP}:443"
 elif [ "${PROTOCOL}" = "HTTP" ] ; then
-    URLBASE="http://$2:8080"
+    URLBASE="http://${IP}:8080"
 fi
 
 ffmpeg_4K_LIVE(){
