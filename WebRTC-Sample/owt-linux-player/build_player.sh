@@ -37,5 +37,5 @@ if [ ! -f ${PLAYER_BUILD}/config.xml ]; then
 fi
 
 if [ ! -f ${PLAYER_BUILD}/setupvars.sh ]; then
-    echo "export LD_LIBRARY_PATH=${WEBRTC_LINUX_CLIENT_SDK}/lib:\$LD_LIBRARY_PATH" > ${PLAYER_BUILD}/setupvars.sh
+    echo "export LD_LIBRARY_PATH=${WEBRTC_LINUX_CLIENT_SDK}/lib:$LD_LIBRARY_PATH" > ${PLAYER_BUILD}/setupvars.sh
 fi
