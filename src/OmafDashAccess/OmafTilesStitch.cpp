@@ -561,6 +561,10 @@ std::map<QualityRank, std::vector<TilesMergeArrangement *>> OmafTilesStitch::Cal
     oneTileHeight = srd.height;
 
     // 1 find the max tile split
+    if (oneTileWidth == 0 || oneTileHeight == 0) {
+      OMAF_LOG(LOG_ERROR, "Tile width or height in srd is zero!\n");
+      return tilesMergeArr;
+    }
     uint32_t maxTile_x = m_maxStitchWidth / oneTileWidth;
     uint32_t maxTile_y = m_maxStitchHeight / oneTileHeight;
 
@@ -1886,6 +1890,7 @@ int32_t OmafTilesStitch::GenerateOutputMergedPackets() {
       resolution.height = (arrangeChanged ? height : initHeight);
       mergedPacket->SetSourceResolution(0, resolution);
       mergedPacket->SetEOS(firstPacket->GetEOS());
+      mergedPacket->SetCatchupFlag(firstPacket->IsCatchup());
 
       if (ERROR_NONE != UpdateMergedDataAndRealSize(
                             qualityRanking, packets, tileColsNum,

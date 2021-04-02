@@ -61,6 +61,7 @@ OmafDashSource::OmafDashSource() {
   mPreExtractorID = 0;
   m_stitch = nullptr;
   mIsLocalMedia = false;
+  m_catchupThread = 0;
 }
 
 OmafDashSource::~OmafDashSource() {
@@ -71,6 +72,10 @@ OmafDashSource::~OmafDashSource() {
   mViewPorts.clear();
   ClearStreams();
   SAFE_DELETE(m_stitch);
+  if (m_catchupThread) {
+    pthread_join(m_catchupThread, NULL);
+    m_catchupThread = 0;
+  }
 }
 
 int OmafDashSource::SyncTime(std::string url) {
@@ -307,6 +312,13 @@ int OmafDashSource::StartStreaming()
 {
   if (!mIsLocalMedia) {
     StartThread();
+    if (omaf_dash_params_.enable_in_time_viewport_update) {
+      int32_t ret = pthread_create(&m_catchupThread, NULL, CatchupThreadWrapper, this);
+      if (ret) {
+        OMAF_LOG(LOG_ERROR, "Failed to create tiles stitching thread !\n");
+        return OMAF_ERROR_CREATE_THREAD;
+      }
+    }
   }
   return ERROR_NONE;
 }
@@ -377,6 +389,17 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
       if (ret == ERROR_NONE) {
         pkts->push_back(pkt);
       }
+      // add catch up packets
+      std::list<MediaPacket*> mergedPackets;
+      pStream->SetNeedVideoParams(true);
+      mergedPackets = pStream->GetOutTilesMergedPackets();
+      // OMAF_LOG(LOG_INFO, " merged packets has the size of %lld\n", mergedPackets.size());
+      std::list<MediaPacket*>::iterator itPacket;
+      for (itPacket = mergedPackets.begin(); itPacket != mergedPackets.end(); itPacket++) {
+        MediaPacket* onePacket = *itPacket;
+        pkts->push_back(onePacket);
+      }
+      mergedPackets.clear();
     }
   } else {
     std::map<int, OmafAdaptationSet*> mapAS = pStream->GetMediaAdaptationSet();
@@ -485,7 +508,7 @@ void OmafDashSource::Run() {
   thread_static();
 }
 
-int OmafDashSource::TimedDownloadSegment(bool bFirst) {
+int OmafDashSource::DownloadSegments(bool bFirst) {
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
   // trace
@@ -531,8 +554,19 @@ int OmafDashSource::TimedDownloadSegment(bool bFirst) {
 }
 
 int OmafDashSource::StartReadThread() {
-  int ret = TimedSelectSegements();
-  if (ERROR_NONE != ret) return ret;
+  int ret = SelectSegements(true);
+
+  if (ERROR_NONE != ret) {
+    OMAF_LOG(LOG_INFO, "Failed to select segments!\n");
+    return ret;
+  }
+
+  ret = UpdateEnabledTracks();
+
+  if (ERROR_NONE != ret) {
+    OMAF_LOG(LOG_INFO, "Failed to update enabled tracks!\n");
+    return ret;
+  }
 
   uint32_t cnt = 0;
   while (cnt < mMapStream.size()) {
@@ -567,7 +601,7 @@ int OmafDashSource::SelectSpecialSegments(int extractorTrackIdx) {
   return ret;
 }
 
-int OmafDashSource::TimedSelectSegements() {
+int OmafDashSource::SelectSegements(bool isTimed) {
   int ret = ERROR_NONE;
   if (nullptr == m_selector) return ERROR_NULL_PTR;
 
@@ -575,7 +609,20 @@ int OmafDashSource::TimedSelectSegements() {
   for (it = this->mMapStream.begin(); it != this->mMapStream.end(); it++) {
     OmafMediaStream* pStream = it->second;
     pStream->SetSegmentNumber(dcount);
-    ret = m_selector->SelectTracks(pStream);
+    ret = m_selector->SelectTracks(pStream, isTimed);
+    if (ERROR_NONE != ret) break;
+  }
+  return ret;
+}
+
+int OmafDashSource::UpdateEnabledTracks() {
+  int ret = ERROR_NONE;
+  if (nullptr == m_selector) return ERROR_NULL_PTR;
+
+  std::map<int, OmafMediaStream*>::iterator it;
+  for (it = this->mMapStream.begin(); it != this->mMapStream.end(); it++) {
+    OmafMediaStream* pStream = it->second;
+    ret = m_selector->UpdateEnabledTracks(pStream);
     if (ERROR_NONE != ret) break;
   }
   return ret;
@@ -687,14 +734,24 @@ void OmafDashSource::thread_dynamic() {
     }
 
     // Update viewport and select Adaption Set according to pose change
-    ret = TimedSelectSegements();
+    ret = SelectSegements(true);
 
-    if (ERROR_NONE != ret) continue;
+    if (ERROR_NONE != ret) {
+      OMAF_LOG(LOG_INFO, "Failed to select segments!\n");
+      continue;
+    }
+
+    ret = UpdateEnabledTracks();
+
+    if (ERROR_NONE != ret) {
+      OMAF_LOG(LOG_INFO, "Failed to update enabled tracks!\n");
+      continue;
+    }
 
     uint32_t timer = sys_clock() - uLastUpdateTime;
 
     if (mMPDinfo->minimum_update_period && (timer > mMPDinfo->minimum_update_period)) {
-      TimedUpdateMPD();
+      UpdateMPD();
       uLastUpdateTime = sys_clock();
     }
 
@@ -705,7 +762,7 @@ void OmafDashSource::thread_dynamic() {
       bFirst = false;
     }
 
-    TimedDownloadSegment(bFirst);
+    DownloadSegments(bFirst);
 
     uint32_t interval = sys_clock() - uLastSegTime;
 
@@ -766,6 +823,11 @@ void OmafDashSource::thread_static() {
   int total_seg =
       segmentDuration > 0 ? (ceil((double)mMPDinfo->media_presentation_duration / segmentDuration / 1000)) : 0;
 
+  for (auto it = this->mMapStream.begin(); it != this->mMapStream.end(); it++) {
+    OmafMediaStream* pStream = it->second;
+    pStream->SetTotalSegNum(total_seg);
+  }
+
   int seg_count = 0;
 
   uint32_t uLastSegTime = 0;
@@ -777,9 +839,19 @@ void OmafDashSource::thread_static() {
     }
 
     // Update viewport and select Adaption Set according to pose change
-    ret = TimedSelectSegements();
+    ret = SelectSegements(true);
 
-    if (ERROR_NONE != ret) continue;
+    if (ERROR_NONE != ret) {
+      OMAF_LOG(LOG_INFO, "Failed to select segments!\n");
+      continue;
+    }
+
+    ret = UpdateEnabledTracks();
+
+    if (ERROR_NONE != ret) {
+      OMAF_LOG(LOG_INFO, "Failed to update enabled tracks!\n");
+      continue;
+    }
 
     if (0 == uLastSegTime) {
       uLastSegTime = sys_clock();
@@ -788,7 +860,7 @@ void OmafDashSource::thread_static() {
       bFirst = false;
     }
 
-    TimedDownloadSegment(bFirst);
+    DownloadSegments(bFirst);
 
     uint32_t interval = sys_clock() - uLastSegTime;
 
@@ -820,6 +892,195 @@ void OmafDashSource::thread_static() {
   return;
 }
 
-int OmafDashSource::TimedUpdateMPD() { return ERROR_NONE; }
+void* OmafDashSource::CatchupThreadWrapper(void* pThis)
+{
+  OmafDashSource *pSource = (OmafDashSource*)pThis;
 
+  pSource->thread_catchup();
+
+  return NULL;
+}
+
+void OmafDashSource::thread_catchup()
+{
+  int ret = ERROR_NONE;
+  bool go_on = true;
+  uint32_t sleepUS = 50000;
+  std::list<pair<uint32_t, int>> downloadedCatchupTracks;
+  std::map<uint32_t, uint32_t> catchupTimesInSeg;
+  uint32_t maxRecordNum = 50;
+  while (go_on) {
+    OMAF_LOG(LOG_INFO, "Start to do catch up thread!\n");
+    if (STATUS_EXITING == GetStatus() || STATUS_STOPPED == GetStatus()) {
+      OMAF_LOG(LOG_INFO, "Catch up thread for downloading is exit!\n");
+      break;
+    }
+    //1. select tiles set according to current viewport
+    ret = SelectSegements(false);
+    if (ERROR_NONE != ret) {
+      OMAF_LOG(LOG_ERROR, "Failed to select segments!\n");
+      usleep(sleepUS);
+      continue;
+    }
+
+    std::map<int, OmafAdaptationSet*> currSelectedTracksMap = m_selector->GetCurrentTracksMap();
+    if (currSelectedTracksMap.empty())
+    {
+      OMAF_LOG(LOG_ERROR, "Current selected tracks map is empty!\n");
+      usleep(sleepUS);
+      continue;
+    }
+    std::map<int, OmafMediaStream*>::iterator it;
+    for (it = this->mMapStream.begin(); it != this->mMapStream.end(); it++) {
+      OmafMediaStream* pStream = it->second;
+      DashStreamInfo *stream_info = pStream->GetStreamInfo();
+      if (stream_info == nullptr) continue;
+      uint32_t max_catchup_num = 0;
+      if (stream_info->tileColNum != 0 && stream_info->tileRowNum != 0) {
+        uint32_t tile_width = stream_info->width / stream_info->tileColNum;
+        uint32_t tile_height = stream_info->height / stream_info->tileRowNum;
+        if (tile_width != 0 && tile_height != 0) {
+          max_catchup_num = (omaf_dash_params_.max_catchup_width / tile_width) * (omaf_dash_params_.max_catchup_height / tile_height);
+        }
+      }
+
+      //2. check if the viewport is changed and get the different tracks map
+      uint64_t currentTimeLine = 0;
+      // pair<segID, tracks_list>
+      std::map<uint32_t, std::map<int, OmafAdaptationSet*>> additional_tracks = m_selector->CompareTracksAndGetDifference(pStream, &currentTimeLine);
+      // remove already downloaded tracks
+      std::map<uint32_t, std::map<int, OmafAdaptationSet*>> new_tracks = GetNewTracksFromDownloaded(additional_tracks, downloadedCatchupTracks, catchupTimesInSeg);
+
+      if (new_tracks.empty())//additional downloading threshold is 2 tiles
+      {
+        // OMAF_LOG(LOG_INFO, "There is no additional different tracks! Viewport hasn't changed!\n");
+        usleep(sleepUS * 5);
+        continue;
+      }
+      // if new_tracks element size is oversized
+      for (auto tracks = new_tracks.begin(); tracks != new_tracks.end(); tracks++) {
+        uint32_t del_num = tracks->second.size() > max_catchup_num ? tracks->second.size() - max_catchup_num : 0;
+        for (auto tk = tracks->second.begin(); tk != tracks->second.end() && del_num > 0;) {
+          tracks->second.erase(tk++);
+          del_num--;
+        }
+      }
+
+      OMAF_LOG(LOG_INFO, "Found additional different track for catch up!\n");
+      for (auto track : new_tracks)
+      {
+        for (auto id : track.second)
+        {
+          OMAF_LOG(LOG_INFO, "seg id %d, track id %d\n", track.first, id.first);
+        }
+      }
+      //3. update catch up tile tracks.
+      if (nullptr == m_selector) {
+        OMAF_LOG(LOG_ERROR, "Omaf Tracks Selector is not created yet!\n");
+        continue;
+      }
+
+      int32_t stream_frame_rate = stream_info->framerate_num / stream_info->framerate_den;
+      uint32_t sampleNumPerSeg = pStream->GetSegmentDuration() * stream_frame_rate;
+      for (auto add_track : new_tracks)
+      {
+        pStream->AddCatchupTask(make_pair((add_track.first - 1) * sampleNumPerSeg, add_track.second));
+        pStream->AddCatchupTriggerPTS(currentTimeLine);
+      }
+      //4. download assigned segments
+      ret = DownloadAssignedSegments(new_tracks);
+      if (ERROR_NONE != ret) {
+        OMAF_LOG(LOG_INFO, "Failed to download assigned segments!\n");
+        usleep(sleepUS);
+        continue;
+      }
+      //5. update downloadedCatchupTracks
+      for (auto track : new_tracks)
+      {
+        for (auto id : track.second)
+        {
+          downloadedCatchupTracks.push_back(make_pair(track.first, id.first));//seg id, track id
+          // OMAF_LOG(LOG_INFO, "downloadedCatchupTracks seg id %d, track id %d\n", track.first, id.first);
+          if (downloadedCatchupTracks.size() > maxRecordNum)
+          {
+            downloadedCatchupTracks.pop_front();
+          }
+        }
+        if (catchupTimesInSeg.find(track.first) == catchupTimesInSeg.end())
+        {
+          catchupTimesInSeg.insert(make_pair(track.first, 1));
+        }
+        else
+        {
+          catchupTimesInSeg[track.first]++;
+        }
+      }
+    }
+    usleep(sleepUS);
+  }
+  return;
+}
+
+int OmafDashSource::DownloadAssignedSegments(std::map<uint32_t, TracksMap> additional_tracks)
+{
+  int ret = ERROR_NONE;
+  OMAF_LOG(LOG_INFO, "Download assigned segment!\n");
+  std::map<int, OmafMediaStream*>::iterator it;
+  for (it = this->mMapStream.begin(); it != this->mMapStream.end(); it++) {
+    OmafMediaStream* pStream = it->second;
+    ret = pStream->DownloadAssignedSegments(additional_tracks);
+    if (ERROR_NONE != ret)
+    {
+      OMAF_LOG(LOG_ERROR, "Failed to download assigned segments!\n");
+      return ret;
+    }
+  }
+  return ret;
+}
+
+int OmafDashSource::UpdateMPD() { return ERROR_NONE; }
+
+std::map<uint32_t, std::map<int, OmafAdaptationSet*>> OmafDashSource::GetNewTracksFromDownloaded(std::map<uint32_t, std::map<int, OmafAdaptationSet*>> additional_tracks, std::list<pair<uint32_t, int>> downloadedCatchupTracks, map<uint32_t, uint32_t> catchupTimesInSeg)
+{
+  // remove repeated tracks
+  for (auto addi = additional_tracks.begin(); addi != additional_tracks.end();)
+  {
+    for (auto tk = addi->second.begin(); tk != addi->second.end();)
+    {
+      bool isFound = false;
+      for (auto downloaded = downloadedCatchupTracks.begin(); downloaded != downloadedCatchupTracks.end(); downloaded++)
+      {
+        if (addi->first == downloaded->first && tk->first == downloaded->second) // found downloaded one
+        {
+          isFound = true;
+          addi->second.erase(tk++);
+          break;
+        }
+      }
+      if (!isFound) tk++;
+    }
+    if (addi->second.empty())
+    {
+      additional_tracks.erase(addi++);
+    }
+    else
+    {
+      addi++;
+    }
+  }
+  // segment response limitation
+  for (auto iter = additional_tracks.begin(); iter != additional_tracks.end();)
+  {
+    if (catchupTimesInSeg.find(iter->first) != catchupTimesInSeg.end() && catchupTimesInSeg[iter->first] >= omaf_dash_params_.max_response_times_in_seg)
+    {
+      // OMAF_LOG(LOG_INFO, "Already catchup select seg id %d for %d times\n", iter->first, catchupTimesInSeg[iter->first]);
+      additional_tracks.erase(iter++);
+    }
+    else
+    {
+      iter++;
+    }
+  }
+  return additional_tracks;
+}
 VCD_OMAF_END

@@ -48,6 +48,30 @@
 
 VCD_OMAF_BEGIN
 
+typedef enum {
+  THREAD_UNKNOWN = 0,
+  THREAD_BUSY = 1,
+  THREAD_IDLE = 2,
+} CThreadStatus;
+
+typedef struct _StitchThread
+{
+  pthread_t        id;
+  CThreadStatus    status;
+  int64_t          pts;
+  OmafTilesStitch *catchupStitch;
+  uint32_t         video_id;
+  _StitchThread() : id(0), status(CThreadStatus::THREAD_UNKNOWN), pts(0), catchupStitch(nullptr), video_id(0) {}
+} StitchThread;
+
+typedef struct _ThreadInputs
+{
+  void *pThis;
+  void *thread;
+} ThreadInputs;
+
+typedef std::map<int, OmafAdaptationSet*> TracksMap;
+
 class OmafReaderManager;
 class OmafDashSegmentClient;
 
@@ -226,15 +250,39 @@ class OmafMediaStream {
 
   void SetNeedVideoParams(bool needParams) { m_needParams = needParams; };
 
-  void SetMaxStitchResolution(uint32_t width, uint32_t height) { m_stitch->SetMaxStitchResolution(width, height); };
+  void SetMaxStitchResolution(uint32_t width, uint32_t height)
+  {
+    if (m_stitch)
+      m_stitch->SetMaxStitchResolution(width, height);
+  };
 
   void SetSegmentNumber( uint32_t seg_num ) { m_activeSegmentNum = seg_num; } ;
+
+  void SetEnableCatchUp(bool enableCatchUp) { m_enableCatchup = enableCatchUp; };
+
+  void SetCatchupThreadNum(uint32_t threadNum) { m_catchupThreadNum = threadNum; };
 
   std::list<MediaPacket*> GetOutTilesMergedPackets();
 
   MediaType GetStreamMediaType() { return m_pStreamInfo->stream_type; };
+  //!
+  //! \brief  Add a new catchup tile tracks map
+  //!
+  int AddCatchupTask(std::pair<uint64_t, std::map<int, OmafAdaptationSet*>> task);
+  //!
+  //! \brief  Add a new catchup trigger PTS
+  //!
+  int AddCatchupTriggerPTS(uint64_t pts);
+  //!
+  //! \brief  Download assigned additional segments
+  //!
+  int DownloadAssignedSegments(std::map<uint32_t, TracksMap> additional_tracks);
 
   void Close();
+
+  void SetTotalSegNum(uint32_t seg_num) { m_totalSegNum = seg_num; };
+
+  uint32_t GetTotalSegNum() { return m_totalSegNum; };
 
  private:
   //!
@@ -249,9 +297,33 @@ class OmafMediaStream {
 
   int32_t StartTilesStitching();
 
+  //!
+  //! \brief  Start catch-up tiles stitching thread
+  //!
+  int32_t StartCatchupTilesStitching();
+
   static void* TilesStitchingThread(void* pThis);
 
+  //!
+  //! \brief  catch-up tiles stitching thread wrapper
+  //!
+  static void* CatchupTilesStitchingThread(void* pThis);
+
   int32_t TilesStitching();
+
+  //!
+  //! \brief  get catch-up tiles tracks map
+  //!
+  int32_t GetCatchupTileTracks(pair<uint64_t, TracksMap> &targetedTracks);
+
+  //!
+  //! \brief  get selected packets with pts
+  //!
+  int32_t GetSelectedPacketsWithPTS(uint64_t targetPTS, pair<uint64_t, TracksMap> targetedTracks, map<uint32_t, MediaPacket*> &selectedPackets);
+  //!
+  //! \brief  get catch up merged packet with high quality at currPTS
+  //!
+  int32_t GetCatchupMergedPackets(map<uint32_t, MediaPacket*> selectedPackets, std::list<MediaPacket*> &catchupMergedPacket, OmafTilesStitch *stitch, bool bFirst);
 
 private:
     OmafMediaStream& operator=(const OmafMediaStream& other) { return *this; };
@@ -276,6 +348,8 @@ private:
   std::mutex mMutex;
   //<! for synchronization of mCurrentExtractors and m_selectedTileTracks
   std::mutex mCurrentMutex;
+  //<! for synchronization of m_catchupTileTracks
+  std::mutex mCatchUpMutex;
   //<! flag for end of stream
   bool m_bEOS;
   OmafDashSourceSyncHelper syncer_helper_;
@@ -292,19 +366,75 @@ private:
   std::map<uint32_t, SourceInfo> m_sources;
   //<! tiles stitching thread ID
   pthread_t m_stitchThread;
+  //<! catch up tiles stitching thread ID
+  pthread_t m_catchupStitchThread;
   //<! mutex for output tiles merged media packet list
   std::mutex m_packetsMutex;
+  //<! mutex for output tiles merged media packet list for catch up
+  std::mutex m_catchupPacketsMutex;
   //<! list of output tiles merged media packets
   std::list<std::list<MediaPacket*>> m_mergedPackets;
+
+  std::map<uint32_t, std::list<std::list<MediaPacket*>>> m_catchupMergedPackets;
 
   bool m_needParams;
   //<! tiles stitch handle
   OmafTilesStitch* m_stitch;
 
   int m_status;
+  int m_catchup_status;
+  ThreadInputs *m_threadInput;
   uint64_t m_currFrameIdx;  //<! the frame index which is currently processed
 
   uint32_t m_activeSegmentNum;
+
+  uint32_t m_totalSegNum;
+
+  uint32_t m_gopSize;
+
+  // for catch up thread pool
+  // data
+  bool m_enableCatchup;
+  uint32_t m_catchupThreadNum; //<! max num for catch up thread
+  std::list<std::pair<uint64_t, std::map<int, OmafAdaptationSet*>>> m_catchupTasksList; //<! catch up task list
+  std::list<uint64_t> m_catchupTriggerPTSList;
+  std::vector<StitchThread*> m_catchupThreadsList; //<! catch up threads list
+  std::condition_variable m_catchupCond; //<! cv for catch up thread
+  std::mutex m_catchupThreadMutex; // mutex for catch up thread
+  std::mutex m_catchupPTSMutex; // mutex for catch up PTS
+  // function
+  //!
+  //! \brief  create catch up thread pool
+  //!
+  int CreateCatchupThreadPool();
+  //!
+  //! \brief  get size of current tasks
+  //!
+  int GetTaskSize();
+  //!
+  //! \brief  stop all catch up threads
+  //!
+  int StopAllCatchupThreads();
+  //!
+  //! \brief  catch up thread function wrapper
+  //!
+  static void* CatchupThreadFuncWrapper(void* input);
+  //!
+  //! \brief  catch up thread function
+  //!
+  int CatchupThreadFunc(void *thread);
+  //!
+  //! \brief  set thread status to idle
+  //!
+  int SetThreadIdle(StitchThread *thread);
+  //!
+  //! \brief  set thread status to busy
+  //!
+  int SetThreadBusy(StitchThread *thread);
+  //!
+  //! \brief  one stitch task
+  //!
+  int TaskRun(OmafTilesStitch* stitch, std::pair<uint64_t, std::map<int, OmafAdaptationSet*>> task, uint32_t video_id, uint64_t triggerPTS);
 };
 
 VCD_OMAF_END;

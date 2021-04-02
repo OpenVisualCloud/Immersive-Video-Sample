@@ -87,6 +87,11 @@ class OmafExtractor : public OmafAdaptationSet {
   //!
   std::list<int> GetDependTrackID();
 
+  std::map<int, OmafAdaptationSet*> GetCurrentTracksMap()
+  {
+    return mAdaptationSets;
+  }
+
   //bool IsExtractor() override { return true; }
 
  private:

@@ -44,8 +44,6 @@ using namespace VCD::OMAF;
 
 VCD_OMAF_BEGIN
 
-typedef std::map<int, OmafAdaptationSet*> TracksMap;
-
 class OmafTileTracksSelector : public OmafTracksSelector
 {
 public:
@@ -69,7 +67,22 @@ public:
     //!         information stored in mPoseHistory can be used for prediction for
     //!         further movement
     //!
-    virtual int SelectTracks(OmafMediaStream* pStream);
+    virtual int SelectTracks(OmafMediaStream* pStream, bool isTimed);
+
+    //!
+    //! \brief  Enable tile tracks adaptation sets and update tile tracks list
+    //!         according current selected tracks
+    //!
+    virtual int UpdateEnabledTracks(OmafMediaStream* pStream);
+
+    //!
+    //! \brief  Get current tile tracks map after select tracks
+    //!
+    virtual map<int, OmafAdaptationSet*> GetCurrentTracksMap()
+    {
+        std::lock_guard<std::mutex> lock(mCurrentMutex);
+        return m_currentTracks;
+    }
 
     //!
     //! \brief  update Viewport; each time pose update will be recorded, but only

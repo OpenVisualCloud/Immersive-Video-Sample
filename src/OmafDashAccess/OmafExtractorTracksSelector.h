@@ -70,7 +70,20 @@ public:
     //!         information stored in mPoseHistory can be used for prediction for
     //!         further movement
     //!
-    virtual int SelectTracks(OmafMediaStream* pStream);
+    virtual int SelectTracks(OmafMediaStream* pStream, bool isTimed);
+
+    //!
+    //! \brief  Enable extractor track and its tile tracks in adaptation set.
+    //!
+    virtual int UpdateEnabledTracks(OmafMediaStream* pStream);
+
+    //!
+    //! \brief  Get current tile tracks map after select tracks
+    //!
+    virtual map<int, OmafAdaptationSet*> GetCurrentTracksMap()
+    {
+        return mCurrentExtractor->GetCurrentTracksMap();
+    }
 
     //!
     //! \brief  update Viewport; each time pose update will be recorded, but only
@@ -115,6 +128,7 @@ private:
 
 private:
     OmafExtractor                     *mCurrentExtractor;
+    ListExtractor                      mCurrentExtractors;
 };
 
 VCD_OMAF_END;

@@ -157,6 +157,12 @@ struct RenderConfig {
   uint32_t maxVideoDecodeHeight;
   // for 360SCVP plugin path
   char* pathof360SCVPPlugin;
+  // for in time viewport update
+  bool enableInTimeViewportUpdate;
+  uint32_t maxResponseTimesInOneSeg;
+  uint32_t maxCatchupWidth;
+  uint32_t maxCatchupHeight;
+  // ...
 };
 
 typedef struct TileInformation{
@@ -283,6 +289,7 @@ typedef struct OutputSurface{
 typedef struct DecodeInfo{
     uint32_t frameRate_num;
     uint32_t frameRate_den;
+    uint32_t segment_duration;
     // ...
 }DecodeInfo;
 

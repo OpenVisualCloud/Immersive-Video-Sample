@@ -106,7 +106,7 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
 
   //!  \brief add Segment for reading after it is downloaded
   //!
-  OMAF_STATUS OpenSegment(std::shared_ptr<OmafSegment> pSeg, bool isExtractor = false) noexcept;
+  OMAF_STATUS OpenSegment(std::shared_ptr<OmafSegment> pSeg, bool isExtractor = false, bool isCatchup = false) noexcept;
   OMAF_STATUS OpenLocalSegment(std::shared_ptr<OmafSegment> pSeg, bool isExtractor = false) noexcept;
 
   //!  \brief Get Next packet from packet queue. each track has a packet queue
@@ -126,6 +126,7 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
 
   uint64_t GetOldestPacketPTSForTrack(int trackId);
   void RemoveOutdatedPacketForTrack(int trackId, uint64_t currPTS);
+  void RemoveOutdatedCatchupPacketForTrack(int trackId, uint64_t currPTS);
   size_t GetSamplesNumPerSegmentForTimeLine(uint64_t currTimeLine)
   {
       size_t samples_num = 0;

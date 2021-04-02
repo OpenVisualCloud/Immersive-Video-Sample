@@ -49,7 +49,7 @@ VCD_OMAF_BEGIN
 
 OmafExtractorTracksSelector::~OmafExtractorTracksSelector() { mCurrentExtractor = nullptr; }
 
-int OmafExtractorTracksSelector::SelectTracks(OmafMediaStream* pStream) {
+int OmafExtractorTracksSelector::SelectTracks(OmafMediaStream* pStream, bool isTimed) {
 
   DashStreamInfo *streamInfo = pStream->GetStreamInfo();
   int ret = ERROR_NONE;
@@ -65,7 +65,8 @@ int OmafExtractorTracksSelector::SelectTracks(OmafMediaStream* pStream) {
       } else {
         pSelectedExtrator = GetExtractorByPose(pStream);
       }
-
+      {
+      std::lock_guard<std::mutex> lock(mCurrentMutex);
       if (NULL == pSelectedExtrator && !mCurrentExtractor) return ERROR_NULL_PTR;
 
       bool isExtractorChanged = false;
@@ -76,26 +77,41 @@ int OmafExtractorTracksSelector::SelectTracks(OmafMediaStream* pStream) {
 
       mCurrentExtractor = pSelectedExtrator ? pSelectedExtrator : mCurrentExtractor;
 
-      ListExtractor extractors;
+      mCurrentExtractors.clear();
 
-      extractors.push_front(mCurrentExtractor);
+      mCurrentExtractors.push_front(mCurrentExtractor);
 
-      if (isExtractorChanged || extractors.size() > 1)  //?
+      if (isExtractorChanged || mCurrentExtractors.size() > 1)  //?
       {
         list<int> trackIDs;
-        for (auto& it : extractors) {
+        for (auto& it : mCurrentExtractors) {
           trackIDs.push_back(it->GetTrackNumber());
         }
         // READERMANAGER::GetInstance()->RemoveTrackFromPacketQueue(trackIDs);
       }
+      if (isTimed)
+      {
+          int32_t stream_frame_rate = streamInfo->framerate_num / streamInfo->framerate_den;
+          uint32_t sampleNumPerSeg = pStream->GetSegmentDuration() * stream_frame_rate;
+          m_prevTimedTracksMap.insert(make_pair(static_cast<uint64_t>(((pStream->GetSegmentNumber() - 1) * sampleNumPerSeg)), mCurrentExtractor->GetCurrentTracksMap()));
+      }
+      }
+  }
+  return ret;
+}
 
-      ret = pStream->UpdateEnabledExtractors(extractors);
+int OmafExtractorTracksSelector::UpdateEnabledTracks(OmafMediaStream* pStream)
+{
+  DashStreamInfo *streamInfo = pStream->GetStreamInfo();
+  int ret = ERROR_NONE;
+  if (streamInfo->stream_type == MediaType_Video)
+  {
+    ret = pStream->UpdateEnabledExtractors(mCurrentExtractors);
   }
   else if (streamInfo->stream_type == MediaType_Audio)
   {
-      ret = pStream->EnableAllAudioTracks();
+    ret = pStream->EnableAllAudioTracks();
   }
-
   return ret;
 }
 
@@ -120,7 +136,7 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
     previousPose = mPose;
 
     mPose = mPoseHistory.front();
-    mPoseHistory.pop_front();
+    // mPoseHistory.pop_front();
 
     if (!mPose) {
       return nullptr;
@@ -130,7 +146,7 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
   }
 
   // won't get viewport if pose hasn't changed
-  if (previousPose && mPose && !IsDifferentPose(previousPose, mPose) && historySize > 1 && !mUsePrediction) {
+  if (previousPose && mPose && !IsDifferentPose(previousPose, mPose) && historySize > 1 && mPose->pts > 0 && !mUsePrediction) {
     OMAF_LOG(LOG_INFO, "pose hasn't changed!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
@@ -162,7 +178,7 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
 #endif
   }
 
-  if (previousPose != mPose) SAFE_DELETE(previousPose);
+  // if (previousPose != mPose) SAFE_DELETE(previousPose);
 
   return selectedExtractor;
 }
@@ -354,14 +370,14 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   {
     std::lock_guard<std::mutex> lock(mMutex);
     mPose = mPoseHistory.front();
-    mPoseHistory.pop_front();
+    // mPoseHistory.pop_front();
     if (!mPose) {
       return extractors;
     }
     historySize = mPoseHistory.size();
   }
   // won't get viewport if pose hasn't changed
-  if (previousPose && mPose && !IsDifferentPose(previousPose, mPose) && historySize > 1) {
+  if (previousPose && mPose && !IsDifferentPose(previousPose, mPose) && historySize > 1 && mPose->pts > 0) {
     OMAF_LOG(LOG_INFO, "pose hasn't changed!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
@@ -369,7 +385,7 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
     tracepoint(mthq_tp_provider, T2_detect_pose_change, 0);
 #endif
 #endif
-    SAFE_DELETE(previousPose);
+    // SAFE_DELETE(previousPose);
     return extractors;
   }
   // if viewport changed, then predict viewport using pose history.
@@ -427,7 +443,7 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   {
     SAFE_DELETE(pre_angle.second);
   }
-  SAFE_DELETE(previousPose);
+  // SAFE_DELETE(previousPose);
   SAFE_DELETE(predictPose);
   predict_angles.clear();
   return extractors;

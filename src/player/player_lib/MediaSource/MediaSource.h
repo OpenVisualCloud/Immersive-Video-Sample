@@ -265,7 +265,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, RENDER_EOS if reach EOS
     //!
-    virtual RenderStatus UpdateFrames(uint64_t pts) = 0;
+    virtual RenderStatus UpdateFrames(uint64_t pts, int64_t *corr_pts) = 0;
 
     //! \brief get isAllValid
     //!

@@ -508,9 +508,8 @@ OutputSurface* VideoDecoder_hw::GetOutputSurface(uint64_t pts)
     return mDecCtx->mOutputSurface;
 }
 
-DecodedFrame* VideoDecoder_hw::GetFrame(uint64_t pts)
+RenderStatus VideoDecoder_hw::GetFrame(uint64_t pts, DecodedFrame *&frame)
 {
-    DecodedFrame* frame = NULL;
     bool waitFlag = false;
     while(mDecCtx->get_size_of_frame() > 0){
         frame = mDecCtx->get_front_of_frame();
@@ -526,7 +525,7 @@ DecodedFrame* VideoDecoder_hw::GetFrame(uint64_t pts)
             ANDROID_LOGD("Need to wait frame to match current pts! frame->pts %d, pts is %d, video id is %d ", frame->pts, pts, mVideoId);
             frame = NULL;
             waitFlag = true;
-            break;
+            return RENDER_WAIT;
         }
         // drop over time frame.
         frame = mDecCtx->pop_frame();
@@ -543,7 +542,9 @@ DecodedFrame* VideoDecoder_hw::GetFrame(uint64_t pts)
         m_status = STATUS_IDLE;
         ANDROID_LOGD("decoder status is set to idle!");
     }
-    return frame;
+
+    if (frame == nullptr) return RENDER_NO_FRAME;
+    else return RENDER_STATUS_OK;
 }
 
 void VideoDecoder_hw::Pending()
@@ -553,7 +554,7 @@ void VideoDecoder_hw::Pending()
     m_status = STATUS_PENDING;
 }
 
-RenderStatus VideoDecoder_hw::UpdateFrame(uint64_t pts)
+RenderStatus VideoDecoder_hw::UpdateFrame(uint64_t pts, int64_t *corr_pts)
 {
     DecodedFrame* frame = GetFrame(pts);
     if(NULL==frame)
