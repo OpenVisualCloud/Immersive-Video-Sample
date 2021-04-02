@@ -62,6 +62,8 @@ HevcVideoStream::HevcVideoStream()
     m_360scvpHandle = NULL;
     m_naluParser = NULL;
     m_isEOS = false;
+    m_lastKeyFramePTS = 0;
+    m_gopSize = 0;
 }
 
 HevcVideoStream::HevcVideoStream(const HevcVideoStream& src)
@@ -593,6 +595,15 @@ int32_t HevcVideoStream::AddFrameInfo(FrameBSInfo *frameInfo)
     newFrameInfo->dataSize = frameInfo->dataSize;
     newFrameInfo->pts = frameInfo->pts;
     newFrameInfo->isKeyFrame = frameInfo->isKeyFrame;
+
+    if (m_gopSize == 0 && newFrameInfo->isKeyFrame) {
+        if (m_lastKeyFramePTS != 0) {
+            m_gopSize = (uint32_t)(newFrameInfo->pts - m_lastKeyFramePTS);
+        }
+        else {
+            m_lastKeyFramePTS = newFrameInfo->pts;
+        }
+    }
 
     std::lock_guard<std::mutex> lock(m_mutex);
     m_frameInfoList.push_back(newFrameInfo);

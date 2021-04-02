@@ -97,6 +97,14 @@ public:
     virtual uint16_t GetSrcHeight() = 0;
 
     //!
+    //! \brief  Get gop size of the video stream
+    //!
+    //! \return uint64_t
+    //!         the gop size of the video stream
+    //!
+    virtual uint32_t GetGopSize() = 0;
+
+    //!
     //! \brief  Get the tiles number in row in video frame
     //!
     //! \return uint8_t
