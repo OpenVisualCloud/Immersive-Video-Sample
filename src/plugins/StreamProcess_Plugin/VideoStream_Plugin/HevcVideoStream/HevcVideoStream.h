@@ -100,6 +100,14 @@ public:
     uint16_t GetSrcHeight() { return m_height; };
 
     //!
+    //! \brief  Get gop size of the video stream
+    //!
+    //! \return uint64_t
+    //!         the gop size of the video stream
+    //!
+    uint32_t GetGopSize() { return m_gopSize; };
+
+    //!
     //! \brief  Get the tiles number in row in video frame
     //!
     //! \return uint8_t
@@ -393,6 +401,8 @@ private:
     uint64_t                  m_bitRate;          //!< the bit rate of the video stream
     bool                      m_isEOS;            //!< the EOS status of the video stream
     std::mutex                m_mutex;            //!< thread mutex for frame information list
+    uint32_t                  m_gopSize;          //!< gop size of the video stream
+    uint64_t                  m_lastKeyFramePTS;  //!< last key frame pts of the video stream
 };
 
 extern "C" VideoStream* Create();
