@@ -150,10 +150,11 @@ RenderStatus MediaPlayer_Linux::Play()
     uint64_t prevLastTime = 0;
     uint64_t deltaTime = 0;
     uint64_t renderCount = 0; // record render times
+    int64_t  correctCount = 0;
     uint64_t start = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     bool quitFlag = false;
     uint64_t needDropFrames = 0;
-    uint64_t accumTimeDelay = 0;
+    int64_t accumTimeDelay = 0;
     do
     {
         HeadPose *pose = new HeadPose;
@@ -181,15 +182,19 @@ RenderStatus MediaPlayer_Linux::Play()
                 if (accumTimeDelay > renderInterval)
                 {
                     needDropFrames = round(float(accumTimeDelay) / renderInterval);
-                    accumTimeDelay = 0;
+                    accumTimeDelay -= needDropFrames * renderInterval;
                 }
                 LOG(INFO)<<"=======interval>INTERVAL========"<<interval - renderInterval<<" and needDropFrames is:" << needDropFrames<< std::endl;
             }
             prevLastTime = lastTime;
             lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
             deltaTime = lastTime - prevLastTime < renderInterval ? 0 : lastTime - prevLastTime - renderInterval;
-            RenderStatus renderStatus = m_renderManager->Render(renderCount);
+            RenderStatus renderStatus = m_renderManager->Render(renderCount, &correctCount);
             LOG(INFO)<<"render count is"<<renderCount<<endl;
+            if (correctCount > renderCount) {//fifo size control
+                renderCount = correctCount;
+                LOG(INFO) << "correct count is " << correctCount << endl;
+            }
 #ifdef _USE_TRACE_
             //trace
             tracepoint(mthq_tp_provider, T13_render_time, renderCount);

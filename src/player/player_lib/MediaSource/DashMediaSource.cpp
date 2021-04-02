@@ -128,6 +128,11 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   pCtxDashStreaming->omaf_params.synchronizer_params.segment_range_size = 20;  // 20
   pCtxDashStreaming->omaf_params.max_decode_width = renderConfig.maxVideoDecodeWidth;
   pCtxDashStreaming->omaf_params.max_decode_height = renderConfig.maxVideoDecodeHeight;
+  pCtxDashStreaming->omaf_params.enable_in_time_viewport_update = renderConfig.enableInTimeViewportUpdate;
+  pCtxDashStreaming->omaf_params.max_response_times_in_seg = renderConfig.maxResponseTimesInOneSeg;
+  pCtxDashStreaming->omaf_params.max_catchup_width = renderConfig.maxCatchupWidth;
+  pCtxDashStreaming->omaf_params.max_catchup_height = renderConfig.maxCatchupHeight;
+
   PluginDef def;
   def.pluginLibPath = renderConfig.pathof360SCVPPlugin;
   pCtxDashStreaming->plugin_def = def;
@@ -190,11 +195,12 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
     // ANDROID_LOGD("dash media source : set surface at i : %d surface is %p", m_nativeSurface[i].first, m_nativeSurface[i].second);
     m_DecoderManager->SetSurface(i, m_nativeSurface[i].first, m_nativeSurface[i].second);
   }
+#endif
   DecodeInfo decode_info;
   decode_info.frameRate_den = mediaInfo.stream_info[0].framerate_den;
   decode_info.frameRate_num = mediaInfo.stream_info[0].framerate_num;
+  decode_info.segment_duration = mediaInfo.stream_info[0].segmentDuration;
   m_DecoderManager->SetDecodeInfo(decode_info);
-#endif
   RenderStatus ret = m_DecoderManager->Initialize(m_rsFactory);
   if (RENDER_STATUS_OK != ret) {
     LOG(INFO) << "m_DecoderManager::Initialize failed" << std::endl;
@@ -366,20 +372,26 @@ void DashMediaSource::ProcessVideoPacket() {
     return;
   }
   currentWaitTime = 0;
-  if (dashPkt[0].bEOS) {
+  if (dashPkt[0].bEOS && !dashPkt[0].bCatchup) {
     m_status = STATUS_STOPPED;
   }
-  LOG(INFO) << "Get packet has done! and pts is " << dashPkt[0].pts << std::endl;
+  for (uint32_t i = 0; i < dashPktNum; i++) {
+    LOG(INFO) << "Get packet has done! and pts is " << dashPkt[i].pts  << " video id " << dashPkt[i].videoID << std::endl;
+  }
+  if (!dashPkt[0].bCatchup) {
 #ifndef _ANDROID_OS_
 #ifdef _USE_TRACE_
   // trace
   tracepoint(mthq_tp_provider, T8_get_packet, dashPkt[0].pts);
 #endif
 #endif
+  }
   if (m_needStreamDumped && !m_dumpedFile.empty()) {
     for (uint32_t i = 0; i < dashPktNum; i++)
     {
-      fwrite(dashPkt[i].buf, 1, dashPkt[i].size, m_dumpedFile[i]);
+      if (!dashPkt[i].bCatchup) {
+        fwrite(dashPkt[i].buf, 1, dashPkt[i].size, m_dumpedFile[i]);
+      }
     }
   }
 #if !TEST_GET_PACKET_ONLY
@@ -420,10 +432,10 @@ void DashMediaSource::Run() {
   }
 }
 
-RenderStatus DashMediaSource::UpdateFrames(uint64_t pts) {
+RenderStatus DashMediaSource::UpdateFrames(uint64_t pts, int64_t *corr_pts) {
   if (NULL == m_DecoderManager) return RENDER_NO_MATCHED_DECODER;
 
-  RenderStatus ret = m_DecoderManager->UpdateVideoFrames(pts);
+  RenderStatus ret = m_DecoderManager->UpdateVideoFrames(pts, corr_pts);
 
   if (RENDER_STATUS_OK != ret) {
     LOG(INFO) << "DashMediaSource::UpdateFrames failed with code:" << ret << std::endl;

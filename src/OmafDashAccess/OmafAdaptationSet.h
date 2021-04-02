@@ -101,6 +101,10 @@ class OmafAdaptationSet {
   //!
   int DownloadSegment();
 
+  //! \brief  Download Segment for assigned tracks .
+  //!
+  int DownloadAssignedSegment(uint32_t trackID, uint32_t segID);
+
   //!
   //! \brief  Select representation from
   //!
@@ -164,6 +168,7 @@ class OmafAdaptationSet {
   uint64_t GetSegmentDuration() { return mSegmentDuration; };
   uint32_t GetStartNumber() { return mStartNumber; };
   std::string GetRepresentationId() { return mRepresentation->GetId(); };
+  uint32_t GetGopSize() { return mGopSize; };
   QualityRank GetRepresentationQualityRanking() {
     try {
       int rank = stoi(mRepresentation->GetQualityRanking());
@@ -246,6 +251,7 @@ class OmafAdaptationSet {
   int mStartNumber;                  //<! the first number of segment after getting
                                      //<! mpd which is used to get first segment for downloading
   int mActiveSegNum;                 //<! the segment are being processed
+  int mStartSegNum;                  //<! the real start segment num
   int mSegNum;                       //<! the segment count
   bool m_bMain;                      //<! whether this AdaptationSet is Main or not. each stream
                                      //<! has one main AdaptationSet
@@ -263,6 +269,7 @@ class OmafAdaptationSet {
   bool mEnable;                     //<! is Adaptation Set enabled
   bool mReEnable;                   //<! flag for Adaption Set is re-enabled
   std::list<bool> mEnableRecord;    //<! record the last 3 enable changes
+  uint32_t mGopSize;                //<! gop size of stream
 
   std::shared_ptr<OmafReaderManager> omaf_reader_mgr_;
   bool mIsExtractorTrack;

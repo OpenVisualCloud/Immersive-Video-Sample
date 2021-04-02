@@ -60,7 +60,7 @@ public:
      //!
      //! \brief  udpate frame to destination with the callback class FrameHandler
      //!
-     virtual RenderStatus UpdateFrame(uint64_t pts){return RENDER_STATUS_OK;};
+     virtual RenderStatus UpdateFrame(uint64_t pts, int64_t *corr_pts){return RENDER_STATUS_OK;};
 
      //!
      //! \brief  send a coded packet to decoder

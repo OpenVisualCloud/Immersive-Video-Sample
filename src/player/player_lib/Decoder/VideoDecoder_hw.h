@@ -240,7 +240,7 @@ public:
      //!
      //! \brief  udpate frame to destination with the callback class FrameHandler
      //!
-     virtual RenderStatus UpdateFrame(uint64_t pts);
+     virtual RenderStatus UpdateFrame(uint64_t pts, int64_t *corr_pts);
 
      //!
      //! \brief
@@ -290,7 +290,7 @@ private:
      //!
      //! \brief  get frame from decoded frame list according to pts.
      //!
-     DecodedFrame* GetFrame(uint64_t pts);
+     RenderStatus GetFrame(uint64_t pts, DecodedFrame *&frame);
 
      OutputSurface* GetOutputSurface(uint64_t pts);
 

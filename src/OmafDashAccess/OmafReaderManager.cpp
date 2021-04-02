@@ -127,18 +127,20 @@ class OmafSegmentNode : public VCD::NonCopyable {
 
  public:
   OmafSegmentNode(std::shared_ptr<OmafReaderManager> mgr, OmafDashMode mode, ProjectionFormat projFmt, std::shared_ptr<OmafReader> reader,
-                  std::shared_ptr<OmafSegment> segment, size_t depends_size = 0, bool isExtractor = false)
+                  std::shared_ptr<OmafSegment> segment, size_t depends_size = 0, bool isExtractor = false, bool isCatchup = false)
       : omaf_reader_mgr_(mgr),
         mode_(mode),
         projection_fmt_(projFmt),
         reader_(reader),
         segment_(segment),
         depends_size_(depends_size),
-        bExtractor_(isExtractor) {}
+        bExtractor_(isExtractor),
+        bCatchup_(isCatchup) {}
 
   virtual ~OmafSegmentNode() {
     OMAF_LOG(LOG_INFO, "Release the segment node %s packet size=%lld\n", to_string().c_str(), media_packets_.size());
     // relase packet
+    std::lock_guard<std::mutex> lock(packet_mutex_);
     while (media_packets_.size()) {
       auto p = media_packets_.front();
       if (p) {
@@ -155,6 +157,7 @@ class OmafSegmentNode : public VCD::NonCopyable {
 
   // int getPacket(std::unique_ptr<MediaPacket> &pPacket, bool needParams) noexcept;
   int getPacket(MediaPacket *&pPacket, bool requireParams) noexcept;
+  int getPacketWithPTS(MediaPacket *&pPacket, bool requireParams, uint64_t pts) noexcept;
   int packetQueueSize(void) const noexcept { return media_packets_.size(); }
   std::string to_string() const noexcept {
     std::stringstream ss;
@@ -195,12 +198,14 @@ class OmafSegmentNode : public VCD::NonCopyable {
     return 0;
   }
   uint64_t getPTS() {
+    std::lock_guard<std::mutex> lock(packet_mutex_);
     if (media_packets_.size()) {
       return media_packets_.front()->GetPTS();
     }
     return 0;
   }
   void clearPacketByPTS(uint64_t pts) {
+    std::lock_guard<std::mutex> lock(packet_mutex_);
     while (media_packets_.size()) {
       auto &packet = media_packets_.front();
       if (packet && (packet->GetPTS() >= pts)) {
@@ -230,6 +235,8 @@ class OmafSegmentNode : public VCD::NonCopyable {
   }
   size_t dependsSize() const noexcept { return depends_size_; }
   bool isExtractor() const noexcept { return bExtractor_; }
+  bool isCatchup() const noexcept { return bCatchup_; }
+  OmafDashMode GetMode() const noexcept { return mode_; }
   bool isReady() const noexcept;
   size_t GetSamplesNum() { return samples_num_; };
 
@@ -310,12 +317,15 @@ class OmafSegmentNode : public VCD::NonCopyable {
   // packet list
   // std::queue<std::unique_ptr<MediaPacket::Ptr>> media_packets_;
   std::queue<MediaPacket *> media_packets_;
+  std::mutex packet_mutex_;
 
   // OmafPacketParams::Ptr packet_params;
 
   const size_t depends_size_ = 0;
 
   const bool bExtractor_ = false;
+
+  const bool bCatchup_ = false;
 
   size_t samples_num_ = 0;
 };
@@ -432,7 +442,7 @@ OMAF_STATUS OmafReaderManager::OpenLocalInitSegment(std::shared_ptr<OmafSegment>
   }
 }
 
-OMAF_STATUS OmafReaderManager::OpenSegment(std::shared_ptr<OmafSegment> pSeg, bool isExtracotr) noexcept {
+OMAF_STATUS OmafReaderManager::OpenSegment(std::shared_ptr<OmafSegment> pSeg, bool isExtracotr, bool isCatchup) noexcept {
   try {
     size_t depends_size = 0;
     auto d_it = initSegId_depends_map_.find(pSeg->GetInitSegID());
@@ -444,8 +454,11 @@ OMAF_STATUS OmafReaderManager::OpenSegment(std::shared_ptr<OmafSegment> pSeg, bo
       this->normalSegmentStateChange(std::move(segment), state);
     });
 
-    OmafSegmentNode::Ptr new_node = std::make_shared<OmafSegmentNode>(shared_from_this(), work_params_.mode_, work_params_.proj_fmt_, reader_,
-                                                                      std::move(pSeg), depends_size, isExtracotr);
+    OmafDashMode work_mode = work_params_.mode_;
+    if (isCatchup) work_mode = OmafDashMode::LATER_BINDING;
+
+    OmafSegmentNode::Ptr new_node = std::make_shared<OmafSegmentNode>(shared_from_this(), work_mode, work_params_.proj_fmt_, reader_,
+                                                                      std::move(pSeg), depends_size, isExtracotr, isCatchup);
     {
       std::unique_lock<std::mutex> lock(segment_opening_mutex_);
 
@@ -524,7 +537,6 @@ OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPa
     OMAF_STATUS ret = ERROR_NONE;
 
     bool bpacket_readed = false;
-
     {
       std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
 
@@ -572,11 +584,11 @@ OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPa
     // 2. sync timeline point for outside reading
     // drop all dashset whose timeline point is less than timeline point
     if (timeline_point_ != -1) {
-      OMAF_LOG(LOG_INFO, "To clear the timeline point < %ld\n", timeline_point_);
-      clearOlderSegmentSet(timeline_point_);
+      OMAF_LOG(LOG_INFO, "To clear the timeline point < %ld\n", timeline_point_ - 1);
+      clearOlderSegmentSet(timeline_point_ - 1);
       std::lock_guard<std::mutex> lock(segment_parsed_mutex_);
       std::list<OmafSegmentNodeTimedSet>::iterator it = segment_parsed_list_.begin();
-      while (it != segment_parsed_list_.end() && it->timeline_point_ < timeline_point_) {
+      while (it != segment_parsed_list_.end() && it->timeline_point_ < timeline_point_ - 1) {
         it = segment_parsed_list_.erase(it);  // 'it' will move to next when calling erase
       }
     }
@@ -592,24 +604,24 @@ OMAF_STATUS OmafReaderManager::GetNextPacketWithPTS(uint32_t trackID, uint64_t p
     OMAF_STATUS ret = ERROR_NONE;
 
     bool bpacket_readed = false;
-
     {
       std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
 
       // 1. read the required packet
       for (auto &nodeset : segment_parsed_list_) {//loop on different timeline
+        uint32_t sample_size = GetSamplesNumPerSegmentForTimeLine(1);
+        if (sample_size != 0 && nodeset.timeline_point_ == (int64_t)(pts / sample_size + 1)) {
         std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
         while (it != nodeset.segment_nodes_.end()) { //loop on different node (track)
           auto &node = *it;
-          //OMAF_LOG(LOG_INFO, "Require trackid=%u, node trackid=%u\n", trackID, node->getTrackId());
+          // OMAF_LOG(LOG_INFO, "Require trackid=%u, node trackid=%u\n", trackID, node->getTrackId());
           if (node->getTrackId() == trackID) {
-            ret = node->getPacket(pPacket, requireParams);
+            // OMAF_LOG(LOG_INFO, "PACKET Get packet with pts %lld, track id %d\n", node->getPTS(), trackID);
+            ret = node->getPacketWithPTS(pPacket, requireParams, pts);
             if (ret == ERROR_NONE) {
-              if (pPacket->GetPTS() == pts)
-              {
-                bpacket_readed = true;
-                timeline_point_ = node->getTimelinePoint();
-              }
+              // OMAF_LOG(LOG_INFO, "PACKET Get correct packet with pts %lld, track id %d\n", pts, trackID);
+              bpacket_readed = true;
+              timeline_point_ = node->getTimelinePoint();
             }
 
             if (0 == node->packetQueueSize()) {
@@ -625,6 +637,7 @@ OMAF_STATUS OmafReaderManager::GetNextPacketWithPTS(uint32_t trackID, uint64_t p
         {
           break;
         }
+      }
       }
     }
     if (!bpacket_readed) {
@@ -643,11 +656,11 @@ OMAF_STATUS OmafReaderManager::GetNextPacketWithPTS(uint32_t trackID, uint64_t p
     // 2. sync timeline point for outside reading
     // drop all dashset whose timeline point is less than timeline point
     if (timeline_point_ != -1) {
-      OMAF_LOG(LOG_INFO, "To clear the timeline point < %ld\n", timeline_point_);
-      clearOlderSegmentSet(timeline_point_);
+      OMAF_LOG(LOG_INFO, "To clear the timeline point < %ld\n", timeline_point_ - 1);
+      clearOlderSegmentSet(timeline_point_ - 1);
       std::lock_guard<std::mutex> lock(segment_parsed_mutex_);
       std::list<OmafSegmentNodeTimedSet>::iterator it = segment_parsed_list_.begin();
-      while (it != segment_parsed_list_.end() && it->timeline_point_ < timeline_point_) {
+      while (it != segment_parsed_list_.end() && it->timeline_point_ < timeline_point_ - 1) {
         it = segment_parsed_list_.erase(it);  // 'it' will move to next when calling erase
       }
     }
@@ -757,7 +770,7 @@ uint64_t OmafReaderManager::GetOldestPacketPTSForTrack(int trackId) {
     std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
     for (auto &nodeset : segment_parsed_list_) {
       for (auto &node : nodeset.segment_nodes_) {
-        if (node->getTrackId() == static_cast<uint32_t>(trackId)) {
+        if (node->getTrackId() == static_cast<uint32_t>(trackId) && !node->isCatchup()) {
           //return node->getPTS();
           if (!findPTS)
           {
@@ -786,7 +799,26 @@ void OmafReaderManager::RemoveOutdatedPacketForTrack(int trackId, uint64_t currP
     std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
     for (auto &nodeset : segment_parsed_list_) {
       for (auto &node : nodeset.segment_nodes_) {
-        if (node->getTrackId() == static_cast<uint32_t>(trackId)) {
+        if (node->getTrackId() == static_cast<uint32_t>(trackId) && !node->isCatchup()) {
+          node->clearPacketByPTS(currPTS);
+        }
+      }
+    }
+  } catch (const std::exception &ex) {
+    OMAF_LOG(LOG_ERROR, "Failed to read packet size for trackid=%d, ex: %s\n", trackId, ex.what());
+  }
+}
+
+void OmafReaderManager::RemoveOutdatedCatchupPacketForTrack(int trackId, uint64_t currPTS) {
+  try {
+    std::unique_lock<std::mutex> lock(segment_parsed_mutex_);
+    for (auto &nodeset : segment_parsed_list_) {//for timeline
+      uint64_t sample_num = GetSamplesNumPerSegmentForTimeLine(1);
+      if (sample_num == 0) return;
+      int64_t currtl = currPTS / sample_num + 1;
+      if (nodeset.timeline_point_ != currtl) continue;//only delete the current timeline catchup packets
+      for (auto &node : nodeset.segment_nodes_) {
+        if (node->getTrackId() == static_cast<uint32_t>(trackId) && node->isCatchup()) {
           node->clearPacketByPTS(currPTS);
         }
       }
@@ -993,7 +1025,7 @@ void OmafReaderManager::normalSegmentStateChange(std::shared_ptr<OmafSegment> se
     {
       std::lock_guard<std::mutex> lock(segment_opened_mutex_);
       bool new_timeline_point = true;
-      if (work_params_.mode_ == OmafDashMode::EXTRACTOR) {
+      if (opened_dash_node->GetMode() == OmafDashMode::EXTRACTOR) {
         // this is a dash node built from extractor
         // build depends based on extractor
         if (opened_dash_node->isExtractor()) {
@@ -1119,6 +1151,7 @@ void OmafReaderManager::threadRunner() noexcept {
 
       // 2. parse the ready segment/dash_node
       const int64_t timeline_point = ready_dash_node->getTimelinePoint();
+      // if (ready_dash_node->isCatchup()) OMAF_LOG(LOG_INFO, "Catch up node found! timeline is %lld, track id %d\n", timeline_point, ready_dash_node->getTrackId());
       //OMAF_LOG(LOG_INFO, "Get ready segment! timeline=%lld\n", timeline_point);
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
@@ -1126,6 +1159,7 @@ void OmafReaderManager::threadRunner() noexcept {
 #endif
 #endif
       OMAF_STATUS ret = ready_dash_node->parse();
+      // if (ready_dash_node->isCatchup()) OMAF_LOG(LOG_INFO, "Catch up node parsed! timeline is %lld, track id %d\n", timeline_point, ready_dash_node->getTrackId());
 
       if (ready_dash_node->getMediaType() == MediaType_Video)
       {
@@ -1151,6 +1185,8 @@ void OmafReaderManager::threadRunner() noexcept {
         bool new_timeline_point = true;
         for (auto &nodeset : segment_parsed_list_) {
           if (nodeset.timeline_point_ == timeline_point) {
+            // if (ready_dash_node->isCatchup())
+            // LOG(INFO) << "Push catch up parsed node PTS " << nodeset.timeline_point_ << " with track id " << ready_dash_node->getTrackId() << " into parsed list" << endl;
             nodeset.segment_nodes_.push_back(std::move(ready_dash_node));
             new_timeline_point = false;
             break;
@@ -1160,6 +1196,8 @@ void OmafReaderManager::threadRunner() noexcept {
           OmafSegmentNodeTimedSet nodeset;
           nodeset.timeline_point_ = timeline_point;
           nodeset.create_time_ = std::chrono::steady_clock::now();
+          // if (ready_dash_node->isCatchup())
+          //   LOG(INFO) << "Push catch up parsed node PTS " << nodeset.timeline_point_ << " with track id " << ready_dash_node->getTrackId() << " into parsed list" << endl;
           nodeset.segment_nodes_.push_back(std::move(ready_dash_node));
           segment_parsed_list_.emplace_back(nodeset);
         }
@@ -1192,7 +1230,7 @@ OmafSegmentNode::Ptr OmafReaderManager::findReadySegmentNode() noexcept {
       while (it != nodeset.segment_nodes_.end()) {
         auto &node = *it;
         if (node->isReady()) {
-          if (work_params_.mode_ == OmafDashMode::EXTRACTOR) {
+          if (node->GetMode() == OmafDashMode::EXTRACTOR) {
             if (node->isExtractor()) {
               ready_dash_node = std::move(node);
             }
@@ -1279,7 +1317,7 @@ void OmafReaderManager::clearOlderSegmentSet(int64_t timeline_point) noexcept {
 // FIXME, dims and vps/sps/pps may not in the same sample
 int OmafPacketParams::init(std::shared_ptr<OmafReader> reader, uint32_t reader_trackId, uint32_t sampleId) noexcept {
   try {
-    // 1. read width and heigh
+    // 1. read width and height
     OMAF_STATUS ret = reader->getDims(reader_trackId, sampleId, width_, height_);
     if (ret) {
       OMAF_LOG(LOG_ERROR, "Failed to get sample dims !\n");
@@ -1595,6 +1633,7 @@ int OmafSegmentNode::removeSegmentStream(std::shared_ptr<OmafReader> reader) noe
 // int OmafSegmentNode::getPacket(std::unique_ptr<MediaPacket> &pPacket, bool needParams) {
 int OmafSegmentNode::getPacket(MediaPacket *&pPacket, bool requireParams) noexcept {
   try {
+    std::lock_guard<std::mutex> lock(packet_mutex_);
     if (media_packets_.size() <= 0) {
       OMAF_LOG(LOG_INFO, "There is no packets\n");
       return ERROR_NULL_PACKET;
@@ -1615,6 +1654,58 @@ int OmafSegmentNode::getPacket(MediaPacket *&pPacket, bool requireParams) noexce
         pPacket->SetSPSLen(packet_params->sps_.size());
         pPacket->SetPPSLen(packet_params->pps_.size());
         pPacket->SetVideoHeaderSize(packet_params->params_.size());
+        pPacket->SetCatchupFlag(this->bCatchup_);
+      }
+    }
+    else if (pPacket->GetMediaType() == MediaType_Audio)
+    {
+      if (requireParams) {
+        pPacket->InsertADTSHdr();
+      }
+    }
+
+    return ERROR_NONE;
+  } catch (const std::exception &ex) {
+    OMAF_LOG(LOG_ERROR, "Exception when read the frame! ex: %s\n", ex.what());
+    return ERROR_INVALID;
+  }
+}
+
+int OmafSegmentNode::getPacketWithPTS(MediaPacket *&pPacket, bool requireParams, uint64_t pts) noexcept {
+  try {
+    std::lock_guard<std::mutex> lock(packet_mutex_);
+    if (media_packets_.size() <= 0) {
+      OMAF_LOG(LOG_INFO, "There is no packets\n");
+      return ERROR_NULL_PACKET;
+    }
+
+    int64_t pkt_pts = -1;
+
+    do {
+      if (media_packets_.size() > 0) {
+        pPacket = media_packets_.front();
+        pkt_pts = pPacket->GetPTS();
+        media_packets_.pop();
+      }
+      else {
+        usleep(5000);
+      }
+    } while (pkt_pts < (int64_t)pts);
+
+    if (pPacket->GetMediaType() == MediaType_Video)
+    {
+      if (requireParams) {
+        auto packet_params = (bExtractor_ == true) ? getPacketParamsForExtractors() : getPacketParams();
+        if (packet_params.get() == nullptr || !packet_params->binit_) {
+          OMAF_LOG(LOG_ERROR, "Invalid VPS/SPS/PPS in getting packet !\n");
+          return OMAF_ERROR_INVALID_DATA;
+        }
+        pPacket->InsertParams(packet_params->params_);
+        pPacket->SetVPSLen(packet_params->vps_.size());
+        pPacket->SetSPSLen(packet_params->sps_.size());
+        pPacket->SetPPSLen(packet_params->pps_.size());
+        pPacket->SetVideoHeaderSize(packet_params->params_.size());
+        pPacket->SetCatchupFlag(this->bCatchup_);
       }
     }
     else if (pPacket->GetMediaType() == MediaType_Audio)
@@ -1785,7 +1876,10 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
 
         packet->SetRealSize(packet_size);
         packet->SetSegID(track_info->sampleProperties[sample].segmentId);
-
+        packet->SetCatchupFlag(bCatchup_);
+        if (bCatchup_)
+          OMAF_LOG(LOG_INFO, "Generate a catch up packet with PTS %lld, for track id %d\n", packet->GetPTS(), segment_->GetTrackId());
+        std::lock_guard<std::mutex> lock(packet_mutex_);
         media_packets_.push(packet);
         OMAF_LOG(LOG_INFO, "Push packet with PTS %ld for track %d\n", packet->GetPTS(), segment_->GetTrackId());
       }
@@ -1842,6 +1936,7 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
 
         packet->SetSegID(track_info->sampleProperties[sample].segmentId);
 
+        std::lock_guard<std::mutex> lock(packet_mutex_);
         media_packets_.push(packet);
         OMAF_LOG(LOG_INFO, "Push packet with PTS %ld for audio track %d\n", packet->GetPTS(), segment_->GetTrackId());
         OMAF_LOG(LOG_INFO, "Add packet size %d\n", packet_size);

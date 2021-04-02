@@ -343,7 +343,6 @@ int32_t ERPRenderTarget::findQuality(RegionData *regionInfo, RectangularRegionWi
             tile_info.packedPicWidth  = regionInfo->GetRegionWisePacking()->packedPicWidth;
             tile_info.packedPicHeight = regionInfo->GetRegionWisePacking()->packedPicHeight;
             tile_info.video_id        = video_id;
-
             std::pair<uint32_t, uint32_t> coord(tile_info.projRegLeft / tile_info.projRegWidth, tile_info.projRegTop / tile_info.projRegHeight);
             int32_t source_idx = 0;
             int32_t quality = findQuality(regionInfo, regionInfo->GetRegionWisePacking()->rectRegionPacking[idx], source_idx);

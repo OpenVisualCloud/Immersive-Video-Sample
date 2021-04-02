@@ -39,8 +39,6 @@
 #include "../../../utils/Threadable.h"
 #include <list>
 
-#define MAX_FRAME_SIZE 60
-
 VCD_NS_BEGIN
 
 typedef struct PacketInfo{
@@ -49,6 +47,7 @@ typedef struct PacketInfo{
      bool      bEOS;
      uint64_t  pts;
      uint32_t  video_id;
+     bool      bCatchup;
 }PacketInfo;
 
 typedef struct DecodedFrame{
@@ -60,6 +59,7 @@ typedef struct DecodedFrame{
      SourceResolution   *qtyResolution;
      uint32_t           video_id;
      bool               bEOS;
+     bool               bCatchup;
 }DecodedFrame;
 
 typedef struct FrameData{
@@ -70,6 +70,7 @@ typedef struct FrameData{
      bool               bCodecChange;
      uint32_t           width;
      uint32_t           height;
+     bool               bCatchup;
 }FrameData;
 
 class DecoderContext
@@ -270,7 +271,7 @@ public:
      //!
      //! \brief  udpate frame to destination with the callback class FrameHandler
      //!
-     virtual RenderStatus UpdateFrame(uint64_t pts);
+     virtual RenderStatus UpdateFrame(uint64_t pts, int64_t *corr_pts);
 
      //!
      //! \brief
@@ -320,7 +321,7 @@ private:
      //!
      //! \brief  get frame from decoded frame list according to pts.
      //!
-     DecodedFrame* GetFrame(uint64_t pts);
+     RenderStatus GetFrame(uint64_t pts, DecodedFrame *&frame, int64_t *corr_pts);
 
      RenderStatus SetRegionInfo(struct RegionInfo *regionInfo, int32_t nQuality, SourceResolution *qtyRes);
 

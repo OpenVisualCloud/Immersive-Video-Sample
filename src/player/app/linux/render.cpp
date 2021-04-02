@@ -268,6 +268,33 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       }
     }
 
+    // in time viewport update option
+    XMLElement *viewportUpdate = info->FirstChildElement("intimeviewportupdate");
+    if (viewportUpdate) {
+      const XMLAttribute *enable = viewportUpdate->FirstAttribute();
+      if (NULL == enable) return RENDER_ERROR;
+      renderConfig.enableInTimeViewportUpdate = atoi(enable->Value());
+      renderConfig.maxResponseTimesInOneSeg = 0;
+      renderConfig.maxCatchupWidth = 0;
+      renderConfig.maxCatchupHeight = 0;
+      XMLElement* responseElem = viewportUpdate->FirstChildElement("responseTimesInOneSeg");
+      XMLElement* maxWidthElem = viewportUpdate->FirstChildElement("maxCatchupWidth");
+      XMLElement* maxHeightElem = viewportUpdate->FirstChildElement("maxCatchupHeight");
+      if (renderConfig.enableInTimeViewportUpdate) {
+        if (responseElem != NULL)
+        {
+          renderConfig.maxResponseTimesInOneSeg = atoi(responseElem->GetText());
+          renderConfig.maxCatchupWidth = atoi(maxWidthElem->GetText());
+          renderConfig.maxCatchupHeight = atoi(maxHeightElem->GetText());
+        }
+        else
+        {
+          LOG(ERROR) << "Invalid params in viewport update!" << endl;
+          return RENDER_ERROR;
+        }
+      }
+    }
+
     // PathOf360SCVPPlugins
     XMLElement* pathof360SCVPPlugin = info->FirstChildElement("PathOf360SCVPPlugins");
     if (pathof360SCVPPlugin != NULL)

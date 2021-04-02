@@ -91,7 +91,7 @@ bool IsSelectionChanged(TracksMap selection1, TracksMap selection2)
     return isChanged;
 }
 
-int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
+int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream, bool isTimed)
 {
     DashStreamInfo *streamInfo = pStream->GetStreamInfo();
     int ret = ERROR_NONE;
@@ -141,7 +141,8 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
         {
             selectedTracks = GetTileTracksByPose(pStream);
         }
-
+        {
+        std::lock_guard<std::mutex> lock(mCurrentMutex);
         if (selectedTracks.empty() && m_currentTracks.empty())
             return ERROR_INVALID;
 
@@ -155,15 +156,42 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream)
             }
             m_currentTracks = selectedTracks;
         }
-        selectedTracks.clear();
+        if (isTimed)
+        {
+            int32_t stream_frame_rate = streamInfo->framerate_num / streamInfo->framerate_den;
+            uint32_t sampleNumPerSeg = pStream->GetSegmentDuration() * stream_frame_rate;
+            uint64_t curr_pts = static_cast<uint64_t>(((pStream->GetSegmentNumber() - 1) * sampleNumPerSeg));
+            // if existed, replace it
+            if (m_prevTimedTracksMap.find(curr_pts) != m_prevTimedTracksMap.end())
+            {
+                m_prevTimedTracksMap[curr_pts] = m_currentTracks;
+            }
+            else
+            {
+                m_prevTimedTracksMap.insert(make_pair(curr_pts, m_currentTracks));
+            }
 
+            OMAF_LOG(LOG_INFO, "Insert segid %lld tracks into previous map!\n", curr_pts);
+        }
+        }
+        selectedTracks.clear();
+    }
+
+    return ret;
+}
+
+int OmafTileTracksSelector::UpdateEnabledTracks(OmafMediaStream* pStream)
+{
+    DashStreamInfo *streamInfo = pStream->GetStreamInfo();
+    int ret = ERROR_NONE;
+    if (streamInfo->stream_type == MediaType_Video)
+    {
         ret = pStream->UpdateEnabledTileTracks(m_currentTracks);
     }
     else if (streamInfo->stream_type == MediaType_Audio)
     {
         ret = pStream->EnableAllAudioTracks();
     }
-
     return ret;
 }
 
@@ -193,7 +221,7 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
         previousPose = mPose;
 
         mPose = mPoseHistory.front();
-        mPoseHistory.pop_front();
+        // mPoseHistory.pop_front();
 
         if(!mPose)
         {
@@ -204,7 +232,7 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
     }
 
     // won't get viewport if pose hasn't changed
-    if( previousPose && mPose && !IsPoseChanged( previousPose, mPose ) && historySize > 1 && !mUsePrediction)
+    if( previousPose && mPose && !IsPoseChanged( previousPose, mPose ) && historySize > 1 && mPose->pts > 0 && !mUsePrediction)
     {
         OMAF_LOG(LOG_INFO,"pose hasn't changed!\n");
 #ifndef _ANDROID_NDK_OPTION_
@@ -238,8 +266,8 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
 #endif
     }
 
-    if (previousPose != mPose)
-        SAFE_DELETE(previousPose);
+    // if (previousPose != mPose)
+    //     SAFE_DELETE(previousPose);
 
     return selectedTracks;
 }
@@ -453,7 +481,7 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
         previousPose = mPose;
 
         mPose = mPoseHistory.front();
-        mPoseHistory.pop_front();
+        // mPoseHistory.pop_front();
 
         if(!mPose)
         {
@@ -464,7 +492,7 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
 
     }
     // won't get viewport if pose hasn't changed
-    if( previousPose && mPose && !IsPoseChanged( previousPose, mPose ) && historySize > 1)
+    if( previousPose && mPose && !IsPoseChanged( previousPose, mPose ) && historySize > 1 && mPose->pts > 0)
     {
         OMAF_LOG(LOG_INFO,"pose hasn't changed!\n");
 #ifndef _ANDROID_NDK_OPTION_
@@ -473,7 +501,7 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
         tracepoint(mthq_tp_provider, T2_detect_pose_change, 0);
 #endif
 #endif
-        SAFE_DELETE(previousPose);
+        // SAFE_DELETE(previousPose);
         return predictedTracks;
     }
     // if viewport changed, then predict viewport using pose history.
@@ -534,7 +562,7 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
 #endif
         }
     }
-    SAFE_DELETE(previousPose);
+    // SAFE_DELETE(previousPose);
     SAFE_DELARRAY(predictPose);
     predict_angles.clear();
     return predictedTracks;

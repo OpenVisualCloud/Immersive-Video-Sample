@@ -280,6 +280,8 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
     {
         stream->SetEnabledExtractor(false);
     }
+    stream->SetEnableCatchUp(omaf_dash_params_.enable_in_time_viewport_update);
+    stream->SetCatchupThreadNum(omaf_dash_params_.max_response_times_in_seg);
     stream->InitStream(type);
     listStream.push_back(stream);
   }

@@ -35,6 +35,8 @@
 #endif
 #endif
 
+#define DEBUG_MODE 0
+
 VCD_OMAF_BEGIN
 
 OmafMediaStream::OmafMediaStream() {
@@ -45,16 +47,23 @@ OmafMediaStream::OmafMediaStream() {
   mStreamID = 0;
   m_hasTileTracksSelected = false;
   m_stitchThread = 0;
+  m_catchupStitchThread = 0;
   m_enabledExtractor = true;
   m_stitch = NULL;
   m_needParams = false;
   m_currFrameIdx = 0;
   m_status = STATUS_UNKNOWN;
+  m_catchup_status = STATUS_UNKNOWN;
   m_activeSegmentNum = 0;
   m_tileSelTimeLine  = 0;
+  m_threadInput = nullptr;
+  m_catchupMergedPackets.clear();
+  m_enableCatchup = false;
+  m_gopSize = 0;
 }
 
 OmafMediaStream::~OmafMediaStream() {
+  OMAF_LOG(LOG_INFO, "Delete omaf media stream!\n");
   SAFE_DELETE(m_pStreamInfo->codec);
   SAFE_DELETE(m_pStreamInfo->mime_type);
   if (m_pStreamInfo->stream_type == MediaType_Video)
@@ -89,6 +98,11 @@ OmafMediaStream::~OmafMediaStream() {
     m_stitchThread = 0;
   }
 
+  if (m_catchupStitchThread) {
+    pthread_join(m_catchupStitchThread, NULL);
+    m_catchupStitchThread = 0;
+  }
+
   if (m_mergedPackets.size()) {
     std::list<std::list<MediaPacket*>>::iterator it;
     for (it = m_mergedPackets.begin(); it != m_mergedPackets.end();) {
@@ -106,8 +120,11 @@ OmafMediaStream::~OmafMediaStream() {
     }
     m_mergedPackets.clear();
   }
+  m_catchupMergedPackets.clear();
   SAFE_DELETE(m_stitch);
   m_sources.clear();
+  SAFE_DELETE(m_threadInput);
+  StopAllCatchupThreads();
 }
 
 void OmafMediaStream::SetOmafReaderMgr(std::shared_ptr<OmafReaderManager> mgr) noexcept {
@@ -133,6 +150,10 @@ void OmafMediaStream::Close() {
     if (m_stitchThread) {
       pthread_join(m_stitchThread, NULL);
       m_stitchThread = 0;
+    }
+    if (m_catchupStitchThread) {
+      pthread_join(m_catchupStitchThread, NULL);
+      m_catchupStitchThread = 0;
     }
   }
 }
@@ -164,14 +185,19 @@ int OmafMediaStream::InitStream(std::string type) {
   } else {
     return ERROR_INVALID;
   }
+
+  UpdateStreamInfo();
+
   if (type == "video")
   {
       if (!m_enabledExtractor && !m_stitch) {
         m_stitch = new OmafTilesStitch();
         if (!m_stitch) return OMAF_ERROR_NULL_PTR;
       }
+      if (m_enableCatchup) {
+        CreateCatchupThreadPool();
+      }
   }
-  UpdateStreamInfo();
 
   if (type == "video")
   {
@@ -214,6 +240,7 @@ OMAF_STATUS OmafMediaStream::UpdateStreamInfo() {
       m_pStreamInfo->channel_bytes = ai.channel_bytes;
       m_pStreamInfo->channels = ai.channels;
       m_pStreamInfo->sample_rate = ai.sample_rate;
+      m_gopSize = mMainAdaptationSet->GetGopSize();
 
       int sourceNumber = mExtratorAdaptationSet->GetQualityRanking()->srqr_quality_infos.size();
       m_pStreamInfo->source_number = sourceNumber;
@@ -234,6 +261,12 @@ OMAF_STATUS OmafMediaStream::UpdateStreamInfo() {
         mMediaAdaptationSet.erase(itAS);
       }
     }
+    // for catch up
+    SourceInfo oneSrc;
+    oneSrc.qualityRanking = m_pStreamInfo->source_resolution[0].qualityRanking;
+    oneSrc.width = m_pStreamInfo->source_resolution[0].width;
+    oneSrc.height = m_pStreamInfo->source_resolution[0].height;
+    m_sources.insert(make_pair(oneSrc.qualityRanking, oneSrc));
   } else {
     if ((m_pStreamInfo->stream_type == MediaType_Video) && (NULL != mMainAdaptationSet)) {
       VideoInfo vi = mMainAdaptationSet->GetVideoInfo();
@@ -252,6 +285,7 @@ OMAF_STATUS OmafMediaStream::UpdateStreamInfo() {
       m_pStreamInfo->mFpt = (int32_t)mMainAdaptationSet->GetFramePackingType();
       m_pStreamInfo->mProjFormat = (int32_t)mMainAdaptationSet->GetProjectionFormat();
       m_pStreamInfo->segmentDuration = mMainAdaptationSet->GetSegmentDuration();
+      m_gopSize = mMainAdaptationSet->GetGopSize();
 
       //m_pStreamInfo->channel_bytes = ai.channel_bytes;
       //m_pStreamInfo->channels = ai.channels;
@@ -508,6 +542,25 @@ int OmafMediaStream::DownloadSegments() {
   return ret;
 }
 
+int OmafMediaStream::DownloadAssignedSegments(std::map<uint32_t, TracksMap> additional_tracks)
+{
+  int ret = ERROR_NONE;
+  std::lock_guard<std::mutex> lock(mMutex);
+  for (auto it = mMediaAdaptationSet.begin(); it != mMediaAdaptationSet.end(); it++)
+  {
+    for (auto track : additional_tracks) // key: segID - value: first=trackID second=AS
+    {
+      TracksMap tsMap = track.second;
+      if (tsMap.find(it->first) != tsMap.end())
+      {
+        OmafAdaptationSet* pAS = (OmafAdaptationSet*)(tsMap[it->first]);
+        pAS->DownloadAssignedSegment(it->first, track.first);
+      }
+    }
+  }
+  return ret;
+}
+
 int OmafMediaStream::SeekTo(int seg_num) {
   int ret = ERROR_NONE;
   std::lock_guard<std::mutex> lock(mMutex);
@@ -664,6 +717,159 @@ static bool IsSelectionChanged(TracksMap selection1, TracksMap selection2) {
   return isChanged;
 }
 
+int32_t OmafMediaStream::GetSelectedPacketsWithPTS(uint64_t targetPTS, pair<uint64_t, TracksMap> targetedTracks, map<uint32_t, MediaPacket*> &selectedPackets)
+{
+  int ret = ERROR_NONE;
+  TracksMap tkMap = targetedTracks.second;
+  if (tkMap.size() == 0)
+  {
+    OMAF_LOG(LOG_ERROR, "TargetedTracks for timeline %lld, size is zero!\n", targetedTracks.first);
+    return ERROR_NO_VALUE;
+  }
+
+  for (auto track : tkMap)
+  {
+    bool needParams = true;//for catch up tile tracks, need params must be true.
+    MediaPacket *onePacket = nullptr;
+    //1. get packet with PTS from reader manager
+    if (omaf_reader_mgr_ == nullptr)
+    {
+      OMAF_LOG(LOG_ERROR, "Omaf Reader Manager is null!\n");
+      return ERROR_NULL_PTR;
+    }
+    // LOG(INFO) << "Target pts is " << targetPTS << " track id " << track.first << endl;
+    ret = omaf_reader_mgr_->GetNextPacketWithPTS(track.first, targetPTS, onePacket, needParams);
+
+    uint32_t wait_time_get_packet = 0;
+    uint32_t wait_timeout_get_packet = 100;
+    while (((onePacket && onePacket->GetEOS()) || (ret == ERROR_NULL_PACKET)) && (wait_time_get_packet < wait_timeout_get_packet) && m_catchup_status != STATUS_STOPPED)
+    {
+      if (!m_pStreamInfo) return ERROR_NULL_PTR;
+      usleep((m_pStreamInfo->segmentDuration * 1000000 / 2) / wait_timeout_get_packet);
+      wait_time_get_packet++;
+      //OMAF_LOG(LOG_INFO, "To get packet %ld for track %d\n", currFramePTS, trackID);
+      ret = omaf_reader_mgr_->GetNextPacketWithPTS(track.first, targetPTS, onePacket, needParams);
+    }
+
+    //2. process packet(successful or outdated)
+    if (ret == ERROR_NONE)//Successfully get packet and insert into selected packets
+    {
+      selectedPackets.insert(make_pair(track.first, onePacket));
+      // OMAF_LOG(LOG_INFO, "Insert one packet with track id %d, PTS %lld to selected packets!\n", track.first, targetPTS);
+    }
+    else if (ret == ERROR_NULL_PACKET)//Outdated
+    {
+      // OMAF_LOG(LOG_INFO, "Found outdated track %d, PTS %lld and remove the corresponding list and task!\n", track.first, targetPTS);
+      return ret;
+    }
+  }
+  return ERROR_NONE;
+}
+
+int32_t OmafMediaStream::GetCatchupMergedPackets(map<uint32_t, MediaPacket*> selectedPackets, std::list<MediaPacket*> &catchupMergedPacket, OmafTilesStitch *stitch, bool bFirst)
+{
+  if (!bFirst) {
+    int ret = stitch->UpdateSelectedTiles(selectedPackets, m_needParams);
+    if (ret != ERROR_NONE)
+    {
+      OMAF_LOG(LOG_ERROR, "Failed to update selected tiles!\n");
+
+      for (auto pkt = selectedPackets.begin(); pkt != selectedPackets.end(); pkt++)
+      {
+        SAFE_DELETE(pkt->second);
+      }
+      selectedPackets.clear();
+    }
+  }
+  //Need to verify
+  for (auto itAS = selectedPackets.begin(); itAS != selectedPackets.end(); itAS++)
+  {
+      omaf_reader_mgr_->RemoveOutdatedCatchupPacketForTrack(itAS->first, itAS->second->GetPTS());
+  }
+
+  catchupMergedPacket = stitch->GetTilesMergedPackets();
+
+  return ERROR_NONE;
+}
+
+int32_t OmafMediaStream::TaskRun(OmafTilesStitch *stitch, std::pair<uint64_t, std::map<int, OmafAdaptationSet*>> task, uint32_t video_id, uint64_t triggerPTS) {
+
+    int ret = ERROR_NONE;
+    //1. get catch up targeted tile tracks and start pts to stitch
+    pair<uint64_t, TracksMap> targetedTracks = task;
+
+    uint64_t startPTSofCurrSeg = targetedTracks.first;
+
+    uint64_t optStartPTS = startPTSofCurrSeg;
+    //1.1 choose opt pts
+    if (m_gopSize > 0 && triggerPTS > startPTSofCurrSeg && triggerPTS - startPTSofCurrSeg > m_gopSize - 10) {
+      optStartPTS = startPTSofCurrSeg + m_gopSize;
+      OMAF_LOG(LOG_INFO, "Start pts from %lld, video id %d\n", optStartPTS, video_id);
+    }
+
+    //2. get samples num (indicate that segment parsed)
+    uint32_t samplesNumPerSeg = GetSegmentDuration() * GetStreamInfo()->framerate_num / GetStreamInfo()->framerate_den;
+    for (uint64_t currPTS = optStartPTS; currPTS < startPTSofCurrSeg + samplesNumPerSeg; currPTS++)
+    {
+      std::map<uint32_t, MediaPacket*> selectedPackets;
+      //2. get selected packets with corresponding PTS
+      ret = GetSelectedPacketsWithPTS(currPTS, targetedTracks, selectedPackets);
+      if (ret == ERROR_NULL_PACKET)//Once found outdated packets, stop task run and skip outdated packets.
+      {
+        OMAF_LOG(LOG_INFO, "Outdated! Failed to get selected packets!\n");
+        return ret;
+      }
+      if (selectedPackets.empty())
+      {
+        OMAF_LOG(LOG_INFO, "Selected packets with PTS %lld is empty!\n", currPTS);
+        return ERROR_NULL_PACKET;
+      }
+
+      //3. do stitch initialize and get merged packet
+      bool bFirst = false;
+      if (!stitch->IsInitialized())
+      {
+        OMAF_LOG(LOG_INFO, "Start to initialize catchup stitch class!\n");
+        ret = stitch->Initialize(selectedPackets, true, (VCD::OMAF::ProjectionFormat)(m_pStreamInfo->mProjFormat), m_sources);
+        if (ret != ERROR_NONE)
+        {
+          OMAF_LOG(LOG_ERROR, "Failed to initialize catch up stitch class!\n");
+
+          for (auto pkt = selectedPackets.begin(); pkt != selectedPackets.end(); pkt++)
+          {
+            SAFE_DELETE(pkt->second);
+          }
+          selectedPackets.clear();
+          return ret;
+        }
+        bFirst = true;
+      }
+
+      std::list<MediaPacket*> catchupMergedPacket;
+      ret = GetCatchupMergedPackets(selectedPackets, catchupMergedPacket, stitch, bFirst);
+      if (ret != ERROR_NONE || catchupMergedPacket.size() == 0)
+      {
+        OMAF_LOG(LOG_ERROR, "Failed to get merged packet at PTS %lld\n", currPTS);
+        continue;
+      }
+      if (currPTS == startPTSofCurrSeg + samplesNumPerSeg - 1) {//last frame set eos
+        for (auto pkt = catchupMergedPacket.begin(); pkt != catchupMergedPacket.end(); pkt++) {
+          MediaPacket *mpkt = *pkt;
+          mpkt->SetEOS(true);
+          // LOG(INFO) << "Set pts " << currPTS << " eos!" << endl;
+        }
+      }
+      //4. push to m_catchupMergedpacket list<pair<uint64_t, MediaPacket*>>
+      std::lock_guard<std::mutex> lock(m_catchupPacketsMutex);
+      m_catchupMergedPackets[video_id].push_back(catchupMergedPacket);
+      OMAF_LOG(LOG_INFO, "Push one merged catch up packet at PTS %lld\n", currPTS);
+    }
+
+    // DONE remove successfully processed catchup tile tracks.
+
+    return ERROR_NONE;
+}
+
 int32_t OmafMediaStream::TilesStitching() {
   if (!m_stitch) {
     OMAF_LOG(LOG_ERROR, "Tiles stitching handle hasn't been created !\n");
@@ -723,8 +929,9 @@ int32_t OmafMediaStream::TilesStitching() {
     OMAF_LOG(LOG_INFO, "Begin new seg %d and samples num per seg %ld\n", beginNewSeg, samplesNumPerSeg);
     uint32_t currWaitTimes = 0;
     std::map<int, OmafAdaptationSet*> updatedSelectedAS;
-
-    if (prevSelectedAS.empty() || beginNewSeg)
+    //1. determine selectedAS according to m_selectedTileTracks
+    // total seg num is zero in live mode
+    if ((m_totalSegNum == 0 || currSegTimeLine <= m_totalSegNum) && (prevSelectedAS.empty() || beginNewSeg))
     {
         if (prevSelectedAS.empty())
         {
@@ -805,6 +1012,7 @@ int32_t OmafMediaStream::TilesStitching() {
     prevSelectedAS = mapSelectedAS;
     bool hasPktOutdated = false;
     std::map<uint32_t, MediaPacket*> selectedPackets;
+    //2. get selectedPackets according to selectedAS
     for (auto as_it = mapSelectedAS.begin(); as_it != mapSelectedAS.end(); as_it++) {
       OmafAdaptationSet* pAS = (OmafAdaptationSet*)(as_it->second);
       int32_t trackID = pAS->GetTrackNumber();
@@ -816,6 +1024,8 @@ int32_t OmafMediaStream::TilesStitching() {
       // ret = READERMANAGER::GetInstance()->GetNextFrame(trackID, onePacket, m_needParams);
       if (as_it != mapSelectedAS.begin()) {
         uint64_t pts = omaf_reader_mgr_->GetOldestPacketPTSForTrack(trackID);
+        //2.1 abnormal situation process
+        //2.1.1 skip frames to next segment, update currFramePTS
         if (pts > currFramePTS) {
           OMAF_LOG(LOG_INFO, "For current PTS %ld :\n", currFramePTS);
           OMAF_LOG(LOG_INFO, "Outdated PTS %ld from track %d\n", pts, trackID);
@@ -836,7 +1046,7 @@ int32_t OmafMediaStream::TilesStitching() {
           beginNewSeg = true;
           skipFrames = true;
           break;
-        } else if (pts < currFramePTS) {
+        } else if (pts < currFramePTS) {//2.1.2 frame has not come yet and wait for a certain time
 
           if (pts == 0)
           {
@@ -933,7 +1143,7 @@ int32_t OmafMediaStream::TilesStitching() {
           }
         }
       }
-
+      //2.2 get one packet according to PTS
       ret = omaf_reader_mgr_->GetNextPacketWithPTS(trackID, currFramePTS, onePacket, m_needParams);
 
       OMAF_LOG(LOG_INFO, "Get next packet !\n");
@@ -946,7 +1156,7 @@ int32_t OmafMediaStream::TilesStitching() {
         //OMAF_LOG(LOG_INFO, "To get packet %ld for track %d\n", currFramePTS, trackID);
         ret = omaf_reader_mgr_->GetNextPacketWithPTS(trackID, currFramePTS, onePacket, m_needParams);
       }
-
+      //2.2.1 get packet successfully and insert to selectedPackets
       if (ret == ERROR_NONE) {
         if (onePacket->GetEOS()) {
           OMAF_LOG(LOG_INFO, "EOS has been gotten !\n");
@@ -971,7 +1181,7 @@ int32_t OmafMediaStream::TilesStitching() {
         break;
       }
     }
-
+    //2.2.2 Once outdated, clear selectedPackets and remove from segment_parsed_list_
     if (hasPktOutdated) {
       std::list<MediaPacket *> allPackets;
       for (auto it1 = selectedPackets.begin(); it1 != selectedPackets.end();) {
@@ -1024,8 +1234,8 @@ int32_t OmafMediaStream::TilesStitching() {
       }
 
       continue;
-    }
-
+    } // end of hasPktOutdated
+    //3. start to stitch packets on currFramePTS
     OMAF_LOG(LOG_INFO, "Start to stitch packets! and pts is %ld\n", currFramePTS);
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
@@ -1087,6 +1297,7 @@ int32_t OmafMediaStream::TilesStitching() {
       }
     } else {
       if (!isEOS && m_status != STATUS_STOPPED) {
+        //3.1 update m_selectedTiles
         ret = m_stitch->UpdateSelectedTiles(selectedPackets, m_needParams);
         if (ret) {
           OMAF_LOG(LOG_ERROR, "Failed to update media packets for tiles merge !\n");
@@ -1119,8 +1330,8 @@ int32_t OmafMediaStream::TilesStitching() {
         }
       }
     }
-
-    std::list<MediaPacket*> mergedPackets;
+    //3.2 get mergedPackets according to m_selectedTiles
+    std::list<MediaPacket*> mergedPackets;//same PTS with different qualities
 
     if (isEOS) {
       std::map<uint32_t, MediaPacket*>::iterator itPacket1;
@@ -1170,17 +1381,219 @@ int32_t OmafMediaStream::TilesStitching() {
 
 std::list<MediaPacket*> OmafMediaStream::GetOutTilesMergedPackets() {
   std::list<MediaPacket*> outPackets;
+  {
   std::lock_guard<std::mutex> lock(m_packetsMutex);
   if (m_mergedPackets.size()) {
-    outPackets = m_mergedPackets.front();
+    outPackets.splice(outPackets.end(), m_mergedPackets.front());
     m_mergedPackets.pop_front();
+  }
+  }
+  {
+  std::lock_guard<std::mutex> lock(m_catchupPacketsMutex);
+  for (auto catchup_packet = m_catchupMergedPackets.begin(); catchup_packet != m_catchupMergedPackets.end(); catchup_packet++)
+  {
+    if (catchup_packet->second.size()) {
+      OMAF_LOG(LOG_INFO, "Pop catch up merged packets at video id %d, PTS %lld\n", catchup_packet->first, catchup_packet->second.front().front()->GetPTS());
+#if (DEBUG_MODE == 1)
+      if (catchup_packet->second.front().front() != nullptr && catchup_packet->second.front().front()->IsCatchup())
+      {
+        if (catchup_packet->first == OFFSET_VIDEO_ID_FOR_CATCHUP)
+          fwrite(catchup_packet->second.front().front()->Payload(), 1, catchup_packet->second.front().front()->Size(), catchupPackets1);
+        if (catchup_packet->first == OFFSET_VIDEO_ID_FOR_CATCHUP + 1)
+          fwrite(catchup_packet->second.front().front()->Payload(), 1, catchup_packet->second.front().front()->Size(), catchupPackets2);
+      }
+#endif
+      for (auto iter = catchup_packet->second.front().begin(); iter != catchup_packet->second.front().end(); iter++)
+      {
+        MediaPacket* pkt = *iter;
+        pkt->SetVideoID(catchup_packet->first);
+        // LOG(INFO) << "Set pkt video id " << catchup_packet->first << endl;
+      }
+      outPackets.splice(outPackets.end(), catchup_packet->second.front());
+      catchup_packet->second.pop_front();
+    }
+  }
   }
   // correct the video id
   uint32_t video_id = 0;
   for (auto packet : outPackets) {
-    packet->SetVideoID(video_id++);
+    if (!packet->IsCatchup())
+    {
+      packet->SetVideoID(video_id++);
+    }
   }
   return outPackets;
+}
+
+int OmafMediaStream::CreateCatchupThreadPool()
+{
+  m_catchupThreadsList.resize(m_catchupThreadNum);
+  for (size_t i = 0; i < m_catchupThreadsList.size(); i++)
+  {
+    m_threadInput = new ThreadInputs();
+    if (!m_threadInput) return ERROR_NULL_PTR;
+    m_threadInput->pThis = this;
+    StitchThread *stitchThread = new StitchThread();
+    if (!stitchThread) return ERROR_NULL_PTR;
+    stitchThread->status = THREAD_IDLE;
+    stitchThread->catchupStitch = new OmafTilesStitch();
+    if (!stitchThread->catchupStitch) return ERROR_NULL_PTR;
+    stitchThread->catchupStitch->SetMaxStitchResolution(2560, 2560);
+    stitchThread->pts = -1;
+    stitchThread->id = 0;
+    m_threadInput->thread = stitchThread;
+    m_catchupThreadsList[i] = stitchThread;
+    stitchThread->video_id = OFFSET_VIDEO_ID_FOR_CATCHUP + i;
+    pthread_create(&m_catchupThreadsList[i]->id, NULL, CatchupThreadFuncWrapper, m_threadInput);
+    OMAF_LOG(LOG_INFO, "Thread id %lld\n", stitchThread->id);
+  }
+  m_catchup_status = STATUS_RUNNING;
+  return ERROR_NONE;
+}
+
+void* OmafMediaStream::CatchupThreadFuncWrapper(void* input)
+{
+  ThreadInputs* thread_input = (ThreadInputs*)input;
+  OmafMediaStream* pStream = (OmafMediaStream*)thread_input->pThis;
+  void* thread = thread_input->thread;
+  pStream->CatchupThreadFunc(thread);
+  return NULL;
+}
+
+int OmafMediaStream::CatchupThreadFunc(void* thread)
+{
+  StitchThread *pThread = static_cast<StitchThread*>(thread);
+  if (pThread == nullptr)
+  {
+    OMAF_LOG(LOG_ERROR, "thread is nullptr\n");
+    return ERROR_NULL_PTR;
+  }
+  uint32_t wait_times = 0;
+  uint32_t time_out = 100;
+  while (m_catchup_status != STATUS_STOPPED)
+  {
+    std::pair<uint64_t, std::map<int, OmafAdaptationSet*>> task;
+    uint64_t triggerPTS = 0;
+    {
+    std::unique_lock<std::mutex> lock(m_catchupThreadMutex);
+    while(m_catchupTasksList.size() == 0 && m_catchup_status != STATUS_STOPPED)
+    {
+      m_catchupCond.wait(lock);
+    }
+    if (!m_catchupTasksList.empty()) {
+      auto iter = m_catchupTasksList.begin();
+      if (iter != m_catchupTasksList.end())
+      {
+        task = *iter;
+        if ((int64_t)task.first <= pThread->pts)
+        {
+          OMAF_LOG(LOG_WARNING, "Current task with pts %lld can not push into the pthread, pts %lld\n", task.first, pThread->pts);
+          SetThreadIdle(pThread);
+          wait_times++;
+          if (wait_times >= time_out) {
+            wait_times = 0;
+            OMAF_LOG(LOG_INFO, "TIME OUT! Catch up task for pts %lld is dropped!\n", task.first);
+            m_catchupTasksList.pop_front();
+            std::unique_lock<std::mutex> lock(m_catchupPTSMutex);
+            if (!m_catchupTriggerPTSList.empty()) {
+              m_catchupTriggerPTSList.pop_front();
+            }
+          }
+          usleep(1000);
+          continue;
+        }
+      }
+      wait_times = 0;
+      m_catchupTasksList.pop_front();
+      std::unique_lock<std::mutex> lock(m_catchupPTSMutex);
+      if (!m_catchupTriggerPTSList.empty()) {
+        triggerPTS = m_catchupTriggerPTSList.front();
+        m_catchupTriggerPTSList.pop_front();
+      }
+    }
+    }
+
+    SetThreadBusy(pThread);
+    OMAF_LOG(LOG_INFO, "Thread id %lld is busy! task pts %lld\n", pThread->id, task.first);
+
+    TaskRun(pThread->catchupStitch, task, pThread->video_id, triggerPTS);
+    pThread->pts = task.first;
+
+    SetThreadIdle(pThread);
+    OMAF_LOG(LOG_INFO, "Thread id %lld is idle! task pts %lld\n", pThread->id, task.first);
+  }
+  return ERROR_NONE;
+}
+
+int OmafMediaStream::SetThreadIdle(StitchThread *thread)
+{
+  for (uint32_t i = 0; i < m_catchupThreadsList.size(); i++)
+  {
+    if (m_catchupThreadsList[i] != nullptr && m_catchupThreadsList[i]->id == thread->id)
+    {
+      m_catchupThreadsList[i]->status = THREAD_IDLE;
+      OMAF_LOG(LOG_INFO, "Set thread id %lld to idle!\n", thread->id);
+    }
+  }
+  return ERROR_NONE;
+}
+
+int OmafMediaStream::SetThreadBusy(StitchThread *thread)
+{
+  for (uint32_t i = 0; i < m_catchupThreadsList.size(); i++)
+  {
+    if (m_catchupThreadsList[i] != nullptr && m_catchupThreadsList[i]->id == thread->id)
+    {
+      m_catchupThreadsList[i]->status = THREAD_BUSY;
+      OMAF_LOG(LOG_INFO, "Set thread id %lld to idle!\n", thread->id);
+    }
+  }
+  return ERROR_NONE;
+}
+
+int OmafMediaStream::AddCatchupTask(std::pair<uint64_t, std::map<int, OmafAdaptationSet*>> task)
+{
+  std::unique_lock<std::mutex> lock(m_catchupThreadMutex);
+  m_catchupTasksList.push_back(task);
+  OMAF_LOG(LOG_INFO, "Push task: PTS %lld\n", task.first);
+  // for (auto tk : task.second)
+  // {
+  //   OMAF_LOG(LOG_INFO, "%d\n", tk.first);
+  // }
+  m_catchupCond.notify_all();
+  return ERROR_NONE;
+}
+
+int OmafMediaStream::AddCatchupTriggerPTS(uint64_t pts)
+{
+  std::unique_lock<std::mutex> lock(m_catchupPTSMutex);
+  OMAF_LOG(LOG_INFO, "Push trigger pts : %lld\n", pts);
+  m_catchupTriggerPTSList.push_back(pts);
+  return ERROR_NONE;
+}
+
+int OmafMediaStream::GetTaskSize()
+{
+  return m_catchupTasksList.size();
+}
+
+int OmafMediaStream::StopAllCatchupThreads()
+{
+  OMAF_LOG(LOG_INFO, "All stitch thread will be stopped!\n");
+  m_catchup_status = STATUS_STOPPED;
+  m_catchupCond.notify_all();
+  for (size_t i = 0; i < m_catchupThreadsList.size(); i++)
+  {
+    SAFE_DELETE(m_catchupThreadsList[i]->catchupStitch);
+    pthread_join(m_catchupThreadsList[i]->id, NULL);
+    SAFE_DELETE(m_catchupThreadsList[i]);
+  }
+
+  m_catchupThreadsList.clear();
+
+  m_catchupTasksList.clear();
+
+  return ERROR_NONE;
 }
 
 VCD_OMAF_END;

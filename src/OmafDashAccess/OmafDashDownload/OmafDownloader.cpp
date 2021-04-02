@@ -288,12 +288,13 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::open(const SourceParams &ds_params, O
         return ERROR_INVALID;
       }
 
-      if (!task_queue_.empty()) {
-        auto &tail_tasks = task_queue_.back();
-        if (tail_tasks->timeline_point_ >= ds_params.timeline_point_) {
-          OMAF_LOG(LOG_FATAL, "Invalid timeline point happen! < %ld, %ld>\n", tail_tasks->timeline_point_, ds_params.timeline_point_);
-        }
-      }
+      // Since there exists catch up download tasks, remove this condition
+      // if (!task_queue_.empty()) {
+      //   auto &tail_tasks = task_queue_.back();
+      //   if (tail_tasks->timeline_point_ >= ds_params.timeline_point_) {
+      //     OMAF_LOG(LOG_FATAL, "Invalid timeline point happen! < %ld, %ld>\n", tail_tasks->timeline_point_, ds_params.timeline_point_);
+      //   }
+      // }
 
       task_queue_.push_back(tl);
     }

@@ -90,6 +90,11 @@ typedef struct _omafDashParams {
   //for stitch
   uint32_t max_decode_width;
   uint32_t max_decode_height;
+  //for catch up
+  bool enable_in_time_viewport_update;
+  uint32_t max_response_times_in_seg;
+  uint32_t max_catchup_width;
+  uint32_t max_catchup_height;
 } OmafParams;
 
 /*

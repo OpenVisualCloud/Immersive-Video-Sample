@@ -86,9 +86,9 @@ class OmafDashSource : public OmafMediaSource, Threadable {
 
  private:
   //!
-  //! \brief TimedSelect extractors or adaptation set for streams
+  //! \brief Select extractors or adaptation set for streams
   //!
-  int TimedSelectSegements();
+  int SelectSegements(bool isTimed);
 
   //!
   //! \brief
@@ -98,12 +98,22 @@ class OmafDashSource : public OmafMediaSource, Threadable {
   //!
   //! \brief update mpd in dynamic mode
   //!
-  int TimedUpdateMPD();
+  int UpdateMPD();
 
   //!
-  //! \brief Download Segment in dynamic mode
+  //! \brief Download Segment in dynamic/static mode
   //!
-  int TimedDownloadSegment(bool bFirst);
+  int DownloadSegments(bool bFirst);
+
+  //!
+  //! \brief Download Assigned addtional Segment in dynamic/static mode
+  //!
+  int DownloadAssignedSegments(std::map<uint32_t, TracksMap> additional_tracks);
+
+  //!
+  //! \brief  Enable tracks adaptation sets according current selected tracks
+  //!
+  int UpdateEnabledTracks();
 
   //!
   //! \brief run thread for dynamic mpd processing
@@ -115,6 +125,14 @@ class OmafDashSource : public OmafMediaSource, Threadable {
   //!
   void thread_static();
 
+  //!
+  //! \brief run thread for catch-up downloading due to in-time viewport update
+  //!
+  static void* CatchupThreadWrapper(void*);
+
+  std::map<uint32_t, std::map<int, OmafAdaptationSet*>> GetNewTracksFromDownloaded(std::map<uint32_t, std::map<int, OmafAdaptationSet*>> additional_tracks, std::list<pair<uint32_t, int>> downloadedCatchupTracks, map<uint32_t, uint32_t> catchupTimesInSeg);
+
+  void thread_catchup();
   //!
   //! \brief ClearStreams
   //!
@@ -178,6 +196,7 @@ private:
   std::shared_ptr<OmafDashSegmentClient> dash_client_;
   std::shared_ptr<OmafReaderManager> omaf_reader_mgr_;
   bool mIsLocalMedia;
+  pthread_t m_catchupThread; //<! catch up thread ID
 };
 
 VCD_OMAF_END;

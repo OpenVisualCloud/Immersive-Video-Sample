@@ -90,7 +90,7 @@ public:
      //! \return RenderStatus
      //!         RENDER_STATUS_OK if success, else fail reason
      //!
-     RenderStatus UpdateVideoFrame( uint32_t video_id, uint64_t pts );
+     RenderStatus UpdateVideoFrame( uint32_t video_id, uint64_t pts, int64_t *corr_pts );
 
      //!
      //! \brief  reset the decoder when decoding information changes
@@ -101,7 +101,7 @@ public:
      //! \return RenderStatus
      //!         RENDER_STATUS_OK if success, else fail reason
      //!
-     RenderStatus UpdateVideoFrames( uint64_t pts );
+     RenderStatus UpdateVideoFrames( uint64_t pts, int64_t *corr_pts );
 
      void SetSurface(uint32_t video_id, uint32_t tex_id, void* surface)
      {
@@ -153,14 +153,16 @@ public:
 
 private:
      ///Video-relative operations
-     RenderStatus CheckVideoDecoders(DashPacket* packets, uint32_t cnt, uint64_t startPts);
+     RenderStatus CheckVideoDecoders(vector<DashPacket*> packets, std::map<uint32_t, MediaDecoder*> decoderMap, uint32_t cnt, bool isCatchup);
 
 
 private:
     std::map<uint32_t, MediaDecoder*>   m_mapVideoDecoder; //! the map of video decoders
+    std::map<uint32_t, MediaDecoder*>   m_mapCatchupVideoDecoder; //! the map of catch-up video decoders
     std::map<uint32_t, MediaDecoder*>   m_mapAudioDecoder; //! the map of audio decoders
     FrameHandlerFactory*                m_handlerFactory;  //! the frameHandler factory to create frameHandler for each decoder
     ThreadLock                          m_mapDecoderLock;
+    ThreadLock                          m_mapCatchupDecoderLock;
     std::vector<void*>                  m_surfaces;
     std::vector<uint32_t>               m_textures;
     DecodeInfo                          m_decodeInfo;
