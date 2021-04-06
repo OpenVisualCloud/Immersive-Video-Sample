@@ -800,10 +800,15 @@ int32_t OmafMediaStream::TaskRun(OmafTilesStitch *stitch, std::pair<uint64_t, st
 
     uint64_t startPTSofCurrSeg = targetedTracks.first;
 
+    uint32_t thresholdFrameNum = 10;
+
     uint64_t optStartPTS = startPTSofCurrSeg;
     //1.1 choose opt pts
-    if (m_gopSize > 0 && triggerPTS > startPTSofCurrSeg && triggerPTS - startPTSofCurrSeg > m_gopSize - 10) {
-      optStartPTS = startPTSofCurrSeg + m_gopSize;
+    // LOG(INFO) <<"Trigger PTS " << triggerPTS << "Start PTS " << startPTSofCurrSeg << endl;
+    if (m_gopSize > 0 && triggerPTS > startPTSofCurrSeg) {
+      uint32_t offset_num = triggerPTS / m_gopSize;
+      uint32_t remain_pts = triggerPTS % m_gopSize;
+      optStartPTS = remain_pts > m_gopSize - thresholdFrameNum ? (offset_num + 1) * m_gopSize : offset_num * m_gopSize;
       OMAF_LOG(LOG_INFO, "Start pts from %lld, video id %d\n", optStartPTS, video_id);
     }
 
