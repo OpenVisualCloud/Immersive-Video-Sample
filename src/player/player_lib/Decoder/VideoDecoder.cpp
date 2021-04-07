@@ -580,7 +580,7 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts, int64_t *corr_pts)
         LOG(INFO)<<"Frame is empty!"<<endl;
         return ret;
     }
-    if (mVideoId >= 5) LOG(INFO) << "Get frame video id " << mVideoId << ", pts " << pts << endl;
+    if (mVideoId >= OFFSET_VIDEO_ID_FOR_CATCHUP) LOG(INFO) << "Get frame video id " << mVideoId << ", pts " << pts << endl;
     if (frame->bEOS)
     {
         this->SetEOS(true);

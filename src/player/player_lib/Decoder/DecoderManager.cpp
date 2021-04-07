@@ -295,7 +295,7 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts, int64_t *corr_pts 
         else *corr_pts = max_corr_pts;
     }
 
-    if (errorCnt > 0)
+    if (errorCnt == m_mapVideoDecoder.size())
     {
         ret = RENDER_NO_FRAME;
     }
@@ -313,8 +313,6 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts, int64_t *corr_pts 
             it++;
         }
     }
-
-    if (ret != RENDER_STATUS_OK) return ret;
 
     LOG(INFO)<<"Update one frame at:"<<pts<<endl;
 
