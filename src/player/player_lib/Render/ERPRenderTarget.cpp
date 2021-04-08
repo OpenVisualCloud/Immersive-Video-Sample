@@ -50,6 +50,7 @@
 #include "../../../trace/MtHQ_tp.h"
 #endif
 #include "../Common/RegionData.h"
+#include "../Common/DataLog.h"
 
 VCD_NS_BEGIN
 
@@ -143,6 +144,7 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
     static uint64_t start = 0;
     static uint64_t totalChangedTime = 0;
     static uint32_t changedCount = 0;
+    DataLog *data_log = DATALOG::GetInstance();
     for (uint32_t i = 0; i < TilesInViewport.size(); i++)
     {
         std::vector<TileInformation> listBest = mQualityRankingInfo.mapQualitySelection[mQualityRankingInfo.mainQualityRanking];
@@ -152,6 +154,9 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
             if (m_isAllHighQualityInView) // firt time to be blur
             {
                 start = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+                if (data_log != nullptr) {
+                    data_log->SetSwitchStartTime(start);
+                }
                 LOG(INFO)<<"low resolution part occurs! pts is " << pts <<std::endl;
 #ifdef _USE_TRACE_
                 //trace
@@ -164,6 +169,9 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
     if (isAllHighFlag && !m_isAllHighQualityInView) // first time to be clear
     {
         uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+        if (data_log != nullptr) {
+            data_log->SetSwitchEndTime(end);
+        }
         LOG(INFO)<<"T9' All high resolution part! pts is " << pts <<std::endl<<"cost time : "<<(end-start)<<"ms"<<std::endl;
 #ifdef _USE_TRACE_
         //trace

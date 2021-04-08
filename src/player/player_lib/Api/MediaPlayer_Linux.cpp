@@ -34,6 +34,7 @@
 #ifdef _LINUX_OS_
 #include "MediaPlayer_Linux.h"
 #include "../Common/Common.h"
+#include "../Common/DataLog.h"
 #include <stdlib.h>
 #include <unistd.h>
 #include <iostream>
@@ -228,6 +229,11 @@ RenderStatus MediaPlayer_Linux::Play()
     LOG(INFO)<<"----[render frame count]:--- "<<renderCount<<std::endl;
     LOG(INFO)<<"----[actual render fps]:---- "<<renderCount / (float(end - start)/1000)<<std::endl;
     LOG(INFO)<<"-----------------------------"<<std::endl;
+    DataLog *data_log = DATALOG::GetInstance();
+    if (data_log != nullptr) {
+        data_log->PrintSwitchPerformanceInLog();
+        data_log->PrintSwitchPerformanceInFile();
+    }
     return RENDER_STATUS_OK;
 }
 
