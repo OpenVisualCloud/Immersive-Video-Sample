@@ -1218,10 +1218,7 @@ int32_t TstitchStream::getViewPortTiles()
         m_pDownRight[i].faceId = -1;
     }
 
-    if(m_pViewportParam.m_input_geoType == E_SVIDEO_EQUIRECT)
-        ret = genViewport_postprocess(&m_pViewportParam, m_pViewport);
-    else
-        ret = 0;
+    ret = genViewport_postprocess(&m_pViewportParam, m_pViewport);
     if (ret)
     {
         SCVP_LOG(LOG_ERROR, "gen viewport process error!\n");
