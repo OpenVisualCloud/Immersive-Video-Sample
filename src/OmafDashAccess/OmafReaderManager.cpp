@@ -1801,7 +1801,10 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
           return ret;
         }
         packet->SetRwpk(std::move(pRwpk));
-        packet->SetPTS(track_info->sampleProperties.size * (segment_->GetSegID() - 1) + sample_begin + sample);
+        if (reader->GetSegSampleSize() == 0) {
+          reader->SetSegSampleSize(track_info->sampleProperties.size);
+        }
+        packet->SetPTS(reader->GetSegSampleSize() * (segment_->GetSegID() - 1) + sample_begin + sample);
         if ((sample + 1) == sample_end)
         {
             packet->SetSegmentEnded(true);
@@ -1921,7 +1924,10 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
           return ret;
         }
 
-        packet->SetPTS(track_info->sampleProperties.size * (segment_->GetSegID() - 1) + sample_begin + sample);
+        if (reader->GetSegSampleSize() == 0) {
+          reader->SetSegSampleSize(track_info->sampleProperties.size);
+        }
+        packet->SetPTS(reader->GetSegSampleSize() * (segment_->GetSegID() - 1) + sample_begin + sample);
         if ((sample + 1) == sample_end)
         {
             packet->SetSegmentEnded(true);
