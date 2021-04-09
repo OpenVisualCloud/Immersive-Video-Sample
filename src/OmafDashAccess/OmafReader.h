@@ -629,6 +629,14 @@ public:
     //!         map of <initSegmentId, trackId>
     //!
     std::map<int,int> getMapInitTrk() const {return mMapInitTrk;}
+    //!
+    //! \brief  set the segment sample size
+    //!
+    void SetSegSampleSize(uint32_t size) { mSegSampleSize = size; };
+    //!
+    //! \brief  get the segment sample size
+    //!
+    uint32_t GetSegSampleSize() { return mSegSampleSize; };
 
 public:
 
@@ -713,6 +721,7 @@ public:
 
 private:
     std::map<int, int>  mMapInitTrk;           //!< the map of <initSegmentId, trackId>
+    uint32_t mSegSampleSize = 0;               //!< segment sample size
 };
 
 VCD_OMAF_END;
