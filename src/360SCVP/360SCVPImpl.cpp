@@ -1210,13 +1210,13 @@ int TstitchStream::GenerateRwpkInfo(RegionWisePacking *dstRwpk)
         else
         {
             int lowIdx = regionIdx - highTilesNum;
-            rwpk->projRegWidth = lowRes_tile_width;
-            rwpk->projRegHeight = lowRes_tile_height;
-            rwpk->projRegTop = (lowIdx / m_tileWidthCountOri[1]) * lowRes_tile_height;
-            rwpk->projRegLeft = (lowIdx % m_tileWidthCountOri[1]) * lowRes_tile_width;
 
-            rwpk->packedRegWidth = rwpk->projRegWidth;
-            rwpk->packedRegHeight = rwpk->projRegHeight;
+            rwpk->packedRegWidth = lowRes_tile_width;
+            rwpk->packedRegHeight = lowRes_tile_height;
+            rwpk->projRegWidth  = lowRes_tile_width * m_mergeStreamParam.highRes.width / m_mergeStreamParam.lowRes.width;
+            rwpk->projRegHeight = lowRes_tile_height * m_mergeStreamParam.highRes.height / m_mergeStreamParam.lowRes.height;
+            rwpk->projRegTop  = (lowIdx / m_tileWidthCountOri[1] * rwpk->projRegHeight);
+            rwpk->projRegLeft = (lowIdx % m_tileWidthCountOri[1] * rwpk->projRegWidth);
             rwpk->packedRegTop = (lowIdx % m_lrTilesInCol) * lowRes_tile_height;
             rwpk->packedRegLeft = (lowIdx / m_lrTilesInCol) * lowRes_tile_width + highRes_tile_width * m_hrTilesInRow;
 
