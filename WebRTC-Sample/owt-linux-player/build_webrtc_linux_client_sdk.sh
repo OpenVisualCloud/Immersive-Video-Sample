@@ -30,12 +30,12 @@ install_dependencies() {
 
 install_openssl() {
     cd ${DEPS}
+    local SSL_VERSION="1_1_1h"
+    rm -rf openssl* OpenSSL*
 
-    rm -rf openssl-1.1.0l.tar.gz openssl-1.1.0l
-
-    wget https://www.openssl.org/source/openssl-1.1.0l.tar.gz
-    tar -zxvf openssl-1.1.0l.tar.gz
-    cd openssl-1.1.0l
+    wget -c https://github.com/openssl/openssl/archive/OpenSSL_${SSL_VERSION}.tar.gz
+    tar xf OpenSSL_${SSL_VERSION}.tar.gz
+    cd openssl-OpenSSL_${SSL_VERSION}
 
     ./config shared -m64 --prefix=${PREFIX} --openssldir=${PREFIX}
     make -j
