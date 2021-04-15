@@ -86,7 +86,7 @@ ENDIF()
 
 IF(USE_WEBRTC)
   SET(LINK_LIB ${LINK_LIB}
-      owt sioclient_tls ssl crypto boost_system dl)
+      owt sioclient_tls ssl crypto dl)
 ENDIF()
 
 IF(USE_TRACE)
