@@ -24,7 +24,7 @@ if [ "${TARGET}" == "server" ] ; then
     cd build/external/ffmpeg_server
     ../../../FFmpeg/configure --prefix=/usr --libdir=/usr/local/lib \
         --enable-static --enable-shared --enable-gpl --enable-nonfree \
-        --disable-optimizations --disable-vaapi
+        --disable-optimizations --disable-vaapi --disable-filter=erp2cubmap_mdf
     make -j $(nproc)
     sudo make install
 
@@ -32,7 +32,7 @@ elif [ "${TARGET}" == "client" ] ; then
 
     mkdir -p build/external/ffmpeg_client
     cd build/external/ffmpeg_client
-    ../../../FFmpeg/configure --enable-shared
+    ../../../FFmpeg/configure --enable-shared --disable-filter=erp2cubmap_mdf
     make -j $(nproc)
     sudo make install
 
