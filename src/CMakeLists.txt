@@ -39,7 +39,8 @@ IF(${TARGET} STREQUAL "server")
   SET(FFMPEG_FLAG --prefix=/usr --libdir=/usr/lib --enable-static
                   --disable-shared --enable-gpl --enable-nonfree
                   --disable-optimizations --disable-vaapi --enable-libopenhevc
-                  --enable-libDistributedEncoder --enable-libVROmafPacking)
+                  --enable-libDistributedEncoder --enable-libVROmafPacking
+                  --disable-filter=erp2cubmap_mdf)
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/360SCVP)
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/VROmafPacking)
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/plugins/OMAFPacking_Plugin)
