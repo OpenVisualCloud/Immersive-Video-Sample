@@ -129,8 +129,6 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
 
             viewPortWidth = floor((float)(viewPortWidth) / (float)(cTAppConvCfg->m_srd[0].tilewidth) + 0.499) * cTAppConvCfg->m_srd[0].tilewidth;
             viewPortHeightmax = floor((float)(viewPortHeight) / (float)(cTAppConvCfg->m_srd[0].tileheight) + 0.499) * cTAppConvCfg->m_srd[0].tileheight;
-            SCVP_LOG(LOG_INFO, "viewPortWidthMax is %d, viewPortHeightMax is %d\n", viewPortWidth, viewPortHeightmax);
-            SCVP_LOG(LOG_INFO, "tilewidth is %d , tileheight is %d\n", cTAppConvCfg->m_srd[0].tilewidth, cTAppConvCfg->m_srd[0].tileheight);
 
             maxTileNumCol = (viewPortWidth / cTAppConvCfg->m_srd[0].tilewidth + 1);
             if (maxTileNumCol > cTAppConvCfg->m_tileNumCol)
@@ -182,7 +180,6 @@ void* genViewport_Init(generateViewPortParam* pParamGenViewport)
             viewPortHeight = int32_t(pDownRight->y - pUpLeft->y);
             if (viewPortHeightmax < viewPortHeight)
                 viewPortHeightmax = viewPortHeight;
-            SCVP_LOG(LOG_INFO, "viewPortWidthMax = %d, viewPortHeightMax = %d\n", viewPortWidth, viewPortHeightmax);
 
             pUpLeft++;
             pDownRight++;
@@ -511,7 +508,6 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
                         pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
                         pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
                         pOutTileTmp->idx = idx;
-                        SCVP_LOG(LOG_INFO, "final decision is idx %d and face_id %d\n", idx, pOutTileTmp->faceId);
                         pOutTileTmp++;
                     }
                     idx--;
@@ -533,7 +529,6 @@ int32_t genViewport_getTilesInViewport(void* pGenHandle, TileDef* pOutTile)
                         pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
                         pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
                         pOutTileTmp->idx = idx;
-                        SCVP_LOG(LOG_INFO, "final decision is idx %d and face_id %d\n", idx, pOutTileTmp->faceId);
                         pOutTileTmp++;
                     }
                     idx++;
@@ -663,7 +658,6 @@ int32_t genViewport_getTilesInViewportByLegacyWay(void* pGenHandle, TileDef* pOu
                         pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
                         pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
                         pOutTileTmp->idx = idx;
-                        SCVP_LOG(LOG_INFO, "final decision is idx %d and face_id %d\n", idx, pOutTileTmp->faceId);
                         pOutTileTmp++;
                         occupancyNum++;
                     }
@@ -686,7 +680,6 @@ int32_t genViewport_getTilesInViewportByLegacyWay(void* pGenHandle, TileDef* pOu
                         pOutTileTmp->x = cTAppConvCfg->m_srd[idx].x;
                         pOutTileTmp->y = cTAppConvCfg->m_srd[idx].y;
                         pOutTileTmp->idx = idx;
-                        SCVP_LOG(LOG_INFO, "final decision is idx %d and face_id %d\n", idx, pOutTileTmp->faceId);
                         pOutTileTmp++;
                         occupancyNum++;
                     }
@@ -1151,7 +1144,6 @@ int32_t TgenViewport::CalculateViewportBoundaryPoints()
     std::list<SpherePoint> referencePoints;
 
     SCVP_LOG(LOG_INFO, "Yaw is %f and Pitch is %f\n", fYaw, fPitch);
-    SCVP_LOG(LOG_INFO, "vFOV is %f and hFOV is %f\n", vFOV, hFOV);
 
     // starting time
     double dResult;
@@ -1574,7 +1566,7 @@ int32_t  TgenViewport::ERPSelectRegion(short inputWidth, short inputHeight, shor
     }
 
     dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
-    SCVP_LOG(LOG_INFO, "Total Time for ERP tile selection: %f s\n", dResult);
+    SCVP_LOG(LOG_INFO, "Total Time for ERP tile selection: %f ms\n", dResult*1000);
     return 0;
 }
 
@@ -1982,7 +1974,6 @@ int32_t TgenViewport::CubemapGetViewportProjInFace(int32_t faceId, std::list<Sph
         }
     }
     if (pointsInFace.size() == 0) {
-        SCVP_LOG(LOG_INFO, "No reference point in current face %d!\n", faceId);
         return ERROR_NONE;
     }
     else if (pointsInFace.size() == 1) {
@@ -2222,21 +2213,17 @@ int32_t TgenViewport::cubemapSelectRegion()
     int32_t faceNum = 6;
     for (int32_t faceid = 0; faceid < faceNum; faceid++)
     {
-        SCVP_LOG(LOG_INFO, "Face is %d\n", faceid);
         for (uint32_t row = 0; row < m_tileNumRow; row++)
         {
             for (uint32_t col = 0; col < m_tileNumCol; col++)
             {
                 if (pTileInfoTmp->isOccupy) {
-                    SCVP_LOG(LOG_INFO, "Selecte Tile at row %d and col %d\n", row, col);
                     selectedTilesNum++;
                 }
                 pTileInfoTmp++;
             }
         }
     }
-    SCVP_LOG(LOG_INFO, "Total Selected Tile Number is %d\n", selectedTilesNum);
-
     referencePoints.clear();
     dResult = (double)(clock() - lBefore) / CLOCKS_PER_SEC;
     SCVP_LOG(LOG_INFO, "Total Time for Cubemap tile selection: %f ms to find inside tile number is %d\n", dResult*1000, selectedTilesNum);
