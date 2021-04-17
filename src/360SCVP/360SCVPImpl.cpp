@@ -393,7 +393,6 @@ static int32_t tile_faceId_init(param_360SCVP* pParamStitchStream, int32_t* tile
     uint8_t regColId, regRowId;
     int32_t idxInPic = 0;
     int32_t mappedFaceId;
-    SCVP_LOG(LOG_INFO, "highResNumRegions and lowResNumRegions are %d and %d\n", highResNumRegions, lowResNumRegions);
     if ((pParamStitchStream->paramViewPort.paramVideoFP.rows == 2) && (pParamStitchStream->paramViewPort.paramVideoFP.cols == 3)) {
         for (idxInPic = 0; idxInPic < highResNumRegions; idxInPic++) {
             regColId = idxInPic % tileNumCol[0];
@@ -450,7 +449,6 @@ static int32_t tile_localPos_init(param_360SCVP* pParamStitchStream, int32_t* ti
     }
     int32_t highResNumRegions = tileNumCol[0] * tileNumRow[0];
     int32_t lowResNumRegions = tileNumCol[1] * tileNumRow[1];
-    SCVP_LOG(LOG_INFO, "highResNumRegions and lowResNumRegions are %d and %d\n", highResNumRegions, lowResNumRegions);
 
     int32_t tileWidth = pParamStitchStream->paramViewPort.faceWidth / pParamStitchStream->paramViewPort.tileNumCol;
     int32_t tileHeight = pParamStitchStream->paramViewPort.faceHeight / pParamStitchStream->paramViewPort.tileNumRow;
@@ -517,9 +515,6 @@ int32_t TstitchStream::initTileInfo(param_360SCVP* pParamStitchStream)
         SCVP_LOG(LOG_ERROR, "TilesInfo is not allocated!\n");
         return ERROR_NULL_PTR;
     }
-    int32_t highResNumRegions = m_tileWidthCountOri[0] * m_tileHeightCountOri[0];
-    int32_t lowResNumRegions = m_tileWidthCountOri[1] * m_tileHeightCountOri[1];
-    SCVP_LOG(LOG_INFO, "highResNumRegions and lowResNumRegions are %d and %d\n", highResNumRegions, lowResNumRegions);
     tile_faceId_init(pParamStitchStream, m_tileWidthCountOri, m_tileHeightCountOri, m_tilesInfo);
 
     if (pParamStitchStream->paramViewPort.usageType == E_MERGE_AND_VIEWPORT) {
@@ -1184,7 +1179,6 @@ int32_t TstitchStream::feedParamToGenStream(param_360SCVP* pParamStitchStream)
 
             pTmpHigh[idx]->inputBufferLen = (pTmpTile->idx!=0) ? m_pNalInfo[0][pTmpTile->idx].nalLen : m_pNalInfo[0][pTmpTile->idx].nalLen- m_specialDataLen[0];
             pTmpHigh[idx]->pTiledBitstreamBuffer = (pTmpTile->idx != 0) ? m_pNalInfo[0][pTmpTile->idx].pNalStream : m_pNalInfo[0][pTmpTile->idx].pNalStream + m_specialDataLen[0];
-            SCVP_LOG(LOG_INFO, "Get the %d th tile \n", pTmpTile->idx);
             pTmpTile++;
             idx++;
         }
@@ -1199,7 +1193,6 @@ int32_t TstitchStream::feedParamToGenStream(param_360SCVP* pParamStitchStream)
 
             pTmpLow[idx]->inputBufferLen = (idx != 0) ? m_pNalInfo[1][idx].nalLen : m_pNalInfo[1][idx].nalLen - m_specialDataLen[1];
             pTmpLow[idx]->pTiledBitstreamBuffer = (idx != 0) ? m_pNalInfo[1][idx].pNalStream : m_pNalInfo[1][idx].pNalStream + m_specialDataLen[1];
-            SCVP_LOG(LOG_INFO, "Get the %d th tile \n", idx);
             idx++;
         }
     }
