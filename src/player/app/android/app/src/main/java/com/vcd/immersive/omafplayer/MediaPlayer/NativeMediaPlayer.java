@@ -70,6 +70,10 @@ public class NativeMediaPlayer {
         public int minLogLevel;
         public int maxVideoDecodeWidth;
         public int maxVideoDecodeHeight;
+        public boolean enableCatchup;
+        public int responseTimesInOneSeg;
+        public int maxCatchupWidth;
+        public int maxCatchupHeight;
 
         public RenderConfig() {
             windowWidth = 0;
@@ -90,13 +94,17 @@ public class NativeMediaPlayer {
             minLogLevel = 0;
             maxVideoDecodeWidth = 0;
             maxVideoDecodeHeight = 0;
+            enableCatchup = false;
+            responseTimesInOneSeg = 0;
+            maxCatchupWidth = 0;
+            maxCatchupHeight = 0;
         }
     }
 
     public static class HeadPose {
         public float yaw;
         public float pitch;
-        public long pts;
+        public int pts;
 
         public HeadPose() {
             yaw = 0;
@@ -280,6 +288,12 @@ public class NativeMediaPlayer {
             mConfig.libPath = predictObj.getString("path");
             mConfig.maxVideoDecodeWidth = cfgJsonObject.getInt("maxVideoDecodeWidth");
             mConfig.maxVideoDecodeHeight = cfgJsonObject.getInt("maxVideoDecodeHeight");
+            String catchupStr = cfgJsonObject.getString("intimeviewportupdate");
+            JSONObject catchupObj = new JSONObject(catchupStr);
+            mConfig.enableCatchup = catchupObj.getBoolean("enable");
+            mConfig.responseTimesInOneSeg = catchupObj.getInt("responseTimesInOneSeg");
+            mConfig.maxCatchupWidth = catchupObj.getInt("maxCatchupWidth");
+            mConfig.maxCatchupHeight = catchupObj.getInt("maxCatchupHeight");
         } catch (JSONException e) {
             e.printStackTrace();
         }

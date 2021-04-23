@@ -32,6 +32,7 @@
 #include <android/native_window_jni.h>
 #include <chrono>
 #include <math.h>
+#include <condition_variable>
 #ifdef _USE_TRACE_
 #include "../../../trace/MtHQ_tp.h"
 #endif
@@ -39,6 +40,8 @@
 #define DECODE_THREAD_COUNT 16
 #define MIN_REMAIN_SIZE_IN_FRAME 0
 #define IS_DUMPED 0
+#define INITIAL_DECODE_WIDTH 960
+#define INITIAL_DECODE_HEIGHT 960
 
 std::condition_variable     m_cv; // condition variable for decoder and render target
 
@@ -55,10 +58,11 @@ VideoDecoder_hw::VideoDecoder_hw()
     mRwpk       = NULL;
     mIsFlushed  = false;
     mDecCtx->mOutputSurface = new OutputSurface();
-    mWidth      = 3840;
-    mHeight     = 1920;
+    mWidth      = INITIAL_DECODE_WIDTH;
+    mHeight     = INITIAL_DECODE_HEIGHT;
     mCnt        = 0;
     mDump_YuvFile = NULL;
+    mNextInputPts   = 0;
 }
 
 VideoDecoder_hw::~VideoDecoder_hw()
@@ -123,6 +127,7 @@ RenderStatus VideoDecoder_hw::Initialize(Codec_Type codec)
     AMediaFormat_setInt32(mDecCtx->mMediaFormat, AMEDIAFORMAT_KEY_HEIGHT, mHeight);
     AMediaFormat_setInt32(mDecCtx->mMediaFormat, "allow-frame-drop", 0);
     AMediaFormat_setInt32(mDecCtx->mMediaFormat, AMEDIAFORMAT_KEY_FRAME_RATE, uint32_t(float(mDecodeInfo.frameRate_num) / mDecodeInfo.frameRate_den));
+    AMediaFormat_setInt32(mDecCtx->mMediaFormat, AMEDIAFORMAT_KEY_MAX_INPUT_SIZE, mWidth * mHeight);
     // 3. get native window from surface
     if (m_status == STATUS_UNKNOWN) {
         CreateOutputSurface();
@@ -190,9 +195,10 @@ RenderStatus VideoDecoder_hw::SendPacket(DashPacket* packet)
 {
     if(NULL == packet) return RENDER_NULL_PACKET;
 
-    if (packet->bEOS) // eos
+    if (packet->bEOS && !packet->bCatchup) // eos
     {
         PacketInfo* endPkt = new PacketInfo;
+        endPkt->pkt = nullptr;
         endPkt->bEOS = true;
         mDecCtx->push_packet(endPkt);
         mDecCtx->bPacketEOS = true;
@@ -225,6 +231,7 @@ RenderStatus VideoDecoder_hw::SendPacket(DashPacket* packet)
         mPkt->buf = new char[mPkt->size];
         mPkt->width = packet->width;
         mPkt->height = packet->height;
+        mPkt->pts = packet->pts;
         memcpy_s(mPkt->buf, packet->size, packet->buf, packet->size);
 
         *mRwpk = *(packet->rwpk);
@@ -234,8 +241,9 @@ RenderStatus VideoDecoder_hw::SendPacket(DashPacket* packet)
         mPktInfo->bEOS = packet->bEOS;
         mPktInfo->pts = packet->pts;
         mPktInfo->video_id = packet->videoID;
+        mPktInfo->bCatchup = packet->bCatchup;
         mDecCtx->push_packet(mPktInfo);
-        ANDROID_LOGD("Push packet at pts %ld", packet->pts);
+        ANDROID_LOGD("Push packet at pts %ld, video id %d", packet->pts, mPktInfo->video_id);
         if (mPktInfo->pkt->buf == nullptr)
         {
             ANDROID_LOGD("Push empty buf at pts %ld ", packet->pts);
@@ -251,6 +259,7 @@ RenderStatus VideoDecoder_hw::SendPacket(DashPacket* packet)
         data->numQuality = packet->numQuality;
         data->qtyResolution = new SourceResolution[packet->numQuality];
         data->bCodecChange = mPktInfo->bCodecChange;
+        data->bCatchup = mPktInfo->bCatchup;
         for(int i =0; i<data->numQuality; i++){
             data->qtyResolution[i].height = packet->qtyResolution[i].height;
             data->qtyResolution[i].width = packet->qtyResolution[i].width;
@@ -281,16 +290,13 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
         LOG(ERROR) << "MediaCodec is not initialized successfully!" << endl;
         return RENDER_NULL_HANDLE;
     }
-    // if changing the resolution, then reconfigure the decoder
-    static int cnt_pts = 0;
-    ANDROID_LOGD("CHANGE: PTS: %ld, Packet has width %d, height %d", cnt_pts, pkt->width, pkt->height);
-    cnt_pts++;
     // 1. decode one frame
     //send packet
     ssize_t buf_idx = AMediaCodec_dequeueInputBuffer(mDecCtx->mMediaCodec, 10000);
     if (buf_idx >= 0)
     {
-        ANDROID_LOGD("Ready to get input buffer!");
+        ANDROID_LOGD("CHANGE: PTS: %ld, Packet has width %d, height %d, video id %d", pkt->pts, pkt->width, pkt->height, mVideoId);
+        ANDROID_LOGD("Ready to get input buffer pts is %ld !, video id %d", pkt->pts, mVideoId);
         size_t out_size = 0;
         uint8_t *input_buf = AMediaCodec_getInputBuffer(mDecCtx->mMediaCodec, buf_idx, &out_size);
         if (input_buf != nullptr && pkt->size <= out_size)
@@ -301,12 +307,11 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
             }
             memcpy(input_buf, pkt->buf, pkt->size);
 
-            ANDROID_LOGD("Input buffer pts %ld", cnt_pts-1);
             int ptsFactor = (int) floor((1 * 1000 * 1000 / (float(mDecodeInfo.frameRate_num) / mDecodeInfo.frameRate_den)));
-            media_status_t status = AMediaCodec_queueInputBuffer(mDecCtx->mMediaCodec, buf_idx, 0, pkt->size, mCnt++ * ptsFactor, 0);
+            media_status_t status = AMediaCodec_queueInputBuffer(mDecCtx->mMediaCodec, buf_idx, 0, pkt->size, pkt->pts * ptsFactor, 0);
             if (status != AMEDIA_OK)
             {
-                ANDROID_LOGD("queue input buffer failed at pts %d", cnt_pts-1);
+                ANDROID_LOGD("queue input buffer failed at pts %d", pkt->pts);
             }
         }
         else {
@@ -315,7 +320,7 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
     }
     else{
         ret = RENDER_NULL_PACKET;
-        ANDROID_LOGD("send packet failed!");
+        ANDROID_LOGD("send packet failed!, video id %d", mVideoId);
     }
     // usleep(20000);
     //receive frame
@@ -323,25 +328,7 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
     ssize_t out_buf_idx = AMediaCodec_dequeueOutputBuffer(mDecCtx->mMediaCodec, &buf_info, 0);
     if (out_buf_idx >= 0) // buffer has no data
     {
-        if (out_buf_idx > 0) ANDROID_LOGD("frame info size is greater than zero!");
-        if (IS_DUMPED != 1){
-            static int cnt = 0;
-            cnt++;
-            // ANDROID_LOGD("buf_info size is %d", buf_info.size);
-            AMediaCodec_releaseOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, buf_info.size != 0);
-        }
-        else
-        {
-            uint8_t *outputBuf = AMediaCodec_getOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, NULL);
-            size_t dataSize = buf_info.size;
-            if (outputBuf != nullptr && dataSize != 0 && mVideoId == 0)
-            {
-                ANDROID_LOGD("CHANGE: dataSize is %d at pts %d", dataSize, cnt_pts-1);
-                fwrite(outputBuf, 1, dataSize, mDump_YuvFile);
-            }
-            AMediaCodec_releaseOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, false);
-        }
-        // 2. pop framedata
+        // 1. pop framedata
         ANDROID_LOGD("frame data size is %d", mDecCtx->get_size_of_framedata());
         FrameData* data = mDecCtx->pop_framedata();
         if (data == NULL)
@@ -358,15 +345,44 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
         frame->qtyResolution = data->qtyResolution;
         frame->video_id = video_id;
         frame->bEOS = false;
+        frame->bCatchup = data->bCatchup;
         mDecCtx->push_frame(frame);
         ANDROID_LOGD("PTS: %d, frame rwpk num: %d, one rrwpk w: %d, h: %d, l: %d, t: %d", data->pts, data->rwpk->numRegions, data->rwpk->rectRegionPacking[0].projRegWidth,
         data->rwpk->rectRegionPacking[0].projRegHeight, data->rwpk->rectRegionPacking[0].projRegLeft, data->rwpk->rectRegionPacking[0].projRegTop);
         SAFE_DELETE(data);
+        // 2. release output buffer
+        if (out_buf_idx > 0) ANDROID_LOGD("frame info size is greater than zero!");
+        if (IS_DUMPED != 1){
+            bool render = (buf_info.size != 0) && (frame->pts >= mNextInputPts || mNextInputPts == 0);
+            AMediaCodec_releaseOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, render);
+        }
+        else
+        {
+            uint8_t *outputBuf = AMediaCodec_getOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, NULL);
+            size_t dataSize = buf_info.size;
+            if (outputBuf != nullptr && dataSize != 0 && mVideoId == 0)
+            {
+                ANDROID_LOGD("CHANGE: dataSize is %d at pts %d", dataSize, pkt->pts);
+                fwrite(outputBuf, 1, dataSize, mDump_YuvFile);
+            }
+            AMediaCodec_releaseOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, false);
+        }
         //successfully decode one frame
-        ANDROID_LOGD("CHANGE: successfully decode one frame at pts %ld", frame->pts);
-        std::mutex mtx;
-        std::unique_lock<std::mutex> lck(mtx);
-        m_cv.wait(lck);
+        if (frame->bCatchup)
+            ANDROID_LOGD("CHANGE: successfully decode one catch up frame at pts %ld", frame->pts);
+        else
+            ANDROID_LOGD("CHANGE: successfully decode one frame at pts %ld", frame->pts);
+        ANDROID_LOGD("mNextInputPts %d", mNextInputPts);
+        //swift deocde when needing drop frame, and for wait and normal situation, do as follows.
+        if (frame->pts >= mNextInputPts) {
+            while (frame->bCatchup && frame->pts > mNextInputPts) {
+                usleep(5);
+            }
+            std::mutex mtx;
+            std::unique_lock<std::mutex> lck(mtx);
+            m_cv.wait(lck);
+            ANDROID_LOGD("Input pts %lld, frame pts %lld", mNextInputPts, frame->pts);
+        }
     }
     else
     {
@@ -378,12 +394,14 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
             AMediaFormat *format = AMediaCodec_getOutputFormat(mDecCtx->mMediaCodec);
             AMediaFormat_getInt32(format, "width", &(pkt->width));
             AMediaFormat_getInt32(format, "height", &(pkt->height));
+            int32_t capacity_wh = pkt->width * pkt->height;
+            AMediaFormat_getInt32(mDecCtx->mMediaFormat, AMEDIAFORMAT_KEY_MAX_INPUT_SIZE, &(capacity_wh));
             // AMediaFormat_getInt32(format, "stride", &(pkt->width));
             break;
         }
         default:
         {
-            LOG(ERROR) << "outout buffer index error occurs!" << endl;
+            ANDROID_LOGD("output buffer index error occurs!, error id is %d", out_buf_idx);
             break;
         }
         }
@@ -393,11 +411,93 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
 
 RenderStatus VideoDecoder_hw::FlushDecoder(uint32_t video_id)
 {
-    if (mDecCtx->mMediaCodec)
+    RenderStatus ret = RENDER_STATUS_OK;
+    if (nullptr == mDecCtx->mMediaCodec)
     {
-        AMediaCodec_flush(mDecCtx->mMediaCodec);
+        LOG(ERROR) << "MediaCodec is not initialized successfully!" << endl;
+        return RENDER_NULL_HANDLE;
     }
-    return RENDER_STATUS_OK;
+    // 1. decode one frame
+    //send EOS flag to decoder
+    ssize_t buf_idx = AMediaCodec_dequeueInputBuffer(mDecCtx->mMediaCodec, 10000);
+    if (buf_idx >= 0)
+    {
+        ANDROID_LOGD("send EOS frame to decoder! video id %d", mVideoId);
+        media_status_t status = AMediaCodec_queueInputBuffer(mDecCtx->mMediaCodec, buf_idx, 0, 0, 0, AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM);
+    }
+    else{
+        ret = RENDER_NULL_PACKET;
+        ANDROID_LOGD("send packet failed!, error code is %d, video id %d", buf_idx, mVideoId);
+        return ret;
+    }
+    // 2. receive frame until meeting the EOS flag
+    AMediaCodecBufferInfo buf_info;
+    do {
+    ssize_t out_buf_idx = AMediaCodec_dequeueOutputBuffer(mDecCtx->mMediaCodec, &buf_info, 0);
+    if (buf_info.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM) {
+        ANDROID_LOGD("Found eos frame with flags! video id %d", mVideoId);
+        break;
+    }
+    if (out_buf_idx >= 0) // buffer has no data
+    {
+        // 1. pop framedata
+        ANDROID_LOGD("frame data size is %d", mDecCtx->get_size_of_framedata());
+        FrameData* data = mDecCtx->pop_framedata();
+        if (data == NULL)
+        {
+            LOG(ERROR) << "Frame data is empty!" << endl;
+            return RENDER_NO_FRAME;
+        }
+        DecodedFrame *frame = new DecodedFrame;
+        frame->output_surface = mDecCtx->mOutputSurface;
+        frame->rwpk = data->rwpk;
+        frame->pts = data->pts;
+        frame->bFmtChange = data->bCodecChange;
+        frame->numQuality = data->numQuality;
+        frame->qtyResolution = data->qtyResolution;
+        frame->video_id = video_id;
+        frame->bEOS = false;
+        frame->bCatchup = data->bCatchup;
+        mDecCtx->push_frame(frame);
+        ANDROID_LOGD("PTS: %d, frame rwpk num: %d, one rrwpk w: %d, h: %d, l: %d, t: %d", data->pts, data->rwpk->numRegions, data->rwpk->rectRegionPacking[0].projRegWidth,
+        data->rwpk->rectRegionPacking[0].projRegHeight, data->rwpk->rectRegionPacking[0].projRegLeft, data->rwpk->rectRegionPacking[0].projRegTop);
+        // 2. release output buffer
+        if (out_buf_idx > 0) ANDROID_LOGD("frame info size is greater than zero!");
+        if (IS_DUMPED != 1){
+            bool render = (buf_info.size != 0) && (frame->pts >= mNextInputPts || mNextInputPts == 0);
+            AMediaCodec_releaseOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, render);
+        }
+        else
+        {
+            uint8_t *outputBuf = AMediaCodec_getOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, NULL);
+            size_t dataSize = buf_info.size;
+            if (outputBuf != nullptr && dataSize != 0 && mVideoId == 0)
+            {
+                // ANDROID_LOGD("CHANGE: dataSize is %d at pts %d", dataSize, cnt_pts-1);
+                fwrite(outputBuf, 1, dataSize, mDump_YuvFile);
+            }
+            AMediaCodec_releaseOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, false);
+        }
+        SAFE_DELETE(data);
+        //successfully decode one frame
+        if (frame->bCatchup)
+            ANDROID_LOGD("CHANGE: successfully decode one catch up frame at pts %ld", frame->pts);
+        else
+            ANDROID_LOGD("CHANGE: successfully decode one frame at pts %ld", frame->pts);
+        ANDROID_LOGD("mNextInputPts %d, video id ", mNextInputPts, mVideoId);
+        //swift deocde when needing drop frame, and for wait and normal situation, do as follows.
+        if (frame->pts >= mNextInputPts) {
+            while (frame->bCatchup && frame->pts > mNextInputPts) {//wait
+                usleep(5);
+            }
+            std::mutex mtx;
+            std::unique_lock<std::mutex> lck(mtx);
+            m_cv.wait(lck);
+            ANDROID_LOGD("Input pts %lld, frame pts %lld", mNextInputPts, frame->pts);
+        }
+    }
+    } while (true);
+    return ret;
 }
 
 bool VideoDecoder_hw::MediaInfoChange(DashPacket* packet, uint64_t pts)
@@ -450,7 +550,7 @@ void VideoDecoder_hw::Run()
             //flush decoder until all packets are popped.
             if (mDecCtx->get_size_of_packet() == 0 && !mIsFlushed)
             {
-                LOG(INFO)<<"Now will flush the decoder "<< mVideoId << endl;
+                ANDROID_LOGD("Now will flush the decoder %d", mVideoId);
                 ret = FlushDecoder(mVideoId);
                 if (RENDER_STATUS_OK != ret)
                 {
@@ -471,20 +571,34 @@ void VideoDecoder_hw::Run()
             LOG(INFO)<<"possible error since null packet has been pushed to queue"<<std::endl;
             continue;
         }
-        if (pkt_info->pkt->buf == nullptr)
-        {
-            ANDROID_LOGD("pop packet buf is empty!");
-        }
         LOG(INFO)<<"Now packet pts is "<<pkt_info->pts<<"video id is " << mVideoId<<endl;
+        ANDROID_LOGD("Now packet pts is %ld, video id %d", pkt_info->pts, mVideoId);
         ANDROID_LOGD("Packet size is %d", mDecCtx->get_size_of_packet());
 	    // check eos status and do flush operation.
         if(pkt_info->bEOS)
         {
+            bool isCatchup = pkt_info->bCatchup;
+            if (pkt_info->pkt) {//catch up eos last frame
+                LOG(INFO) << "Decoded frame is pts " << pkt_info->pts << endl;
+                ret = DecodeFrame(pkt_info->pkt, pkt_info->video_id);
+                if(RENDER_STATUS_OK != ret){
+                    LOG(INFO)<<"Video "<< mVideoId <<": failed to decoder one frame"<<std::endl;
+                }
+
+                SAFE_DELETE(pkt_info->pkt);
+
+                SAFE_DELETE(pkt_info);
+            }
+            ANDROID_LOGD("Finish to decode last eos frame, video id %d", mVideoId);
             ret = FlushDecoder(mVideoId);
             if(RENDER_STATUS_OK != ret){
                 LOG(INFO)<<"Video "<< mVideoId <<": failed to flush decoder when EOS"<<std::endl;
             }
-            m_status = STATUS_IDLE;
+            ANDROID_LOGD("Flush the docoder video id %d", mVideoId);
+            if (isCatchup) {
+                AMediaCodec_flush(mDecCtx->mMediaCodec);
+                ANDROID_LOGD("After flushing, resume the decoder id %d", mVideoId);
+            }
 	        continue;
         }
         ///need not to reset decoder if w/h changed
@@ -539,8 +653,6 @@ RenderStatus VideoDecoder_hw::GetFrame(uint64_t pts, DecodedFrame *&frame)
 
     if( !waitFlag && (mDecCtx->get_size_of_frame() == 0) && (m_status==STATUS_PENDING) ){
         ANDROID_LOGD("frame fifo is empty now! video id is : %d", mVideoId);
-        m_status = STATUS_IDLE;
-        ANDROID_LOGD("decoder status is set to idle!");
     }
 
     if (frame == nullptr) return RENDER_NO_FRAME;
@@ -556,11 +668,14 @@ void VideoDecoder_hw::Pending()
 
 RenderStatus VideoDecoder_hw::UpdateFrame(uint64_t pts, int64_t *corr_pts)
 {
-    DecodedFrame* frame = GetFrame(pts);
+    DecodedFrame* frame = nullptr;
+    RenderStatus ret = GetFrame(pts, frame);
+    mNextInputPts = pts + 1;
+    ANDROID_LOGD("Update next input pts is %d, video id %d", mNextInputPts, mVideoId);
     if(NULL==frame)
     {
         ANDROID_LOGD("VideoDecoder_hw::Frame is empty!");
-        return RENDER_NO_FRAME;
+        return ret;
     }
     if (frame->bEOS)
     {

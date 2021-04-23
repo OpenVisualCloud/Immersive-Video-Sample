@@ -1155,8 +1155,11 @@ int32_t OmafMediaStream::TilesStitching() {
       currWaitTimes = 0;
 
       while ((ret == ERROR_NULL_PACKET) && (currWaitTimes < waitTimes_GetPacket) && m_status != STATUS_STOPPED) {
-
+#ifdef _ANDROID_NDK_OPTION_
+        usleep((m_pStreamInfo->segmentDuration * 1000000) / waitTimes_GetPacket);
+#else
         usleep((m_pStreamInfo->segmentDuration * 1000000 / 2) / waitTimes_GetPacket);
+#endif
         currWaitTimes++;
         //OMAF_LOG(LOG_INFO, "To get packet %ld for track %d\n", currFramePTS, trackID);
         ret = omaf_reader_mgr_->GetNextPacketWithPTS(trackID, currFramePTS, onePacket, m_needParams);

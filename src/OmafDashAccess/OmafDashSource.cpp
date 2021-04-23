@@ -951,12 +951,21 @@ void OmafDashSource::thread_catchup()
       // remove already downloaded tracks
       std::map<uint32_t, std::map<int, OmafAdaptationSet*>> new_tracks = GetNewTracksFromDownloaded(additional_tracks, downloadedCatchupTracks, catchupTimesInSeg);
 
-      if (new_tracks.empty())//additional downloading threshold is 2 tiles
+      bool hasEnoughAdditionalTiles = true;
+      for (auto tk : new_tracks)//additional downloading threshold is 2 tiles
       {
-        // OMAF_LOG(LOG_INFO, "There is no additional different tracks! Viewport hasn't changed!\n");
-        usleep(sleepUS * 5);
+        if (tk.second.size() <= 2) {
+          // OMAF_LOG(LOG_INFO, "There is no additional different tracks! Viewport hasn't changed!\n");
+          usleep(sleepUS * 5);
+          hasEnoughAdditionalTiles = false;
+          break;
+        }
+      }
+      if (!hasEnoughAdditionalTiles) {
+        OMAF_LOG(LOG_INFO, "Has not enough additional tiles!\n");
         continue;
       }
+
       // if new_tracks element size is oversized
       for (auto tracks = new_tracks.begin(); tracks != new_tracks.end(); tracks++) {
         uint32_t del_num = tracks->second.size() > max_catchup_num ? tracks->second.size() - max_catchup_num : 0;
@@ -967,6 +976,7 @@ void OmafDashSource::thread_catchup()
       }
 
       OMAF_LOG(LOG_INFO, "Found additional different track for catch up!\n");
+      // ANDROID_LOGD("Found additional different track for catch up!\n");
       for (auto track : new_tracks)
       {
         for (auto id : track.second)

@@ -42,7 +42,7 @@
 #include <map>
 #include "RenderSourceFactory.h"
 
-#define MAX_SURFACE_NUM 5
+#define MAX_SURFACE_NUM 10
 
 VCD_NS_BEGIN
 
