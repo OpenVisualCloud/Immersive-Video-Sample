@@ -50,6 +50,7 @@ typedef struct PacketInfo{
      bool      bEOS;
      uint64_t  pts;
      uint32_t  video_id;
+     bool      bCatchup;
 }PacketInfo;
 
 typedef struct DecodedFrame{
@@ -61,6 +62,7 @@ typedef struct DecodedFrame{
      SourceResolution   *qtyResolution;
      uint32_t           video_id;
      bool               bEOS;
+     bool               bCatchup;
 }DecodedFrame;
 
 typedef struct FrameData{
@@ -70,6 +72,7 @@ typedef struct FrameData{
      SourceResolution*  qtyResolution;
      bool               bCodecChange;
      uint32_t           video_id;
+     bool               bCatchup;
 }FrameData;
 
 class DecoderContext
@@ -314,6 +317,7 @@ private:
      uint32_t                     mHeight;
      long long int                mCnt;
      FILE*                        mDump_YuvFile;
+     uint64_t                     mNextInputPts;
 };
 
 VCD_NS_END

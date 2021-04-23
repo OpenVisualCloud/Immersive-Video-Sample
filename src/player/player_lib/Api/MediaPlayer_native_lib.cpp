@@ -148,6 +148,22 @@ Java_com_vcd_immersive_omafplayer_MediaPlayer_NativeMediaPlayer_Create(JNIEnv *e
     jfieldID maxVideoDecodeHeightID = (env)->GetFieldID(objclass, "maxVideoDecodeHeight", "I");
     jint maxVideoDecodeHeight = (int)(env)->GetIntField(config, maxVideoDecodeHeightID);
     render_config.maxVideoDecodeHeight = maxVideoDecodeHeight;
+    // enableCatchup
+    jfieldID enableCatchupID = (env)->GetFieldID(objclass, "enableCatchup","Z");
+    bool enableCatchup = (bool)(env)->GetBooleanField(config, enableCatchupID);
+    render_config.enableInTimeViewportUpdate = enableCatchup;
+    // responseTimesInOneSeg
+    jfieldID responseTimesInOneSegID = (env)->GetFieldID(objclass, "responseTimesInOneSeg", "I");
+    jint responseTimesInOneSeg = (int)(env)->GetIntField(config, responseTimesInOneSegID);
+    render_config.maxResponseTimesInOneSeg = enableCatchup ? responseTimesInOneSeg : 0;
+    // maxCatchupWidth
+    jfieldID maxCatchupWidthID = (env)->GetFieldID(objclass, "maxCatchupWidth", "I");
+    jint maxCatchupWidth = (int)(env)->GetIntField(config, maxCatchupWidthID);
+    render_config.maxCatchupWidth = enableCatchup ? maxCatchupWidth : 0;
+    // maxCatchupHeight
+    jfieldID maxCatchupHeightID = (env)->GetFieldID(objclass, "maxCatchupHeight", "I");
+    jint maxCatchupHeight = (int)(env)->GetIntField(config, maxCatchupHeightID);
+    render_config.maxCatchupHeight = enableCatchup ? maxCatchupHeight : 0;
     return (jint)pPlayer->Create(render_config);
 }
 JNIEXPORT jint JNICALL
@@ -219,9 +235,13 @@ Java_com_vcd_immersive_omafplayer_MediaPlayer_NativeMediaPlayer_SetCurrentPositi
     jfieldID pitchID = (env)->GetFieldID(objclass, "pitch", "F");
     jfloat pitch = (float)(env)->GetFloatField(pose, pitchID);
 
+    jfieldID ptsID = (env)->GetFieldID(objclass, "pts", "I");
+    jlong pts = (float)(env)->GetIntField(pose, ptsID);
+
     HeadPose head_pose;
     head_pose.yaw = yaw;
     head_pose.pitch = pitch;
+    head_pose.pts = pts;
     pPlayer->SetCurrentPosition(head_pose);
 }
 

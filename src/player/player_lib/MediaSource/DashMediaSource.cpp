@@ -367,6 +367,7 @@ void DashMediaSource::ProcessVideoPacket() {
     if (currentWaitTime > WAIT_PACKET_TIME_OUT) // wait 5s but get packet failed
     {
       m_status = STATUS_TIMEOUT;
+      // ANDROID_LOGD("Wait too long to get packet from Omaf Dash Access library! Force to quit!");
       LOG(ERROR) << " Wait too long to get packet from Omaf Dash Access library! Force to quit! " << std::endl;
     }
     return;
@@ -377,6 +378,7 @@ void DashMediaSource::ProcessVideoPacket() {
   }
   for (uint32_t i = 0; i < dashPktNum; i++) {
     LOG(INFO) << "Get packet has done! and pts is " << dashPkt[i].pts  << " video id " << dashPkt[i].videoID << std::endl;
+    // ANDROID_LOGD("Get packet has done! and pts is %lld, video id %d\n", dashPkt[i].pts, dashPkt[i].videoID);
   }
   if (!dashPkt[0].bCatchup) {
 #ifndef _ANDROID_OS_

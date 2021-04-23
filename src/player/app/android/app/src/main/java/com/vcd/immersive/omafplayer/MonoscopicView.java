@@ -144,7 +144,7 @@ public final class MonoscopicView extends GLSurfaceView {
             if (pose.pitch < -90) pose.pitch = -90.0f;
             if (pose.pitch > 90) pose.pitch = 90.0f;
 //            Log.e(TAG, "YAW is " + pose.yaw + " PITCH is " + pose.pitch);
-            renderer.scene.SetCurrentPosition(pose);
+            renderer.scene.AddCurrentPose(pose);
 
             // Rotate from Android coordinates to OpenGL coordinates. Android's coordinate system
             // assumes Y points North and Z points to the sky. OpenGL has Y pointing up and Z pointing

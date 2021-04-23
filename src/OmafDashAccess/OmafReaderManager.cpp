@@ -1882,6 +1882,7 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
         packet->SetCatchupFlag(bCatchup_);
         if (bCatchup_)
           OMAF_LOG(LOG_INFO, "Generate a catch up packet with PTS %lld, for track id %d\n", packet->GetPTS(), segment_->GetTrackId());
+        // ANDROID_LOGD("Generate a packet with PTS %lld, for track id %d, is catch up %d", packet->GetPTS(), segment_->GetTrackId(), bCatchup_);
         std::lock_guard<std::mutex> lock(packet_mutex_);
         media_packets_.push(packet);
         OMAF_LOG(LOG_INFO, "Push packet with PTS %ld for track %d\n", packet->GetPTS(), segment_->GetTrackId());

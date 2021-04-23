@@ -68,6 +68,7 @@ public class MediaLoader {
 
     public static final String MEDIA_FORMAT_KEY = "stereoFormat";
     private static final int MAX_SURFACE_NUM = 5;
+    private static final int MAX_CATCHUP_SURFACE_NUM = 2;
 
     /** A spherical mesh for video should be large enough that there are no stereo artifacts. */
     private static final int SPHERE_RADIUS_METERS = 50;
@@ -100,7 +101,7 @@ public class MediaLoader {
     // The sceneRenderer is set after GL initialization is complete.
     private SceneRenderer sceneRenderer;
     // The displaySurface is configured after both GL initialization and media loading.
-    private Surface[] decodeSurface = new Surface[MAX_SURFACE_NUM];
+    private Surface[] decodeSurface = new Surface[MAX_SURFACE_NUM + MAX_CATCHUP_SURFACE_NUM];
     private Surface displaySurface;
 
     // The actual work of loading media happens on a background thread.
@@ -205,6 +206,15 @@ public class MediaLoader {
                 Pair<Integer, Surface> decoder_surface = sceneRenderer.createDecodeSurface(
                     mediaPlayer.mConfig.maxVideoDecodeWidth, mediaPlayer.mConfig.maxVideoDecodeHeight, i);
                 Log.i(TAG, "Complete to create one decode surface! surface id is " + i);
+                mediaPlayer.SetDecodeSurface(decoder_surface.second, decoder_surface.first, i);//set surface
+                Log.i(TAG, "ready to set decode surface!");
+                decodeSurface[i] = decoder_surface.second;
+                Log.i(TAG, "decode id in java " + decoder_surface.first);
+            }
+            for (int i=MAX_SURFACE_NUM;i<MAX_CATCHUP_SURFACE_NUM + MAX_SURFACE_NUM;i++){
+                Pair<Integer, Surface> decoder_surface = sceneRenderer.createDecodeSurface(
+                        mediaPlayer.mConfig.maxCatchupWidth, mediaPlayer.mConfig.maxCatchupHeight, i);
+                Log.i(TAG, "Complete to create one catch-up decode surface! surface id is " + i);
                 mediaPlayer.SetDecodeSurface(decoder_surface.second, decoder_surface.first, i);//set surface
                 Log.i(TAG, "ready to set decode surface!");
                 decodeSurface[i] = decoder_surface.second;

@@ -109,7 +109,7 @@ public:
     void SetCurrentPosition(HeadPose pose)
     {
         m_renderManager->SetViewport(&pose);
-        m_renderManager->ChangeViewport(&pose, 0);//pose.pts is useless in android
+        m_renderManager->ChangeViewport(&pose, pose.pts);
         return;
     };
 

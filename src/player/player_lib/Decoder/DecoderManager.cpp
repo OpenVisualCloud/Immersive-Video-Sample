@@ -43,7 +43,7 @@
 #endif
 VCD_NS_BEGIN
 
-#define MAX_DECODER_NUM 5
+#define MAX_DECODER_NUM 10
 
 DecoderManager::DecoderManager()
 {
