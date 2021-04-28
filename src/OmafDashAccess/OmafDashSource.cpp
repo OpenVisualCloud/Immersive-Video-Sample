@@ -989,8 +989,10 @@ void OmafDashSource::thread_catchup()
         OMAF_LOG(LOG_ERROR, "Omaf Tracks Selector is not created yet!\n");
         continue;
       }
-
-      int32_t stream_frame_rate = stream_info->framerate_num / stream_info->framerate_den;
+      int32_t stream_frame_rate = 0;
+      if (stream_info->framerate_den != 0) {
+        stream_frame_rate = round(float(stream_info->framerate_num) / stream_info->framerate_den);
+      }
       uint32_t sampleNumPerSeg = pStream->GetSegmentDuration() * stream_frame_rate;
       for (auto add_track : new_tracks)
       {

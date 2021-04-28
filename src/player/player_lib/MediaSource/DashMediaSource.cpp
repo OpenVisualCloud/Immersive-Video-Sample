@@ -391,9 +391,7 @@ void DashMediaSource::ProcessVideoPacket() {
   if (m_needStreamDumped && !m_dumpedFile.empty()) {
     for (uint32_t i = 0; i < dashPktNum; i++)
     {
-      if (!dashPkt[i].bCatchup) {
-        fwrite(dashPkt[i].buf, 1, dashPkt[i].size, m_dumpedFile[i]);
-      }
+        fwrite(dashPkt[i].buf, 1, dashPkt[i].size, m_dumpedFile[dashPkt[i].videoID]);
     }
   }
 #if !TEST_GET_PACKET_ONLY
