@@ -25,6 +25,7 @@
 
  */
 
+#include <cmath>
 #include "OmafDashRangeSync.h"
 #include "OmafReaderManager.h"
 #include "OmafTileTracksSelector.h"
@@ -813,7 +814,10 @@ int32_t OmafMediaStream::TaskRun(OmafTilesStitch *stitch, std::pair<uint64_t, st
     }
 
     //2. get samples num (indicate that segment parsed)
-    uint32_t samplesNumPerSeg = GetSegmentDuration() * GetStreamInfo()->framerate_num / GetStreamInfo()->framerate_den;
+    uint32_t samplesNumPerSeg = 0;
+    if (m_pStreamInfo != nullptr && m_pStreamInfo->framerate_den != 0) {
+      samplesNumPerSeg = GetSegmentDuration() * round(float(m_pStreamInfo->framerate_num) / m_pStreamInfo->framerate_den);
+    }
     for (uint64_t currPTS = optStartPTS; currPTS < startPTSofCurrSeg + samplesNumPerSeg; currPTS++)
     {
       std::map<uint32_t, MediaPacket*> selectedPackets;
@@ -821,7 +825,7 @@ int32_t OmafMediaStream::TaskRun(OmafTilesStitch *stitch, std::pair<uint64_t, st
       ret = GetSelectedPacketsWithPTS(currPTS, targetedTracks, selectedPackets);
       if (ret == ERROR_NULL_PACKET)//Once found outdated packets, stop task run and skip outdated packets.
       {
-        OMAF_LOG(LOG_INFO, "Outdated! Failed to get selected packets!\n");
+        OMAF_LOG(LOG_INFO, "Outdated! Failed to get selected packets at pts %ld!\n", currPTS);
         return ret;
       }
       if (selectedPackets.empty())
