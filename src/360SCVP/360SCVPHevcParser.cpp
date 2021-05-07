@@ -542,8 +542,8 @@ static int32_t hevc_parse_slice_segment(GTS_BitStream *gts_bitstream, HEVCState 
             //uint32_t segments = slice_info->offset_len >> 4;
             //int32_t remain = (slice_info->offset_len & 15);
 
-            for (m = 0; m < slice_info->num_entry_point_offsets; m++) {
-                slice_info->entry_point_offset_minus1[m] = gts_bs_read_int(gts_bitstream, slice_info->offset_len);
+            //for (m = 0; m < slice_info->num_entry_point_offsets; m++) {
+                //slice_info->entry_point_offset_minus1[m] = gts_bs_read_int(gts_bitstream, slice_info->offset_len);
                 //uint32_t res = 0;
                 //for (n=0; n<segments; n++) {
                 //    res <<= 16;
@@ -554,7 +554,7 @@ static int32_t hevc_parse_slice_segment(GTS_BitStream *gts_bitstream, HEVCState 
                 //    res += gts_bs_read_int(gts_bitstream, remain);
                 //}
                 // entry_point_offset = val + 1; // +1; // +1 to get the size
-            }
+            //}
         }
     }
 
@@ -1728,7 +1728,7 @@ int32_t gts_media_hevc_parse_nalu(hevc_specialInfo* pSpecialInfo, int8_t *data, 
     uint32_t data_without_emulation_bytes_size = 0;
     bool is_slice = false;
     int32_t ret = -1;
-    HEVCSliceInfo SliceInfo;
+    HEVCSliceInfo *SliceInfo;
     uint8_t *nal_unit_type = &pSpecialInfo->naluType;
     uint8_t *temporal_id = &pSpecialInfo->temporal_id;
     uint8_t *layer_id = &pSpecialInfo->layer_id;
@@ -1736,7 +1736,7 @@ int32_t gts_media_hevc_parse_nalu(hevc_specialInfo* pSpecialInfo, int8_t *data, 
     uint16_t* payloadType = &pSpecialInfo->seiPayloadType;
     int32_t specialID = 0;
 
-    memcpy_s(&SliceInfo, sizeof(HEVCSliceInfo), &hevc->s_info, sizeof(HEVCSliceInfo));
+    SliceInfo = &hevc->s_info;
 
     hevc->s_info.entry_point_start_bits = -1;
     hevc->s_info.payload_start_offset = -1;
@@ -1755,10 +1755,11 @@ int32_t gts_media_hevc_parse_nalu(hevc_specialInfo* pSpecialInfo, int8_t *data, 
     if (!bs) goto exit;
 
     if (! hevc_parse_nal_header(bs, nal_unit_type, temporal_id, layer_id, payloadType)) goto exit;
-    SliceInfo.nal_unit_type = *nal_unit_type;
-    SliceInfo.temporal_id = *temporal_id;
+    SliceInfo->nal_unit_type = *nal_unit_type;
+    SliceInfo->temporal_id = *temporal_id;
 
-    switch (SliceInfo.nal_unit_type) {
+    //switch (SliceInfo.nal_unit_type) {
+    switch (SliceInfo->nal_unit_type) {
     case GTS_HEVC_NALU_ACCESS_UNIT:
     case GTS_HEVC_NALU_END_OF_SEQ:
     case GTS_HEVC_NALU_END_OF_STREAM:
@@ -1783,22 +1784,22 @@ int32_t gts_media_hevc_parse_nalu(hevc_specialInfo* pSpecialInfo, int8_t *data, 
     case GTS_HEVC_NALU_SLICE_RASL_N:
     case GTS_HEVC_NALU_SLICE_RASL_R:
         is_slice = true;
-        ret = hevc_parse_slice_segment(bs, hevc, &SliceInfo);
+        ret = hevc_parse_slice_segment(bs, hevc, SliceInfo);
         if (ret<0)
             goto exit;
         ret = 0;
 
-        *slicehdrlen = SliceInfo.payload_start_offset;
-        hevc_compute_poc(&SliceInfo);
-        if (hevc->s_info.poc != SliceInfo.poc)
+        *slicehdrlen = SliceInfo->payload_start_offset;
+        hevc_compute_poc(SliceInfo);
+        if (hevc->s_info.poc != SliceInfo->poc)
         {
             ret = 1;
             break;
         }
-        if (SliceInfo.first_slice_segment_in_pic_flag)
+        if (SliceInfo->first_slice_segment_in_pic_flag)
         {
             if (!(*layer_id)
-            || (SliceInfo.prev_layer_id_plus1 && ((*layer_id) <= SliceInfo.prev_layer_id_plus1 - 1)) )
+            || (SliceInfo->prev_layer_id_plus1 && ((*layer_id) <= SliceInfo->prev_layer_id_plus1 - 1)) )
             {
                 ret = 1;
                 break;
@@ -1826,16 +1827,17 @@ int32_t gts_media_hevc_parse_nalu(hevc_specialInfo* pSpecialInfo, int8_t *data, 
     }
     //save the previous values
     if (ret && hevc->s_info.sps) {
-        SliceInfo.frame_num_offset_prev = hevc->s_info.frame_num_offset;
-        SliceInfo.frame_num_prev = hevc->s_info.frame_num;
+        SliceInfo->frame_num_offset_prev = hevc->s_info.frame_num_offset;
+        SliceInfo->frame_num_prev = hevc->s_info.frame_num;
 
-        SliceInfo.poc_lsb_prev = hevc->s_info.poc_lsb;
-        SliceInfo.poc_msb_prev = hevc->s_info.poc_msb;
-        SliceInfo.prev_layer_id_plus1 = *layer_id + 1;
+        SliceInfo->poc_lsb_prev = hevc->s_info.poc_lsb;
+        SliceInfo->poc_msb_prev = hevc->s_info.poc_msb;
+        SliceInfo->prev_layer_id_plus1 = *layer_id + 1;
     }
     if (is_slice)
-        hevc_compute_poc(&SliceInfo);
-    memcpy_s(&hevc->s_info, sizeof(HEVCSliceInfo), &SliceInfo, sizeof(HEVCSliceInfo));
+    {
+        hevc_compute_poc(SliceInfo);
+    }
 
 exit:
     if (bs) gts_bs_del(bs);
