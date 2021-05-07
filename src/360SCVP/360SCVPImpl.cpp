@@ -2030,7 +2030,10 @@ int32_t  TstitchStream::GenerateSliceHdr(param_360SCVP* pParam360SCVP, int32_t n
 {
     int32_t ret = -1;
     GTS_BitStream *bsWrite = NULL;
-    HEVCState hevcTmp;
+    HEVCState *hevcTmp;
+    uint32_t origWidth, origHeight;
+    bool origFirstSliceFlag;
+    uint32_t origSliceSegAddr;
     if (!pParam360SCVP)
         return -1;
 
@@ -2057,13 +2060,17 @@ int32_t  TstitchStream::GenerateSliceHdr(param_360SCVP* pParam360SCVP, int32_t n
             return ret;
         }
         // modify the sliceheader
-        memcpy_s(&hevcTmp, sizeof(HEVCState), m_hevcState, sizeof(HEVCState));
+        origWidth = m_hevcState->sps[0].width;
+        origHeight = m_hevcState->sps[0].height;
+        origFirstSliceFlag = m_hevcState->s_info.first_slice_segment_in_pic_flag;
+        origSliceSegAddr = m_hevcState->s_info.slice_segment_address;
 
-        HEVC_SPS *sps = &(hevcTmp.sps[0]);
+        hevcTmp = m_hevcState;
+        HEVC_SPS *sps = &(hevcTmp->sps[0]);
         sps->width = pParam360SCVP->destWidth;
         sps->height = pParam360SCVP->destHeight;
 
-        HEVCSliceInfo *si = &hevcTmp.s_info;
+        HEVCSliceInfo *si = &(hevcTmp->s_info);
         if (!si)
             return -1;
         si->first_slice_segment_in_pic_flag = 1;
@@ -2072,7 +2079,12 @@ int32_t  TstitchStream::GenerateSliceHdr(param_360SCVP* pParam360SCVP, int32_t n
         si->slice_segment_address = newSliceAddr;
 
         // write the new sliceheader
-        hevc_write_slice_header(bsWrite, &hevcTmp);
+        hevc_write_slice_header(bsWrite, hevcTmp);
+        m_hevcState->sps[0].width = origWidth;
+        m_hevcState->sps[0].height = origHeight;
+        m_hevcState->s_info.first_slice_segment_in_pic_flag = origFirstSliceFlag;
+        m_hevcState->s_info.slice_segment_address = origSliceSegAddr;
+
         pParam360SCVP->outputBitstreamLen = gts_bs_get_position(bsWrite);
         gts_bs_del(bsWrite);
         ret = 0;

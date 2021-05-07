@@ -876,10 +876,10 @@ void hevc_write_bitstream_slice_header(GTS_BitStream * stream, HEVCState * state
         {
             bitstream_put_ue(stream, state->s_info.offset_len - 1);
 
-            for (uint32_t k = 0; k < state->s_info.num_entry_point_offsets; k++)
-            {
-                gts_bs_write_int(stream, state->s_info.entry_point_offset_minus1[k], state->s_info.offset_len);
-            }
+            //for (uint32_t k = 0; k < state->s_info.num_entry_point_offsets; k++)
+            //{
+            //    gts_bs_write_int(stream, state->s_info.entry_point_offset_minus1[k], state->s_info.offset_len);
+            //}
         }
     }
 

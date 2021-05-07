@@ -512,7 +512,7 @@ typedef struct
     int32_t entry_point_start_bits;
     uint32_t num_entry_point_offsets;
     uint32_t offset_len;
-    uint32_t entry_point_offset_minus1[1024];
+    //uint32_t entry_point_offset_minus1[1024];
     //byte offset of the payload start (after byte alignment)
     int32_t payload_start_offset;
 
