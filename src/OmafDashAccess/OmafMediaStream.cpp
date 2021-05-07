@@ -148,6 +148,7 @@ void OmafMediaStream::SetOmafReaderMgr(std::shared_ptr<OmafReaderManager> mgr) n
 void OmafMediaStream::Close() {
   if (m_status != STATUS_STOPPED) {
     m_status = STATUS_STOPPED;
+    m_catchup_status = STATUS_STOPPED;
     if (m_stitchThread) {
       pthread_join(m_stitchThread, NULL);
       m_stitchThread = 0;
@@ -816,7 +817,12 @@ int32_t OmafMediaStream::TaskRun(OmafTilesStitch *stitch, std::pair<uint64_t, st
     //2. get samples num (indicate that segment parsed)
     uint32_t samplesNumPerSeg = 0;
     if (m_pStreamInfo != nullptr && m_pStreamInfo->framerate_den != 0) {
-      samplesNumPerSeg = GetSegmentDuration() * round(float(m_pStreamInfo->framerate_num) / m_pStreamInfo->framerate_den);
+      // samplesNumPerSeg = GetSegmentDuration() * round(float(m_pStreamInfo->framerate_num) / m_pStreamInfo->framerate_den);
+      uint32_t normalsamplesNumPerSeg = GetSegmentDuration() * round(float(m_pStreamInfo->framerate_num) / m_pStreamInfo->framerate_den);
+      if (normalsamplesNumPerSeg != 0) {
+        samplesNumPerSeg = omaf_reader_mgr_->GetSamplesNumPerSegmentForTimeLine(startPTSofCurrSeg / normalsamplesNumPerSeg + 1);
+        // LOG(INFO) << "samplesNumPerSeg for seg " << startPTSofCurrSeg / normalsamplesNumPerSeg + 1 << " is " << samplesNumPerSeg << endl;
+      }
     }
     for (uint64_t currPTS = optStartPTS; currPTS < startPTSofCurrSeg + samplesNumPerSeg; currPTS++)
     {
@@ -871,7 +877,7 @@ int32_t OmafMediaStream::TaskRun(OmafTilesStitch *stitch, std::pair<uint64_t, st
       //4. push to m_catchupMergedpacket list<pair<uint64_t, MediaPacket*>>
       std::lock_guard<std::mutex> lock(m_catchupPacketsMutex);
       m_catchupMergedPackets[video_id].push_back(catchupMergedPacket);
-      OMAF_LOG(LOG_INFO, "Push one merged catch up packet at PTS %lld\n", currPTS);
+      OMAF_LOG(LOG_INFO, "[FrameSequences][CatchUp][Stitch]: Push one stitched catchup packet at PTS %lld, video id %d\n", currPTS, video_id);
     }
 
     // DONE remove successfully processed catchup tile tracks.

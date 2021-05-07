@@ -974,14 +974,16 @@ void OmafDashSource::thread_catchup()
           del_num--;
         }
       }
-
-      OMAF_LOG(LOG_INFO, "Found additional different track for catch up!\n");
-      // ANDROID_LOGD("Found additional different track for catch up!\n");
-      for (auto track : new_tracks)
-      {
-        for (auto id : track.second)
+      if (!new_tracks.empty()) {
+        OMAF_LOG(LOG_INFO, "[FrameSequences][CatchUp][Trigger]: Found additional different track for catch up trigger pts is %lld, and segment size is %d\n", currentTimeLine, new_tracks.size());
+        // ANDROID_LOGD("Found additional different track for catch up!\n");
+        for (auto track : new_tracks)
         {
-          OMAF_LOG(LOG_INFO, "seg id %d, track id %d\n", track.first, id.first);
+          OMAF_LOG(LOG_INFO, "[FrameSequences][CatchUp][Trigger]: Catchup trigger pts is %lld, seg id is %d\n", currentTimeLine, track.first);
+          for (auto id : track.second)
+          {
+            OMAF_LOG(LOG_INFO, "seg id %d, track id %d\n", track.first, id.first);
+          }
         }
       }
       //3. update catch up tile tracks.

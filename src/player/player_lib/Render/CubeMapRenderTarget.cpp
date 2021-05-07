@@ -166,7 +166,7 @@ RenderStatus CubeMapRenderTarget::Update( float yaw, float pitch, float hFOV, fl
                 if (data_log != nullptr) {
                     data_log->SetSwitchStartTime(start);
                 }
-                LOG(INFO)<<"low resolution part occurs! pts is " << pts <<std::endl;
+                LOG(INFO)<<"[FrameSequences][Low]: low resolution part occurs! pts is " << pts <<std::endl;
 #ifndef _ANDROID_OS_
 #ifdef _USE_TRACE_
                 //trace
@@ -183,7 +183,7 @@ RenderStatus CubeMapRenderTarget::Update( float yaw, float pitch, float hFOV, fl
         if (data_log != nullptr) {
             data_log->SetSwitchEndTime(end);
         }
-        LOG(INFO)<<"T9' All high resolution part! pts is " << pts <<std::endl<<"cost time : "<<(end-start)<<"ms"<<std::endl;
+        LOG(INFO)<<"[FrameSequences][High]: T9' All high resolution part! pts is " << pts <<"cost time : "<<(end-start)<<"ms"<<std::endl;
 #ifndef _ANDROID_OS_
 #ifdef _USE_TRACE_
         //trace

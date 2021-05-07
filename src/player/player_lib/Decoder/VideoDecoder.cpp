@@ -296,7 +296,7 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id, uint64_
         frame->av_frame->height = data->height;
         LOG(WARNING) << "PTS : " << data->pts << " frame->av_frame->width " << frame->av_frame->width << " is not equal to " << data->width << " or frame->av_frame->height " << frame->av_frame->height << " is not equal to " << data->height << endl;
     }
-    LOG(INFO)<<"Push one frame at:"<<data->pts<<" video id is:"<<video_id << " and frame fifo size is " << mDecCtx->get_size_of_frame()<<endl;
+    LOG(INFO)<<"[FrameSequences][Decode]: Push one decoded frame at:"<<data->pts<<" video id is:"<<video_id << " and frame fifo size is " << mDecCtx->get_size_of_frame()<<endl;
     mDecCtx->push_frame(frame);
 #ifdef _USE_TRACE_
     // trace
@@ -370,7 +370,7 @@ RenderStatus VideoDecoder::FlushDecoder(uint32_t video_id)
         {
             frame->bEOS = false;
         }
-        LOG(INFO)<<"Push one frame at:"<<data->pts<<" video id is:"<<video_id<<endl;
+        LOG(INFO)<<"[FrameSequences][Decode]: Push one decoded frame at:"<<data->pts<<" video id is:"<<video_id << " and frame fifo size is " << mDecCtx->get_size_of_frame()<<endl;
         mDecCtx->push_frame(frame);
         //SAFE_DELETE(data->rwpk);
         SAFE_DELETE(data);
@@ -519,7 +519,7 @@ RenderStatus VideoDecoder::GetFrame(uint64_t pts, DecodedFrame *&frame, int64_t 
         }
         // drop over time frame or drop former catch-up frames
         frame = mDecCtx->pop_frame();
-        LOG(INFO)<<"Now will drop one frame since pts is over time! input pts is:" << pts <<" frame pts is:" << frame->pts<<"video id is:" << mVideoId<<endl;
+        LOG(INFO)<<"[FrameSequences][Decode]: Now will drop one frame since pts is over time! input pts is:" << pts <<" frame pts is:" << frame->pts<<"video id is:" << mVideoId<<endl;
         av_frame_free(&frame->av_frame);
         if (frame->rwpk)
             SAFE_DELETE_ARRAY(frame->rwpk->rectRegionPacking);
