@@ -377,7 +377,7 @@ void DashMediaSource::ProcessVideoPacket() {
     m_status = STATUS_STOPPED;
   }
   for (uint32_t i = 0; i < dashPktNum; i++) {
-    LOG(INFO) << "Get packet has done! and pts is " << dashPkt[i].pts  << " video id " << dashPkt[i].videoID << std::endl;
+    LOG(INFO) << "[FrameSequences][Packet]: Get packet has done! and pts is " << dashPkt[i].pts  << " video id " << dashPkt[i].videoID << " catch up flag is " << dashPkt[i].bCatchup << std::endl;
     // ANDROID_LOGD("Get packet has done! and pts is %lld, video id %d\n", dashPkt[i].pts, dashPkt[i].videoID);
   }
   if (!dashPkt[0].bCatchup) {

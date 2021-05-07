@@ -157,7 +157,7 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
                 if (data_log != nullptr) {
                     data_log->SetSwitchStartTime(start);
                 }
-                LOG(INFO)<<"low resolution part occurs! pts is " << pts <<std::endl;
+                LOG(INFO)<<"[FrameSequences][Low]: low resolution part occurs! pts is " << pts <<std::endl;
 #ifdef _USE_TRACE_
                 //trace
                 tracepoint(mthq_tp_provider, T0_change_to_lowQ, changedCount+1, pts);
@@ -172,7 +172,7 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
         if (data_log != nullptr) {
             data_log->SetSwitchEndTime(end);
         }
-        LOG(INFO)<<"T9' All high resolution part! pts is " << pts <<std::endl<<"cost time : "<<(end-start)<<"ms"<<std::endl;
+        LOG(INFO)<<"[FrameSequences][High]: T9' All high resolution part! pts is " << pts <<" cost time : "<<(end-start)<<"ms"<<std::endl;
 #ifdef _USE_TRACE_
         //trace
         tracepoint(mthq_tp_provider, T12_change_to_highQ, changedCount+1, pts);

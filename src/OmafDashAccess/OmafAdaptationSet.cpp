@@ -503,7 +503,7 @@ int OmafAdaptationSet::DownloadAssignedSegment(uint32_t trackID, uint32_t segID)
 
   int realSegNum = segID + mStartSegNum - 1;
 
-  OMAF_LOG(LOG_INFO, "Download Catchup OmafSegment id %d for AdaptationSet: %d\n", segID, trackID);
+  OMAF_LOG(LOG_INFO, "[FrameSequences][CatchUp][Download]: Download Catchup OmafSegment id %d for AdaptationSet: %d\n", segID, trackID);
   // ANDROID_LOGD("Download Catchup OmafSegment id %d for AdaptationSet: %d\n", segID, trackID);
 
   if (omaf_reader_mgr_ == nullptr) {

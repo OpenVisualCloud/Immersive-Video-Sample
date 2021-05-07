@@ -314,7 +314,7 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts, int64_t *corr_pts 
         }
     }
 
-    LOG(INFO)<<"Update one frame at:"<<pts<<endl;
+    LOG(INFO)<<"[FrameSequences][Update]: Update one frame at:"<<pts<<endl;
 
     //2. update catch-up video decoders
     RenderStatus st = RENDER_STATUS_OK;
