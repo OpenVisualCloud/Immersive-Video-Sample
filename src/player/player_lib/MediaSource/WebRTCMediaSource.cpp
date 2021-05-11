@@ -238,6 +238,7 @@ WebRTCMediaSource::WebRTCMediaSource()
       m_source_height(0),
       m_source_framerate_den(1),
       m_source_framerate_num(30),
+      m_frame_count(0),
       m_yaw(0),
       m_pitch(0),
       m_rtcp_feedback(nullptr),
@@ -510,9 +511,10 @@ bool WebRTCMediaSource::OnVideoPacket(
 
   dashPkt.buf = buf;
   dashPkt.size = bitstream_buf->size();
-  dashPkt.pts = frame->time_stamp;
+  dashPkt.pts = m_frame_count++; // TODO: consider how to use the frame->time_stamp propertly in future.
   dashPkt.rwpk = rwpk;
   dashPkt.bEOS = false;
+  dashPkt.bCatchup = false;
 
   RenderStatus ret = m_DecoderManager->SendVideoPackets(&dashPkt, 1);
   if (RENDER_STATUS_OK != ret) {

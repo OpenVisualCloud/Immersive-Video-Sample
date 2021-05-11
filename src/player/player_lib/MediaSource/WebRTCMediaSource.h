@@ -174,6 +174,7 @@ class WebRTCMediaSource : public MediaSource, public WebRTCVideoPacketListener {
   std::string m_subId;
   int m_yaw;
   int m_pitch;
+  uint32_t m_frame_count;
   std::mutex m_mutex;
   std::condition_variable m_cond;
 
