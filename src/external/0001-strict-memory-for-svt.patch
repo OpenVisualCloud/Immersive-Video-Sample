@@ -29,8 +29,8 @@ index ef869b2..06f333a 100644
 
 -#define MAX_PICTURE_WIDTH_SIZE                      9344u
 -#define MAX_PICTURE_HEIGHT_SIZE                     5120u
-+#define MAX_PICTURE_WIDTH_SIZE                      (1024 * 12)u
-+#define MAX_PICTURE_HEIGHT_SIZE                     (1024 * 6)u
++#define MAX_PICTURE_WIDTH_SIZE                      1024 * 12u
++#define MAX_PICTURE_HEIGHT_SIZE                     1024 * 6u
 
  #define FILLER_DATA_OVERHEAD                        6
 
