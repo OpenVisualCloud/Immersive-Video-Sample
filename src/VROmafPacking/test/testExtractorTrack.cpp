@@ -561,8 +561,8 @@ TEST_F(ExtractorTrackTest, AllProcess)
             fread(vpsData, 1, vpsLen, fp);
 
             int32_t compRet = 0;
-            errno_t result = memcmp_s(vpsNalu->data, vpsLen, vpsData, vpsLen, &compRet);
-            EXPECT_TRUE(result == EOK);
+            int result = memcmp_s(vpsNalu->data, vpsLen, vpsData, vpsLen, &compRet);
+            EXPECT_TRUE(result == 0);
             EXPECT_TRUE(vpsNalu->dataSize == vpsLen);
             EXPECT_TRUE(compRet == 0);
             EXPECT_TRUE(vpsNalu->startCodesSize == 4);
@@ -595,7 +595,7 @@ TEST_F(ExtractorTrackTest, AllProcess)
             }
             fread(spsData, 1, spsLen, fp);
             result = memcmp_s(spsNalu->data, spsLen, spsData, spsLen, &compRet);
-            EXPECT_TRUE(result == EOK);
+            EXPECT_TRUE(result == 0);
             EXPECT_TRUE(spsNalu->dataSize == spsLen); //includes start codes
             EXPECT_TRUE(compRet == 0);
             EXPECT_TRUE(spsNalu->startCodesSize == 4);
@@ -630,7 +630,7 @@ TEST_F(ExtractorTrackTest, AllProcess)
             }
             fread(ppsData, 1, ppsLen, fp);
             result = memcmp_s(ppsNalu->data, ppsLen, ppsData, ppsLen, &compRet);
-            EXPECT_TRUE(result == EOK);
+            EXPECT_TRUE(result == 0);
             EXPECT_TRUE(ppsNalu->dataSize == ppsLen); //includes start codes
             EXPECT_TRUE(compRet == 0);
             EXPECT_TRUE(ppsNalu->startCodesSize == 4);
@@ -766,7 +766,7 @@ TEST_F(ExtractorTrackTest, AllProcess)
             fread(projSEIData, 1, projSEILen, fp);
 
             result = memcmp_s(projSEI->data, projSEILen, projSEIData, projSEILen, &compRet);
-            EXPECT_TRUE(result == EOK);
+            EXPECT_TRUE(result == 0);
             EXPECT_TRUE(projSEI->dataSize == projSEILen);
             EXPECT_TRUE(compRet == 0);
 

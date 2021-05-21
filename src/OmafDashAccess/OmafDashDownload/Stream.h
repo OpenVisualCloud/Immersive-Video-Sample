@@ -40,10 +40,6 @@
 #include "../common.h"
 #include "../isolib/dash_parser/Mp4StreamIO.h"
 
-extern "C" {
-#include "safestringlib/safe_mem_lib.h"
-}
-
 namespace VCD {
 namespace OMAF {
 //!

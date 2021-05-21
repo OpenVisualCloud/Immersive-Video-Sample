@@ -43,9 +43,6 @@
 #include <string.h>
 #include <stdio.h>
 
-extern "C"
-{
-#include "safestringlib/safe_mem_lib.h"
-}
+#include "../utils/safe_mem.h"
 
 #endif /* _COMMON_H_ */

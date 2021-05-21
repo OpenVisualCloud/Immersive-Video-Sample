@@ -25,9 +25,7 @@
  */
 #include "360SCVPBitstream.h"
 #include "assert.h"
-extern "C" {
-    #include "safestringlib/safe_mem_lib.h"
-}
+#include "../utils/safe_mem.h"
 
 void* gts_malloc(size_t size)
 {

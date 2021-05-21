@@ -35,10 +35,7 @@
 #include "OmafPackingLog.h"
 #include "error.h"
 #include "HevcNaluParser.h"
-extern "C"
-{
-#include "safestringlib/safe_mem_lib.h"
-}
+#include "../../../../utils/safe_mem.h"
 
 HevcNaluParser::~HevcNaluParser()
 {

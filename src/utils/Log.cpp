@@ -33,10 +33,7 @@
 
 #include "Log.h"
 
-extern "C"
-{
-#include "safestringlib/safe_mem_lib.h"
-}
+#include "safe_mem.h"
 
 #define GetOneParamValue(type, param)              \
     ((strncmp(type, "char", 4) == 0) ? param.charParam : ((strncmp(type, "uint32_t", 8) == 0) ? param.uint32Param : ((strncmp(type, "int32_t", 7) == 0) ? param.int32Param : ((strncmp(type, "int64_t", 7) == 0) ? param.int64Param : ((strncmp(type, "\0", 1) == 0) ? param.charParam : '!')))))       \

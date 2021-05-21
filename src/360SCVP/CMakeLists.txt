@@ -13,6 +13,10 @@ SET(DIR_SRC
     ${DIR_SRC}
 )
 
+IF(USE_SAFE_MEM)
+ADD_DEFINITIONS("-D_SAFE_MEM_")
+ENDIF()
+
 if(NOT USE_ANDROID_NDK)
 ADD_DEFINITIONS("-z noexecstack -z relro -z now -fstack-protector-strong -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wl,-S -Wall -Werror -g -c -fPIC -std=c++11")
 else()
@@ -42,8 +46,10 @@ if(NOT DEFINED CMAKE_INSTALL_INCLUDEDIR)
 endif()
 
 TARGET_LINK_LIBRARIES(360SCVP glog)
-TARGET_LINK_LIBRARIES(360SCVP safestring_shared)
 TARGET_LINK_LIBRARIES(360SCVP dl)
+IF(USE_SAFE_MEM)
+TARGET_LINK_LIBRARIES(360SCVP safestring_shared)
+ENDIF()
 
 install(TARGETS 360SCVP
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"

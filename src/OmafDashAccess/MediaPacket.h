@@ -44,10 +44,6 @@
 
 #include <memory>
 
-extern "C" {
-#include "safestringlib/safe_mem_lib.h"
-}
-
 namespace VCD {
 namespace OMAF {
 

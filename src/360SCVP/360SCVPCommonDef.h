@@ -28,9 +28,7 @@
 #define __360SCVP_COMMONDEF__
 #include "stdint.h"
 
-extern "C" {
-    #include "safestringlib/safe_mem_lib.h"
-}
+#include "../utils/safe_mem.h"
 
 #define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
 #define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
