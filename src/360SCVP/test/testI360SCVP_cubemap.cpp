@@ -29,9 +29,7 @@
 #include <fstream>
 #include "../360SCVPAPI.h"
 
-extern "C" {
-    #include "safestringlib/safe_mem_lib.h"
-}
+#include "../../utils/safe_mem.h"
 
 namespace{
 class I360SCVPTest_cubemap : public testing::Test {

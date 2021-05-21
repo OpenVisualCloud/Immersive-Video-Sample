@@ -37,9 +37,7 @@
 
 #include <sstream>
 #include <string>
-extern "C" {
-#include "safestringlib/safe_mem_lib.h"
-}
+#include "../utils/safe_mem.h"
 
 namespace VCD {
 namespace OMAF {

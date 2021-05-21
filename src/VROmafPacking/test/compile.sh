@@ -15,7 +15,7 @@ g++ -I../ -I./vs_plugin -I../../isolib -I../../google_test/ -std=c++11 -g -c tes
 g++ -I../ -I./vs_plugin -I../../isolib -I../../google_test/ -std=c++11 -g -c testExtractorTrack.cpp -D_GLIBCXX_USE_CXX11_ABI=0
 g++ -I../ -I./vs_plugin -I../../isolib -I../../google_test/ -std=c++11 -g -c testDefaultSegmentation.cpp -D_GLIBCXX_USE_CXX11_ABI=0
 
-LD_FLAGS="-L/usr/local/lib -lVROmafPacking -l360SCVP -lHevcVideoStreamProcess -lsafestring_shared -ldl -lstdc++ -lpthread -lm -L/usr/local/lib"
+LD_FLAGS="-L/usr/local/lib -lVROmafPacking -l360SCVP -lHevcVideoStreamProcess -ldl -lstdc++ -lpthread -lm -L/usr/local/lib"
 
 g++ -L/usr/local/lib testHevcNaluParser.o libgtest.a -o testHevcNaluParser ${LD_FLAGS}
 g++ -L/usr/local/lib testVideoStream.o libgtest.a -o testVideoStream ${LD_FLAGS}

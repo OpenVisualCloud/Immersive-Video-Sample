@@ -12,6 +12,10 @@ AUX_SOURCE_DIRECTORY(OmafDashDownload/. DOWN_SRC)
 AUX_SOURCE_DIRECTORY(OmafDashParser/. PARSE_SRC)
 AUX_SOURCE_DIRECTORY(OmafViewportPredict/. PREDICT_SRC)
 
+IF(USE_SAFE_MEM)
+ADD_DEFINITIONS("-D_SAFE_MEM_")
+ENDIF()
+
 IF(NOT USE_ANDROID_NDK)
   ADD_DEFINITIONS("-g -c -fPIC -lstdc++fs -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0
                    -z noexecstack -z relro -z now -fstack-protector-strong
@@ -57,7 +61,9 @@ TARGET_LINK_LIBRARIES(OmafDashAccess glog)
 TARGET_LINK_LIBRARIES(OmafDashAccess curl)
 TARGET_LINK_LIBRARIES(OmafDashAccess dashparser)
 TARGET_LINK_LIBRARIES(OmafDashAccess 360SCVP)
+IF(USE_SAFE_MEM)
 TARGET_LINK_LIBRARIES(OmafDashAccess safestring_shared)
+ENDIF()
 IF(NOT USE_ANDROID_NDK)
   IF(USE_TRACE)
     TARGET_LINK_LIBRARIES(OmafDashAccess trace)

@@ -38,10 +38,7 @@
 
 #include "VROmafPacking_data.h"
 #include "VROmafPacking_def.h"
-extern "C"
-{
-#include "safestringlib/safe_mem_lib.h"
-}
+#include "../../../../utils/safe_mem.h"
 
 //!
 //! \class VideoSegmentInfoGenerator

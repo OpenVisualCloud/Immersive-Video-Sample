@@ -17,6 +17,10 @@ OPTION(ANDROID_OS
 
 PROJECT(app)
 
+IF(USE_SAFE_MEM)
+ADD_DEFINITIONS("-D_SAFE_MEM_")
+ENDIF()
+
 IF(LINUX_OS)
   ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -fpermissive")
 ENDIF()
@@ -65,7 +69,10 @@ ENDIF()
 ADD_EXECUTABLE(render ${DIR_SRC})
 
 IF(LINUX_OS)
-  SET(LINK_LIB ${LINK_LIB} MediaPlayer glog glfw GL GLU safestring_shared dl)
+  SET(LINK_LIB ${LINK_LIB} MediaPlayer glog glfw GL GLU dl)
+  IF(USE_SAFE_MEM)
+    SET(LINK_LIB ${LINK_LIB} safestring_shared)
+  ENDIF()
 ENDIF()
 
 TARGET_LINK_LIBRARIES(render ${LINK_LIB})

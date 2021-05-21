@@ -7,8 +7,16 @@ OPTION(USE_TRACE
        "Use trace"
        OFF)
 
+OPTION(USE_SAFE_MEM_LIB
+       "Use safe mem lib"
+       OFF)
+
 IF(USE_TRACE)
   ADD_DEFINITIONS("-D_USE_TRACE_")
+ENDIF()
+
+IF(USE_SAFE_MEM_LIB)
+  SET(USE_SAFE_MEM true)
 ENDIF()
 
 IF(NOT DE_FLAG)
@@ -26,13 +34,13 @@ ENDIF()
 
 IF(${TARGET} STREQUAL "server")
   SET(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} \
-                               -std=c++11 -lpthread -lsafestring_shared \
+                               -std=c++11 -lpthread \
                                -D_GLIBCXX_USE_CXX11_ABI=0")
   SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} \
                                -z noexecstack -z relro -z now \
                                -fstack-protector-strong -fPIE -fPIC -pie -O2 \
                                -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security \
-                               -Wl,-S -Wall -std=c++11 -lpthread -lsafestring_shared \
+                               -Wl,-S -Wall -std=c++11 -lpthread \
                                -D_GLIBCXX_USE_CXX11_ABI=0")
   SET(FFMPEG_DIR "ffmpeg")
   SET(FFMPEG_FILE "ffmpeg.txt")
