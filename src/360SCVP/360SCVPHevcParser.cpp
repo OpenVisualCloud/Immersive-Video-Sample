@@ -1127,6 +1127,7 @@ static void hevc_parse_hrd_parameters(GTS_BitStream *bs, HEVC_VPS *vps, bool com
     //uint32_t flagHdrParaPresentVcl = 0;
     //bool flagHdrParaPresentSubpic = false;
     HEVC_HrdInfo hrd_info;
+    memset_s(&hrd_info, sizeof(HEVC_HrdInfo), 0);
     if (commonInfPresentFlag) {
         hrd_info.nal_hrd_param_present_flag = gts_bs_read_int(bs, 1);
         hrd_info.vcl_hrd_param_present_flag = gts_bs_read_int(bs, 1);
