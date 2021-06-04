@@ -1,5 +1,32 @@
 # **Changelog**
 ---
+## [1.6.0] - 2021-6-4
+**Features & bug fix:**
+- OMAF Packing Library
+   + Support GOP size output in DASH MPD file
+
+- OMAF Dash Access Library
+   + Support motion halting possibility output with viewport prediction
+   + Support in-time viewport update strategy to reduce M2HQ latency
+   + bug fix : incorrect pts, framerate calculation
+
+- 360SCVP (Stream Concatenation and Viewport Processing) Library
+   + Support HEVC B frame in bitstream parsing and stitching
+   + Optimize viewport related tiles selectin for both equirectangular and cube-map projections
+   + Support webrtc under cube-map projection
+   + Optimize memory copy in GenerateSliceHdr
+
+- Reference OMAF Player
+   + Android Player: Support in-time viewport update strategy to reduce M2HQ latency
+   + Android Player: Support user input configuration
+   + Linux Player: Support in-time viewport update strategy to reduce M2HQ latency
+   + Linux Player: Support performance data log and frame sequences log to trace M2HQ latency
+
+- FFmpeg Plugins & Encoder Library
+   + Encoder Library:add HEVC B frame support and optimize config file parsing
+   + FFmpeg Plugins: add option for HEVC B frame support
+
+---
 ## [1.4.0] - 2021-1-14
 **Features & bug fix:**
 - OMAF Packing Library
