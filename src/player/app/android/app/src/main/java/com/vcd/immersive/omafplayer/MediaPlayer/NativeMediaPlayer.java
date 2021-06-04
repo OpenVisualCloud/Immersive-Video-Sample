@@ -34,6 +34,8 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 
 import java.io.InputStreamReader;
@@ -223,7 +225,6 @@ public class NativeMediaPlayer {
         mHandler = 0;
         mConfig = null;
         context = text;
-        ParseXmlConfig();
     }
 
     public int Initialize()
@@ -235,18 +236,29 @@ public class NativeMediaPlayer {
             Log.e(TAG, "Failed to init jni media player!");
             return -1;
         }
+
+        GetConfigValueFromCfgFile();
+
         return 0;
     }
 
-    private String GetCfgJson()
-    {
+    private void GetConfigValueFromCfgFile() {
+
         StringBuilder stringBuilder = new StringBuilder();
-        AssetManager assetManager = context.getAssets();
 
         try {
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
-                    assetManager.open("cfg.json"), "utf-8"
-            ));
+            //1. load cfg file
+            String path = context.getExternalFilesDir("").getPath();
+            File inputfile = new File(path + "/cfg.json");
+            if (!inputfile.exists()) {
+                Log.i(TAG, "Error occurs! Cfg file Not found");
+                return;
+            }
+
+            FileInputStream inputStream = new FileInputStream(inputfile);
+            InputStreamReader isr = new InputStreamReader(inputStream, "UTF-8");
+            BufferedReader bufferedReader = new BufferedReader(isr);
+
             String jsonLines;
             while ((jsonLines = bufferedReader.readLine()) != null) {
                 stringBuilder.append(jsonLines);
@@ -256,12 +268,8 @@ public class NativeMediaPlayer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return stringBuilder.toString();
-    }
-
-    private int ParseXmlConfig()
-    {
-        String cfgJsonStr = GetCfgJson();
+        //2. set text according to json file
+        String cfgJsonStr = stringBuilder.toString();
         JSONObject cfgJsonObject = null;
         try {
             cfgJsonObject = new JSONObject(cfgJsonStr);
@@ -270,34 +278,29 @@ public class NativeMediaPlayer {
         }
         mConfig = new RenderConfig();
         try {
-            mConfig.windowHeight = cfgJsonObject.getInt("windowHeight");
-            mConfig.windowWidth = cfgJsonObject.getInt("windowWidth");
             mConfig.url = cfgJsonObject.getString("url");
             mConfig.sourceType = cfgJsonObject.getInt("sourceType");
-            mConfig.viewportHFOV = cfgJsonObject.getInt("viewportHFOV");
-            mConfig.viewportVFOV = cfgJsonObject.getInt("viewportVFOV");
-            mConfig.viewportWidth = cfgJsonObject.getInt("viewportWidth");
-            mConfig.viewportHeight = cfgJsonObject.getInt("viewportHeight");
-
-            mConfig.cachePath = cfgJsonObject.getString("cachePath");
             mConfig.enableExtractor = cfgJsonObject.getBoolean("enableExtractor");
-            String predictStr = cfgJsonObject.getString("predict");
-            JSONObject predictObj = new JSONObject(predictStr);
-            mConfig.enablePredictor = predictObj.getBoolean("enable");
-            mConfig.predictPluginName = predictObj.getString("name");
-            mConfig.libPath = predictObj.getString("path");
+            mConfig.cachePath = cfgJsonObject.getString("cachePath");
             mConfig.maxVideoDecodeWidth = cfgJsonObject.getInt("maxVideoDecodeWidth");
             mConfig.maxVideoDecodeHeight = cfgJsonObject.getInt("maxVideoDecodeHeight");
-            String catchupStr = cfgJsonObject.getString("intimeviewportupdate");
-            JSONObject catchupObj = new JSONObject(catchupStr);
-            mConfig.enableCatchup = catchupObj.getBoolean("enable");
-            mConfig.responseTimesInOneSeg = catchupObj.getInt("responseTimesInOneSeg");
-            mConfig.maxCatchupWidth = catchupObj.getInt("maxCatchupWidth");
-            mConfig.maxCatchupHeight = catchupObj.getInt("maxCatchupHeight");
+            mConfig.enablePredictor = cfgJsonObject.getBoolean("hasPredict");
+            mConfig.predictPluginName = cfgJsonObject.getString("predictName");
+            mConfig.libPath = cfgJsonObject.getString("predictPath");
+            mConfig.enableCatchup = cfgJsonObject.getBoolean("hasCatchup");
+            mConfig.responseTimesInOneSeg = cfgJsonObject.getInt("catchupTimes");
+            mConfig.maxCatchupWidth = cfgJsonObject.getInt("maxCatchupWidth");
+            mConfig.maxCatchupHeight = cfgJsonObject.getInt("maxCatchupHeight");
+            // default in file
+            mConfig.windowWidth = cfgJsonObject.has("windowWidth") ? cfgJsonObject.getInt("windowWidth") : 0;
+            mConfig.windowHeight = cfgJsonObject.has("windowHeight") ? cfgJsonObject.getInt("windowHeight") : 0;
+            mConfig.viewportHFOV = cfgJsonObject.has("viewportHFOV") ? cfgJsonObject.getInt("viewportHFOV") : 0;
+            mConfig.viewportVFOV = cfgJsonObject.has("viewportVFOV") ? cfgJsonObject.getInt("viewportVFOV") : 0;
+            mConfig.viewportWidth = cfgJsonObject.has("viewportWidth") ? cfgJsonObject.getInt("viewportWidth") : 0;
+            mConfig.viewportHeight = cfgJsonObject.has("viewportHeight") ? cfgJsonObject.getInt("viewportHeight") : 0;
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        return 0;
     }
 
     public int Create(String config_url)
