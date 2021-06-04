@@ -30,6 +30,7 @@ if [ ! -d "./glog" ];then
     git clone https://github.com/google/glog.git
 fi
 cd glog
+git reset --hard 0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6
 patch -p1 < ../../../../external/0001-Update-glob-header-cpp-file-for-android-ndk-build.patch
 if [ ! -d "./build" ];then
     mkdir build

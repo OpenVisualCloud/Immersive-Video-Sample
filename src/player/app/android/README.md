@@ -44,3 +44,8 @@ arm processer: arm64-v8a
 > 2. Check the android cellphone is recognized as running device.
 > 3. Check input parameters in assets/cfg.json.
 > 4. Click 'green triangle' run button.
+
+or use gradlew command to build the apk.
+cd src/player/app/android
+./gradlew assembleDebug
+adb install ./app/build/outputs/apk/debug/app-debug.apk

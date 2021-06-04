@@ -1,30 +1,746 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Layout for the 2D Activity. It will either show a permission button or the MonoscopicView. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/activity_root"
-    android:orientation="vertical"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
+    <!--top tile-->
+     <RelativeLayout
+         android:id="@+id/topTitle"
+         android:layout_width="match_parent"
+         android:layout_height="50dp"
+         android:layout_alignParentLeft="true"
+         android:layout_alignParentTop="true"
+         android:background="@color/colorPrimaryDark">
 
-    <!-- Permission request button that will be shown until the permission is granted. -->
-    <Button
-        android:id="@+id/permission_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/permission_warning"/>
+      <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_centerInParent="true"
+          android:layout_marginLeft="10dip"
+          android:text="Omaf Player"
+          android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+          android:textSize="20sp" />
+     </RelativeLayout>
+     <!--URL-->
+     <RelativeLayout
+         android:id="@+id/relativeLayout1"
+         android:layout_width="350dp"
+         android:layout_height="40dp"
+         android:layout_below="@+id/topTitle"
+         android:layout_centerHorizontal="true"
+         android:layout_marginTop="30dp">
 
-    <!-- These views are hidden unless the permission is granted. -->
-    <com.vcd.immersive.omafplayer.MonoscopicView
-        android:id="@+id/video_view"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_gravity="top"
-        android:layout_weight="1"
-        android:visibility="gone"/>
+      <RelativeLayout
+          android:layout_width="match_parent"
+          android:layout_height="match_parent"
+          android:layout_alignParentTop="true"
+          android:layout_centerHorizontal="true">
 
-    <include
+       <TextView
+           android:id="@+id/textView_url"
+           android:layout_width="70dp"
+           android:layout_height="wrap_content"
+           android:layout_alignParentLeft="true"
+           android:layout_centerVertical="true"
+           android:lines="1"
+           android:padding="1dp"
+           android:text="@string/url_text_view"
+           android:textSize="12sp" />
+
+       <View
+           android:id="@+id/view1"
+           android:layout_width="1dip"
+           android:layout_height="match_parent"
+           android:layout_centerVertical="true"
+           android:layout_gravity="center_horizontal"
+           android:layout_marginLeft="2dp"
+           android:layout_marginRight="2dp"
+           android:layout_toRightOf="@+id/textView_url"
+           android:background="#EEEFFF" />
+
+       <EditText
+           android:id="@+id/text_url"
+           android:layout_width="wrap_content"
+           android:layout_height="40dp"
+           android:layout_centerVertical="true"
+           android:layout_marginLeft="2dp"
+           android:layout_toRightOf="@+id/view1"
+           android:ems="19"
+           android:hint="@string/url_text_hint"
+           android:padding="1dp"
+           android:textSize="12sp">
+
+        <requestFocus />
+       </EditText>
+      </RelativeLayout>
+     </RelativeLayout>
+
+    <!--source type-->
+    <RelativeLayout
+        android:id="@+id/relativeLayout2"
+        android:layout_width="350dp"
+        android:layout_height="40dp"
+        android:layout_below="@+id/relativeLayout1"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true">
+
+            <TextView
+                android:id="@+id/textView_sourceType"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="1"
+                android:padding="1dp"
+                android:text="@string/sourcetype_text_view"
+                android:textSize="12sp" />
+
+            <View
+                android:id="@+id/view2"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:layout_toRightOf="@+id/textView_sourceType"
+                android:background="#EEEFFF" />
+
+            <EditText
+                android:id="@+id/text_sourceType"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="2dp"
+                android:layout_toRightOf="@+id/view2"
+                android:ems="19"
+                android:hint="@string/sourcetype_text_hint"
+                android:padding="1dp"
+                android:textSize="12sp">
+            </EditText>
+        </RelativeLayout>
+    </RelativeLayout>
+
+    <!--enable extractor-->
+    <RelativeLayout
+        android:id="@+id/relativeLayout3"
+        android:layout_width="350dp"
+        android:layout_height="40dp"
+        android:layout_below="@+id/relativeLayout2"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true">
+
+            <TextView
+                android:id="@+id/textView_extractor"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="1"
+                android:padding="1dp"
+                android:text="@string/extractor_text_view"
+                android:textSize="12sp" />
+
+            <View
+                android:id="@+id/view3"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:layout_toRightOf="@+id/textView_extractor"
+                android:background="#EEEFFF" />
+
+            <EditText
+                android:id="@+id/text_extractor"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="2dp"
+                android:layout_toRightOf="@+id/view3"
+                android:ems="19"
+                android:hint="@string/extractor_text_hint"
+                android:padding="1dp"
+                android:textSize="12sp">
+            </EditText>
+        </RelativeLayout>
+    </RelativeLayout>
+
+    <!--cachePath-->
+    <RelativeLayout
+        android:id="@+id/relativeLayout4"
+        android:layout_width="350dp"
+        android:layout_height="40dp"
+        android:layout_below="@+id/relativeLayout3"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true">
+
+            <TextView
+                android:id="@+id/textView_cachePath"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="1"
+                android:padding="1dp"
+                android:text="@string/cachePath_text_view"
+                android:textSize="12sp" />
+
+            <View
+                android:id="@+id/view4"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:layout_toRightOf="@+id/textView_cachePath"
+                android:background="#EEEFFF" />
+
+            <EditText
+                android:id="@+id/text_cachePath"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="2dp"
+                android:layout_toRightOf="@+id/view4"
+                android:ems="19"
+                android:hint="@string/cachePath_text_hint"
+                android:padding="1dp"
+                android:textSize="12sp">
+            </EditText>
+        </RelativeLayout>
+    </RelativeLayout>
+
+    <!--maxVideoDecodeWidth-->
+    <RelativeLayout
+        android:id="@+id/relativeLayout5"
+        android:layout_width="350dp"
+        android:layout_height="40dp"
+        android:layout_below="@+id/relativeLayout4"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true">
+
+            <TextView
+                android:id="@+id/textView_maxWidth"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="2"
+                android:padding="1dp"
+                android:text="@string/maxWidth_text_view"
+                android:textSize="12sp" />
+
+            <View
+                android:id="@+id/view5"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:layout_toRightOf="@+id/textView_maxWidth"
+                android:background="#EEEFFF" />
+
+            <EditText
+                android:id="@+id/text_maxWidth"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="2dp"
+                android:layout_toRightOf="@+id/view5"
+                android:ems="19"
+                android:hint="@string/maxWidth_text_hint"
+                android:padding="1dp"
+                android:textSize="12sp">
+            </EditText>
+        </RelativeLayout>
+    </RelativeLayout>
+
+    <!--maxVideoDecodeHeight-->
+    <RelativeLayout
+        android:id="@+id/relativeLayout6"
+        android:layout_width="350dp"
+        android:layout_height="40dp"
+        android:layout_below="@+id/relativeLayout5"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true">
+
+            <TextView
+                android:id="@+id/textView_maxHeight"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="2"
+                android:padding="1dp"
+                android:text="@string/maxHeight_text_view"
+                android:textSize="12sp" />
+
+            <View
+                android:id="@+id/view6"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:layout_toRightOf="@+id/textView_maxHeight"
+                android:background="#EEEFFF" />
+
+            <EditText
+                android:id="@+id/text_maxHeight"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="2dp"
+                android:layout_toRightOf="@+id/view6"
+                android:ems="19"
+                android:hint="@string/maxHeight_text_hint"
+                android:padding="1dp"
+                android:textSize="12sp">
+            </EditText>
+        </RelativeLayout>
+    </RelativeLayout>
+
+    <!--hasPredict-->
+    <RelativeLayout
+        android:id="@+id/relativeLayout7"
+        android:layout_width="350dp"
+        android:layout_height="40dp"
+        android:layout_below="@+id/relativeLayout6"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true">
+
+            <TextView
+                android:id="@+id/textView_hasPredict"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="1"
+                android:padding="1dp"
+                android:text="@string/hasPredict_text_view"
+                android:textSize="12sp" />
+
+            <View
+                android:id="@+id/view7"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:layout_toRightOf="@+id/textView_hasPredict"
+                android:background="#EEEFFF" />
+
+            <EditText
+                android:id="@+id/text_hasPredict"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="2dp"
+                android:layout_toRightOf="@+id/view7"
+                android:ems="19"
+                android:hint="@string/hasPredict_text_hint"
+                android:padding="1dp"
+                android:textSize="12sp">
+            </EditText>
+        </RelativeLayout>
+    </RelativeLayout>
+
+    <!--predictName-->
+    <RelativeLayout
+        android:id="@+id/relativeLayout8"
+        android:layout_width="350dp"
+        android:layout_height="40dp"
+        android:layout_below="@+id/relativeLayout7"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true">
+
+            <TextView
+                android:id="@+id/textView_predictName"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="2"
+                android:padding="1dp"
+                android:text="@string/predictName_text_view"
+                android:textSize="12sp" />
+
+            <View
+                android:id="@+id/view8"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:layout_toRightOf="@+id/textView_predictName"
+                android:background="#EEEFFF" />
+
+            <EditText
+                android:id="@+id/text_predictName"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="2dp"
+                android:layout_toRightOf="@+id/view8"
+                android:ems="19"
+                android:hint="@string/predictName_text_hint"
+                android:padding="1dp"
+                android:textSize="12sp">
+            </EditText>
+        </RelativeLayout>
+    </RelativeLayout>
+
+    <!--predictPath-->
+    <RelativeLayout
+        android:id="@+id/relativeLayout9"
+        android:layout_width="350dp"
+        android:layout_height="40dp"
+        android:layout_below="@+id/relativeLayout8"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true">
+
+            <TextView
+                android:id="@+id/textView_predictPath"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="1"
+                android:padding="1dp"
+                android:text="@string/predictPath_text_view"
+                android:textSize="12sp" />
+
+            <View
+                android:id="@+id/view9"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:layout_toRightOf="@+id/textView_predictPath"
+                android:background="#EEEFFF" />
+
+            <EditText
+                android:id="@+id/text_predictPath"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="2dp"
+                android:layout_toRightOf="@+id/view9"
+                android:ems="19"
+                android:hint="@string/predictPath_text_hint"
+                android:padding="1dp"
+                android:textSize="12sp">
+            </EditText>
+        </RelativeLayout>
+    </RelativeLayout>
+
+    <!--hasCatchup-->
+    <RelativeLayout
+        android:id="@+id/relativeLayout10"
+        android:layout_width="350dp"
+        android:layout_height="40dp"
+        android:layout_below="@+id/relativeLayout9"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true">
+
+            <TextView
+                android:id="@+id/textView_hasCatchup"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="1"
+                android:padding="1dp"
+                android:text="@string/hasCatchup_text_view"
+                android:textSize="12sp" />
+
+            <View
+                android:id="@+id/view10"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:layout_toRightOf="@+id/textView_hasCatchup"
+                android:background="#EEEFFF" />
+
+            <EditText
+                android:id="@+id/text_hasCatchup"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="2dp"
+                android:layout_toRightOf="@+id/view10"
+                android:ems="19"
+                android:hint="@string/hasCatchup_text_hint"
+                android:padding="1dp"
+                android:textSize="12sp">
+            </EditText>
+        </RelativeLayout>
+    </RelativeLayout>
+
+    <!--catchupTimes-->
+    <RelativeLayout
+        android:id="@+id/relativeLayout11"
+        android:layout_width="350dp"
+        android:layout_height="40dp"
+        android:layout_below="@+id/relativeLayout10"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true">
+
+            <TextView
+                android:id="@+id/textView_catchupTimes"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="2"
+                android:padding="1dp"
+                android:text="@string/catchupTimes_text_view"
+                android:textSize="12sp" />
+
+            <View
+                android:id="@+id/view11"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:layout_toRightOf="@+id/textView_catchupTimes"
+                android:background="#EEEFFF" />
+
+            <EditText
+                android:id="@+id/text_catchupTimes"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="2dp"
+                android:layout_toRightOf="@+id/view11"
+                android:ems="19"
+                android:hint="@string/catchupTimes_text_hint"
+                android:padding="1dp"
+                android:textSize="12sp">
+            </EditText>
+        </RelativeLayout>
+    </RelativeLayout>
+
+    <!--maxCatchupWidth-->
+    <RelativeLayout
+        android:id="@+id/relativeLayout12"
+        android:layout_width="350dp"
+        android:layout_height="40dp"
+        android:layout_below="@+id/relativeLayout11"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true">
+
+            <TextView
+                android:id="@+id/textView_maxCatchupWidth"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="2"
+                android:padding="1dp"
+                android:text="@string/maxCatchupWidth_text_view"
+                android:textSize="12sp" />
+
+            <View
+                android:id="@+id/view12"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:layout_toRightOf="@+id/textView_maxCatchupWidth"
+                android:background="#EEEFFF" />
+
+            <EditText
+                android:id="@+id/text_maxCatchupWidth"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="2dp"
+                android:layout_toRightOf="@+id/view12"
+                android:ems="19"
+                android:hint="@string/maxCatchupWidth_text_hint"
+                android:padding="1dp"
+                android:textSize="12sp">
+            </EditText>
+        </RelativeLayout>
+    </RelativeLayout>
+
+    <!--maxCatchupHeight-->
+    <RelativeLayout
+        android:id="@+id/relativeLayout13"
+        android:layout_width="350dp"
+        android:layout_height="40dp"
+        android:layout_below="@+id/relativeLayout12"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true">
+
+            <TextView
+                android:id="@+id/textView_maxCatchupHeight"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:lines="2"
+                android:padding="1dp"
+                android:text="@string/maxCatchupHeight_text_view"
+                android:textSize="12sp" />
+
+            <View
+                android:id="@+id/view13"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_centerVertical="true"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginLeft="2dp"
+                android:layout_marginRight="2dp"
+                android:layout_toRightOf="@+id/textView_maxCatchupHeight"
+                android:background="#EEEFFF" />
+
+            <EditText
+                android:id="@+id/text_maxCatchupHeight"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="2dp"
+                android:layout_toRightOf="@+id/view13"
+                android:ems="19"
+                android:hint="@string/maxCatchupHeight_text_hint"
+                android:padding="1dp"
+                android:textSize="12sp">
+            </EditText>
+        </RelativeLayout>
+    </RelativeLayout>
+
+    <!--login button-->
+     <Button
+         android:id="@+id/loginButton"
+         android:layout_width="160dp"
+         android:layout_height="40dp"
+         android:layout_below="@+id/relativeLayout13"
+         android:layout_alignLeft="@+id/relativeLayout13"
+         android:layout_alignRight="@+id/relativeLayout13"
+         android:layout_marginTop="35dp"
+         android:padding="1dp"
+         android:text="@string/ok_key"
+         android:textSize="18sp" />
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/activity_root"
+        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        layout="@layout/video_ui"
-        android:visibility="gone"/>
-</LinearLayout>
+        android:gravity="center"
+        android:layout_height="match_parent">
+        <!-- permisson button-->
+        <!-- Permission request button that will be shown until the permission is granted. -->
+        <Button
+            android:id="@+id/permission_button"
+            android:layout_width="350dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_centerHorizontal="true"
+            android:visibility="gone"
+            android:text="@string/permission_warning"/>
+
+        <!-- These views are hidden unless the permission is granted. -->
+        <com.vcd.immersive.omafplayer.MonoscopicView
+            android:id="@+id/video_view"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_gravity="top"
+            android:layout_weight="1"
+            android:visibility="gone"/>
+
+        <include
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            layout="@layout/video_ui"
+            android:visibility="gone"/>
+    </LinearLayout>
+</RelativeLayout>
