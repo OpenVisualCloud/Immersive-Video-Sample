@@ -85,7 +85,7 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
     {
       renderConfig.url = new char[1024];
       memcpy_s(renderConfig.url, 1024, (char *)urlElem->GetText(), 1024);
-      string url_string = renderConfig.url;
+      string url_string(renderConfig.url, renderConfig.url + strlen(renderConfig.url));
       // string fileType(renderConfig.url + strlen(renderConfig.url) - 3, renderConfig.url + strlen(renderConfig.url));
       string fileType = url_string.substr(url_string.size() - 3);
       if (fileType != "mpd") {
@@ -281,7 +281,7 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       XMLElement* maxWidthElem = viewportUpdate->FirstChildElement("maxCatchupWidth");
       XMLElement* maxHeightElem = viewportUpdate->FirstChildElement("maxCatchupHeight");
       if (renderConfig.enableInTimeViewportUpdate) {
-        if (responseElem != NULL)
+        if (responseElem != NULL && maxWidthElem != NULL && maxHeightElem != NULL)
         {
           renderConfig.maxResponseTimesInOneSeg = atoi(responseElem->GetText());
           renderConfig.maxCatchupWidth = atoi(maxWidthElem->GetText());
@@ -342,11 +342,15 @@ int main(int32_t argc, char *argv[]) {
     SAFE_DELETE_ARRAY(renderConfig.pathof360SCVPPlugin);
     SAFE_DELETE_ARRAY(renderConfig.url);
     SAFE_DELETE_ARRAY(renderConfig.cachePath);
+    if (renderConfig.enablePredictor) {
+      SAFE_DELETE_ARRAY(renderConfig.libPath);
+      SAFE_DELETE_ARRAY(renderConfig.predictPluginName);
+    }
     return RENDER_ERROR;
   }
   GlogWrapper m_glogWrapper((char*)"glogRender", renderConfig.minLogLevel);
 
-  string cacheDir = renderConfig.cachePath;
+  string cacheDir(renderConfig.cachePath, renderConfig.cachePath + strlen(renderConfig.cachePath));
   DIR *dir = opendir(cacheDir.c_str());
   if (dir) {
     closedir(dir);
@@ -357,8 +361,10 @@ int main(int32_t argc, char *argv[]) {
       SAFE_DELETE_ARRAY(renderConfig.pathof360SCVPPlugin);
       SAFE_DELETE_ARRAY(renderConfig.url);
       SAFE_DELETE_ARRAY(renderConfig.cachePath);
-      SAFE_DELETE_ARRAY(renderConfig.libPath);
-      SAFE_DELETE_ARRAY(renderConfig.predictPluginName);
+      if (renderConfig.enablePredictor) {
+        SAFE_DELETE_ARRAY(renderConfig.libPath);
+        SAFE_DELETE_ARRAY(renderConfig.predictPluginName);
+      }
       LOG(ERROR) << "Uable to create cache path: " << cacheDir << endl;
       return RENDER_ERROR;
     }
@@ -380,6 +386,10 @@ int main(int32_t argc, char *argv[]) {
   SAFE_DELETE_ARRAY(renderConfig.pathof360SCVPPlugin);
   SAFE_DELETE_ARRAY(renderConfig.url);
   SAFE_DELETE_ARRAY(renderConfig.cachePath);
+  if (renderConfig.enablePredictor) {
+    SAFE_DELETE_ARRAY(renderConfig.libPath);
+    SAFE_DELETE_ARRAY(renderConfig.predictPluginName);
+  }
   return 0;
 }
 #endif
