@@ -160,7 +160,7 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream, bool isTimed)
         {
             int32_t stream_frame_rate = streamInfo->framerate_num / streamInfo->framerate_den;
             uint32_t sampleNumPerSeg = pStream->GetSegmentDuration() * stream_frame_rate;
-            uint64_t curr_pts = static_cast<uint64_t>(((pStream->GetSegmentNumber() - 1) * sampleNumPerSeg));
+            uint64_t curr_pts = static_cast<uint64_t>(pStream->GetSegmentNumber() - 1) * sampleNumPerSeg;
             // if existed, replace it
             if (m_prevTimedTracksMap.find(curr_pts) != m_prevTimedTracksMap.end())
             {

@@ -61,6 +61,8 @@ OmafMediaStream::OmafMediaStream() {
   m_catchupMergedPackets.clear();
   m_enableCatchup = false;
   m_gopSize = 0;
+  m_totalSegNum = 0;
+  m_catchupThreadNum = 0;
 }
 
 OmafMediaStream::~OmafMediaStream() {
@@ -746,7 +748,10 @@ int32_t OmafMediaStream::GetSelectedPacketsWithPTS(uint64_t targetPTS, pair<uint
     uint32_t wait_timeout_get_packet = 100;
     while (((onePacket && onePacket->GetEOS()) || (ret == ERROR_NULL_PACKET)) && (wait_time_get_packet < wait_timeout_get_packet) && m_catchup_status != STATUS_STOPPED)
     {
-      if (!m_pStreamInfo) return ERROR_NULL_PTR;
+      if (!m_pStreamInfo) {
+        SAFE_DELETE(onePacket);
+        return ERROR_NULL_PTR;
+      }
       usleep((m_pStreamInfo->segmentDuration * 1000000 / 2) / wait_timeout_get_packet);
       wait_time_get_packet++;
       //OMAF_LOG(LOG_INFO, "To get packet %ld for track %d\n", currFramePTS, trackID);
@@ -842,7 +847,7 @@ int32_t OmafMediaStream::TaskRun(OmafTilesStitch *stitch, std::pair<uint64_t, st
 
       //3. do stitch initialize and get merged packet
       bool bFirst = false;
-      if (!stitch->IsInitialized())
+      if (!stitch->IsInitialized() && m_pStreamInfo != nullptr)
       {
         OMAF_LOG(LOG_INFO, "Start to initialize catchup stitch class!\n");
         ret = stitch->Initialize(selectedPackets, true, (VCD::OMAF::ProjectionFormat)(m_pStreamInfo->mProjFormat), m_sources);

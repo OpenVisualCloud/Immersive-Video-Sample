@@ -47,6 +47,7 @@ public:
         mStartPts = 0;
         m_status = STATUS_UNKNOWN;
         m_nativeSurface = nullptr;
+        mIsCatchup = false;
         memset_s(&mDecodeInfo, sizeof(mDecodeInfo), 0);
     };
     virtual ~MediaDecoder(){};

@@ -392,7 +392,9 @@ std::map<uint32_t, std::map<int, OmafAdaptationSet*>> OmafTracksSelector::Compar
     }
     else // in this case, the change will be detected and render soon(Means the latency of (render - download) is less than thresholdFrameNum). Need not catch up. Eg.C25-D30-R30
     {
+      if (m_prevTimedTracksMap.rbegin() != m_prevTimedTracksMap.rend()) {
         OMAF_LOG(LOG_WARNING, "Abnormal happens outside of all 3 conditions! The current time line is %lld and last timeline in prevTracks is %lld\n", *currentTimeLine, m_prevTimedTracksMap.rbegin()->first);
+      }
     }
 
     return diffTracksMap;

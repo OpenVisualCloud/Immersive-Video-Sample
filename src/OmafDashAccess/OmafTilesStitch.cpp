@@ -1687,9 +1687,9 @@ int32_t OmafTilesStitch::UpdateMergedDataAndRealSize(
         I360SCVP_GenerateSliceHdr(m_360scvpParam, ctuIdx, m_360scvpHandle);
         *realSize += m_360scvpParam->outputBitstreamLen;
         memcpy_s(mergedData + *realSize,
-                 (nalu->dataSize - (HEVC_STARTCODES_LEN + HEVC_NALUHEADER_LEN + nalu->sliceHeaderLen)),
+                 (size_t(nalu->dataSize) - (HEVC_STARTCODES_LEN + HEVC_NALUHEADER_LEN + nalu->sliceHeaderLen)),
                  (nalu->data + HEVC_STARTCODES_LEN + HEVC_NALUHEADER_LEN + nalu->sliceHeaderLen),
-                 (nalu->dataSize - (HEVC_STARTCODES_LEN + HEVC_NALUHEADER_LEN + nalu->sliceHeaderLen)));
+                 (size_t(nalu->dataSize) - (HEVC_STARTCODES_LEN + HEVC_NALUHEADER_LEN + nalu->sliceHeaderLen)));
 
         *realSize += nalu->dataSize - (HEVC_STARTCODES_LEN + HEVC_NALUHEADER_LEN + nalu->sliceHeaderLen);
         SAFE_DELETE(nalu);

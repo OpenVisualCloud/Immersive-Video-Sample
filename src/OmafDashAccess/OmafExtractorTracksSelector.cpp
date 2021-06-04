@@ -93,7 +93,7 @@ int OmafExtractorTracksSelector::SelectTracks(OmafMediaStream* pStream, bool isT
       {
           int32_t stream_frame_rate = streamInfo->framerate_num / streamInfo->framerate_den;
           uint32_t sampleNumPerSeg = pStream->GetSegmentDuration() * stream_frame_rate;
-          m_prevTimedTracksMap.insert(make_pair(static_cast<uint64_t>(((pStream->GetSegmentNumber() - 1) * sampleNumPerSeg)), mCurrentExtractor->GetCurrentTracksMap()));
+          m_prevTimedTracksMap.insert(make_pair(static_cast<uint64_t>(pStream->GetSegmentNumber() - 1) * sampleNumPerSeg, mCurrentExtractor->GetCurrentTracksMap()));
       }
       }
   }
