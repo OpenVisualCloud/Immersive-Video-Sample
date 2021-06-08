@@ -350,13 +350,12 @@ int main(int32_t argc, char *argv[]) {
   }
   GlogWrapper m_glogWrapper((char*)"glogRender", renderConfig.minLogLevel);
 
-  string cacheDir(renderConfig.cachePath, renderConfig.cachePath + strlen(renderConfig.cachePath));
-  DIR *dir = opendir(cacheDir.c_str());
+  DIR *dir = opendir(renderConfig.cachePath);
   if (dir) {
     closedir(dir);
   } else {
-    LOG(INFO) << "Failed to open the cache path: " << cacheDir << " , create a folder with this path!" << endl;
-    int checkdir = mkdir(cacheDir.c_str(), 0777);
+    LOG(INFO) << "Failed to open the cache path: " << renderConfig.cachePath << " , create a folder with this path!" << endl;
+    int checkdir = mkdir(renderConfig.cachePath, 0777);
     if (checkdir) {
       SAFE_DELETE_ARRAY(renderConfig.pathof360SCVPPlugin);
       SAFE_DELETE_ARRAY(renderConfig.url);
@@ -365,7 +364,7 @@ int main(int32_t argc, char *argv[]) {
         SAFE_DELETE_ARRAY(renderConfig.libPath);
         SAFE_DELETE_ARRAY(renderConfig.predictPluginName);
       }
-      LOG(ERROR) << "Uable to create cache path: " << cacheDir << endl;
+      LOG(ERROR) << "Uable to create cache path: " << renderConfig.cachePath << endl;
       return RENDER_ERROR;
     }
   }
