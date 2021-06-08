@@ -538,7 +538,7 @@ RenderStatus VideoDecoder::GetFrame(uint64_t pts, DecodedFrame *&frame, int64_t 
     uint32_t max_frame_size = INT_MAX;
     if (mDecodeInfo.frameRate_den != 0)
         max_frame_size = (mDecodeInfo.frameRate_num / mDecodeInfo.frameRate_den) * mDecodeInfo.segment_duration + 10;
-    if (mDecCtx->get_size_of_frame() > max_frame_size && corr_pts != nullptr) {
+    if (mDecCtx->get_size_of_frame() > max_frame_size && corr_pts != nullptr && !mDecCtx->bPacketEOS) {
         while (mDecCtx->get_size_of_frame() > max_frame_size / 2) {
             frame = mDecCtx->pop_frame();
             LOG(INFO)<<"Due to over size, drop frame pts is:" << frame->pts << " video id is:" << mVideoId<<endl;
