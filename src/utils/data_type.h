@@ -170,8 +170,8 @@ typedef enum {
 }PredictionMode;
 
 typedef struct PREDICTOPTION {
-  PredictionMode mode;
-  bool usingFeedbackAngleAdjust;
+  PredictionMode mode = UNKNOWN;
+  bool usingFeedbackAngleAdjust = false;
 }PredictOption;
 
 #ifdef __cplusplus
