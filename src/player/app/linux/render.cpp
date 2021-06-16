@@ -88,7 +88,8 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       memset_s(renderConfig.url, 1024*sizeof(char), 0);
       int n = std::min(int(strlen(urlElem->GetText())), 1024 - 1);
       memcpy_s(renderConfig.url, n * sizeof(char), (char *)urlElem->GetText(), n * sizeof(char));
-      string url_string(renderConfig.url, renderConfig.url + strlen(renderConfig.url));
+      string url_string = "";
+      url_string.assign(renderConfig.url, strlen(renderConfig.url));
       // string fileType(renderConfig.url + strlen(renderConfig.url) - 3, renderConfig.url + strlen(renderConfig.url));
       string fileType = url_string.substr(url_string.size() - 3);
       if (fileType != "mpd") {
