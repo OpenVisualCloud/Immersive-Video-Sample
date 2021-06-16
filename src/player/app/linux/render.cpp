@@ -36,6 +36,7 @@
 #include <dirent.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <algorithm>
 #include "../../../utils/tinyxml2.h"
 #include "../../player_lib/Common/Common.h"
 #include "../../player_lib/Api/MediaPlayer_Linux.h"
@@ -84,7 +85,9 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
     if (urlElem != NULL)
     {
       renderConfig.url = new char[1024];
-      memcpy_s(renderConfig.url, 1024, (char *)urlElem->GetText(), 1024);
+      memset_s(renderConfig.url, 1024*sizeof(char), 0);
+      int n = std::min(int(strlen(urlElem->GetText())), 1024 - 1);
+      memcpy_s(renderConfig.url, n * sizeof(char), (char *)urlElem->GetText(), n * sizeof(char));
       string url_string(renderConfig.url, renderConfig.url + strlen(renderConfig.url));
       // string fileType(renderConfig.url + strlen(renderConfig.url) - 3, renderConfig.url + strlen(renderConfig.url));
       string fileType = url_string.substr(url_string.size() - 3);
@@ -173,7 +176,9 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
     if (pathElem != NULL)
     {
       renderConfig.cachePath = new char[1024];
-      memcpy_s(renderConfig.cachePath, 1024, (char *)pathElem->GetText(), 1024);
+      memset_s(renderConfig.cachePath, 1024 * sizeof(char), 0);
+      int n = std::min(int(strlen(pathElem->GetText())), 1024 -1);
+      memcpy_s(renderConfig.cachePath, n * sizeof(char), (char *)pathElem->GetText(), n * sizeof(char));
     }
     else
     {
@@ -364,7 +369,7 @@ int main(int32_t argc, char *argv[]) {
         SAFE_DELETE_ARRAY(renderConfig.libPath);
         SAFE_DELETE_ARRAY(renderConfig.predictPluginName);
       }
-      LOG(ERROR) << "Uable to create cache path: " << renderConfig.cachePath << endl;
+      LOG(ERROR) << "Uable to create cache path! " << endl;
       return RENDER_ERROR;
     }
   }

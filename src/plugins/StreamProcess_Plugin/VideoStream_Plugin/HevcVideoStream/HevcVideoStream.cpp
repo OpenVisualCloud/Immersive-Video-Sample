@@ -93,6 +93,8 @@ HevcVideoStream::HevcVideoStream(const HevcVideoStream& src)
     m_360scvpHandle = std::move(src.m_360scvpHandle);
     m_naluParser = std::move(src.m_naluParser);
     m_isEOS = src.m_isEOS;
+    m_lastKeyFramePTS = 0;
+    m_gopSize = 0;
 }
 
 HevcVideoStream& HevcVideoStream::operator=(HevcVideoStream&& other)
