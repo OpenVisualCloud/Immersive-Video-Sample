@@ -400,8 +400,9 @@ void* tile_merge_Init(param_mergeStream *mergeStreamParams)
     copy_tile_params(&(mergeStream->highRes), &(mergeStreamParams->highRes));
     copy_tile_params(&(mergeStream->lowRes), &(mergeStreamParams->lowRes));
 
-    mergeStream->slice_segment_address = (int32_t *)malloc((HR_ntile+LR_ntile) * sizeof(int32_t));
-    memset_s(mergeStream->slice_segment_address, (HR_ntile+LR_ntile) * sizeof(int32_t), 0);
+    int32_t totalTileNum = HR_ntile + LR_ntile;
+    mergeStream->slice_segment_address = (int32_t *)malloc(totalTileNum * sizeof(int32_t));
+    memset_s(mergeStream->slice_segment_address, totalTileNum * sizeof(int32_t), 0);
 
     mergeStream->inputBistreamsLen = 0;
 
