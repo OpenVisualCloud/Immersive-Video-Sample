@@ -42,42 +42,19 @@ install_openssl() {
     make install
 }
 
-install_boost() {
-    cd ${DEPS}
-
-    rm -rf boost_1_67_0.tar.gz boost_1_67_0
-
-    wget https://dl.bintray.com/boostorg/release/1.67.0/source/boost_1_67_0.tar.gz
-    tar -zxvf boost_1_67_0.tar.gz
-    cd boost_1_67_0
-
-    ./bootstrap.sh
-    ./b2 -j`nproc` variant=release link=shared runtime-link=shared --with-system --with-random --with-date_time --with-regex --with-thread --with-filesystem --with-chrono --with-atomic
-}
-
 install_socket_io_client() {
     cd ${DEPS}
 
     rm -rf socket.io-client-cpp
+    git clone -b 2.x --recurse-submodules https://github.com/socketio/socket.io-client-cpp.git
 
-    git clone --recurse-submodules https://github.com/socketio/socket.io-client-cpp.git
     cd socket.io-client-cpp
-    git reset --hard 6063cb1d612f6ca0232d4134a018053fb8faea20
-
-    cd lib/websocketpp
-    git pull origin master
-    git reset --hard 1b11fd301531e6df35a6107c1e8665b1e77a2d8e
-
-    cd ../..
-
     mkdir -p build
     cd build
-    cmake -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fPIC" -DBOOST_ROOT:STRING=${DEPS}/boost_1_67_0 -DOPENSSL_ROOT_DIR:STRING=${PREFIX} ../
+
+    cmake -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fPIC" -DOPENSSL_ROOT_DIR:STRING=${PREFIX} -DCMAKE_INSTALL_INCLUDEDIR=${PREFIX}/include -DCMAKE_INSTALL_LIBDIR=${PREFIX}/lib ../
     make -j
     make install
-
-    cp -v lib/Release/libsioclient* ${PREFIX}/lib
-    cp -v include/* ${PREFIX}/include
 }
 
 install_depot_tools() {
@@ -189,7 +166,6 @@ mkdir -p ${DEPS}
 
 install_dependencies
 install_openssl
-install_boost
 install_socket_io_client
 install_owt_client_native
 
@@ -197,3 +173,4 @@ install_owt_client_native
 install_ffmpeg
 install_safestringlib
 install_360scvp
+
