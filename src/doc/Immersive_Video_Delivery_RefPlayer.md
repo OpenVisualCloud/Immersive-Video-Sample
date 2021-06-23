@@ -55,4 +55,8 @@ The configuration file, config.xml, is used to config parameters for 360 linux p
 | maxVideoDecodeWidth | max video decoded width | decoded width that is supported |
 | maxVideoDecodeHeight | max video decoded height | decoded height that is supported |
 | predict | viewport prediction plugin | 0 is disable and 1 is enable |
+| intimeviewportupdate | support catch up path | 0 is disable and 1 is enable |
+| responseTimesInOneSeg| max catch up streams num in one segment duration | 1 or 2 |
+| maxCatchupWidth | max width of catch up streams | lower than 4k |
+| maxCatchupHeight | max height of catch up streams | lower than 4k |
 | PathOf360SCVPPlugins | path of 360SCVP plugins | needed for planar format rendering |

@@ -378,7 +378,10 @@ public:
         }
     };
 
+    int32_t GetStatus() { return m_status; };
+
 protected:
+    int32_t                   m_status = STATUS_UNKNOWN;
     MediaInfo                 mMediaInfo;         //! media information
     RenderSourceFactory      *m_rsFactory;        //! Render Source list for rendering to RenderTarget
     struct MediaSourceInfo    m_mediaSourceInfo;  //! deprecated

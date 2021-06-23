@@ -44,9 +44,15 @@ import java.io.UnsupportedEncodingException;
 
 public class NativeMediaPlayer {
     private final String TAG = "NATIVE_MEDIA_PLAYER";
+
+    public final int READY = 0;
+    public final int PLAY = 1;
+    public final int PAUSED = 2;
+    public final int STOPPED = 3;
+
     private long mHandler;
     public RenderConfig mConfig;
-    private int status = 0;
+    private int status = READY;
     private Context context;
 
     static {
@@ -115,15 +121,6 @@ public class NativeMediaPlayer {
         }
     }
 
-    public int GetCurrentStatus()
-    {
-        return status;
-    }
-
-    public void SetCurrentStatus(int st)
-    {
-        status = st;
-    }
     /**
      * Original signature : <code>Handler Init()</code><br>
      * <i>native declaration : line 82</i>

@@ -127,7 +127,7 @@ RenderStatus VideoDecoder_hw::Initialize(Codec_Type codec)
     AMediaFormat_setInt32(mDecCtx->mMediaFormat, AMEDIAFORMAT_KEY_HEIGHT, mHeight);
     AMediaFormat_setInt32(mDecCtx->mMediaFormat, "allow-frame-drop", 0);
     AMediaFormat_setInt32(mDecCtx->mMediaFormat, AMEDIAFORMAT_KEY_FRAME_RATE, uint32_t(float(mDecodeInfo.frameRate_num) / mDecodeInfo.frameRate_den));
-    AMediaFormat_setInt32(mDecCtx->mMediaFormat, AMEDIAFORMAT_KEY_MAX_INPUT_SIZE, mWidth * mHeight);
+    AMediaFormat_setInt32(mDecCtx->mMediaFormat, AMEDIAFORMAT_KEY_MAX_INPUT_SIZE, mWidth * mHeight * 10);
     // 3. get native window from surface
     if (m_status == STATUS_UNKNOWN) {
         CreateOutputSurface();
@@ -159,7 +159,7 @@ RenderStatus VideoDecoder_hw::Initialize(Codec_Type codec)
     }
     mIsFlushed = false;
     LOG(INFO) << "A new video decoder is created!" << std::endl;
-    mDump_YuvFile = fopen("sdcard/Android/data/tmp/1.yuv","wb");
+    // mDump_YuvFile = fopen("sdcard/Android/data/tmp/1.yuv","wb");
     return RENDER_STATUS_OK;
 }
 
@@ -340,6 +340,7 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
         frame->output_surface = mDecCtx->mOutputSurface;
         frame->rwpk = data->rwpk;
         frame->pts = data->pts;
+        ANDROID_LOGD("data->pts %ld, video id %d", data->pts, mVideoId);
         frame->bFmtChange = data->bCodecChange;
         frame->numQuality = data->numQuality;
         frame->qtyResolution = data->qtyResolution;
@@ -353,7 +354,8 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
         // 2. release output buffer
         if (out_buf_idx > 0) ANDROID_LOGD("frame info size is greater than zero!");
         if (IS_DUMPED != 1){
-            bool render = (buf_info.size != 0) && (frame->pts >= mNextInputPts || mNextInputPts == 0);
+            bool render = (buf_info.size != 0) && (frame->pts == mNextInputPts || mNextInputPts == 0);
+            ANDROID_LOGD("is render %d, pts %ld, video id %d", render, frame->pts, mVideoId);
             AMediaCodec_releaseOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, render);
         }
         else
@@ -363,7 +365,7 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
             if (outputBuf != nullptr && dataSize != 0 && mVideoId == 0)
             {
                 ANDROID_LOGD("CHANGE: dataSize is %d at pts %d", dataSize, pkt->pts);
-                fwrite(outputBuf, 1, dataSize, mDump_YuvFile);
+                // fwrite(outputBuf, 1, dataSize, mDump_YuvFile);
             }
             AMediaCodec_releaseOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, false);
         }
@@ -371,17 +373,17 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
         if (frame->bCatchup)
             ANDROID_LOGD("CHANGE: successfully decode one catch up frame at pts %ld", frame->pts);
         else
-            ANDROID_LOGD("CHANGE: successfully decode one frame at pts %ld", frame->pts);
+            ANDROID_LOGD("CHANGE: successfully decode one frame at pts %ld video id %d", frame->pts, mVideoId);
         ANDROID_LOGD("mNextInputPts %d", mNextInputPts);
         //swift deocde when needing drop frame, and for wait and normal situation, do as follows.
         if (frame->pts >= mNextInputPts) {
             while (frame->bCatchup && frame->pts > mNextInputPts) {
                 usleep(5);
             }
+            ANDROID_LOGD("Input pts %lld, frame pts %lld video id %d", mNextInputPts, frame->pts, mVideoId);
             std::mutex mtx;
             std::unique_lock<std::mutex> lck(mtx);
             m_cv.wait(lck);
-            ANDROID_LOGD("Input pts %lld, frame pts %lld", mNextInputPts, frame->pts);
         }
     }
     else
@@ -464,7 +466,7 @@ RenderStatus VideoDecoder_hw::FlushDecoder(uint32_t video_id)
         // 2. release output buffer
         if (out_buf_idx > 0) ANDROID_LOGD("frame info size is greater than zero!");
         if (IS_DUMPED != 1){
-            bool render = (buf_info.size != 0) && (frame->pts >= mNextInputPts || mNextInputPts == 0);
+            bool render = (buf_info.size != 0) && (frame->pts == mNextInputPts || mNextInputPts == 0);
             AMediaCodec_releaseOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, render);
         }
         else
@@ -474,7 +476,7 @@ RenderStatus VideoDecoder_hw::FlushDecoder(uint32_t video_id)
             if (outputBuf != nullptr && dataSize != 0 && mVideoId == 0)
             {
                 // ANDROID_LOGD("CHANGE: dataSize is %d at pts %d", dataSize, cnt_pts-1);
-                fwrite(outputBuf, 1, dataSize, mDump_YuvFile);
+                // fwrite(outputBuf, 1, dataSize, mDump_YuvFile);
             }
             AMediaCodec_releaseOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, false);
         }
@@ -483,7 +485,7 @@ RenderStatus VideoDecoder_hw::FlushDecoder(uint32_t video_id)
         if (frame->bCatchup)
             ANDROID_LOGD("CHANGE: successfully decode one catch up frame at pts %ld", frame->pts);
         else
-            ANDROID_LOGD("CHANGE: successfully decode one frame at pts %ld", frame->pts);
+            ANDROID_LOGD("CHANGE: successfully decode one frame at pts %ld video id %d", frame->pts, mVideoId);
         ANDROID_LOGD("mNextInputPts %d, video id ", mNextInputPts, mVideoId);
         //swift deocde when needing drop frame, and for wait and normal situation, do as follows.
         if (frame->pts >= mNextInputPts) {
@@ -557,6 +559,8 @@ void VideoDecoder_hw::Run()
                     LOG(INFO)<<"Video "<< mVideoId <<": failed to flush decoder when status is pending!"<<std::endl;
                 }
                 mIsFlushed = true;
+                AMediaCodec_flush(mDecCtx->mMediaCodec);
+                ANDROID_LOGD("After flushing, resume the decoder id %d", mVideoId);
                 continue;
             }
         }
@@ -725,7 +729,7 @@ RenderStatus VideoDecoder_hw::CreateOutputSurface()
 
     jobject jsurface = mDecCtx->mOutputSurface->out_surface->GetJobject();
 
-    ANDROID_LOGD("decoder manager : set surface at i : %d surface is %p", mVideoId, m_nativeSurface);
+    ANDROID_LOGD("Create output surface decoder manager : set surface at i : %d surface is %p", mVideoId, m_nativeSurface);
     if (IS_DUMPED != 1)
         mDecCtx->mOutputSurface->native_window = ANativeWindow_fromSurface(JNIContext::GetJNIEnv(), (jobject)m_nativeSurface);
     else

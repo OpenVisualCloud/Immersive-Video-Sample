@@ -705,7 +705,7 @@ void OmafDashSource::thread_dynamic() {
     SetStatus(STATUS_STOPPED);
     return;
   }
-  uint32_t wait_time = 3000;
+  uint32_t wait_time = 10000;
   uint32_t current_wait_time = 0;
   bool isInitSegParsed = omaf_reader_mgr_->IsInitSegmentsParsed();
   while (!isInitSegParsed) {
@@ -795,7 +795,7 @@ void OmafDashSource::thread_static() {
     SetStatus(STATUS_STOPPED);
     return;
   }
-  uint32_t wait_time = 3000;
+  uint32_t wait_time = 10000;
   uint32_t current_wait_time = 0;
   bool isInitSegParsed = omaf_reader_mgr_->IsInitSegmentsParsed();
   while (!isInitSegParsed) {

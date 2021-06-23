@@ -106,7 +106,7 @@ RenderStatus DecoderManager::CreateVideoDecoder(uint32_t video_id, Codec_Type vi
     }
 
 #ifdef _ANDROID_OS_
-    ANDROID_LOGD("decoder manager : set surface at i : %d surface is %p", m_textures[video_id], m_surfaces[video_id]);
+    ANDROID_LOGD("Create decoder decoder manager : set surface at i : %d surface is %p", m_textures[video_id], m_surfaces[video_id]);
 #endif
     return RENDER_STATUS_OK;
 }
@@ -224,6 +224,7 @@ RenderStatus DecoderManager::UpdateVideoFrame( uint32_t video_id, uint64_t pts, 
     if (video_id < OFFSET_VIDEO_ID_FOR_CATCHUP) {
         if(m_mapVideoDecoder.find(video_id)!=m_mapVideoDecoder.end()){
             ret = m_mapVideoDecoder[video_id]->UpdateFrame(pts, corr_pts);
+#ifndef _ANDROID_OS_
             if((STATUS_IDLE == m_mapVideoDecoder[video_id]->GetDecoderStatus())
             &&(ret==RENDER_NO_FRAME)){// to remove rs handler
                 LOG(INFO)<<" Now will destroy decoder and handler! video id is " << video_id<< endl;
@@ -235,6 +236,7 @@ RenderStatus DecoderManager::UpdateVideoFrame( uint32_t video_id, uint64_t pts, 
                 }
                 ret = RENDER_STATUS_OK; // time to destroy the decoder
             }
+#endif
         }else{
             ret = RENDER_NO_MATCHED_DECODER;
         }
@@ -242,6 +244,7 @@ RenderStatus DecoderManager::UpdateVideoFrame( uint32_t video_id, uint64_t pts, 
     else {
         if(m_mapCatchupVideoDecoder.find(video_id)!=m_mapCatchupVideoDecoder.end()){
             ret = m_mapCatchupVideoDecoder[video_id]->UpdateFrame(pts, nullptr);
+#ifndef _ANDROID_OS_
             if((STATUS_IDLE == m_mapCatchupVideoDecoder[video_id]->GetDecoderStatus())
             &&(ret==RENDER_NO_FRAME)){// to remove rs handler
                 LOG(INFO)<<" Now will destroy decoder and handler! video id is " << video_id<< endl;
@@ -253,6 +256,7 @@ RenderStatus DecoderManager::UpdateVideoFrame( uint32_t video_id, uint64_t pts, 
                 }
                 ret = RENDER_STATUS_OK; // time to destroy the decoder
             }
+#endif
         }else{
             ret = RENDER_NO_MATCHED_DECODER;
         }

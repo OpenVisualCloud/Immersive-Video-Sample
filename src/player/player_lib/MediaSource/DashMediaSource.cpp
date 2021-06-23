@@ -48,7 +48,7 @@
 #define MIN_LIST_REMAIN 2
 #define DECODE_THREAD_COUNT 16
 #define MAX_PACKETS 16
-#define WAIT_PACKET_TIME_OUT 5000 // 5s
+#define WAIT_PACKET_TIME_OUT 10000 // 10s
 #define TEST_GET_PACKET_ONLY 0
 #define MAX_DUMP_FILE_NUM 10
 using namespace tinyxml2;
@@ -60,7 +60,12 @@ DashMediaSource::DashMediaSource() {
   m_status = STATUS_UNKNOWN;
   m_handler = NULL;
   m_DecoderManager = NULL;
+  m_needStreamDumped = false;
+  m_maxVideoWidth = 0;
+  m_maxVideoHeight = 0;
+#ifndef _ANDROID_OS_
   GetStreamDumpedOptionParams();
+#endif
   m_singleFile = NULL;
   if (m_needStreamDumped) {
     for (uint32_t i = 0; i < MAX_DUMP_FILE_NUM; i++)
@@ -132,7 +137,8 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   pCtxDashStreaming->omaf_params.max_response_times_in_seg = renderConfig.maxResponseTimesInOneSeg;
   pCtxDashStreaming->omaf_params.max_catchup_width = renderConfig.maxCatchupWidth;
   pCtxDashStreaming->omaf_params.max_catchup_height = renderConfig.maxCatchupHeight;
-
+  m_maxVideoWidth = renderConfig.maxVideoDecodeWidth;
+  m_maxVideoHeight = renderConfig.maxVideoDecodeHeight;
   PluginDef def;
   def.pluginLibPath = renderConfig.pathof360SCVPPlugin;
   pCtxDashStreaming->plugin_def = def;
@@ -394,6 +400,13 @@ void DashMediaSource::ProcessVideoPacket() {
         fwrite(dashPkt[i].buf, 1, dashPkt[i].size, m_dumpedFile[dashPkt[i].videoID]);
     }
   }
+#ifdef _ANDROID_OS_
+  if (dashPktNum == 1 && (dashPkt[0].width > m_maxVideoWidth || dashPkt[0].height > m_maxVideoHeight) && !dashPkt[0].bCatchup) {//ET mode
+    ANDROID_LOGD("Cannot start VR Player due to codec capacity! please check maxDecWidth/maxDecHeight settings! w %d, h %d", dashPkt[0].width, dashPkt[0].height);
+    m_status = STATUS_STOPPED;
+    return;
+  }
+#endif
 #if !TEST_GET_PACKET_ONLY
   if (NULL != m_DecoderManager) {
     RenderStatus ret = m_DecoderManager->SendVideoPackets(&(dashPkt[0]), dashPktNum);
