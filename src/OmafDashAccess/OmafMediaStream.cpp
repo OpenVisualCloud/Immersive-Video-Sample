@@ -883,6 +883,7 @@ int32_t OmafMediaStream::TaskRun(OmafTilesStitch *stitch, std::pair<uint64_t, st
       std::lock_guard<std::mutex> lock(m_catchupPacketsMutex);
       m_catchupMergedPackets[video_id].push_back(catchupMergedPacket);
       OMAF_LOG(LOG_INFO, "[FrameSequences][CatchUp][Stitch]: Push one stitched catchup packet at PTS %lld, video id %d\n", currPTS, video_id);
+      // ANDROID_LOGD("[FrameSequences][CatchUp][Stitch]: Push one stitched catchup packet at PTS %lld, video id %d\n", currPTS, video_id);
     }
 
     // DONE remove successfully processed catchup tile tracks.

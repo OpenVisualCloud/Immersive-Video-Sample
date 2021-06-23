@@ -452,7 +452,7 @@ int32_t OmafTilesStitch::UpdateSelectedTiles(std::map<uint32_t, MediaPacket *> &
   return ERROR_NONE;
 }
 
-vector<pair<uint32_t, uint32_t>> OmafTilesStitch::GenerateRowAndColArr(uint32_t packetsSize, uint32_t splitNum, uint32_t maxTile_x, uint32_t maxTile_y)
+vector<pair<uint32_t, uint32_t>> OmafTilesStitch::GenerateRowAndColArr(uint32_t packetsSize, uint32_t splitNum, uint32_t maxTile_x, uint32_t maxTile_y, QualityRank ranking)
 {
     vector<pair<uint32_t, uint32_t>> arrangementArr;
     if (packetsSize < splitNum || splitNum == 0)
@@ -524,7 +524,7 @@ vector<pair<uint32_t, uint32_t>> OmafTilesStitch::GenerateRowAndColArr(uint32_t 
         }
 
         OMAF_LOG(LOG_INFO, "one arrangement has the tile division of %u x %u\n", sqrtedSize, dividedSize);
-        if (dividedSize > sqrtedSize ) {
+        if (maxTile_x > maxTile_y || ranking != HIGHEST_QUALITY_RANKING) {
           oneArrangement = std::make_pair(sqrtedSize, dividedSize); //height , width
         } else {
           oneArrangement = std::make_pair(dividedSize, sqrtedSize);
@@ -574,7 +574,7 @@ std::map<QualityRank, std::vector<TilesMergeArrangement *>> OmafTilesStitch::Cal
     uint32_t splitNum = ceil(float(packetsSize) / (maxTile_x * maxTile_y));
 
     // 3. generate row and col arrays according to split num and maxTile_x & maxTile_y
-    vector<pair<uint32_t, uint32_t>> rowAndColArr = GenerateRowAndColArr(packetsSize, splitNum, maxTile_x, maxTile_y);
+    vector<pair<uint32_t, uint32_t>> rowAndColArr = GenerateRowAndColArr(packetsSize, splitNum, maxTile_x, maxTile_y, qualityRanking);
     vector<TilesMergeArrangement*> mergeArrList;
     for (uint32_t i = 0; i < splitNum; i++)
     {

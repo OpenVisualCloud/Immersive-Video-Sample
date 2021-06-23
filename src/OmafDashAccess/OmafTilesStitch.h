@@ -261,7 +261,7 @@ private:
 
   int32_t UpdateInitTilesMergeArr();
 
-  vector<pair<uint32_t, uint32_t>> GenerateRowAndColArr(uint32_t packetsSize, uint32_t splitNum, uint32_t maxTile_x, uint32_t maxTile_y);
+  vector<pair<uint32_t, uint32_t>> GenerateRowAndColArr(uint32_t packetsSize, uint32_t splitNum, uint32_t maxTile_x, uint32_t maxTile_y, QualityRank ranking);
 
  private:
   bool m_isInitialized;  //<! whether the stitch class has been initialized

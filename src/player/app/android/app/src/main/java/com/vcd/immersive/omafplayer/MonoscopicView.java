@@ -307,8 +307,10 @@ public final class MonoscopicView extends GLSurfaceView {
             screenWidth = width;
             screenHeight = height;
             GLES20.glViewport(0, 0, width, height);
-            Matrix.perspectiveM(
-                    projectionMatrix, 0, mediaLoader.mediaPlayer.mConfig.viewportVFOV, (float) width / height, Z_NEAR, Z_FAR);
+            if (mediaLoader.mediaPlayer != null && mediaLoader.mediaPlayer.mConfig != null) {
+                Matrix.perspectiveM(
+                        projectionMatrix, 0, mediaLoader.mediaPlayer.mConfig.viewportVFOV, (float) width / height, Z_NEAR, Z_FAR);
+            }
         }
 
         @Override
@@ -322,7 +324,9 @@ public final class MonoscopicView extends GLSurfaceView {
             }
 
             Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
-            scene.glDrawFrame(viewProjectionMatrix, Type.MONOCULAR, screenWidth, screenHeight);
+            if (mediaLoader.mediaPlayer != null && mediaLoader.mediaPlayer.GetStatus() == mediaLoader.mediaPlayer.PLAY) {
+                scene.glDrawFrame(viewProjectionMatrix, Type.MONOCULAR, screenWidth, screenHeight);
+            }
         }
 
         /** Adjusts the GL camera's rotation based on device rotation. Runs on the sensor thread. */

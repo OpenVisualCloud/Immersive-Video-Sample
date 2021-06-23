@@ -137,5 +137,12 @@ RenderStatus MediaPlayer_Android::Close()
     return RENDER_STATUS_OK;
 }
 
+int MediaPlayer_Android::UpdateDisplayTex(int render_count)
+{
+    m_renderManager->UpdateFrames(render_count);
+    int ret = m_renderManager->UpdateDisplayTex();
+    return ret;
+}
+
 VCD_NS_END
 #endif

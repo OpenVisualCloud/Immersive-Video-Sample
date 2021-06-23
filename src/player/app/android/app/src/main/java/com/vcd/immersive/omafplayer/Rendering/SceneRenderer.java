@@ -277,10 +277,15 @@ public final class SceneRenderer {
      */
     public void glDrawFrame(float[] viewProjectionMatrix, int eyeType, int width, int height) {
         Log.i(TAG, "begin to draw frame !");
-        if (mediaPlayer != null) {
-            mediaPlayer.SetCurrentStatus(1);
+        if (mediaPlayer == null) {
+            return;
         }
-        else{
+        if (mediaPlayer.GetStatus() == mediaPlayer.STOPPED) {
+            Log.e(TAG, "Media player set to stopped!");
+            return;
+        }
+        if (mediaPlayer.GetStatus() != mediaPlayer.PLAY) {
+            Log.i(TAG, "Media player is not in PLAY mode!");
             return;
         }
         if (!glConfigureScene()) {
@@ -313,7 +318,7 @@ public final class SceneRenderer {
             }
             Log.i(TAG, "update tex image at pts " + cnt++);
         }
-        if (drawTimes++ % 2 == 0)
+        if (drawTimes++ % 2 == 0 && cnt > renderCount)
         {
             Log.i(TAG, "begin to update display tex!");
             int ret = 0;
@@ -433,22 +438,26 @@ public final class SceneRenderer {
 
     public void SetCurrentPosition(int pts)
     {
-        if (mediaPlayer != null && mediaPlayer.GetCurrentStatus() != 0 && pose_history.size() != 0) {
-            NativeMediaPlayer.HeadPose pose = pose_history.getFirst();
-            pose.pts = pts;
-            mediaPlayer.SetCurrentPosition(pose);
-            Log.i(TAG, "Set current position to native player and pts is " + pose.pts);
+        synchronized (this) {
+            if (mediaPlayer != null && mediaPlayer.GetStatus() != 0 && pose_history.size() != 0) {
+                NativeMediaPlayer.HeadPose pose = pose_history.getFirst();
+                pose.pts = pts;
+                mediaPlayer.SetCurrentPosition(pose);
+                Log.i(TAG, "Set current position to native player and pts is " + pose.pts);
+            }
         }
     }
 
     public void AddCurrentPose(NativeMediaPlayer.HeadPose pose)
     {
-        if (pose != null) {
-            pose_history.addFirst(pose);
-        }
-        int max_pose_number = 100;
-        if (pose_history.size() > max_pose_number) {
-            pose_history.removeLast();
+        synchronized (this) {
+            if (pose != null) {
+                pose_history.addFirst(pose);
+            }
+            int max_pose_number = 100;
+            if (pose_history.size() > max_pose_number) {
+                pose_history.removeLast();
+            }
         }
     }
 }
