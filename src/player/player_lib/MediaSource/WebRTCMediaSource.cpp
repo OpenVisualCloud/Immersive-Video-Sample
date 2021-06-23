@@ -332,6 +332,7 @@ void WebRTCMediaSource::setMediaInfo() {
 
     m_rsFactory->SetHighTileRow(vi.sourceHighTileRow);
     m_rsFactory->SetHighTileCol(vi.sourceHighTileCol);
+    m_rsFactory->SetProjectionFormat(vi.mProjFormat);
   }
 }
 
