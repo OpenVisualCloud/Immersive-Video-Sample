@@ -28,6 +28,7 @@
     <ProjectionType>ERP</ProjectionType>
     <frameRate>30</frameRate>
     <frameNum>100</frameNum>
+    <enableDump>false</enableDump>
     <predict enable="0">
      <!-- <plugin>libViewportPredict_LR.so</plugin>
      <path>../plugins/ViewportPredict_Plugin/predict_LR/</path> -->

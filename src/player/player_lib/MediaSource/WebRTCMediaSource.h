@@ -161,6 +161,8 @@ class WebRTCMediaSource : public MediaSource, public WebRTCVideoPacketListener {
  private:
   void parseOptions();
   void setMediaInfo();
+  void initDump();
+  void dump(const uint8_t* buf, int len, FILE* fp);
 
   int32_t m_source_width;
   int32_t m_source_height;
@@ -187,6 +189,8 @@ class WebRTCMediaSource : public MediaSource, public WebRTCVideoPacketListener {
   void* m_parserRWPKHandle;
 
   bool m_ready;
+  bool m_enableBsDump;
+  FILE* m_bsDumpfp;
 };
 
 class SimpleBuffer {
