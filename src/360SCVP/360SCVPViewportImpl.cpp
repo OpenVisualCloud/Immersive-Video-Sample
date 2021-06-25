@@ -1326,8 +1326,12 @@ int32_t  TgenViewport::ERPSelectRegion(short inputWidth, short inputHeight, shor
     float fPitch = m_codingSVideoInfo.viewPort.fPitch;
     float vFOV = m_codingSVideoInfo.viewPort.vFOV;
     float hFOV = m_codingSVideoInfo.viewPort.hFOV;
+#ifndef _ANDROID_NDK_OPTION_
     float leftCol[m_tileNumRow] = {float(m_tileNumCol)};
     float rightCol[m_tileNumRow] = {-1};
+#else
+    float leftCol[m_tileNumRow], rightCol[m_tileNumRow];
+#endif
     bool bHasOccupiedTile;
     float horzStep = ERP_HORZ_ANGLE / (float)m_tileNumCol;
     float vertStep = ERP_VERT_ANGLE / (float)m_tileNumRow;
@@ -1364,9 +1368,24 @@ int32_t  TgenViewport::ERPSelectRegion(short inputWidth, short inputHeight, shor
     centerCol = (clampAngle(fYaw, -ERP_HORZ_ANGLE / 2, ERP_HORZ_ANGLE / 2) + ERP_HORZ_ANGLE / 2) / horzStep;
     int32_t row, tileIdx;
     float col;
+#ifndef _ANDROID_NDK_OPTION_
     float distanceLeftToCenter[m_tileNumRow] = {-1.0};
     float distanceRightToCenter[m_tileNumRow] = {-1.0};
+#else
+    float distanceLeftToCenter[m_tileNumRow], distanceRightToCenter[m_tileNumRow];
 
+    for (uint32_t i = 0; i < m_tileNumRow; i++) {
+        for (uint32_t j = 0; j < m_tileNumCol; j++) {
+            leftCol[i] = m_tileNumCol;
+            rightCol[i] = -1;
+        }
+    }
+
+    for (uint32_t i = 0; i < m_tileNumRow; i++) {
+        distanceLeftToCenter[i] = -1;
+        distanceRightToCenter[i] = -1;
+    }
+#endif
     /* Search in top vertical boundary */
     for (float offsetAngle = hFOV/2; offsetAngle >= 0; offsetAngle -= HORZ_BOUNDING_STEP) {
         pVertBoundaryPoint->alpha = clampAngle(pVertBoundaryPoint->alpha, -ERP_HORZ_ANGLE/2, ERP_HORZ_ANGLE/2) + ERP_HORZ_ANGLE / 2;
