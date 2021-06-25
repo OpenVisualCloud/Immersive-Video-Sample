@@ -23,6 +23,10 @@ else()
 ADD_DEFINITIONS("-fPIE -fPIC -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Wall -Werror -g -c -fPIC -std=c++11")
 endif()
 
+IF(USE_ANDROID_NDK)
+  ADD_DEFINITIONS("-D_ANDROID_NDK_OPTION_")
+ENDIF()
+
 INCLUDE_DIRECTORIES(/usr/local/include ./ ../utils ../plugins/360SCVP_Plugins/TileSelection_Plugins)
 LINK_DIRECTORIES(/usr/local/lib)
 
