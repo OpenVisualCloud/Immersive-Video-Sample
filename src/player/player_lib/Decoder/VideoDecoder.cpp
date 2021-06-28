@@ -540,14 +540,14 @@ RenderStatus VideoDecoder::GetFrame(uint64_t pts, DecodedFrame *&frame, int64_t 
         max_frame_size = (mDecodeInfo.frameRate_num / mDecodeInfo.frameRate_den) * mDecodeInfo.segment_duration + 10;
     if (mDecCtx->get_size_of_frame() > max_frame_size && corr_pts != nullptr && !mDecCtx->bPacketEOS) {
         while (mDecCtx->get_size_of_frame() > max_frame_size / 2) {
-            frame = mDecCtx->pop_frame();
-            LOG(INFO)<<"Due to over size, drop frame pts is:" << frame->pts << " video id is:" << mVideoId<<endl;
-            av_frame_free(&frame->av_frame);
-            if (frame->rwpk)
-                SAFE_DELETE_ARRAY(frame->rwpk->rectRegionPacking);
-            SAFE_DELETE(frame->rwpk);
-            SAFE_DELETE_ARRAY(frame->qtyResolution);
-            SAFE_DELETE(frame);
+            DecodedFrame *frame_d = mDecCtx->pop_frame();
+            LOG(INFO)<<"Due to over size, drop frame pts is:" << frame_d->pts << " video id is:" << mVideoId<<endl;
+            av_frame_free(&frame_d->av_frame);
+            if (frame_d->rwpk)
+                SAFE_DELETE_ARRAY(frame_d->rwpk->rectRegionPacking);
+            SAFE_DELETE(frame_d->rwpk);
+            SAFE_DELETE_ARRAY(frame_d->qtyResolution);
+            SAFE_DELETE(frame_d);
         }
         *corr_pts = mDecCtx->get_front_of_frame()->pts;
         LOG(INFO) << "Correct pts is " << *corr_pts << endl;
