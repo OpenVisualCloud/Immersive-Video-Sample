@@ -318,13 +318,13 @@ public final class MonoscopicView extends GLSurfaceView {
             // Combine touch & sensor data.
             // Orientation = pitch * sensor * yaw since that is closest to what most users expect the
             // behavior to be.
-            synchronized (this) {
-                Matrix.multiplyMM(tempMatrix, 0, deviceOrientationMatrix, 0, touchYawMatrix, 0);
-                Matrix.multiplyMM(viewMatrix, 0, touchPitchMatrix, 0, tempMatrix, 0);
-            }
-
-            Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
             if (mediaLoader.mediaPlayer != null && mediaLoader.mediaPlayer.GetStatus() == mediaLoader.mediaPlayer.PLAY) {
+                synchronized (this) {
+                    Log.i(TAG, "onDrawFrame");
+                    Matrix.multiplyMM(tempMatrix, 0, deviceOrientationMatrix, 0, touchYawMatrix, 0);
+                    Matrix.multiplyMM(viewMatrix, 0, touchPitchMatrix, 0, tempMatrix, 0);
+                }
+                Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
                 scene.glDrawFrame(viewProjectionMatrix, Type.MONOCULAR, screenWidth, screenHeight);
             }
         }
