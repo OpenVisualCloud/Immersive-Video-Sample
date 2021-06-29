@@ -68,7 +68,7 @@ public class MediaLoader {
 
     public static final String MEDIA_FORMAT_KEY = "stereoFormat";
     private static final int MAX_SURFACE_NUM = 5;
-    private static final int MAX_CATCHUP_SURFACE_NUM = 2;
+    private static final int MAX_CATCHUP_SURFACE_NUM = 1;
 
     /** A spherical mesh for video should be large enough that there are no stereo artifacts. */
     private static final int SPHERE_RADIUS_METERS = 50;

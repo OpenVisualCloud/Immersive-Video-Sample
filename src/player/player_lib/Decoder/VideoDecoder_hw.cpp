@@ -347,7 +347,10 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
         frame->video_id = video_id;
         frame->bEOS = false;
         frame->bCatchup = data->bCatchup;
-        mDecCtx->push_frame(frame);
+        while (frame->bCatchup && frame->pts > mNextInputPts) {
+            ANDROID_LOGD("check frame pts %ld is greater than input pts %d, wait!", frame->pts, mNextInputPts);
+            usleep(5);
+        }
         ANDROID_LOGD("PTS: %d, frame rwpk num: %d, one rrwpk w: %d, h: %d, l: %d, t: %d", data->pts, data->rwpk->numRegions, data->rwpk->rectRegionPacking[0].projRegWidth,
         data->rwpk->rectRegionPacking[0].projRegHeight, data->rwpk->rectRegionPacking[0].projRegLeft, data->rwpk->rectRegionPacking[0].projRegTop);
         SAFE_DELETE(data);
@@ -374,12 +377,11 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
             ANDROID_LOGD("CHANGE: successfully decode one catch up frame at pts %ld", frame->pts);
         else
             ANDROID_LOGD("CHANGE: successfully decode one frame at pts %ld video id %d", frame->pts, mVideoId);
+
         ANDROID_LOGD("mNextInputPts %d", mNextInputPts);
+        mDecCtx->push_frame(frame);
         //swift deocde when needing drop frame, and for wait and normal situation, do as follows.
         if (frame->pts >= mNextInputPts) {
-            while (frame->bCatchup && frame->pts > mNextInputPts) {
-                usleep(5);
-            }
             ANDROID_LOGD("Input pts %lld, frame pts %lld video id %d", mNextInputPts, frame->pts, mVideoId);
             std::mutex mtx;
             std::unique_lock<std::mutex> lck(mtx);
@@ -460,13 +462,17 @@ RenderStatus VideoDecoder_hw::FlushDecoder(uint32_t video_id)
         frame->video_id = video_id;
         frame->bEOS = false;
         frame->bCatchup = data->bCatchup;
-        mDecCtx->push_frame(frame);
+        while (frame->bCatchup && frame->pts > mNextInputPts) {
+            ANDROID_LOGD("check frame pts %ld is greater than input pts %d, wait!", frame->pts, mNextInputPts);
+            usleep(5);
+        }
         ANDROID_LOGD("PTS: %d, frame rwpk num: %d, one rrwpk w: %d, h: %d, l: %d, t: %d", data->pts, data->rwpk->numRegions, data->rwpk->rectRegionPacking[0].projRegWidth,
         data->rwpk->rectRegionPacking[0].projRegHeight, data->rwpk->rectRegionPacking[0].projRegLeft, data->rwpk->rectRegionPacking[0].projRegTop);
         // 2. release output buffer
         if (out_buf_idx > 0) ANDROID_LOGD("frame info size is greater than zero!");
         if (IS_DUMPED != 1){
             bool render = (buf_info.size != 0) && (frame->pts == mNextInputPts || mNextInputPts == 0);
+            ANDROID_LOGD("is render %d, pts %ld, video id %d", render, frame->pts, mVideoId);
             AMediaCodec_releaseOutputBuffer(mDecCtx->mMediaCodec, out_buf_idx, render);
         }
         else
@@ -486,12 +492,11 @@ RenderStatus VideoDecoder_hw::FlushDecoder(uint32_t video_id)
             ANDROID_LOGD("CHANGE: successfully decode one catch up frame at pts %ld", frame->pts);
         else
             ANDROID_LOGD("CHANGE: successfully decode one frame at pts %ld video id %d", frame->pts, mVideoId);
-        ANDROID_LOGD("mNextInputPts %d, video id ", mNextInputPts, mVideoId);
+
+        ANDROID_LOGD("mNextInputPts %d, video id %d", mNextInputPts, mVideoId);
+        mDecCtx->push_frame(frame);
         //swift deocde when needing drop frame, and for wait and normal situation, do as follows.
         if (frame->pts >= mNextInputPts) {
-            while (frame->bCatchup && frame->pts > mNextInputPts) {//wait
-                usleep(5);
-            }
             std::mutex mtx;
             std::unique_lock<std::mutex> lck(mtx);
             m_cv.wait(lck);
@@ -584,7 +589,9 @@ void VideoDecoder_hw::Run()
             bool isCatchup = pkt_info->bCatchup;
             if (pkt_info->pkt) {//catch up eos last frame
                 LOG(INFO) << "Decoded frame is pts " << pkt_info->pts << endl;
+                do {
                 ret = DecodeFrame(pkt_info->pkt, pkt_info->video_id);
+                } while (ret == RENDER_NULL_PACKET);// ensure that send packet is right
                 if(RENDER_STATUS_OK != ret){
                     LOG(INFO)<<"Video "<< mVideoId <<": failed to decoder one frame"<<std::endl;
                 }
@@ -594,7 +601,9 @@ void VideoDecoder_hw::Run()
                 SAFE_DELETE(pkt_info);
             }
             ANDROID_LOGD("Finish to decode last eos frame, video id %d", mVideoId);
+            do {
             ret = FlushDecoder(mVideoId);
+            } while (ret == RENDER_NULL_PACKET);// ensure that send packet is right
             if(RENDER_STATUS_OK != ret){
                 LOG(INFO)<<"Video "<< mVideoId <<": failed to flush decoder when EOS"<<std::endl;
             }

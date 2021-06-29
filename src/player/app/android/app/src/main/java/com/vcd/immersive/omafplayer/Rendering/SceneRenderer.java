@@ -41,7 +41,7 @@ public final class SceneRenderer {
     private static final String TAG = "SceneRenderer";
     private static final long Interval = 33;
     private static final int MULTI_DECODER_MAX_NUM = 5;
-    private static final int MAX_CATCHUP_SURFACE_NUM = 2;
+    private static final int MAX_CATCHUP_SURFACE_NUM = 1;
     // This is the primary interface between the Media Player and the GL Scene.
     private Surface[] decodeSurface = new Surface[MULTI_DECODER_MAX_NUM + MAX_CATCHUP_SURFACE_NUM];
     private Surface displaySurface;
@@ -67,6 +67,8 @@ public final class SceneRenderer {
     private int drawTimes = 0;
 
     private int renderCount = 0;
+
+    private boolean isWrittenCatchup = false;
 
     private int cnt = 0;
 
@@ -309,6 +311,7 @@ public final class SceneRenderer {
             for (int i = MULTI_DECODER_MAX_NUM; i < MULTI_DECODER_MAX_NUM + MAX_CATCHUP_SURFACE_NUM; i++){
                 decodeTexture[i].updateTexImage();
             }
+            isWrittenCatchup = true;
             Log.i(TAG, "update catch up tex image at pts " + cnt);
         }
         if (frameAvailable.compareAndSet(true, false))
@@ -324,7 +327,17 @@ public final class SceneRenderer {
             int ret = 0;
 
             ret = mediaPlayer.UpdateDisplayTex(renderCount);
-            if (ret == 0) renderCount++;
+            if (ret == 0) {
+                Log.i(TAG, "update display tex at pts " + renderCount);
+                renderCount++;
+                if (isWrittenCatchup) {
+                    for (int i = MULTI_DECODER_MAX_NUM; i < MULTI_DECODER_MAX_NUM + MAX_CATCHUP_SURFACE_NUM; i++) {
+                        decodeTexture[i].releaseTexImage();
+                        isWrittenCatchup = false;
+                        Log.i(TAG, "release catch up tex image at pts " + renderCount);
+                    }
+                }
+            }
             checkGlError();
             if (ret == 0 && !hasTransformTypeSent) {
                 transformType = mediaPlayer.GetTransformType();
