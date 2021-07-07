@@ -4,9 +4,9 @@ ORIPATH=$(pwd)
 ITEM=$1
 VERSION=$2
 PACKAGE=package
-LIBDIR=${ORIPATH}/../build/${PACKAGE}/${ITEM}/usr/lib64/immersive-${ITEM}/
-BINDIR=${ORIPATH}/../build/${PACKAGE}/${ITEM}/usr/bin/immersive-${ITEM}/
-NAME=$(echo "immersive-${item}")
+LIBDIR=${ORIPATH}/../build/${PACKAGE}/${ITEM}/usr/lib64/omaf-${ITEM}/
+BINDIR=${ORIPATH}/../build/${PACKAGE}/${ITEM}/usr/bin/omaf-${ITEM}/
+NAME=$(echo "omaf-${item}")
 
 parameters_usage(){
     echo 'Usage: 1. <item>:           [ server, client ]'
@@ -15,8 +15,8 @@ parameters_usage(){
 
 package(){
     if [ ${ITEM} = "server" ] ; then
-        echo 'sudo cp /usr/lib64/immersive-server/libHighResPlusFullLowResPacking.so /usr/local/lib' > post
-        echo 'sudo cp /usr/lib64/immersive-server/libHevcVideoStreamProcess.so /usr/local/lib' > post
+        echo 'sudo cp /usr/lib64/omaf-server/libHighResPlusFullLowResPacking.so /usr/local/lib' > post
+        echo 'sudo cp /usr/lib64/omaf-server/libHevcVideoStreamProcess.so /usr/local/lib' > post
         # echo 'sudo cp /usr/lib64/immersive-server/libSingleVideoPacking.so /usr/local/lib' >> post
         echo 'sudo ldconfig && sudo cp /usr/bin/immersive-server/WorkerServer /root' >> post
     elif [ ${ITEM} = "client" ] ; then
@@ -26,7 +26,7 @@ package(){
         -f \
         -s dir \
         -t $1 \
-        -n immersive-$2$3 \
+        -n omaf-$2$3 \
         -v 1${VERSION} \
         --iteration 1.el7 \
         -C ${PACKAGE}/$2 \
@@ -93,16 +93,16 @@ if [ ${ITEM} = "client" ] ; then
     cp external/ffmpeg_client_so/libswscale.so.5                      ${LIBDIR}
     cp external/ffmpeg_client_so/libswresample.so.3                   ${LIBDIR}
     cp external/ffmpeg_server_so/libpostproc.so.55                    ${LIBDIR}
-    cp /usr/local/lib/libva-drm.so.2                                  ${LIBDIR}
-    cp /usr/local/lib/libva-x11.so.2                                  ${LIBDIR}
-    cp /usr/local/lib/libva.so.2                                      ${LIBDIR}
     cp /usr/local/lib/libglog.so.0                                    ${LIBDIR}
     cp /usr/local/lib/libsafestring_shared.so                         ${LIBDIR}
     cp /usr/lib64/libSDL2-2.0.so.0                                    ${LIBDIR}
+    cp /usr/lib64/libssl.so.10                                        ${LIBDIR}
+    cp /usr/lib64/libcrypto.so.10                                     ${LIBDIR}
     cp client/360SCVP/lib360SCVP.so                                   ${LIBDIR}
     cp client/OmafDashAccess/libOmafDashAccess.so                     ${LIBDIR}
-    cp client/player/render                                           ${BINDIR}
-    cp ../player/config.xml                                           ${BINDIR}
+    cp client/player/player_lib/libMediaPlayer.so                     ${LIBDIR}
+    cp client/player/app/render                                       ${BINDIR}
+    cp ../player/app/linux/config.xml                                 ${BINDIR}
     mv ../external/git_info                                           ${BINDIR}
     strip ${LIBDIR}/*
     strip ${BINDIR}/render
