@@ -27,6 +27,23 @@
 #include "360SCVPHevcParser.h"
 #include "360SCVPHevcTilestream.h"
 
+inline uint32_t ceil_log2(uint32_t x)
+{
+    uint32_t l = 0;
+
+    while (x > (1U << l))
+        l++;
+
+    return l;
+}
+
+template<class T> inline void set_bit(T& f, uint32_t i, bool b)
+{
+    T mask = (T(1) << (sizeof(T) * 8 - 1 - i));
+    if (b) f |= mask;
+    else f &= ~mask;
+}
+
 uint32_t gts_media_nalu_emulation_bytes_remove_count(const int8_t *buffer, uint32_t size_nal)
 {
     uint32_t n = 0, emulation_bytes_count = 0;
@@ -171,9 +188,10 @@ bool gts_media_hevc_slice_is_IDR(HEVCState *hevc)
     }
 }
 
-static bool parse_short_term_ref_pic_set(GTS_BitStream *bs, HEVC_SPS *sps, HEVCSliceInfo *si, uint32_t idx_rps)
+static uint32_t parse_short_term_ref_pic_set(GTS_BitStream *bs, HEVC_SPS *sps, HEVCSliceInfo *si, uint32_t idx_rps)
 {
     uint32_t i;
+    uint32_t used_by_curr_pic_flags = 0;
     si->rps[idx_rps].inter_ref_pic_set_prediction_flag = (bool)0;
     if (idx_rps != 0)
         si->rps[idx_rps].inter_ref_pic_set_prediction_flag = (bool)gts_bs_read_int(bs, 1);
@@ -222,19 +240,20 @@ static bool parse_short_term_ref_pic_set(GTS_BitStream *bs, HEVC_SPS *sps, HEVCS
         ref_pic_set->num_negative_pics = i0;
         ref_pic_set->num_positive_pics = i1;
     } else {
-        //int32_t prev = 0, poc = 0;
         si->rps[idx_rps].num_negative_pics = bs_get_ue(bs);
         si->rps[idx_rps].num_positive_pics = bs_get_ue(bs);
-        if (si->rps[idx_rps].num_negative_pics>16)
-            return false;
-        if (si->rps[idx_rps].num_positive_pics>16)
-            return false;
+        //N = si->rps[idx_rps].num_negative_pics + si->rps[idx_rps].num_positive_pics;
+        //if (si->rps[idx_rps].num_negative_pics>16)
+            //return false;
+        //if (si->rps[idx_rps].num_positive_pics>16)
+            //return false;
         for (i=0; i<si->rps[idx_rps].num_negative_pics; i++) {
             //uint32_t delta_poc_s0_minus1 = bs_get_ue(bs);
             //poc = prev - delta_poc_s0_minus1 - 1;
             //prev = poc;
             si->rps[idx_rps].delta_poc0[i] = bs_get_ue(bs) + 1;
             si->rps[idx_rps].used_by_curr_pic_s0_flag[i] = (bool)gts_bs_read_int(bs, 1);
+            set_bit(used_by_curr_pic_flags, i, !!(si->rps[idx_rps].used_by_curr_pic_s0_flag[i]));
         }
         for (i=0; i<si->rps[idx_rps].num_positive_pics; i++) {
             //uint32_t deltaPocS1 = 0;
@@ -243,9 +262,10 @@ static bool parse_short_term_ref_pic_set(GTS_BitStream *bs, HEVC_SPS *sps, HEVCS
             //prev = poc;
             //si->rps[idx_rps].delta_poc[i] = poc;
             si->rps[idx_rps].used_by_curr_pic_s1_flag[i] = (bool)gts_bs_read_int(bs, 1);
+            set_bit(used_by_curr_pic_flags, (i + si->rps[idx_rps].num_negative_pics), !!(si->rps[idx_rps].used_by_curr_pic_s1_flag[i]));
         }
     }
-    return true;
+    return used_by_curr_pic_flags;
 }
 
 void hevc_PredWeightTable(GTS_BitStream *bs, HEVCState *hevc, HEVCSliceInfo *si, HEVC_PPS *pps, HEVC_SPS *sps, uint32_t num_ref_idx_l0_active, uint32_t num_ref_idx_l1_active)
@@ -292,24 +312,40 @@ parse_weights:
     }
 }
 
-static
-bool ref_pic_lists_modification(GTS_BitStream *bs, uint32_t slice_type, uint32_t num_ref_idx_l0_active, uint32_t num_ref_idx_l1_active)
+template<class T> uint32_t count_bits(T f, uint32_t n = 0)
 {
-    //uint32_t i;
+    uint32_t c = 0, sz = sizeof(T) * 8;
+
+    if (!n)
+        n = sz;
+
+    f >>= (sz - n);
+
+    while(n--)
+    {
+        c += (f & 1);
+        f >>= 1;
+    }
+
+    return c;
+}
+
+static
+bool ref_pic_lists_modification(GTS_BitStream *bs, uint32_t slice_type, uint32_t num_ref_idx_l0_active, uint32_t num_ref_idx_l1_active, uint32_t num_pic_total_curr)
+{
+    uint32_t sz = ceil_log2(num_pic_total_curr);
     bool ref_pic_list_modification_flag_l0 = (bool)gts_bs_read_int(bs, 1);
     if (ref_pic_list_modification_flag_l0) {
-        /*for (i=0; i<num_ref_idx_l0_active; i++) {
-            list_entry_l0[i] = *//*gts_bs_read_int(bs, (uint32_t)ceil(log(getNumPicTotalCurr())/log(2)));
-        }*/
-        return false;
+        for (uint32_t i=0; i<num_ref_idx_l0_active; i++) {
+            /*list_entry_l0[i] = */gts_bs_read_int(bs, sz);
+        }
     }
     if (slice_type == GF_HEVC_SLICE_TYPE_B) {
         bool ref_pic_list_modification_flag_l1 = (bool)gts_bs_read_int(bs, 1);
         if (ref_pic_list_modification_flag_l1) {
-            /*for (i=0; i<num_ref_idx_l1_active; i++) {
-                list_entry_l1[i] = *//*gts_bs_read_int(bs, (uint32_t)ceil(log(getNumPicTotalCurr()) / log(2)));
-            }*/
-            return false;
+            for (uint32_t i=0; i<num_ref_idx_l1_active; i++) {
+                /*list_entry_l1[i] = */gts_bs_read_int(bs, sz);
+            }
         }
     }
 
@@ -325,6 +361,7 @@ static int32_t hevc_parse_slice_segment(GTS_BitStream *gts_bitstream, HEVCState 
     //int32_t index_hevc_pps;
     bool RapPicFlag = false;
     bool IDRPicFlag = false;
+    uint32_t used_by_curr_pic_flags = 0;
 
     slice_info->first_slice_segment_in_pic_flag = (bool)gts_bs_read_int(gts_bitstream, 1);
     //printf("Get first slice %d for slice %p \n", slice_info->first_slice_segment_in_pic_flag, state);
@@ -406,10 +443,11 @@ static int32_t hevc_parse_slice_segment(GTS_BitStream *gts_bitstream, HEVCState 
             //if (!state->full_slice_header_parse) return 0;
 
             slice_info->short_term_ref_pic_set_sps_flag = (bool)gts_bs_read_int(gts_bitstream, 1);
-            if (slice_info->short_term_ref_pic_set_sps_flag == 0) {
-                bool ret = parse_short_term_ref_pic_set(gts_bitstream, hevc_sps, slice_info, hevc_sps->num_short_term_ref_pic_sets );
-                if (!ret)
-                    return -1;
+            if (!slice_info->short_term_ref_pic_set_sps_flag) {
+                printf("To parse short term ref pic set !\n");
+                used_by_curr_pic_flags = parse_short_term_ref_pic_set(gts_bitstream, hevc_sps, slice_info, hevc_sps->num_short_term_ref_pic_sets );
+                //if (!ret)
+                    //return -1;
             } else if( hevc_sps->num_short_term_ref_pic_sets > 1 ) {
                 uint32_t numbits = 0;
 
@@ -472,8 +510,9 @@ static int32_t hevc_parse_slice_segment(GTS_BitStream *gts_bitstream, HEVCState 
                     slice_info->count_index_reference_1 = 1 + bs_get_ue(gts_bitstream);
             }
 
-            if (hevc_pps->lists_modification_present_flag /*TODO: && NumPicTotalCurr > 1*/) {
-                if (!ref_pic_lists_modification(gts_bitstream, slice_info->slice_type, slice_info->count_index_reference_0, slice_info->count_index_reference_1)) {
+            uint32_t num_pic_total_curr = count_bits(used_by_curr_pic_flags);
+            if (hevc_pps->lists_modification_present_flag && num_pic_total_curr > 1) {
+                if (!ref_pic_lists_modification(gts_bitstream, slice_info->slice_type, slice_info->count_index_reference_0, slice_info->count_index_reference_1, num_pic_total_curr)) {
                     //GF_LOG(GF_LOG_WARNING, GF_LOG_CODING, ("[state] ref_pic_lists_modification( ) not implemented\n"));
                     return -1;
                 }
@@ -1411,7 +1450,7 @@ static int32_t gts_media_hevc_read_sps_bs(GTS_BitStream *bs, HEVCState *hevc, ui
     multiLayerExtSpsFlag = (bool)((layer_id != 0) && (sps_ext_or_max_sub_layers_minus1 == 7));
     if (!multiLayerExtSpsFlag) {
         gts_bs_read_int(bs, 1);
-		HEVC_profiletierevel(bs, (bool)1, max_sub_layers_minus1, &ptl);
+	    HEVC_profiletierevel(bs, (bool)1, max_sub_layers_minus1, &ptl);
     }
 
     sps_id = bs_get_ue(bs);
@@ -1452,7 +1491,7 @@ static int32_t gts_media_hevc_read_sps_bs(GTS_BitStream *bs, HEVCState *hevc, ui
             spsInforHevc->separate_colour_plane_flag = (bool)gts_bs_read_int(bs, 1);
         spsInforHevc->width = bs_get_ue(bs);
         spsInforHevc->height = bs_get_ue(bs);
-        if (gts_bs_read_int(bs, 1)) {
+        if (gts_bs_read_int(bs, 1)) { //conformance_window_flag
             uint32_t width_sub, height_sub;
 
             if (spsInforHevc->chroma_format_idc==1) {
@@ -1538,6 +1577,30 @@ static int32_t gts_media_hevc_read_sps_bs(GTS_BitStream *bs, HEVCState *hevc, ui
     spsInforHevc->num_short_term_ref_pic_sets = bs_get_ue(bs);
     if (spsInforHevc->num_short_term_ref_pic_sets>64) {
         return -1;
+    }
+    if (spsInforHevc->num_short_term_ref_pic_sets)
+    {
+        for (uint32_t idx = 0; idx < spsInforHevc->num_short_term_ref_pic_sets; idx++)
+        {
+            uint32_t i;
+            uint32_t num_negative_pics;
+            uint32_t num_positive_pics;
+                //int32_t prev = 0, poc = 0;
+            num_negative_pics = bs_get_ue(bs);
+            num_positive_pics = bs_get_ue(bs);
+            if (num_negative_pics>16)
+                return false;
+            if (num_positive_pics>16)
+                return false;
+            for (i=0; i<num_negative_pics; i++) {
+                bs_get_ue(bs);
+                gts_bs_read_int(bs, 1);
+            }
+            for (i=0; i<num_positive_pics; i++) {
+                bs_get_ue(bs);
+                gts_bs_read_int(bs, 1);
+            }
+        }
     }
 
     spsInforHevc->long_term_ref_pics_present_flag = (bool)gts_bs_read_int(bs, 1);
@@ -1759,7 +1822,6 @@ int32_t gts_media_hevc_parse_nalu(hevc_specialInfo* pSpecialInfo, int8_t *data, 
     SliceInfo->nal_unit_type = *nal_unit_type;
     SliceInfo->temporal_id = *temporal_id;
 
-    //switch (SliceInfo.nal_unit_type) {
     switch (SliceInfo->nal_unit_type) {
     case GTS_HEVC_NALU_ACCESS_UNIT:
     case GTS_HEVC_NALU_END_OF_SEQ:
