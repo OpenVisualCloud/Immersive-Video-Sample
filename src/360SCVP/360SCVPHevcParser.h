@@ -236,6 +236,7 @@ typedef struct
     bool     inter_ref_pic_set_prediction_flag;
     uint32_t index_num;
     bool     delta_rps_sign;
+    uint32_t abs_delta_rps_minus1;
     uint32_t index_num_absolute;
     bool     used_by_curr_pic_flag[256];
     bool     used_delta_flag[256];
@@ -246,6 +247,7 @@ typedef struct
     bool     used_by_curr_pic_s0_flag[16];
     int32_t  delta_poc1[16];
     bool     used_by_curr_pic_s1_flag[16];
+    uint32_t num_delta_pocs;
 } HEVC_ReferencePictureSets;
 
 #define MAX_CPB_CNT 32
@@ -308,6 +310,7 @@ typedef struct
 {
     int32_t id, vps_id;
     /*used to discard repeated SPSs - 0: not parsed, 1 parsed, 2 stored*/
+
     uint32_t state;
     uint32_t crc;
     uint32_t width, height;
@@ -321,6 +324,8 @@ typedef struct
     uint8_t bit_depth_chroma;
     uint8_t log2_max_pic_order_cnt_lsb;
     uint8_t max_sub_layers_minus1;
+    uint8_t sps_temporal_id_nesting_flag;
+    uint8_t amp_enabled_flag;
     bool separate_colour_plane_flag;
 
     uint32_t max_CU_width, max_CU_height, max_CU_depth;
@@ -328,6 +333,9 @@ typedef struct
     uint32_t max_dec_pic_buffering, num_reorder_pics, max_latency_increase;
 
     uint32_t num_short_term_ref_pic_sets, num_long_term_ref_pic_sps;
+
+    HEVC_ReferencePictureSets rps[64];
+    uint32_t used_by_curr_pic_flags[64];
 
     uint32_t max_transform_hierarchy_depth_inter;
     uint32_t max_transform_hierarchy_depth_intra;
@@ -353,6 +361,11 @@ typedef struct
     bool slice_segment_header_extension_present_flag, output_flag_present_flag, lists_modification_present_flag, cabac_init_present_flag;
     bool weighted_pred_flag, weighted_bipred_flag, slice_chroma_qp_offsets_present_flag, deblocking_filter_control_present_flag, deblocking_filter_override_enabled_flag, loop_filter_across_slices_enabled_flag, entropy_coding_sync_enabled_flag;
     bool loop_filter_across_tiles_enabled_flag, pps_loop_filter_across_slices_enabled_flag, cu_qp_delta_enabled_flag;
+    bool transform_skip_enabled_flag;
+
+    bool pps_deblocking_filter_disabled_flag;
+    int8_t pps_beta_offset_div2;
+    int8_t pps_tc_offset_div2;
 
     uint32_t num_tile_columns, num_tile_rows, pic_init_qp_minus26, diff_cu_qp_delta_depth;
     uint32_t column_width[22], row_height[20];
@@ -521,7 +534,11 @@ typedef struct
 
     int32_t slice_qp_delta, slice_cb_qp_offset, slice_cr_qp_offset;
     //bool used_by_curr_pic_s0_flag[16];
+
     HEVC_ReferencePictureSets rps[64];
+
+    bool ref_pic_list_modification_flag_l0, ref_pic_list_modification_flag_l1;
+    uint32_t list_entry_l0[16], list_entry_l1[16];
 
     uint32_t size_ext;
     std::vector<uint8_t> ext_bytes;
