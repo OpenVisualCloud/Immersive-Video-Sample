@@ -62,6 +62,34 @@ static uint32_t math_ceil_log2(uint32_t value)
     return math_floor_log2(value) + ((value & (value - 1)) ? 1 : 0);
 }
 
+inline uint32_t ceil_log2(uint32_t x)
+{
+    uint32_t l = 0;
+
+    while (x > (1U << l))
+        l++;
+
+    return l;
+}
+
+template<class T> uint32_t count_bits(T f, uint32_t n = 0)
+{
+    uint32_t c = 0, sz = sizeof(T) * 8;
+
+    if (!n)
+        n = sz;
+
+    f >>= (sz - n);
+
+    while(n--)
+    {
+        c += (f & 1);
+        f >>= 1;
+    }
+
+    return c;
+}
+
 /**
 * \brief Chroma subsampling format used for encoding.
 * \since 3.15.0
@@ -435,7 +463,7 @@ static void hevc_write_bitstream_seq_parameter_set(GTS_BitStream* stream,
     // TODO: profile IDC and level IDC should be defined later on
     gts_bs_write_int(stream, 0, 4); //, "sps_video_parameter_set_id"
     gts_bs_write_int(stream, sps->max_sub_layers_minus1, 3); //, "sps_max_sub_layers_minus1"
-    gts_bs_write_int(stream, 0, 1); //, "sps_temporal_id_nesting_flag"
+    gts_bs_write_int(stream, sps->sps_temporal_id_nesting_flag, 1); //, "sps_temporal_id_nesting_flag"
 
     hevc_write_bitstream_PTL(stream, state);
 
@@ -473,7 +501,7 @@ static void hevc_write_bitstream_seq_parameter_set(GTS_BitStream* stream,
     // scaling list
     gts_bs_write_int(stream, 0, 1); //, "scaling_list_enable_flag"
 
-    gts_bs_write_int(stream,  0, 1); //, "amp_enabled_flag"
+    gts_bs_write_int(stream,  sps->amp_enabled_flag, 1); //, "amp_enabled_flag"
 
     gts_bs_write_int(stream,  sps->sample_adaptive_offset_enabled_flag, 1); //,    "sample_adaptive_offset_enabled_flag"
     gts_bs_write_int(stream, 0, 1); //, "pcm_enabled_flag"
@@ -486,11 +514,69 @@ static void hevc_write_bitstream_seq_parameter_set(GTS_BitStream* stream,
 #endif
 
     bitstream_put_ue(stream, sps->num_short_term_ref_pic_sets); //, "num_short_term_ref_pic_sets"
+    if (sps->num_short_term_ref_pic_sets)
+    {
+        for (uint32_t idx = 0; idx < sps->num_short_term_ref_pic_sets; idx++)
+        {
+            if (idx > 0)
+            {
+                gts_bs_write_int(stream, sps->rps[idx].inter_ref_pic_set_prediction_flag, 1);
+            }
+
+            if (sps->rps[idx].inter_ref_pic_set_prediction_flag)
+            {
+                gts_bs_write_int(stream, sps->rps[idx].delta_rps_sign, 1);
+                bitstream_put_ue(stream, sps->rps[idx].abs_delta_rps_minus1);
+
+                uint32_t next_num_delta_pocs = 0;
+                uint32_t num_delta_pocs = sps->rps[idx-1].num_delta_pocs;
+                for (uint32_t i = 0; i <= num_delta_pocs; i++)
+                {
+                    gts_bs_write_int(stream, sps->rps[idx].used_by_curr_pic_flag[i], 1);
+
+                    if (!sps->rps[idx].used_by_curr_pic_flag[i])
+                        gts_bs_write_int(stream, sps->rps[idx].used_delta_flag[i], 1);
+
+                    if (sps->rps[idx].used_by_curr_pic_flag[i] || sps->rps[idx].used_delta_flag[i])
+                        ++next_num_delta_pocs;
+                }
+
+                sps->rps[idx].num_delta_pocs = next_num_delta_pocs;
+            }
+            else // inter_ref_pic_set_prediction_flag == 0
+            {
+                bitstream_put_ue(stream, sps->rps[idx].num_negative_pics);
+                bitstream_put_ue(stream, sps->rps[idx].num_positive_pics);
+
+                for (uint32_t i = 0; i < sps->rps[idx].num_negative_pics; i++)
+                {
+                    bitstream_put_ue(stream, sps->rps[idx].delta_poc0[i] - 1);
+                    gts_bs_write_int(stream, sps->rps[idx].used_by_curr_pic_s0_flag[i], 1);
+                }
+                for (uint32_t i = 0; i < sps->rps[idx].num_positive_pics; i++)
+                {
+                    bitstream_put_ue(stream, sps->rps[idx].delta_poc1[i] - 1);
+                    gts_bs_write_int(stream, sps->rps[idx].used_by_curr_pic_s1_flag[i], 1);
+                }
+
+                sps->rps[idx].num_delta_pocs = sps->rps[idx].num_negative_pics + sps->rps[idx].num_positive_pics;
+            }
+        }
+    }
 
     //IF num short term ref pic sets
     //ENDIF
 
-    gts_bs_write_int(stream, 0, 1); //, "long_term_ref_pics_present_flag"
+    gts_bs_write_int(stream, sps->long_term_ref_pics_present_flag, 1); //, "long_term_ref_pics_present_flag"
+    if (sps->long_term_ref_pics_present_flag)
+    {
+        bitstream_put_ue(stream, sps->num_long_term_ref_pic_sps);
+        for (uint32_t i = 0; i < sps->num_long_term_ref_pic_sps; i++)
+        {
+            gts_bs_write_int(stream, sps->log2_max_pic_order_cnt_lsb, 1);
+            gts_bs_write_int(stream, 0, 1);
+        }
+    }
 
     //IF long_term_ref_pics_present
     //ENDIF
@@ -525,15 +611,15 @@ static void hevc_write_bitstream_pic_parameter_set(GTS_BitStream* stream,
     gts_bs_write_int(stream, 0, 1); //, "sign_data_hiding_flag"
     gts_bs_write_int(stream, 0, 1); //, "cabac_init_present_flag"
 
-    bitstream_put_ue(stream, 0); //, "num_ref_idx_l0_default_active_minus1"
-    bitstream_put_ue(stream, 0); //, "num_ref_idx_l1_default_active_minus1"
+    bitstream_put_ue(stream, pps->num_ref_idx_l0_default_active - 1); //, "num_ref_idx_l0_default_active_minus1"
+    bitstream_put_ue(stream, pps->num_ref_idx_l1_default_active - 1); //, "num_ref_idx_l1_default_active_minus1"
 
     // If tiles and slices = tiles is enabled, signal QP in the slice header. Keeping the PPS constant for OMAF etc
     bool signal_qp_in_slice_header = 1;//(encoder->cfg.slices & HEVC_SLICES_TILES) && encoder->tiles_enable;
     bitstream_put_se(stream, signal_qp_in_slice_header ? 0 : (((int8_t)state->pps[state->last_parsed_pps_id].pic_init_qp_minus26))); //, "pic_init_qp_minus26"
 
     gts_bs_write_int(stream, 0, 1); //, "constrained_intra_pred_flag"
-    gts_bs_write_int(stream, 0, 1); //, "transform_skip_enabled_flag"
+    gts_bs_write_int(stream, pps->transform_skip_enabled_flag, 1); //, "transform_skip_enabled_flag"
 
     // Use separate QP for each LCU when rate control is enabled.
     gts_bs_write_int(stream, pps->cu_qp_delta_enabled_flag, 1); //, "cu_qp_delta_enabled_flag"
@@ -581,11 +667,15 @@ static void hevc_write_bitstream_pic_parameter_set(GTS_BitStream* stream,
 
     //IF deblocking_filter
     gts_bs_write_int(stream, pps->deblocking_filter_override_enabled_flag, 1); //, "deblocking_filter_override_enabled_flag"
-    gts_bs_write_int(stream,  1, 1); //,    "pps_disable_deblocking_filter_flag"
+    gts_bs_write_int(stream, pps->pps_deblocking_filter_disabled_flag, 1); //,    "pps_disable_deblocking_filter_flag"
+    if (!pps->pps_deblocking_filter_disabled_flag) {
+        bitstream_put_se(stream, pps->pps_beta_offset_div2); //, "pps_beta_offset_div2"
+        bitstream_put_se(stream, pps->pps_tc_offset_div2); //, "pps_tc_offset_div2"
+    }
 
     gts_bs_write_int(stream, 0, 1); //, "pps_scaling_list_data_present_flag"
 
-    gts_bs_write_int(stream, 0, 1); //, "lists_modification_present_flag"
+    gts_bs_write_int(stream, pps->lists_modification_present_flag, 1); //, "lists_modification_present_flag"
     bitstream_put_ue(stream, 0); //, "log2_parallel_merge_level_minus2"
     gts_bs_write_int(stream, 0, 1); //, "slice_segment_header_extension_present_flag"
     gts_bs_write_int(stream, 0, 1); //, "pps_extension_flag"
@@ -778,15 +868,32 @@ static void hevc_write_bitstream_slice_header_independent(GTS_BitStream * stream
             }
         }
 
-        //ref_pic_lists_modification()
-        //if (pps->lists_modification_present_flag)
-        //{
-        //}
-        //printf("si->mvd_l1_zero_flag %d \n", si->mvd_l1_zero_flag);
+        uint32_t num_pic_total_curr = count_bits(sps->used_by_curr_pic_flags[si->short_term_ref_pic_set_idx]);
+        if ((pps->lists_modification_present_flag) && (num_pic_total_curr > 1))
+        {
+            uint32_t sz = ceil_log2(num_pic_total_curr);
+
+            gts_bs_write_int(stream, si->ref_pic_list_modification_flag_l0, 1);
+            if (si->ref_pic_list_modification_flag_l0)
+            {
+                for (uint32_t i=0; i<si->count_index_reference_0; i++)
+                    gts_bs_write_int(stream, si->list_entry_l0[i], sz);
+            }
+
+            if (state->s_info.slice_type == SLICE_B)
+            {
+                gts_bs_write_int(stream, si->ref_pic_list_modification_flag_l1, 1);
+                if (si->ref_pic_list_modification_flag_l1)
+                {
+                    for (uint32_t i=0; i<si->count_index_reference_1; i++)
+                        gts_bs_write_int(stream, si->list_entry_l1[i], sz);
+                }
+            }
+        }
+
         if (si->slice_type == SLICE_B)
         {
             gts_bs_write_int(stream, si->mvd_l1_zero_flag, 1);
-            //printf("Write si->mvd_l1_zero_flag %d \n", si->mvd_l1_zero_flag);
         }
 
         if (pps->cabac_init_present_flag)
