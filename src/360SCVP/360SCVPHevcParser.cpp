@@ -214,7 +214,12 @@ static uint32_t parse_short_term_ref_pic_set(GTS_BitStream *bs, HEVC_SPS *sps, H
         reference_pic_del = (1 - (si->rps[idx_rps].delta_rps_sign<<1)) * (si->rps[idx_rps].index_num_absolute + 1);
 
         ref_pic_set = &si->rps[idx_rps];
-        hevc_pic_set = &si->rps[index_reference];
+
+        if(index_reference < sps->num_short_term_ref_pic_sets)
+            hevc_pic_set = &sps->rps[index_reference];
+        else
+            hevc_pic_set = &si->rps[index_reference];
+
         reference_set_nb = hevc_pic_set->num_negative_pics + hevc_pic_set->num_positive_pics;
         for (i=0; i<=reference_set_nb; i++) {
             int32_t ref_idc;
@@ -453,7 +458,7 @@ static int32_t hevc_parse_slice_segment(GTS_BitStream *gts_bitstream, HEVCState 
             slice_info->short_term_ref_pic_set_sps_flag = (bool)gts_bs_read_int(gts_bitstream, 1);
 
             if (!slice_info->short_term_ref_pic_set_sps_flag) {
-                used_by_curr_pic_flags = parse_short_term_ref_pic_set(gts_bitstream, hevc_sps, slice_info, hevc_sps->num_short_term_ref_pic_sets );
+                used_by_curr_pic_flags = parse_short_term_ref_pic_set(gts_bitstream, hevc_sps, slice_info, hevc_sps->num_short_term_ref_pic_sets);
                 num_pic_total_curr = count_bits(used_by_curr_pic_flags);
                 //if (!ret)
                     //return -1;
@@ -1618,6 +1623,7 @@ static int32_t gts_media_hevc_read_sps_bs(GTS_BitStream *bs, HEVCState *hevc, ui
             {
                 spsInforHevc->rps[idx].delta_rps_sign = gts_bs_read_int(bs, 1);
                 spsInforHevc->rps[idx].abs_delta_rps_minus1 = bs_get_ue(bs);
+                int32_t delta_rps = (1 - (spsInforHevc->rps[idx].delta_rps_sign << 1)) * (spsInforHevc->rps[idx].abs_delta_rps_minus1 + 1);
 
                 uint32_t next_num_delta_pocs = 0;
                 uint32_t num_delta_pocs = spsInforHevc->rps[idx-1].num_delta_pocs;
@@ -1629,6 +1635,16 @@ static int32_t gts_media_hevc_read_sps_bs(GTS_BitStream *bs, HEVCState *hevc, ui
 
                     if (spsInforHevc->rps[idx].used_by_curr_pic_flag[i] || spsInforHevc->rps[idx].used_delta_flag[i])
                     {
+                        if (i < num_delta_pocs)
+                            spsInforHevc->rps[idx].delta_poc[i] = delta_rps + spsInforHevc->rps[idx - 1].delta_poc[i];
+                        else
+                            spsInforHevc->rps[idx].delta_poc[i] = delta_rps;
+
+                        if ( spsInforHevc->rps[idx].delta_poc[i] < 0)
+                            ++spsInforHevc->rps[idx].num_negative_pics;
+                        else
+                            ++spsInforHevc->rps[idx].num_positive_pics;
+
                         ++next_num_delta_pocs;
                         set_bit(spsInforHevc->used_by_curr_pic_flags[idx], i, !!spsInforHevc->rps[idx].used_by_curr_pic_flag[i]);
                     }

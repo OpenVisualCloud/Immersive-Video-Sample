@@ -826,7 +826,9 @@ static void hevc_write_bitstream_slice_header_independent(GTS_BitStream * stream
 
                 gts_bs_write_int(stream, si->delta_poc_msb_present_flag[m], 1);
                 if (si->delta_poc_msb_present_flag[m])
+                {
                     bitstream_put_ue(stream, si->poc_MCL_del[m]);
+                }
             }
         }
 
