@@ -36,8 +36,8 @@
 
 std::string const shader_r2t_vs =
 "#version 300 es\n"
-"in vec3 vPosition;\n"
-"in vec2 aTexCoord;\n"
+"layout (location = 0) in vec3 vPosition;\n"
+"layout (location = 1) in vec2 aTexCoord;\n"
 "out vec2 texCoord;\n"
 "void main()\n"
 "{\n"
@@ -82,8 +82,8 @@ std::string const shader_r2t_fs =
 
 std::string const shader_screen_vs =
 "#version 300 es\n"
-"in vec3 vertex;\n"
-"in vec2 texCoord0;\n"
+"layout (location = 0) in vec3 vertex;\n"
+"layout (location = 1) in vec2 texCoord0;\n"
 "uniform mat4 uProjMatrix;\n"
 "uniform mat4 uViewMatrix;\n"
 "out vec2 texCoord;\n"
