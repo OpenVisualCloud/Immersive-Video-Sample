@@ -95,19 +95,13 @@ RenderStatus ERPMesh::Create()
     float right = 1.0f;
 
     uint32_t numVertices = vertexColumns * vertexRows;
-    m_vertices = (float *)malloc(numVertices * sizeof(float) * 3);
+    m_vertices = (float *)malloc(numVertices * sizeof(float) * 5);
     if (NULL == m_vertices)
-    {
-        return RENDER_ERROR;
-    }
-    m_texCoords = (float *)malloc(numVertices * sizeof(float) * 2);
-    if (NULL == m_texCoords)
     {
         return RENDER_ERROR;
     }
     m_vertexNum = numVertices;
     uint32_t vertexPtr = 0;
-    uint32_t texPtr = 0;
 
     float longitudeStep = width / m_columns;
     float latitudeStep = height / m_rows;
@@ -128,8 +122,8 @@ RenderStatus ERPMesh::Create()
             m_vertices[vertexPtr++] = y;
             m_vertices[vertexPtr++] = z;
 
-            m_texCoords[texPtr++] = i < m_columns ? u : right;
-            m_texCoords[texPtr++] = j < m_rows ? 1 - v : 1 - bottom;
+            m_vertices[vertexPtr++] = i < m_columns ? u : right;
+            m_vertices[vertexPtr++] = j < m_rows ? 1 - v : 1 - bottom;
         }
     }
 
@@ -167,14 +161,18 @@ RenderStatus ERPMesh::Bind(uint32_t vertexAttrib, uint32_t texCoordAttrib)
     RenderBackend *renderBackend = RENDERBACKEND::GetInstance();
     renderBackend->GenVertexArrays(1, &m_VAOHandle);
     renderBackend->GenBuffers(1, &m_EBOHandle);
+    renderBackend->GenBuffers(1, &m_VBOHandle);
     renderBackend->BindVertexArray(m_VAOHandle);
+
+    renderBackend->BindBuffer(GL_ARRAY_BUFFER, m_VBOHandle);
+    renderBackend->BufferData(GL_ARRAY_BUFFER, m_vertexNum * 5 * sizeof(float), m_vertices, GL_STATIC_DRAW);
+
     renderBackend->BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBOHandle);
     renderBackend->BufferData(GL_ELEMENT_ARRAY_BUFFER, GetIndexNum() * sizeof(uint32_t), &GetIndices()[0], GL_STATIC_DRAW);
-    renderBackend->VertexAttribPointer(vertexAttrib, 3, GL_FLOAT, GL_FALSE, 0, GetVertices());
-    renderBackend->EnableVertexAttribArray(vertexAttrib);
-    renderBackend->VertexAttribPointer(texCoordAttrib, 2, GL_FLOAT, GL_FALSE, 0, GetTexCoords());
-    renderBackend->EnableVertexAttribArray(texCoordAttrib);
-    renderBackend->BindVertexArray(0);
+    renderBackend->VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    renderBackend->EnableVertexAttribArray(0);
+    renderBackend->VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    renderBackend->EnableVertexAttribArray(1);
     return RENDER_STATUS_OK;
 }
 

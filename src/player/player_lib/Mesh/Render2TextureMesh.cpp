@@ -45,38 +45,24 @@ VCD_NS_BEGIN
 
 RenderStatus Render2TextureMesh::Create()
 {
-    m_vertexNum = 6; //6 vertex * 3
-    m_vertices = new float[m_vertexNum * 3];
+    m_vertexNum = 6; //6 vertex * 5
+    m_vertices = new float[m_vertexNum * 5];
     if (NULL == m_vertices)
     {
         return RENDER_ERROR;
     }
     float squareVertices[] = {
-        -1.0f, 1.0f, 0.0f,
-        -1.0f, -1.0f, 0.0f,
-        1.0f, -1.0f, 0.0f,
-        -1.0f, 1.0f, 0.0f,
-        1.0f, -1.0f, 0.0f,
-        1.0f, 1.0f, 0.0f};
-    for (uint32_t i = 0; i < m_vertexNum * 3; i++)
+        // positions         // texture coords
+         1.0f,  1.0f, 0.0f,    1.0f, 1.0f, // top right
+         1.0f, -1.0f, 0.0f,    1.0f, 0.0f, // bottom right
+        -1.0f, -1.0f, 0.0f,    0.0f, 0.0f, // bottom left
+         1.0f,  1.0f, 0.0f,    1.0f, 1.0f,
+        -1.0f, -1.0f, 0.0f,    0.0f, 0.0f,
+        -1.0f,  1.0f, 0.0f,    0.0f, 1.0f  // top left
+    };
+    for (uint32_t i = 0; i < m_vertexNum * 5; i++)
     {
         m_vertices[i] = squareVertices[i];
-    }
-    m_texCoords = new float[m_vertexNum * 2]; // 6 vertex * 2
-    if (NULL == m_texCoords)
-    {
-        return RENDER_ERROR;
-    }
-    float squareTexCoords[] = {
-        0.0f, 1.0f,
-        0.0f, 0.0f,
-        1.0f, 0.0f,
-        0.0f, 1.0f,
-        1.0f, 0.0f,
-        1.0f, 1.0f};
-    for (uint32_t i = 0; i < m_vertexNum * 2; i++)
-    {
-        m_texCoords[i] = squareTexCoords[i];
     }
     return RENDER_STATUS_OK;
 }
@@ -85,12 +71,16 @@ RenderStatus Render2TextureMesh::Bind(uint32_t vertexAttrib, uint32_t texCoordAt
 {
     RenderBackend *renderBackend = RENDERBACKEND::GetInstance();
     renderBackend->GenVertexArrays(1, &m_VAOHandle);
+    renderBackend->GenBuffers(1, &m_VBOHandle);
     renderBackend->BindVertexArray(m_VAOHandle);
-    renderBackend->VertexAttribPointer(vertexAttrib, 3, GL_FLOAT, GL_FALSE, 0, m_vertices);
-    renderBackend->EnableVertexAttribArray(vertexAttrib);
-    renderBackend->VertexAttribPointer(texCoordAttrib, 2, GL_FLOAT, GL_FALSE, 0, m_texCoords);
-    renderBackend->EnableVertexAttribArray(texCoordAttrib);
-    renderBackend->BindVertexArray(0);
+
+    renderBackend->BindBuffer(GL_ARRAY_BUFFER, m_VBOHandle);
+    renderBackend->BufferData(GL_ARRAY_BUFFER, m_vertexNum * 5 * sizeof(float), m_vertices, GL_STATIC_DRAW);
+
+    renderBackend->VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+    renderBackend->EnableVertexAttribArray(0);
+    renderBackend->VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    renderBackend->EnableVertexAttribArray(1);
     return RENDER_STATUS_OK;
 }
 

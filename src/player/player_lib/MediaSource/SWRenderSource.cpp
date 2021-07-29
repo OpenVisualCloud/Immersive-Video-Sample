@@ -298,7 +298,7 @@ RenderStatus SWRenderSource::UpdateR2T(BufferInfo* bufInfo)
         renderBackend->BindTexture(GL_TEXTURE_2D, sourceTextureHandle[i]);
     }
     renderBackend->Viewport(0, 0, sourceWH->width[0], sourceWH->height[0]);
-    renderBackend->DrawArrays(GL_TRIANGLES, 0, 6);
+    renderBackend->DrawArrays(GL_TRIANGLE_STRIP, 0, 6);
     uint64_t end2 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"bind process is:"<<(end2 - start2)<<endl;
     return RENDER_STATUS_OK;
