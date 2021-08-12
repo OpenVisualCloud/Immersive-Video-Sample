@@ -22,7 +22,7 @@ build_server(){
         thrift -r --gen cpp shared.thrift
         patch gen-cpp/shared_types.h Implement_operator_RegionInformation.patch
         cd -
-        cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server -DDE_FLAG=true -DUSE_SAFE_MEM_LIB=OFF ../..
+        cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server -DDE_FLAG=true -DUSE_SAFE_MEM_LIB=OFF -DENABLE_MSDK=OFF ../..
     else
         sudo cp ../../ffmpeg/dependency/*.so /usr/local/lib/
         sudo cp ../../ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/

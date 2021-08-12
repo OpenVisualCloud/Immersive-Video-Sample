@@ -7,12 +7,20 @@ OPTION(USE_TRACE
        "Use trace"
        OFF)
 
+OPTION(ENABLE_MSDK
+       "Enable MSDK"
+       OFF)
+
 OPTION(USE_SAFE_MEM_LIB
        "Use safe mem lib"
        OFF)
 
 IF(USE_TRACE)
   ADD_DEFINITIONS("-D_USE_TRACE_")
+ENDIF()
+
+IF(ENABLE_MSDK)
+   ADD_DEFINITIONS("-D_ENABLE_MSDK_")
 ENDIF()
 
 IF(USE_SAFE_MEM_LIB)
