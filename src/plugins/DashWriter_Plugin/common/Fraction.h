@@ -38,7 +38,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
-#include "../include/Common.h"
+#include "../../../isolib/include/Common.h"
 
 using namespace std;
 

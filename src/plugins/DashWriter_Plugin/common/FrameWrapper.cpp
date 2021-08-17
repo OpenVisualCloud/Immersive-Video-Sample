@@ -36,14 +36,6 @@ using namespace std;
 
 VCD_MP4_BEGIN
 
-GetDataOfFrame::GetDataOfFrame()
-{
-}
-
-GetDataOfFrame::~GetDataOfFrame()
-{
-}
-
 FrameWrapper::FrameWrapper(unique_ptr<GetDataOfFrame>&& aAcquire, FrameInfo aFrameInfo)
     : m_acquire(move(aAcquire))
     , m_frameInfo(aFrameInfo)

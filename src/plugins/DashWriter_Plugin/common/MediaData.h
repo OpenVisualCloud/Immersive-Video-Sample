@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Intel Corporation
+ * Copyright (c) 2021, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,14 +25,12 @@
  */
 
 //!
-//! \file:   SegmentWriter.h
-//! \brief:  Segmenter related API definition
-//! \detail: Define segment related information, like track of segment
-//!          and so on.
+//! \file:   MediaData.h
+//! \brief:  Media type and media data related definition
 //!
 
-#ifndef _SEGMENTERAPI_H_
-#define _SEGMENTERAPI_H_
+#ifndef _MEDIADATA_H_
+#define _MEDIADATA_H_
 
 #include <iostream>
 #include <list>
@@ -45,7 +43,6 @@
 #include <vector>
 
 #include "Frame.h"
-#include "DataItem.h"
 #include "AcquireTrackData.h"
 
 using namespace std;
@@ -53,6 +50,196 @@ using namespace std;
 VCD_MP4_BEGIN
 
 class MovieHeaderAtom;
+
+//!
+//! \enum:   CodedFormat
+//! \brief:  indicate the coded format of the data
+//!
+enum CodedFormat
+{
+    NoneFormat,
+    H264,
+    H265,
+    AAC,
+    TimedMetadata,
+    H265Extractor
+};
+
+//!
+//! \enum:   ConfigType
+//! \brief:  indicate the paramter set type
+//!
+enum ConfigType
+{
+    SPS,                    // for AVC and HEVC
+    PPS,                    // for AVC and HEVC
+    VPS,                    // for HEVC
+    AudioSpecificConfig     // for AAC
+};
+
+//!
+//! \struct: Bitrate
+//! \brief:  define the bitrate information of input data
+//!
+struct Bitrate
+{
+    uint32_t avgBitrate;
+    uint32_t maxBitrate;
+};
+
+//!
+//! \enum:   FrameType
+//! \brief:  indicate the frame type, whether IDR or not
+//!
+enum FrameType
+{
+    NA,
+    IDR,
+    NONIDR,
+    // more types directly from the H264 header
+};
+
+//!
+//! \struct: SegmenterMeta
+//! \brief:  define the meta data of the segment
+//!
+struct SegmenterMeta
+{
+    // the duration of the produced segment
+    FrameDuration segmentDuration;
+};
+
+//!
+//! \enum:   OmafProjectionType
+//! \brief:  define the picture projection type
+//!
+enum OmafProjectionType
+{
+    NoneProjection,
+    EQUIRECTANGULAR,
+    CUBEMAP,
+    PLANAR
+};
+
+//!
+//! \struct: Region
+//! \brief:  define the region wise packing information
+//!          for one region
+//!
+struct Region
+{
+    uint32_t projTop;
+    uint32_t projLeft;
+    uint32_t projWidth;
+    uint32_t projHeight;
+    int32_t transform;
+    uint16_t packedTop;
+    uint16_t packedLeft;
+    uint16_t packedWidth;
+    uint16_t packedHeight;
+};
+
+//!
+//! \struct: RegionPacking
+//! \brief:  define the region wise packing information
+//!          for all regions
+//!
+struct RegionPacking
+{
+    bool constituentPictMatching;
+    uint32_t projPictureWidth;
+    uint32_t projPictureHeight;
+    uint16_t packedPictureWidth;
+    uint16_t packedPictureHeight;
+
+    std::vector<Region> regions;
+};
+
+//!
+//! \struct: Spherical
+//! \brief:  define the content coverage information
+//!          for one region on the sphere
+//!
+struct Spherical
+{
+    int32_t cAzimuth;
+    int32_t cElevation;
+    int32_t cTilt;
+    uint32_t rAzimuth;
+    uint32_t rElevation;
+    //bool interpolate;
+};
+
+//!
+//! \struct: QualityInfo
+//! \brief:  define the quality rank related information
+//!          for one region
+//!
+struct QualityInfo
+{
+    uint8_t qualityRank;
+    uint16_t origWidth = 0;    // used only with multi-res cases
+    uint16_t origHeight = 0;   // used only with multi-res cases
+    DataItem<Spherical> sphere;    // not used with remaining area info
+};
+
+//!
+//! \struct: Quality3d
+//! \brief:  define the quality rank related information
+//!          for all regions
+//!
+struct Quality3d
+{
+    uint8_t shapeType = 0;
+    uint8_t qualityType = 0;
+    bool remainingArea = false;
+    std::vector<QualityInfo> qualityInfo;
+};
+
+//!
+//! \struct: CodedMeta
+//! \brief:  define the meta data for the coded data
+//!
+struct CodedMeta
+{
+    int64_t presIndex;        // presentation index (as in RawFormatMeta)
+    int64_t codingIndex; // coding index
+    FrameTime codingTime;
+    FrameTime presTime;
+    FrameDuration duration;
+
+    TrackId trackId;
+
+    bool inCodingOrder;
+
+    CodedFormat format = CodedFormat::NoneFormat;
+
+    std::map<ConfigType, std::vector<uint8_t>> decoderConfig;
+
+    uint32_t width = 0;
+    uint32_t height = 0;
+
+    uint8_t channelCfg = 0;
+    uint32_t samplingFreq = 0;
+    Bitrate bitrate = {}; // bitrate information
+
+    FrameType type = FrameType::NA;
+
+    SegmenterMeta segmenterMeta;
+
+    // applicable in OMAF
+    OmafProjectionType projection = OmafProjectionType::EQUIRECTANGULAR;
+    DataItem<RegionPacking> regionPacking;
+    DataItem<Spherical> sphericalCoverage;
+    DataItem<Quality3d> qualityRankCoverage;
+
+    bool isEOS = false;
+
+    bool isIDR() const
+    {
+        return type == FrameType::IDR;
+    }
+};
 
 struct TrackInfo
 {
@@ -116,8 +303,9 @@ struct TrackHeaderBoxWrapper;
 struct SampleEntryBoxWrapper;
 struct RegionBlock;
 
-struct InitialSegment
+class InitialSegment
 {
+public:
     InitialSegment();
     InitialSegment(const InitialSegment& initSeg);
     InitialSegment& operator=(const InitialSegment& initSeg);
@@ -136,8 +324,8 @@ struct FileInfo
 
 struct OmniSampleEntry
 {
-    OmniSampleEntry();
-    virtual ~OmniSampleEntry();
+    OmniSampleEntry() = default;
+    virtual ~OmniSampleEntry() = default;
     virtual unique_ptr<SampleEntryBoxWrapper> GenSampleEntryBox() const = 0;
     virtual unique_ptr<HandlerBoxWrapper> GenHandlerBox() const         = 0;
 
@@ -261,6 +449,41 @@ struct HevcVideoSampleEntry : public VideoSampleEntry
 
     unique_ptr<SampleEntryBoxWrapper> GenSampleEntryBox() const override;
     unique_ptr<HandlerBoxWrapper> GenHandlerBox() const override;
+};
+
+//!
+//! \struct: SampleConstructor
+//! \brief:  define the sample data related information of
+//!          tile for extractor
+//!
+struct SampleConstructor
+{
+    uint8_t  streamIdx;
+    uint8_t  trackRefIndex;
+    int8_t   sampleOffset;
+    uint32_t dataOffset;
+    uint32_t dataLength;
+};
+
+//!
+//! \struct: InlineConstructor
+//! \brief:  define new constructed information for tile
+//!          for extractor, like new slice header
+//!
+struct InlineConstructor
+{
+    uint8_t length;
+    uint8_t *inlineData; //new "sliceHeader" for the tile
+};
+
+//!
+//! \struct: Extractor
+//! \brief:  define the extractor
+//!
+struct Extractor
+{
+    std::list<SampleConstructor*> sampleConstructor;
+    std::list<InlineConstructor*> inlineConstructor;
 };
 
 struct HevcExtractorSampleConstructor
@@ -391,14 +614,6 @@ struct MovieDescription
     DataItem<BrandSpec> fileType;
 };
 
-InitialSegment GenInitSegment(const TrackDescriptionsMap& inTrackDes,
-                            const MovieDescription& inMovieDes,
-                            const bool isFraged);
-
-void WriteSegmentHeader(ostream& outStr);
-void WriteInitSegment(ostream& outStr, const InitialSegment& initSegment);
-void WriteSampleData(ostream& outStr, const Segment& oneSeg);
-
 struct SegmentWriterCfg
 {
     bool checkIDR = false;
@@ -413,139 +628,11 @@ struct SidxInfo
     size_t size;
 };
 
-class SidxWriter
+enum class Action
 {
-public:
-    SidxWriter() = default;
-    ~SidxWriter() = default;
-
-    void AddSubSeg(Segment)
-    {
-    }
-
-    void SetFirstSubSegOffset(streampos)
-    {
-    }
-
-    void AddSubSegSize(streampos)
-    {
-    }
-
-    DataItem<SidxInfo> WriteSidx(ostream&, DataItem<ostream::pos_type>)
-    {
-        return {};
-    }
-
-    void SetOutput(ostream*)
-    {
-    }
-};
-
-class SegmentWriter
-{
-public:
-    SegmentWriter(SegmentWriterCfg inCfg);
-
-    virtual ~SegmentWriter();
-
-    enum class Action
-    {
-        KeepFeeding,
-        ExtractSegment
-    };
-
-    void AddTrack(TrackId trackIndex, TrackMeta inTrackMeta);
-
-    void AddTrack(TrackMeta inTrackMeta);
-
-    Action FeedOneFrame(TrackId trackIndex, FrameWrapper oneFrame);
-    Action FeedEOS(TrackId aTrackId);
-
-    void SetWriteSegmentHeader(bool toWriteHdr);
-    void WriteInitSegment(ostream& outStr, const InitialSegment& initSegment);
-    void WriteSegment(ostream& outStr, const Segment oneSeg);
-    void WriteSubSegments(ostream& outStr, const list<Segment> subSegList);
-
-    list<SegmentList> ExtractSubSegments();
-    SegmentList ExtractSegments();
-
-private:
-    struct Impl;
-
-    unique_ptr<Impl> m_impl;
-
-    unique_ptr<SidxWriter> m_sidxWriter;
-
-    bool m_needWriteSegmentHeader = true;
-};
-
-struct SegmentWriter::Impl
-{
-    struct TrackState
-    {
-        Impl* imple;
-        TrackMeta trackMeta;
-        Frames frames;
-
-        struct SubSegment
-        {
-            Frames frames;
-        };
-
-        list<SubSegment> SubSegments;
-
-        list<list<SubSegment>> FullSubSegments;
-
-        FrameTime segDur;
-        FrameTime subSegDur;
-
-        bool isEnd = false;
-
-        bool hasSubSeg = false;
-
-        size_t insertSubSegNum = 0;
-
-        FrameTime trackOffset;
-
-        TrackState(Impl* aImpl = nullptr)
-            : imple(aImpl)
-        {
-        }
-
-        void FeedOneFrame(FrameWrapper oneFrame);
-
-        void FeedEOS();
-
-        bool IsFinished() const;
-
-        bool IsIncomplete() const;
-
-        bool CanTakeSegment() const;
-
-        list<Frames> TakeSegment();
-    };
-
-    bool AllTracksFinished() const;
-
-    bool AllTracksReadyForSegment() const;
-
-    bool AnyTrackIncomplete() const;
-
-    Impl* const m_imple;
-    SegmentWriterCfg m_config;
-    map<TrackId, TrackState> m_trackSte;
-    FrameTime m_segBeginT;
-    bool m_isFirstSeg = true;
-
-    FrameTime m_offset;
-
-    SequenceId m_seqId;
-
-    Impl()
-        : m_imple(this)
-    {
-    }
+    KeepFeeding,
+    ExtractSegment
 };
 
 VCD_MP4_END;
-#endif  // _SEGMENTERAPI_H_
+#endif /* _MEDIADATA_H_ */

@@ -35,110 +35,37 @@
 #include <sstream>
 
 #include "DashSegmenter.h"
-#include "../isolib/dash_writer/SegmentWriter.h"
 
 VCD_NS_BEGIN
 
-AcquireVideoFrameData::AcquireVideoFrameData(uint8_t *data, uint64_t size)
-{
-    m_data = data;
-    m_dataSize = size;
-}
-
-AcquireVideoFrameData::~AcquireVideoFrameData()
-{
-
-}
-
-VCD::MP4::FrameBuf AcquireVideoFrameData::Get() const
-{
-    VCD::MP4::FrameBuf frameData(
-        static_cast<const std::uint8_t*>(m_data),
-        static_cast<const std::uint8_t*>(m_data) + m_dataSize);
-
-    return frameData;
-}
-
-size_t AcquireVideoFrameData::GetDataSize() const
-{
-    return (size_t)(m_dataSize);
-}
-
-AcquireVideoFrameData* AcquireVideoFrameData::Clone() const
-{
-    return new AcquireVideoFrameData(m_data, m_dataSize);
-}
-
-VCD::MP4::SegmentWriterCfg MakeSegmentWriterConfig(
-    GeneralSegConfig *dashConfig)
-{
-    VCD::MP4::SegmentWriterCfg config {};
-    config.segmentDuration = dashConfig->sgtDuration;
-    config.subsegmentDuration = dashConfig->subsgtDuration;
-    config.checkIDR = dashConfig->needCheckIDR;
-    return config;
-}
-
 DashSegmenter::DashSegmenter(GeneralSegConfig *dashConfig, bool createWriter)
     : m_config(*dashConfig)
-    , m_segWriter(MakeSegmentWriterConfig(dashConfig))
 {
-    if (createWriter)
+    m_createWriter = createWriter;
+}
+
+void DashSegmenter::SetSegmentWriter(VCD::MP4::SegmentWriterBase *segWriter)
+{
+    m_segWriter = segWriter;
+
+    if (m_createWriter)
     {
         //m_segmentWriter.reset(VCD::MP4::Writer::create());
         if (m_config.useSeparatedSidx)
         {
-            m_segWriter.SetWriteSegmentHeader(false);
+            m_segWriter->SetWriteSegmentHeader(false);
         }
     }
 
-
     for (auto trackIdMeta : m_config.tracks)
     {
-        m_segWriter.AddTrack(trackIdMeta.first, trackIdMeta.second);
+        m_segWriter->AddTrack(trackIdMeta.first, trackIdMeta.second);
     }
 }
 
 DashSegmenter::~DashSegmenter()
 {
-}
-
-bool DashSegmenter::DetectNonRefFrame(uint8_t *frameData)
-{
-    bool flagNonRef = false;
-    flagNonRef = ((frameData[AVC_STARTCODES_LEN] >> AVC_NALUTYPE_LEN) == 0);
-    return flagNonRef;
-}
-
-void DashSegmenter::Feed(
-    VCD::MP4::TrackId trackId,
-    CodedMeta codedFrameMeta,
-    Nalu *dataNalu,
-    VCD::MP4::FrameCts compositionTime)
-{
-    CodedMeta frameMeta = codedFrameMeta;
-    std::unique_ptr<VCD::MP4::GetDataOfFrame> dataFrameAcquire(
-        new AcquireVideoFrameData(dataNalu->data, dataNalu->dataSize));
-
-    VCD::MP4::FrameInfo infoPerFrame;
-    infoPerFrame.cts = compositionTime;
-    infoPerFrame.duration = frameMeta.duration;
-    infoPerFrame.isIDR = frameMeta.isIDR();
-    //LOG(INFO)<<"Feed one sample for track "<<trackId.get()<<" ,IDR status "<<frameInfo.isIDR<<" and frame duration "<<frameInfo.duration.num<<" and  "<<frameInfo.duration.den<<std::endl;
-
-    bool flagNonRefframe = (frameMeta.format == CodedFormat::H264) ? DetectNonRefFrame(dataNalu->data) : false;
-
-    infoPerFrame.sampleFlags.flags.reserved = 0;
-    infoPerFrame.sampleFlags.flags.is_leading = (infoPerFrame.isIDR ? 3 : 0);
-    infoPerFrame.sampleFlags.flags.sample_depends_on = (infoPerFrame.isIDR ? 2 : 1);
-    infoPerFrame.sampleFlags.flags.sample_is_depended_on = (flagNonRefframe ? 2 : 1);
-    infoPerFrame.sampleFlags.flags.sample_has_redundancy = 0;
-    infoPerFrame.sampleFlags.flags.sample_padding_value = 0;
-    infoPerFrame.sampleFlags.flags.sample_is_non_sync_sample = !infoPerFrame.isIDR;
-    infoPerFrame.sampleFlags.flags.sample_degradation_priority = 0;
-
-    VCD::MP4::FrameWrapper ssFrame(std::move(dataFrameAcquire), infoPerFrame);
-    m_segWriter.FeedOneFrame(trackId, ssFrame);
+    m_segWriter = NULL;
 }
 
 int32_t DashSegmenter::SegmentData(TrackSegmentCtx *trackSegCtx)
@@ -172,7 +99,7 @@ int32_t DashSegmenter::SegmentData(TrackSegmentCtx *trackSegCtx)
     }
 }
 
-int32_t DashSegmenter::SegmentOneTrack(Nalu *dataNalu, CodedMeta codedMeta, char *outBaseName)
+int32_t DashSegmenter::SegmentOneTrack(Nalu *dataNalu, VCD::MP4::CodedMeta codedMeta, char *outBaseName)
 {
     VCD::MP4::TrackId trackId = 1;
     trackId = codedMeta.trackId;
@@ -184,14 +111,14 @@ int32_t DashSegmenter::SegmentOneTrack(Nalu *dataNalu, CodedMeta codedMeta, char
         {
             if (!trackInfo.isFirstFrame)
             {
-                m_segWriter.FeedEOS(trackId);
+                m_segWriter->FeedEOS(trackId);
             }
             trackInfo.endOfStream = true;
         }
     }
     else if (codedMeta.inCodingOrder)
     {
-        CodedMeta frameMeta = codedMeta;
+        VCD::MP4::CodedMeta frameMeta = codedMeta;
         VCD::MP4::FrameCts frameCts;
         if (frameMeta.presTime == VCD::MP4::FrameTime(0, 1))
         {
@@ -210,7 +137,7 @@ int32_t DashSegmenter::SegmentOneTrack(Nalu *dataNalu, CodedMeta codedMeta, char
         trackInfo.lastPresIndex = frameMeta.presIndex;
         trackInfo.isFirstFrame = false;
 
-        Feed(trackId, codedMeta, dataNalu, frameCts);
+        m_segWriter->Feed(trackId, codedMeta, dataNalu->data, dataNalu->dataSize, frameCts);
 
     }
     else
@@ -218,44 +145,39 @@ int32_t DashSegmenter::SegmentOneTrack(Nalu *dataNalu, CodedMeta codedMeta, char
          return OMAF_ERROR_UNDEFINED_OPERATION;
     }
 
-    std::list<VCD::MP4::SegmentList> segments = m_segWriter.ExtractSubSegments();
-    if (segments.size())
-    {
-        for (auto& segment : segments)
-        {
-            m_segNum++;
-            snprintf(m_segName, 1024, "%s.%ld.mp4", outBaseName, m_segNum);
-            WriteSegment(segment);
-        }
-    }
+    int32_t ret = WriteSegment(outBaseName);
+    if (ret)
+        return ret;
 
     return ERROR_NONE;
 }
 
-int32_t DashSegmenter::WriteSegment(VCD::MP4::SegmentList& aSegment)
+int32_t DashSegmenter::WriteSegment(char *baseName)
 {
     std::ostringstream frameStream;
-    std::unique_ptr<std::ostringstream> sidxStream;
+    //std::unique_ptr<std::ostringstream> sidxStream;
 
-    m_segWriter.WriteSubSegments(frameStream, aSegment);
+    m_segWriter->WriteSegments(frameStream, &(m_segNum), m_segName, baseName);
 
     std::string frameString(frameStream.str());
 
-    m_file = fopen(m_segName, "wb+");
-    if (!m_file)
-        return OMAF_ERROR_NULL_PTR;
+    if (frameString.size())
+    {
+        m_file = fopen(m_segName, "wb+");
+        if (!m_file)
+            return OMAF_ERROR_NULL_PTR;
 
-    m_segSize = frameString.size();
-    fwrite(frameString.c_str(), 1, frameString.size(), m_file);
+        m_segSize = frameString.size();
+        fwrite(frameString.c_str(), 1, frameString.size(), m_file);
 
-    fclose(m_file);
-    m_file = NULL;
-
+        fclose(m_file);
+        m_file = NULL;
+    }
     return ERROR_NONE;
 }
 
 int32_t DashSegmenter::PackExtractors(
-    std::map<uint8_t, Extractor*>* extractorsMap,
+    std::map<uint8_t, VCD::MP4::Extractor*>* extractorsMap,
     std::list<VCD::MP4::TrackId> refTrackIdxs,
     Nalu *extractorsNalu)
 {
@@ -264,51 +186,17 @@ int32_t DashSegmenter::PackExtractors(
 
     std::vector<uint8_t> extractorNALUs;
 
-    std::map<uint8_t, Extractor*>::iterator it;
+    std::map<uint8_t, VCD::MP4::Extractor*>::iterator it;
     std::list<VCD::MP4::TrackId>::iterator itRefTrack = refTrackIdxs.begin();
     if (itRefTrack == refTrackIdxs.end())
         return OMAF_ERROR_INVALID_REF_TRACK;
     for (it = extractorsMap->begin(); it != extractorsMap->end(); it++, itRefTrack++)
     {
-        Extractor *extractor = it->second;
+        VCD::MP4::Extractor *extractor = it->second;
         if (!extractor)
             return OMAF_ERROR_NULL_PTR;
 
-
-        VCD::MP4::HevcExtractorTrackPackedData extractorData;
-        extractorData.nuhTemporalIdPlus1 = DEFAULT_HEVC_TEMPORALIDPLUS1;//extractor.nuhTemporalIdPlus1;
-        std::list<SampleConstructor*>::iterator sampleConstruct;
-        std::list<InlineConstructor*>::iterator inlineConstruct;
-
-        VCD::MP4::HevcExtractor outputExtractor;
-        for (sampleConstruct = extractor->sampleConstructor.begin(),
-            inlineConstruct = extractor->inlineConstructor.begin();
-            sampleConstruct != extractor->sampleConstructor.end() ||
-            inlineConstruct != extractor->inlineConstructor.end();)
-        {
-            if (inlineConstruct != extractor->inlineConstructor.end())
-            {
-                outputExtractor.inlineConstructor = VCD::MP4::HevcExtractorInlineConstructor{};
-                std::vector<uint8_t> neededData(
-                    static_cast<const uint8_t*>((*inlineConstruct)->inlineData),
-                    static_cast<const uint8_t*>((*inlineConstruct)->inlineData + (*inlineConstruct)->length));
-                outputExtractor.inlineConstructor->inlineData = std::move(neededData);
-                inlineConstruct++;
-            }
-            else if (sampleConstruct != extractor->sampleConstructor.end())
-            {
-                outputExtractor.sampleConstructor = VCD::MP4::HevcExtractorSampleConstructor{};
-                outputExtractor.sampleConstructor->sampleOffset = 0;
-                outputExtractor.sampleConstructor->dataOffset = (*sampleConstruct)->dataOffset;
-                outputExtractor.sampleConstructor->dataLength = (*sampleConstruct)->dataLength;
-                outputExtractor.sampleConstructor->trackId = (*itRefTrack).GetIndex();//(*sampleConstruct)->trackRefIndex;  // Note: this refers to the index in the track references. It works if trackIds are 1-based and contiguous, as the spec expects the index is 1-based.
-                sampleConstruct++;
-                // now we have a full extractor: either just a sample constructor, or inline+sample constructor pair
-                extractorData.samples.push_back(outputExtractor);
-                const VCD::MP4::FrameBuf& nal = extractorData.GenFrameData();
-                extractorNALUs.insert(extractorNALUs.end(), make_move_iterator(nal.begin()), make_move_iterator(nal.end()));
-            }
-        }
+        m_segWriter->GenPackedExtractors(*itRefTrack, extractorNALUs, extractor);
     }
 
     if (extractorsNalu->data == NULL)

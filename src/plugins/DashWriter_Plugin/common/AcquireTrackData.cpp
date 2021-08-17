@@ -38,10 +38,13 @@
 #include "BoxBlockAccess.h"
 #include "TrackAtom.h"
 #include "Utils.h"
+#include "DecPts.h"
 
 using namespace std;
 
 VCD_MP4_BEGIN
+
+using SamplePTS    = std::map<PTSTime, DecodePts::SampleIndex>;
 
 SamplePTS GetPTS(const DecodePts& aDecodePts, uint32_t aTimeScale)
 {

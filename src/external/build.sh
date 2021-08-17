@@ -137,7 +137,9 @@ build_test(){
     # Compile VROmafPacking test
     OP_TEST_PATH="${SRC_PATH}/VROmafPacking/test"
     OP_VS_CONFIG="-I${SRC_PATH}/plugins/StreamProcess_Plugin/VideoStream_Plugin/common/ "`
-                `"-I${SRC_PATH}/plugins/StreamProcess_Plugin/VideoStream_Plugin/HevcVideoStream/"
+                `"-I${SRC_PATH}/plugins/StreamProcess_Plugin/VideoStream_Plugin/HevcVideoStream/ "`
+                `"-I${SRC_PATH}/plugins/DashWriter_Plugin/ "`
+                `"-I${SRC_PATH}/plugins/DashWriter_Plugin/common/"
     OP_SHARED_CONFIG="${SHARED_CONFIG} -lVROmafPacking -lHevcVideoStreamProcess -ldl"
     cd ../VROmafPacking && \
         g++ ${OP_VS_CONFIG} ${BASIC_CONFIG} ${OP_TEST_PATH}/testHevcNaluParser.cpp && \

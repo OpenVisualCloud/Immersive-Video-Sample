@@ -44,6 +44,9 @@ Segmentation::Segmentation()
     m_trackIdStarter = 1;
     m_frameRate.num = 0;
     m_frameRate.den = 0;
+    m_isCMAFEnabled = false;
+    m_segWriterPluginPath = NULL;
+    m_segWriterPluginName = NULL;
 }
 
 Segmentation::Segmentation(
@@ -59,6 +62,10 @@ Segmentation::Segmentation(
     m_trackIdStarter = 1;
     m_frameRate.num = initInfo->bsBuffers[0].frameRate.num;
     m_frameRate.den = initInfo->bsBuffers[0].frameRate.den;
+
+    m_isCMAFEnabled = initInfo->cmafEnabled;
+    m_segWriterPluginPath = initInfo->segWriterPluginPath;
+    m_segWriterPluginName = initInfo->segWriterPluginName;
 }
 
 Segmentation::Segmentation(const Segmentation& src)

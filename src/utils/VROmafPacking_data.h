@@ -186,20 +186,24 @@ typedef struct InitialInfo
     uint8_t                 bsNumAudio;              //mandatory
     BSBuffer                *bsBuffers;              //mandatory
 
-    const char              *packingPluginPath;      //needed for region-wise packing information generation if extractor track will be generated, use default plugin if no set
-    const char              *packingPluginName;      //needed for region-wise packing information generation if extractor track will be generated, use default plugin if no set
+    const char              *packingPluginPath;      //needed for region-wise packing information generation if extractor track will be generated, default path is "/usr/local/lib"
+    const char              *packingPluginName;      //needed for region-wise packing information generation if extractor track will be generated, default plugin is "HighResPlusFullLowResPacking"
     bool                    fixedPackedPicRes;       //needed to set whether all extractor tracks have the same resolution if extractor track will be generated
 
-    const char              *videoProcessPluginPath; //needed for video stream process, use default plugin if no set
-    const char              *videoProcessPluginName; //needed for video stream process, use default plugin if no set
-    const char              *audioProcessPluginPath; //needed for audio stream process, mandatory if there is audio input
-    const char              *audioProcessPluginName; //needed for audio stream process, mandatory if there is auido input
+    const char              *videoProcessPluginPath; //needed for video stream process, default path is "/usr/local/lib"
+    const char              *videoProcessPluginName; //needed for video stream process, default plugin is "HevcVideoStreamProcess"
+    const char              *audioProcessPluginPath; //needed for audio stream process, no default path and mandatory if there is audio input
+    const char              *audioProcessPluginName; //needed for audio stream process, no default plugin and mandatory if there is auido input
 
     ViewportInformation     *viewportInfo;           //mandatory
     SegmentationInfo        *segmentationInfo;       //mandatory
 
     EGeometryType           projType;                //mandatory
     InputCubeMapInfo        *cubeMapInfo;            //needed if projType is E_SVIDEO_CUBEMAP
+
+    bool                    cmafEnabled;             //whether CMAF segments need to be generated, and default value is false, then only OMAF segments will be generated
+    const char              *segWriterPluginPath;    //needed for segments generation, mandatory if cmafEnabled is true, and default path is "/usr/local/lib" if cmafEnabled is false
+    const char              *segWriterPluginName;    //needed for segments generation, mandatory if cmafEnabled is true, and default plugin is "SegmentWriter" if cmafEnabled is false
 
     void                    *logFunction;            //external log callback function pointer, NULL if external log is not used
 }InitialInfo;

@@ -938,7 +938,7 @@ TEST_F(ExtractorTrackTest, AllProcess)
             }
 
             extractorTrack->ConstructExtractors();
-            std::map<uint8_t, Extractor*> *extractors = extractorTrack->GetAllExtractors();
+            std::map<uint8_t, VCD::MP4::Extractor*> *extractors = extractorTrack->GetAllExtractors();
             if  ((viewportIdx == 0) || (viewportIdx == 2) || (viewportIdx == 4))
             {
                 EXPECT_TRUE(extractors->size() == 6);
@@ -952,17 +952,17 @@ TEST_F(ExtractorTrackTest, AllProcess)
                 EXPECT_TRUE(extractors->size() == 10);
             }
 
-            std::map<uint8_t, Extractor*>::iterator itExtractor;
+            std::map<uint8_t, VCD::MP4::Extractor*>::iterator itExtractor;
             for (itExtractor = extractors->begin();
                 itExtractor != extractors->end();
                 itExtractor++)
             {
-                Extractor *extractor = itExtractor->second;
+                VCD::MP4::Extractor *extractor = itExtractor->second;
                 EXPECT_TRUE(extractor->sampleConstructor.size() == 1);
                 EXPECT_TRUE(extractor->inlineConstructor.size() == 1);
-                std::list<InlineConstructor*>::iterator itInlineCtor;
+                std::list<VCD::MP4::InlineConstructor*>::iterator itInlineCtor;
                 itInlineCtor = extractor->inlineConstructor.begin();
-                InlineConstructor *inlineCtor = *itInlineCtor;
+                VCD::MP4::InlineConstructor *inlineCtor = *itInlineCtor;
                 EXPECT_TRUE(inlineCtor->length != 0);
                 EXPECT_TRUE(inlineCtor->inlineData != NULL);
             }

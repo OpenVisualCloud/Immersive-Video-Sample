@@ -32,7 +32,6 @@
 //!
 
 #include "gtest/gtest.h"
-//#include "../../plugins/StreamProcess_Plugin/VideoStream_Plugin/HevcVideoStream//HevcNaluParser.h"
 #include "HevcNaluParser.h"
 #include "OmafPackingLog.h"
 
