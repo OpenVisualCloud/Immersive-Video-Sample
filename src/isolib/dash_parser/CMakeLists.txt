@@ -22,7 +22,7 @@ ADD_DEFINITIONS("-g -c -fPIC -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0
                    -Wformat-security -Wall")
 endif()
 
-INCLUDE_DIRECTORIES(/usr/local/include ../include ../atoms ../common)
+INCLUDE_DIRECTORIES(/usr/local/include ../include ../atoms ../common ../../utils)
 
 LINK_DIRECTORIES(/usr/local/lib ../atoms ../common)
 

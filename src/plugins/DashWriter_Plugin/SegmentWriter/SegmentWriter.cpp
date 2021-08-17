@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Intel Corporation
+ * Copyright (c) 2021, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
 
 //!
 //! \file:   SegmentWriter.cpp
-//! \brief:  Writer related operation implementation
+//! \brief:  Dash segment writer related operation implementation
 //!
 
 #include <algorithm>
@@ -336,11 +336,8 @@ void WriteSampleData(ostream& outStr, const Segment& oneSeg)
 void WriteInitSegment(ostream& outStr, const InitialSegment& initSegment)
 {
     Stream stream;
-
     initSegment.ftyp->fileTypeBox->ToStream(stream);
-
     initSegment.moov->movieBox->ToStream(stream);
-
     auto data = stream.GetStorage();
     outStr.write(reinterpret_cast<const char*>(&data[0]), streamsize(data.size()));
 }
@@ -371,9 +368,6 @@ TrackDescription::TrackDescription(TrackMeta inTrackMeta,
 }
 
 TrackDescription::~TrackDescription() = default;
-
-OmniSampleEntry::OmniSampleEntry()  = default;
-OmniSampleEntry::~OmniSampleEntry() = default;
 
 uint8_t RwpkRectRegion::packingType() const
 {
@@ -847,7 +841,285 @@ void UpdateMediaInfoAtom(MediaInformationAtom& minfAtom, const TrackDescription&
     }
 }
 
-InitialSegment GenInitSegment(const TrackDescriptionsMap& inTrackDes,
+AcquireVideoFrameData::AcquireVideoFrameData(uint8_t *data, uint64_t size)
+{
+    m_data = data;
+    m_dataSize = size;
+}
+
+AcquireVideoFrameData::~AcquireVideoFrameData()
+{
+
+}
+
+FrameBuf AcquireVideoFrameData::Get() const
+{
+    FrameBuf frameData(
+        static_cast<const std::uint8_t*>(m_data),
+        static_cast<const std::uint8_t*>(m_data) + m_dataSize);
+
+    return frameData;
+}
+
+size_t AcquireVideoFrameData::GetDataSize() const
+{
+    return (size_t)(m_dataSize);
+}
+
+AcquireVideoFrameData* AcquireVideoFrameData::Clone() const
+{
+    return new AcquireVideoFrameData(m_data, m_dataSize);
+}
+
+void SegmentWriter::FillOmafStructures(
+    TrackId inTrackId,
+    bool isOMAF,
+    bool isPackedSubPic,
+    VideoFramePackingType packingType,
+    const CodedMeta& inMetaData,
+    HevcVideoSampleEntry& hevcEntry,
+    TrackMeta& inMeta)
+{
+    if (isOMAF)
+    {
+        if (inMetaData.projection == OmafProjectionType::EQUIRECTANGULAR)
+        {
+            hevcEntry.projFmt = OmniProjFormat::OMNI_ERP;
+        }
+        else if (inMetaData.projection == OmafProjectionType::CUBEMAP)
+        {
+            hevcEntry.projFmt = OmniProjFormat::OMNI_Cubemap;
+        }
+        else if (inMetaData.projection == OmafProjectionType::PLANAR)
+        {
+            hevcEntry.projFmt = OmniProjFormat::OMNI_Planar;
+        }
+
+        if (isPackedSubPic)
+        {
+            // viewport dependent
+            BrandSpec trackType = { string("&apos;hevd&apos;"), 0,{ "&apos;hevd&apos;" } };
+            inMeta.trackType = trackType;
+            hevcEntry.compatibleSchemes.push_back({ "podv", 0, "" });
+            hevcEntry.compatibleSchemes.push_back({ "ercm", 0, "" });
+            m_omafVideoTrackBrand = "&apos;hevd&apos;";
+        }
+        else
+        {
+            BrandSpec trackType = { string("hevi"), 0,{ "hevi" } };
+            inMeta.trackType = trackType;
+            hevcEntry.compatibleSchemes.push_back({ "podv", 0, "" });
+            hevcEntry.compatibleSchemes.push_back({ "erpv", 0, "" });
+            m_omafVideoTrackBrand = "hevi";
+        }
+
+        hevcEntry.stvi = packingType;
+
+        if (inMetaData.sphericalCoverage)
+        {
+            hevcEntry.covi = CoverageInformation();
+            if (inMetaData.projection == OmafProjectionType::EQUIRECTANGULAR)
+            {
+                hevcEntry.covi->coverageShape = COVIShapeType::TWO_AZIMUTH_AND_TWO_ELEVATION_CIRCLES;
+            }
+            else
+            {
+                hevcEntry.covi->coverageShape = COVIShapeType::FOUR_GREAT_CIRCLES;
+            }
+            if (hevcEntry.stvi)
+            {
+                hevcEntry.covi->defaultViewIdc = OmniViewIdc::OMNI_LEFT_AND_RIGHT;
+            }
+            else
+            {
+                hevcEntry.covi->defaultViewIdc = OmniViewIdc::OMNI_MONOSCOPIC;
+            }
+            hevcEntry.covi->viewIdcPresenceFlag = false;
+
+            auto coviReg = unique_ptr<COVIRegion>(new COVIRegion());
+            auto& sphericalCoverage = inMetaData.sphericalCoverage.get();
+            coviReg->centAzimuth = sphericalCoverage.cAzimuth;
+            coviReg->centElevation = sphericalCoverage.cElevation;
+            coviReg->centTilt = sphericalCoverage.cTilt;
+            coviReg->azimuthRange = sphericalCoverage.rAzimuth;
+            coviReg->elevationRange = sphericalCoverage.rElevation;
+            coviReg->interpolate = false;
+            hevcEntry.covi->sphereRegions.push_back(move(coviReg));
+        }
+
+        if (inMetaData.regionPacking)
+        {
+            hevcEntry.rwpk = RegionWisePacking();
+
+            auto& regionPacking = inMetaData.regionPacking.get();
+            hevcEntry.rwpk->constituenPicMatching = regionPacking.constituentPictMatching;
+            hevcEntry.rwpk->projPicHeight = regionPacking.projPictureHeight;
+            hevcEntry.rwpk->projPicWidth = regionPacking.projPictureWidth;
+            hevcEntry.rwpk->packedPicHeight = regionPacking.packedPictureHeight;
+            hevcEntry.rwpk->packedPicWidth = regionPacking.packedPictureWidth;
+            for (auto& regionIn : regionPacking.regions)
+            {
+                auto rwpkReg = unique_ptr<RwpkRectRegion>(new RwpkRectRegion());
+                rwpkReg->packedRegTop = regionIn.packedTop;
+                rwpkReg->packedRegLeft = regionIn.packedLeft;
+                rwpkReg->packedRegWidth = regionIn.packedWidth;
+                rwpkReg->packedRegHeight = regionIn.packedHeight;
+
+                rwpkReg->projRegTop = regionIn.projTop;
+                rwpkReg->projRegLeft = regionIn.projLeft;
+                rwpkReg->projRegWidth = regionIn.projWidth;
+                rwpkReg->projRegHeight = regionIn.projHeight;
+
+                rwpkReg->transformType = regionIn.transform;
+
+                hevcEntry.rwpk->regions.push_back(std::move(rwpkReg));
+            }
+        }
+    }
+}
+
+void SegmentWriter::AddH264VideoTrack(TrackId trackId, const TrackMeta& meta, const CodedMeta& inMetaData)
+{
+    vector<uint8_t> avcSPS = inMetaData.decoderConfig.at(ConfigType::SPS);
+    vector<uint8_t> avcPPS = inMetaData.decoderConfig.at(ConfigType::PPS);
+    TrackMeta trackMeta = meta;
+    FileInfo trackFileInfo;
+    trackFileInfo.creationTime = 0;
+    trackFileInfo.modificationTime = 0;
+    AvcVideoSampleEntry avcEntry;
+
+    avcEntry.width = inMetaData.width;
+    avcEntry.height = inMetaData.height;
+
+    avcEntry.sps = avcSPS;
+    avcEntry.pps = avcPPS;
+
+    m_trackDescriptions.insert(make_pair(trackId, TrackDescription(trackMeta, trackFileInfo, avcEntry)));
+}
+
+void SegmentWriter::AddH265VideoTrack(TrackId trackId,
+    bool isOMAF,
+    bool isPackedSubPic,
+    VideoFramePackingType packingType,
+    const TrackMeta& meta,
+    const CodedMeta& inMetaData)
+{
+    vector<uint8_t> hevcSPS = inMetaData.decoderConfig.at(ConfigType::SPS);
+    vector<uint8_t> hevcPPS = inMetaData.decoderConfig.at(ConfigType::PPS);
+    vector<uint8_t> hevcVPS = inMetaData.decoderConfig.at(ConfigType::VPS);
+    TrackMeta trackMeta = meta;
+    FileInfo trackFileInfo;
+    trackFileInfo.creationTime = 0;
+    trackFileInfo.modificationTime = 0;
+    HevcVideoSampleEntry hevcEntry{};
+
+    hevcEntry.width = inMetaData.width;
+    hevcEntry.height = inMetaData.height;
+    hevcEntry.frameRate = inMetaData.duration.per1().asDouble();
+
+    hevcEntry.sps = hevcSPS;
+    hevcEntry.pps = hevcPPS;
+    hevcEntry.vps = hevcVPS;
+
+    FillOmafStructures(trackId, isOMAF, isPackedSubPic, packingType, inMetaData, hevcEntry, trackMeta);
+
+    m_trackDescriptions.insert(make_pair(trackId, TrackDescription(trackMeta, trackFileInfo, hevcEntry)));
+}
+
+void SegmentWriter::AddH265ExtractorTrack(TrackId trackId,
+    bool isOMAF,
+    bool isPackedSubPic,
+    VideoFramePackingType packingType,
+    const TrackMeta& meta,
+    const std::map<std::string, std::set<TrackId>>& references,
+    const CodedMeta& inMetaData)
+{
+    vector<uint8_t> hevcSPS = inMetaData.decoderConfig.at(ConfigType::SPS);
+    vector<uint8_t> hevcPPS = inMetaData.decoderConfig.at(ConfigType::PPS);
+    vector<uint8_t> hevcVPS = inMetaData.decoderConfig.at(ConfigType::VPS);
+    TrackMeta trackMeta = meta;
+    FileInfo trackFileInfo;
+    trackFileInfo.creationTime = 0;
+    trackFileInfo.modificationTime = 0;
+    HevcVideoSampleEntry hevcEntry{};
+
+    hevcEntry.width = inMetaData.width;
+    hevcEntry.height = inMetaData.height;
+    hevcEntry.frameRate = inMetaData.duration.per1().asDouble();
+    hevcEntry.sampleEntryType = "hvc2";
+
+    hevcEntry.sps = hevcSPS;
+    hevcEntry.pps = hevcPPS;
+    hevcEntry.vps = hevcVPS;
+
+    FillOmafStructures(trackId, isOMAF, isPackedSubPic, packingType, inMetaData, hevcEntry, trackMeta);
+
+    TrackDescription trackDes = TrackDescription(trackMeta, trackFileInfo, hevcEntry);
+    trackDes.trackReferences = references;//trackCfg.trackReferences;
+    m_trackDescriptions.insert(make_pair(trackId, move(trackDes)));
+}
+
+void SegmentWriter::AddAACTrack(TrackId trackId,
+    const TrackMeta& meta,
+    bool  isOMAF,
+    const CodedMeta& inMetaData)
+{
+    std::vector<uint8_t> audioSpecInfo = inMetaData.decoderConfig.at(ConfigType::AudioSpecificConfig);
+    TrackMeta trackMeta = meta;
+    FileInfo trackFileInfo;
+    trackFileInfo.creationTime = 0;
+    trackFileInfo.modificationTime = 0;
+    MP4AudioSampleEntry sampleEntry;
+
+    sampleEntry.sizeOfSample = 16;
+    sampleEntry.cntOfChannels = inMetaData.channelCfg;
+    sampleEntry.rateOfSample = inMetaData.samplingFreq;
+    sampleEntry.idOfES = 1;
+    sampleEntry.esIdOfDepends = 0;
+    sampleEntry.sizeOfBuf = 0;
+    sampleEntry.maxBitrate = inMetaData.bitrate.maxBitrate;
+    sampleEntry.avgBitrate = inMetaData.bitrate.avgBitrate;
+    for (auto byte : audioSpecInfo)
+    {
+        sampleEntry.decSpecificInfo.push_back(static_cast<char>(byte));
+    }
+
+    if (isOMAF)
+    {
+        m_omafAudioTrackBrand = "oa2d";
+    }
+
+    m_trackDescriptions.insert(make_pair(trackId, TrackDescription(trackMeta, trackFileInfo, sampleEntry)));
+}
+
+InitialSegment SegmentWriter::MakeInitSegment(
+    const bool isFraged)
+{
+    MovieDescription moovDes;
+    moovDes.creationTime = 0;
+    moovDes.modificationTime = 0;
+    vector<int32_t> tempVec(16, 0);
+    moovDes.matrix = tempVec;
+    moovDes.matrix[0]  = 1;
+    moovDes.matrix[5]  = 1;
+    moovDes.matrix[10] = 1;
+    moovDes.matrix[15] = 1;
+
+    BrandSpec brandSpec = { string("isom"), 512, { "isom", "iso6" } }; //Should be iso9 ?
+    if (!m_omafVideoTrackBrand.empty())
+    {
+        brandSpec.compatibleBrands.push_back(m_omafVideoTrackBrand);
+    }
+    if (!m_omafAudioTrackBrand.empty())
+    {
+        brandSpec.compatibleBrands.push_back(m_omafAudioTrackBrand);
+    }
+    moovDes.fileType = brandSpec;
+    InitialSegment initialSeg = GenInitSegment(m_trackDescriptions, moovDes, isFraged);
+    return initialSeg;
+}
+
+InitialSegment SegmentWriter::GenInitSegment(const TrackDescriptionsMap& inTrackDes,
                             const MovieDescription& inMovieDes,
                             const bool isFraged)
 {
@@ -1200,6 +1472,10 @@ bool SegmentWriter::Impl::TrackState::CanTakeSegment() const
     return isSegReady;
 }
 
+SegmentWriter::SegmentWriter()
+{
+}
+
 SegmentWriter::SegmentWriter(SegmentWriterCfg inCfg)
     : m_impl(new Impl())
     , m_sidxWriter(new SidxWriter)
@@ -1224,7 +1500,7 @@ void SegmentWriter::AddTrack(TrackMeta inTrackMeta)
     m_impl->m_trackSte[inTrackMeta.trackId].trackMeta = inTrackMeta;
 }
 
-SegmentWriter::Action SegmentWriter::FeedEOS(TrackId trackIndex)
+Action SegmentWriter::FeedEOS(TrackId trackIndex)
 {
     m_impl->m_trackSte[trackIndex].FeedEOS();
     return m_impl->AllTracksReadyForSegment() ? Action::ExtractSegment : Action::KeepFeeding;
@@ -1263,7 +1539,85 @@ bool SegmentWriter::Impl::AllTracksFinished() const
     return ready;
 }
 
-SegmentWriter::Action SegmentWriter::FeedOneFrame(TrackId trackIndex, FrameWrapper oneFrame)
+bool SegmentWriter::DetectNonRefFrame(uint8_t *frameData)
+{
+    bool flagNonRef = false;
+    flagNonRef = ((frameData[4] >> 5) == 0);
+    return flagNonRef;
+}
+
+void SegmentWriter::GenPackedExtractors(TrackId trackId,
+    std::vector<uint8_t>& extractorNALUs,
+    Extractor *extractor)
+{
+    HevcExtractorTrackPackedData extractorData;
+    extractorData.nuhTemporalIdPlus1 = 1;//DEFAULT_HEVC_TEMPORALIDPLUS1;//extractor.nuhTemporalIdPlus1;
+    std::list<SampleConstructor*>::iterator sampleConstruct;
+    std::list<InlineConstructor*>::iterator inlineConstruct;
+
+    HevcExtractor outputExtractor;
+    for (sampleConstruct = extractor->sampleConstructor.begin(),
+        inlineConstruct = extractor->inlineConstructor.begin();
+        sampleConstruct != extractor->sampleConstructor.end() ||
+        inlineConstruct != extractor->inlineConstructor.end();)
+    {
+        if (inlineConstruct != extractor->inlineConstructor.end())
+        {
+            outputExtractor.inlineConstructor = HevcExtractorInlineConstructor{};
+            std::vector<uint8_t> neededData(
+                static_cast<const uint8_t*>((*inlineConstruct)->inlineData),
+                static_cast<const uint8_t*>((*inlineConstruct)->inlineData + (*inlineConstruct)->length));
+            outputExtractor.inlineConstructor->inlineData = std::move(neededData);
+            inlineConstruct++;
+        }
+        else if (sampleConstruct != extractor->sampleConstructor.end())
+        {
+            outputExtractor.sampleConstructor = HevcExtractorSampleConstructor{};
+            outputExtractor.sampleConstructor->sampleOffset = 0;
+            outputExtractor.sampleConstructor->dataOffset = (*sampleConstruct)->dataOffset;
+            outputExtractor.sampleConstructor->dataLength = (*sampleConstruct)->dataLength;
+            outputExtractor.sampleConstructor->trackId = trackId.GetIndex();//(*sampleConstruct)->trackRefIndex;  // Note: this refers to the index in the track references. It works if trackIds are 1-based and contiguous, as the spec expects the index is 1-based.
+            sampleConstruct++;
+            // now we have a full extractor: either just a sample constructor, or inline+sample constructor pair
+            extractorData.samples.push_back(outputExtractor);
+            const FrameBuf& nal = extractorData.GenFrameData();
+            extractorNALUs.insert(extractorNALUs.end(), make_move_iterator(nal.begin()), make_move_iterator(nal.end()));
+        }
+    }
+}
+
+void SegmentWriter::Feed(
+    TrackId trackId,
+    const CodedMeta& codedFrameMeta,
+    uint8_t *data,
+    int32_t dataSize,
+    const FrameCts& compositionTime)
+{
+    CodedMeta frameMeta = codedFrameMeta;
+    std::unique_ptr<GetDataOfFrame> dataFrameAcquire(
+        new AcquireVideoFrameData(data, dataSize));
+
+    FrameInfo infoPerFrame;
+    infoPerFrame.cts = compositionTime;
+    infoPerFrame.duration = frameMeta.duration;
+    infoPerFrame.isIDR = frameMeta.isIDR();
+
+    bool flagNonRefframe = (frameMeta.format == CodedFormat::H264) ? DetectNonRefFrame(data) : false;
+
+    infoPerFrame.sampleFlags.flags.reserved = 0;
+    infoPerFrame.sampleFlags.flags.is_leading = (infoPerFrame.isIDR ? 3 : 0);
+    infoPerFrame.sampleFlags.flags.sample_depends_on = (infoPerFrame.isIDR ? 2 : 1);
+    infoPerFrame.sampleFlags.flags.sample_is_depended_on = (flagNonRefframe ? 2 : 1);
+    infoPerFrame.sampleFlags.flags.sample_has_redundancy = 0;
+    infoPerFrame.sampleFlags.flags.sample_padding_value = 0;
+    infoPerFrame.sampleFlags.flags.sample_is_non_sync_sample = !infoPerFrame.isIDR;
+    infoPerFrame.sampleFlags.flags.sample_degradation_priority = 0;
+
+    FrameWrapper ssFrame(std::move(dataFrameAcquire), infoPerFrame);
+    FeedOneFrame(trackId, ssFrame);
+}
+
+Action SegmentWriter::FeedOneFrame(TrackId trackIndex, FrameWrapper oneFrame)
 {
     assert(!m_impl->m_trackSte[trackIndex].isEnd);
 
@@ -1403,25 +1757,19 @@ list<SegmentList> SegmentWriter::ExtractSubSegments()
     return segGroup;
 }
 
-SegmentList SegmentWriter::ExtractSegments()
-{
-    list<SegmentList> subsegments = ExtractSubSegments();
-    SegmentList segments;
-    for (auto& segment : subsegments)
-    {
-        segments.insert(segments.end(), segment.begin(), segment.end());
-    }
-    return segments;
-}
-
 void SegmentWriter::SetWriteSegmentHeader(bool toWriteHdr)
 {
     m_needWriteSegmentHeader = toWriteHdr;
 }
 
-void SegmentWriter::WriteInitSegment(ostream& outStr, const InitialSegment& initSeg)
+void SegmentWriter::WriteInitSegment(ostream& outStr, const bool isFraged)
 {
-    WriteInitSegment(outStr, initSeg);
+    InitialSegment initSeg = MakeInitSegment(isFraged);
+    Stream stream;
+    initSeg.ftyp->fileTypeBox->ToStream(stream);
+    initSeg.moov->movieBox->ToStream(stream);
+    auto data = stream.GetStorage();
+    outStr.write(reinterpret_cast<const char*>(&data[0]), streamsize(data.size()));
 }
 
 void SegmentWriter::WriteSubSegments(ostream& outStr, const list<Segment> subSegList)
@@ -1449,9 +1797,34 @@ void SegmentWriter::WriteSubSegments(ostream& outStr, const list<Segment> subSeg
 
 }
 
-void SegmentWriter::WriteSegment(ostream& outStr, const Segment oneSeg)
+void SegmentWriter::WriteSegments(std::ostringstream &frameString,
+    uint64_t *segNum,
+    char segName[1024],
+    char *baseName)
 {
-    WriteSubSegments(outStr, {oneSeg});
+    std::list<SegmentList> segments = ExtractSubSegments();
+    if (segments.size())
+    {
+        for (auto& segment : segments)
+        {
+            (*segNum)++;
+            snprintf(segName, 1024, "%s.%ld.mp4", baseName, *segNum);
+            WriteSubSegments(frameString, segment);
+            std::string segString(frameString.str());
+        }
+    }
+}
+
+extern "C" SegmentWriterBase* Create(SegmentWriterCfg inCfg)
+{
+    SegmentWriter *segWriter = new SegmentWriter(inCfg);
+    return (SegmentWriterBase*)(segWriter);
+}
+
+extern "C" void Destroy(SegmentWriterBase* segWriter)
+{
+    delete segWriter;
+    segWriter = NULL;
 }
 
 VCD_MP4_END

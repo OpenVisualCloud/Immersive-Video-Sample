@@ -74,6 +74,7 @@ public:
         m_currSegedFrmNum = 0;
         m_currProcessedFrmNum = 0;
         m_isMpdGenInit = false;
+        m_segWriterPluginHdl = NULL;
     };
 
     //!
@@ -110,6 +111,8 @@ public:
         m_currSegedFrmNum = 0;
         m_currProcessedFrmNum = 0;
         m_isMpdGenInit = false;
+
+        CreateSegWriterPluginHdl();
     };
 
     DefaultSegmentation(const DefaultSegmentation& src)
@@ -134,6 +137,7 @@ public:
         m_currSegedFrmNum = src.m_currSegedFrmNum;
         m_currProcessedFrmNum = src.m_currProcessedFrmNum;
         m_isMpdGenInit = src.m_isMpdGenInit;
+        m_segWriterPluginHdl = src.m_segWriterPluginHdl;
     };
 
     DefaultSegmentation& operator=(DefaultSegmentation&& other)
@@ -158,6 +162,7 @@ public:
         m_currSegedFrmNum = other.m_currSegedFrmNum;
         m_currProcessedFrmNum = other.m_currProcessedFrmNum;
         m_isMpdGenInit = other.m_isMpdGenInit;
+        m_segWriterPluginHdl = other.m_segWriterPluginHdl;
         return *this;
     };
 
@@ -213,6 +218,7 @@ private:
     //!         ERROR_NONE if success, else failed reason
     //!
     //virtual int32_t VideoWritePovdBox();
+    int32_t CreateDashSegmentWriter(TrackSegmentCtx *trackSegCtx);
 
     //!
     //! \brief  Construct track segmentation context
@@ -394,6 +400,53 @@ private:
     //!
     bool HasAudio();
 
+    int32_t CreateSegWriterPluginHdl()
+    {
+        if (!m_segWriterPluginPath || !m_segWriterPluginName)
+        {
+            OMAF_LOG(LOG_ERROR, "Segment generation plugin is not assigned ! \n");
+            return OMAF_ERROR_NULL_PTR;
+        }
+
+        if (m_isCMAFEnabled)
+        {
+            if (0 == strcmp(m_segWriterPluginName, "SegmentWriter"))
+            {
+                OMAF_LOG(LOG_ERROR, "Plugin SegmentWriter can't generate CMAF segments !\n");
+                return OMAF_ERROR_BAD_PARAM;
+            }
+        }
+
+        uint32_t pathLen = strlen(m_segWriterPluginPath);
+
+        char pluginLibName[1024];
+        memset_s(pluginLibName, 1024, 0);
+        if (m_segWriterPluginPath[pathLen - 1] == '/')
+        {
+            snprintf(pluginLibName, 1024, "%slib%s.so", m_segWriterPluginPath, m_segWriterPluginName);
+        }
+        else
+        {
+            snprintf(pluginLibName, 1024, "%s/lib%s.so", m_segWriterPluginPath, m_segWriterPluginName);
+        }
+
+        OMAF_LOG(LOG_INFO, "Segment generation plugin is %s\n", pluginLibName);
+
+        m_segWriterPluginHdl = dlopen(pluginLibName, RTLD_LAZY);
+        const char *dlsymErr1 = dlerror();
+        if (!(m_segWriterPluginHdl))
+        {
+            OMAF_LOG(LOG_ERROR, "Failed to open segment writer plugin %s !\n", pluginLibName);
+            if (dlsymErr1)
+            {
+                OMAF_LOG(LOG_ERROR, "Get error msg %s \n", dlsymErr1);
+            }
+            return OMAF_ERROR_DLOPEN;
+        }
+
+        return ERROR_NONE;
+    }
+
 private:
     std::map<MediaStream*, TrackSegmentCtx*>       m_streamSegCtx;       //!< map of media stream and its track segmentation context
     std::map<ExtractorTrack*, TrackSegmentCtx*>    m_extractorSegCtx;    //!< map of extractor track and its track segmentation context
@@ -425,6 +478,7 @@ private:
     uint64_t                                       m_currSegedFrmNum;    //!< newest number of frames which have been segmented for their tile tracks
     uint64_t                                       m_currProcessedFrmNum;//!< newest number of frames which have been segmented for both tiles tracks and extractor tracks
     bool                                           m_isMpdGenInit;       //!< flag for whether MPD generator has been initialized
+    void                                           *m_segWriterPluginHdl;
 };
 
 VCD_NS_END;

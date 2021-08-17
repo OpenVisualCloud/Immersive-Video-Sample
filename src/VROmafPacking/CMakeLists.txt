@@ -20,11 +20,11 @@ ENDIF()
 
 IF(USE_TRACE)
   ADD_DEFINITIONS("-D_USE_TRACE_")
-  INCLUDE_DIRECTORIES(/usr/local/include ../utils ../360SCVP ../isolib ../trace ../plugins/StreamProcess_Plugin)
-  LINK_DIRECTORIES(/usr/local/lib ../isolib/dash_writer ../trace)
+  INCLUDE_DIRECTORIES(../utils ../360SCVP ../trace ../plugins/StreamProcess_Plugin ../plugins/DashWriter_Plugin ../plugins/DashWriter_Plugin/common /usr/local/include)
+  LINK_DIRECTORIES(/usr/local/lib ../trace)
 ELSE()
-  INCLUDE_DIRECTORIES(/usr/local/include ../utils ../360SCVP ../isolib ../plugins/StreamProcess_Plugin)
-  LINK_DIRECTORIES(/usr/local/lib ../isolib/dash_writer)
+  INCLUDE_DIRECTORIES(../utils ../360SCVP ../plugins/StreamProcess_Plugin ../plugins/DashWriter_Plugin ../plugins/DashWriter_Plugin/common /usr/local/include)
+  LINK_DIRECTORIES(/usr/local/lib)
 ENDIF()
 
 SET(DIR_SRC
@@ -34,7 +34,6 @@ SET(DIR_SRC
 
 ADD_LIBRARY(VROmafPacking SHARED ${DIR_SRC})
 
-TARGET_LINK_LIBRARIES(VROmafPacking dashwriter)
 TARGET_LINK_LIBRARIES(VROmafPacking glog)
 TARGET_LINK_LIBRARIES(VROmafPacking dl)
 IF(USE_SAFE_MEM)

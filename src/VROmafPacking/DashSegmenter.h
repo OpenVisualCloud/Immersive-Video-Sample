@@ -39,10 +39,11 @@
 #include <fstream>
 #include <map>
 #include <set>
+#include <dlfcn.h>
 
-#include "../isolib/dash_writer/SegmentWriter.h"
-#include "../isolib/dash_writer/AcquireTrackData.h"
-#include "../isolib/dash_writer/DataItem.h"
+#include "DashWriterPluginAPI.h"
+#include "AcquireTrackData.h"
+#include "DataItem.h"
 
 #include "VROmafPacking_def.h"
 #include "OmafPackingCommon.h"
@@ -63,6 +64,7 @@ VCD_NS_BEGIN
 #define MAINSTREAM_QUALITY_RANK 1
 #define SECONDRES_STREAM_QUALITY_RANK 2
 
+class TrackSegmentCtx;
 class DashInitSegmenter;
 class DashSegmenter;
 
@@ -76,56 +78,6 @@ enum OperatingMode
 {
     None,
     OMAF
-};
-
-//!
-//! \enum:   CodedFormat
-//! \brief:  indicate the coded format of the data
-//!
-enum CodedFormat
-{
-    NoneFormat,
-    H264,
-    H265,
-    AAC,
-    TimedMetadata,
-    H265Extractor
-};
-
-//!
-//! \enum:   ConfigType
-//! \brief:  indicate the paramter set type
-//!
-enum ConfigType
-{
-    SPS,                    // for AVC and HEVC
-    PPS,                    // for AVC and HEVC
-    VPS,                    // for HEVC
-    AudioSpecificConfig     // for AAC
-};
-
-//!
-//! \enum:   FrameType
-//! \brief:  indicate the frame type, whether IDR or not
-//!
-enum FrameType
-{
-    NA,
-    IDR,
-    NONIDR,
-    // more types directly from the H264 header
-};
-
-//!
-//! \enum:   OmafProjectionType
-//! \brief:  define the picture projection type
-//!
-enum OmafProjectionType
-{
-    NoneProjection,
-    EQUIRECTANGULAR,
-    CUBEMAP,
-    PLANAR
 };
 
 //!
@@ -224,180 +176,6 @@ struct TrackInfo
 };
 
 //!
-//! \struct: Bitrate
-//! \brief:  define the bitrate information of input data
-//!
-struct Bitrate
-{
-    uint32_t avgBitrate;
-    uint32_t maxBitrate;
-};
-
-//!
-//! \struct: SegmenterMeta
-//! \brief:  define the meta data of the segment
-//!
-struct SegmenterMeta
-{
-    // the duration of the produced segment
-    VCD::MP4::FrameDuration segmentDuration;
-};
-
-//!
-//! \struct: Region
-//! \brief:  define the region wise packing information
-//!          for one region
-//!
-struct Region
-{
-    uint32_t projTop;
-    uint32_t projLeft;
-    uint32_t projWidth;
-    uint32_t projHeight;
-    int32_t transform;
-    uint16_t packedTop;
-    uint16_t packedLeft;
-    uint16_t packedWidth;
-    uint16_t packedHeight;
-};
-
-//!
-//! \struct: RegionPacking
-//! \brief:  define the region wise packing information
-//!          for all regions
-//!
-struct RegionPacking
-{
-    bool constituentPictMatching;
-    uint32_t projPictureWidth;
-    uint32_t projPictureHeight;
-    uint16_t packedPictureWidth;
-    uint16_t packedPictureHeight;
-
-    std::vector<Region> regions;
-};
-
-//!
-//! \struct: Spherical
-//! \brief:  define the content coverage information
-//!          for one region on the sphere
-//!
-struct Spherical
-{
-    int32_t cAzimuth;
-    int32_t cElevation;
-    int32_t cTilt;
-    uint32_t rAzimuth;
-    uint32_t rElevation;
-    //bool interpolate;
-};
-
-//!
-//! \struct: QualityInfo
-//! \brief:  define the quality rank related information
-//!          for one region
-//!
-struct QualityInfo
-{
-    uint8_t qualityRank;
-    uint16_t origWidth = 0;    // used only with multi-res cases
-    uint16_t origHeight = 0;   // used only with multi-res cases
-    VCD::MP4::DataItem<Spherical> sphere;    // not used with remaining area info
-};
-
-//!
-//! \struct: Quality3d
-//! \brief:  define the quality rank related information
-//!          for all regions
-//!
-struct Quality3d
-{
-    uint8_t shapeType = 0;
-    uint8_t qualityType = 0;
-    bool remainingArea = false;
-    std::vector<QualityInfo> qualityInfo;
-};
-
-//!
-//! \struct: CodedMeta
-//! \brief:  define the meta data for the coded data
-//!
-struct CodedMeta
-{
-    int64_t presIndex;        // presentation index (as in RawFormatMeta)
-    int64_t codingIndex; // coding index
-    VCD::MP4::FrameTime codingTime;
-    VCD::MP4::FrameTime presTime;
-    VCD::MP4::FrameDuration duration;
-
-    VCD::MP4::TrackId trackId;
-
-    bool inCodingOrder;
-
-    CodedFormat format = CodedFormat::NoneFormat;
-
-    std::map<ConfigType, std::vector<uint8_t>> decoderConfig;
-
-    uint32_t width = 0;
-    uint32_t height = 0;
-
-    uint8_t channelCfg = 0;
-    uint32_t samplingFreq = 0;
-    Bitrate bitrate = {}; // bitrate information
-
-    FrameType type = FrameType::NA;
-
-    SegmenterMeta segmenterMeta;
-
-    // applicable in OMAF
-    OmafProjectionType projection = OmafProjectionType::EQUIRECTANGULAR;
-    VCD::MP4::DataItem<RegionPacking> regionPacking;
-    VCD::MP4::DataItem<Spherical> sphericalCoverage;
-    VCD::MP4::DataItem<Quality3d> qualityRankCoverage;
-
-    bool isEOS = false;
-
-    bool isIDR() const
-    {
-        return type == FrameType::IDR;
-    }
-};
-
-//!
-//! \struct: TrackSegmentCtx
-//! \brief:  define the context of segmentation for
-//!          one track, which will be updated dynamically
-//!          during the segmentation
-//!
-struct TrackSegmentCtx
-{
-    bool              isAudio;
-    bool              isExtractorTrack;
-
-    TileInfo          *tileInfo;
-    uint16_t          tileIdx;
-
-    uint16_t          extractorTrackIdx;
-    std::map<uint8_t, Extractor*>* extractors;
-    Nalu              extractorTrackNalu;
-    std::list<VCD::MP4::TrackId> refTrackIdxs;
-
-    Nalu              audioNalu;
-
-    VCD::MP4::TrackId trackIdx;
-    InitSegConfig     dashInitCfg;
-    GeneralSegConfig  dashCfg;
-    DashInitSegmenter *initSegmenter;
-    DashSegmenter     *dashSegmenter;
-
-    CodedMeta         codedMeta;
-
-    uint8_t           qualityRanking;
-
-    bool              isEOS;
-};
-
-//!
 //! \class DashInitSegmenter
 //! \brief Define the operation and needed data for generating
 //!        the initial segment for one track
@@ -444,16 +222,19 @@ public:
     //!
     uint64_t GetInitSegmentSize() { return m_initSegSize; };
 
-private:
-    VCD::MP4::TrackDescriptionsMap                m_trackDescriptions;           //!< track description information
+    void SetSegmentWriter(VCD::MP4::SegmentWriterBase *segWriter)
+    {
+        m_segWriter = segWriter;
+    };
 
+private:
     std::set<VCD::MP4::TrackId>                   m_firstFrameRemaining;         //!< the remaining track index for which initial segment is not generated for the first frame
 
     const InitSegConfig                           m_config;                      //!< the configuration for the initial segment
 
-    std::string                                   m_omafVideoTrackBrand = "";    //!< video track OMAF brand information
-    std::string                                   m_omafAudioTrackBrand = "";    //!< audio track OMAF brand information
     uint64_t                                      m_initSegSize = 0;
+
+    VCD::MP4::SegmentWriterBase                   *m_segWriter = NULL;
 
 private:
 
@@ -468,7 +249,7 @@ private:
     //!
     //! \return void
     //!
-    void AddH264VideoTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
+    //void AddH264VideoTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
 
     //!
     //! \brief  Add the specified track of HEVC coded data into sample
@@ -481,7 +262,7 @@ private:
     //!
     //! \return void
     //!
-    void AddH265VideoTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
+    //void AddH265VideoTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
 
     //!
     //! \brief  Add the specified track of HEVC extractor track data
@@ -494,9 +275,9 @@ private:
     //!
     //! \return void
     //!
-    void AddH265ExtractorTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
+    //void AddH265ExtractorTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
 
-    void AddAACTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
+    //void AddAACTrack(VCD::MP4::TrackId aTrackId, CodedMeta& aMeta);
     //!
     //! \brief  Make initial segment for the track
     //!
@@ -506,7 +287,7 @@ private:
     //! \return InitialSegment
     //!         the initial segment
     //!
-    VCD::MP4::InitialSegment MakeInitSegment(bool aFragmented);
+    //VCD::MP4::InitialSegment MakeInitSegment(bool aFragmented);
 
     //!
     //! \brief  Fill the OMAF compliant sample entry
@@ -523,65 +304,11 @@ private:
     //!
     //! \return void
     //!
-    void FillOmafStructures(
-        VCD::MP4::TrackId aTrackId,
-        CodedMeta& aMeta,
-        VCD::MP4::HevcVideoSampleEntry& aSampleEntry,
-        VCD::MP4::TrackMeta& aTrackMeta);
-};
-
-//!
-//! \class AcquireVideoFrameData
-//! \brief Define the operation of acquiring video coded data
-//!
-
-class AcquireVideoFrameData : public VCD::MP4::GetDataOfFrame
-{
-public:
-
-    //!
-    //! \brief  Copy Constructor
-    //!
-    //! \param  [in] data
-    //!         the pointer to the nalu data
-    //! \param  [in] size
-    //!         size of the nalu data
-    //!
-    AcquireVideoFrameData(uint8_t *data, uint64_t size);
-
-    //!
-    //! \brief  Destructor
-    //!
-    ~AcquireVideoFrameData() override;
-
-    //!
-    //! \brief  Get the coded data
-    //!
-    //! \return FrameBuf
-    //!         the FrameBuf which includes the coded data
-    //!
-    VCD::MP4::FrameBuf Get() const override;
-
-    //!
-    //! \brief  Get the size of coded data
-    //!
-    //! \return size_t
-    //!         the size of coded data
-    //!
-    size_t GetDataSize() const override;
-
-    //!
-    //! \brief  Clone one AcquireVideoFrameData object
-    //!
-    //! \return AcquireVideoFrameData*
-    //!         the pointer to the cloned AcquireVideoFrameData object
-    //!
-    AcquireVideoFrameData* Clone() const override;
-
-private:
-    //Nalu *m_tileNalu; //!< the pointer to the nalu information of coded data
-    uint8_t  *m_data;        //!< the pointer to the nalu data
-    uint64_t m_dataSize;     //!< nalu data size
+    //void FillOmafStructures(
+    //    VCD::MP4::TrackId aTrackId,
+    //    CodedMeta& aMeta,
+    //    VCD::MP4::HevcVideoSampleEntry& aSampleEntry,
+    //    VCD::MP4::TrackMeta& aTrackMeta);
 };
 
 //!
@@ -636,6 +363,8 @@ public:
     //!
     uint64_t GetSegmentSize() { return m_segSize; };
 
+    void SetSegmentWriter(VCD::MP4::SegmentWriterBase *segWriter);
+
 protected:
 
     //!
@@ -654,7 +383,7 @@ protected:
     //!
     int32_t SegmentOneTrack(
         Nalu *dataNalu,
-        CodedMeta codedMeta,
+        VCD::MP4::CodedMeta codedMeta,
         char *outBaseName);
 
     //!
@@ -672,18 +401,19 @@ protected:
     //!
     //! \return void
     //!
-    void Feed(
-        VCD::MP4::TrackId trackId,
-        CodedMeta codedFrameMeta,
-        Nalu *dataNalu,
-        VCD::MP4::FrameCts compositionTime);
+    //void Feed(
+    //    VCD::MP4::TrackId trackId,
+    //    VCD::MP4::CodedMeta codedFrameMeta,
+    //    Nalu *dataNalu,
+    //    VCD::MP4::FrameCts compositionTime);
 
     std::map<VCD::MP4::TrackId, TrackInfo>   m_trackInfo;                   //!< track information of all tracks
 
     const GeneralSegConfig         m_config;                      //!< the configuration of data segment of the track
 
-    //VCD::MP4::AutoSegmenter m_autoSegmenter;               //!< the low level segmenter to write segment
-    VCD::MP4::SegmentWriter        m_segWriter;
+    bool                           m_createWriter = false;
+
+    VCD::MP4::SegmentWriterBase    *m_segWriter = NULL;
 
     bool                           m_waitForInitSegment = false;  //!< whether to wait for initial segment
 
@@ -696,7 +426,7 @@ protected:
     //! \return bool
     //!         whether the coded data comes from reference frame
     //!
-    bool DetectNonRefFrame(uint8_t *frameData);
+    //bool DetectNonRefFrame(uint8_t *frameData);
 
     //!
     //! \brief  Write the segment
@@ -707,7 +437,7 @@ protected:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason 
     //!
-    int32_t WriteSegment(VCD::MP4::SegmentList& aSegments);
+    int32_t WriteSegment(char *baseName);
 
     //!
     //! \brief  Pack all extractors data into bitstream
@@ -725,7 +455,7 @@ protected:
     //!         ERROR_NONE if success, else failed reason
     //!
     int32_t PackExtractors(
-        std::map<uint8_t, Extractor*>* extractorsMap,
+        std::map<uint8_t, VCD::MP4::Extractor*>* extractorsMap,
         std::list<VCD::MP4::TrackId> refTrackIdxs,
         Nalu *extractorsNalu);
 
@@ -735,6 +465,138 @@ private:
     FILE                                                              *m_file = NULL;          //!< file pointer to write segments
     char                                                              m_segName[1024];           //!< segment file name string
     uint64_t                                                          m_segSize = 0;
+};
+
+//!
+//! \struct: TrackSegmentCtx
+//! \brief:  define the context of segmentation for
+//!          one track, which will be updated dynamically
+//!          during the segmentation
+//!
+struct TrackSegmentCtx
+{
+    bool              isAudio;
+    bool              isExtractorTrack;
+
+    TileInfo          *tileInfo;
+    uint16_t          tileIdx;
+
+    uint16_t          extractorTrackIdx;
+    std::map<uint8_t, VCD::MP4::Extractor*>* extractors;
+    Nalu              extractorTrackNalu;
+    std::list<VCD::MP4::TrackId> refTrackIdxs;
+
+    Nalu              audioNalu;
+
+    VCD::MP4::TrackId trackIdx;
+
+    VCD::MP4::SegmentWriterBase *segWriter;
+    void              *segWriterPluginHdl;
+
+    InitSegConfig     dashInitCfg;
+    GeneralSegConfig  dashCfg;
+    DashInitSegmenter *initSegmenter;
+    DashSegmenter     *dashSegmenter;
+
+    VCD::MP4::CodedMeta         codedMeta;
+
+    uint8_t           qualityRanking;
+
+    bool              isEOS;
+
+    TrackSegmentCtx()
+    {
+        isAudio = false;
+        isExtractorTrack = false;
+
+        tileInfo = NULL;
+        tileIdx = 0;
+
+        extractorTrackIdx = 0;
+        extractors = NULL;
+        memset_s(&extractorTrackNalu, sizeof(Nalu), 0);
+
+        memset_s(&audioNalu, sizeof(Nalu), 0);
+
+        segWriter = NULL;
+        segWriterPluginHdl = NULL;
+
+        initSegmenter = NULL;
+        dashSegmenter = NULL;
+        qualityRanking = 0;
+        isEOS = false;
+    }
+
+    ~TrackSegmentCtx()
+    {
+        if (segWriterPluginHdl)
+        {
+            if (segWriter)
+            {
+                VCD::MP4::DestroySegmentWriter* destroySegWriter = NULL;
+                destroySegWriter = (VCD::MP4::DestroySegmentWriter*)dlsym(segWriterPluginHdl, "Destroy");
+                const char *dlsymErr = dlerror();
+                if (dlsymErr)
+                {
+                    OMAF_LOG(LOG_ERROR, "Failed to load symbol segment writer Destroy !\n");
+                    OMAF_LOG(LOG_ERROR, "And get error message %s \n", dlsymErr);
+                    return;
+                }
+
+                if (!destroySegWriter)
+                {
+                    OMAF_LOG(LOG_ERROR, "NULL segment writer destructor !\n");
+                    return;
+                }
+
+                destroySegWriter(segWriter);
+            }
+        }
+    }
+
+    VCD::MP4::SegmentWriterCfg MakeSegmentWriterConfig(
+        GeneralSegConfig *dashConfig)
+    {
+        VCD::MP4::SegmentWriterCfg config {};
+        config.segmentDuration = dashConfig->sgtDuration;
+        config.subsegmentDuration = dashConfig->subsgtDuration;
+        config.checkIDR = dashConfig->needCheckIDR;
+        return config;
+    }
+
+    int32_t CreateDashSegmentWriter()
+    {
+        if (!segWriterPluginHdl)
+        {
+            OMAF_LOG(LOG_ERROR, "NULL segment writer plugin handle !\n");
+            return OMAF_ERROR_NULL_PTR;
+        }
+
+        VCD::MP4::CreateSegmentWriter* createSegWriter = NULL;
+        createSegWriter = (VCD::MP4::CreateSegmentWriter*)dlsym(segWriterPluginHdl, "Create");
+        const char *dlsymErr2 = NULL;
+        dlsymErr2 = dlerror();
+        if (dlsymErr2)
+        {
+            OMAF_LOG(LOG_ERROR, "Failed to load symbol Create: %s\n", dlsymErr2);
+            return OMAF_ERROR_DLSYM;
+        }
+
+        if (!createSegWriter)
+        {
+            OMAF_LOG(LOG_ERROR, "NULL segment writer creator !\n");
+            return OMAF_ERROR_NULL_PTR;
+        }
+
+        segWriter = createSegWriter(MakeSegmentWriterConfig(&(dashCfg)));
+        if (!segWriter)
+        {
+            OMAF_LOG(LOG_ERROR, "Failed to create segment writer !\n");
+            return OMAF_ERROR_NULL_PTR;
+        }
+
+        return ERROR_NONE;
+    }
 };
 
 VCD_NS_END;

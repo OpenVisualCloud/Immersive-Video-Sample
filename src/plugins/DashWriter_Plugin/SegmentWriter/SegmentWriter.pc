@@ -1,0 +1,10 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${exec_prefix}/include
+
+Name: Dash OMAF Segment Writer plugin
+Description: Dash OMAF segment writer is responsible for writing segments for video and audio tracks, which are compliant with OMAF spec.
+Version:0.0.1-DEV
+Cflags: -I${prefix}/include
+Libs: -L${libdir} -lSegmentWriter -static-libstdc++ -lpthread -L/usr/local/lib64

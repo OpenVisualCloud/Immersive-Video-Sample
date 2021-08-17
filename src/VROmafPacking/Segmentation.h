@@ -133,6 +133,10 @@ protected:
     SegmentationInfo                *m_segInfo;             //!< pointer to the segmentation information
     uint64_t                        m_trackIdStarter;       //!< track index starter
     Rational                        m_frameRate;            //!< the frame rate of the video
+
+    bool                            m_isCMAFEnabled;
+    const char                      *m_segWriterPluginPath;
+    const char                      *m_segWriterPluginName;
 };
 
 VCD_NS_END;

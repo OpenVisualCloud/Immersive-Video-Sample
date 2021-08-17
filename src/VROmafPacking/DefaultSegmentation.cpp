@@ -34,12 +34,13 @@
 #include "VideoStreamPluginAPI.h"
 #include "AudioStreamPluginAPI.h"
 #include "DefaultSegmentation.h"
-#include "../isolib/dash_writer/Fraction.h"
+#include "Fraction.h"
 
 #include <unistd.h>
 #include <chrono>
 #include <cstdint>
 #include <sys/time.h>
+#include <dlfcn.h>
 
 #ifdef _USE_TRACE_
 #include "../trace/Bandwidth_tp.h"
@@ -67,8 +68,7 @@ DefaultSegmentation::~DefaultSegmentation()
                DELETE_MEMORY(trackSegCtxs[i].dashSegmenter);
             }
 
-            delete[] trackSegCtxs;
-            trackSegCtxs = NULL;
+            DELETE_ARRAY(trackSegCtxs);
         }
         else if (stream && (stream->GetMediaType() == AUDIOTYPE))
         {
@@ -76,10 +76,9 @@ DefaultSegmentation::~DefaultSegmentation()
             {
                 DELETE_MEMORY(trackSegCtxs->initSegmenter);
                 DELETE_MEMORY(trackSegCtxs->dashSegmenter);
-
-                delete trackSegCtxs;
-                trackSegCtxs = NULL;
             }
+
+            DELETE_MEMORY(trackSegCtxs);
         }
     }
     m_streamSegCtx.clear();
@@ -123,14 +122,20 @@ DefaultSegmentation::~DefaultSegmentation()
     }
 
     DELETE_ARRAY(m_videosBitrate);
+
+    if (m_segWriterPluginHdl)
+    {
+        dlclose(m_segWriterPluginHdl);
+        m_segWriterPluginHdl = NULL;
+    }
 }
 
-int32_t ConvertRwpk(RegionWisePacking *rwpk, CodedMeta *codedMeta)
+int32_t ConvertRwpk(RegionWisePacking *rwpk, VCD::MP4::CodedMeta *codedMeta)
 {
     if (!rwpk || !codedMeta)
         return OMAF_ERROR_NULL_PTR;
 
-    RegionPacking regionPacking;
+    VCD::MP4::RegionPacking regionPacking;
     regionPacking.constituentPictMatching = rwpk->constituentPicMatching;
     regionPacking.projPictureWidth = rwpk->projPicWidth;
     regionPacking.projPictureHeight = rwpk->projPicHeight;
@@ -139,7 +144,7 @@ int32_t ConvertRwpk(RegionWisePacking *rwpk, CodedMeta *codedMeta)
 
     for (uint8_t i = 0; i < rwpk->numRegions; i++)
     {
-        Region region;
+        VCD::MP4::Region region;
         region.projTop = rwpk->rectRegionPacking[i].projRegTop;
         region.projLeft = rwpk->rectRegionPacking[i].projRegLeft;
         region.projWidth = rwpk->rectRegionPacking[i].projRegWidth;
@@ -158,12 +163,12 @@ int32_t ConvertRwpk(RegionWisePacking *rwpk, CodedMeta *codedMeta)
     return ERROR_NONE;
 }
 
-int32_t ConvertCovi(SphereRegion *spr, CodedMeta *codedMeta)
+int32_t ConvertCovi(SphereRegion *spr, VCD::MP4::CodedMeta *codedMeta)
 {
     if (!spr || !codedMeta)
         return OMAF_ERROR_NULL_PTR;
 
-    Spherical sphericalCov;
+    VCD::MP4::Spherical sphericalCov;
     sphericalCov.cAzimuth = spr->centreAzimuth;
     sphericalCov.cElevation = spr->centreElevation;
     sphericalCov.cTilt = spr->centreTilt;
@@ -175,24 +180,24 @@ int32_t ConvertCovi(SphereRegion *spr, CodedMeta *codedMeta)
     return ERROR_NONE;
 }
 
-int32_t FillQualityRank(CodedMeta *codedMeta, std::list<PicResolution> *picResList)
+int32_t FillQualityRank(VCD::MP4::CodedMeta *codedMeta, std::list<PicResolution> *picResList)
 {
     if (!picResList)
         return OMAF_ERROR_NULL_PTR;
 
-    Quality3d qualityRankCov;
+    VCD::MP4::Quality3d qualityRankCov;
 
     std::list<PicResolution>::iterator it;
     uint8_t qualityRankStarter = MAINSTREAM_QUALITY_RANK;
     uint8_t resNum = 0;
     for (it = picResList->begin(); it != picResList->end(); it++)
     {
-        QualityInfo info;
+        VCD::MP4::QualityInfo info;
         PicResolution picRes = *it;
         info.origWidth = picRes.width;
         info.origHeight = picRes.height;
         info.qualityRank = qualityRankStarter + resNum;
-        Spherical sphere;
+        VCD::MP4::Spherical sphere;
         sphere.cAzimuth = codedMeta->sphericalCoverage.get().cAzimuth;
         sphere.cElevation = codedMeta->sphericalCoverage.get().cElevation;
         sphere.cTilt = codedMeta->sphericalCoverage.get().cTilt;
@@ -335,6 +340,22 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                 trackSegCtxs[i].dashCfg.streamsIdx.push_back(it->first);
                 snprintf(trackSegCtxs[i].dashCfg.trackSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, m_trackIdStarter + i);
 
+                //setup VCD::MP4::SegmentWriterBase
+                int32_t ret = ERROR_NONE;
+                trackSegCtxs[i].segWriterPluginHdl = m_segWriterPluginHdl;
+                ret = trackSegCtxs[i].CreateDashSegmentWriter();
+                if (ret)
+                {
+                    for (uint32_t id = 0; id < i; id++)
+                    {
+                        DELETE_MEMORY(trackSegCtxs[id].initSegmenter);
+                        DELETE_MEMORY(trackSegCtxs[id].dashSegmenter);
+                    }
+                    DELETE_ARRAY(trackSegCtxs);
+
+                    return ret;
+                }
+
                 //setup DashInitSegmenter
                 trackSegCtxs[i].initSegmenter = new DashInitSegmenter(&(trackSegCtxs[i].dashInitCfg));
                 if (!(trackSegCtxs[i].initSegmenter))
@@ -344,9 +365,11 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                         DELETE_MEMORY(trackSegCtxs[id].initSegmenter);
                         DELETE_MEMORY(trackSegCtxs[id].dashSegmenter);
                     }
+
                     DELETE_ARRAY(trackSegCtxs);
                     return OMAF_ERROR_NULL_PTR;
                 }
+                (trackSegCtxs[i].initSegmenter)->SetSegmentWriter(trackSegCtxs[i].segWriter);
 
                 //setup DashSegmenter
                 trackSegCtxs[i].dashSegmenter = new DashSegmenter(&(trackSegCtxs[i].dashCfg), true);
@@ -362,6 +385,7 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                     DELETE_ARRAY(trackSegCtxs);
                     return OMAF_ERROR_NULL_PTR;
                 }
+                (trackSegCtxs[i].dashSegmenter)->SetSegmentWriter(trackSegCtxs[i].segWriter);
 
                 trackSegCtxs[i].qualityRanking = qualityLevel;
 
@@ -373,15 +397,15 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                 trackSegCtxs[i].codedMeta.duration = VCD::MP4::FrameDuration{ frameRate.den * 1000, frameRate.num * 1000};
                 trackSegCtxs[i].codedMeta.trackId = trackSegCtxs[i].trackIdx;
                 trackSegCtxs[i].codedMeta.inCodingOrder = true;
-                trackSegCtxs[i].codedMeta.format = CodedFormat::H265;
-                trackSegCtxs[i].codedMeta.decoderConfig.insert(std::make_pair(ConfigType::VPS, vpsData));
-                trackSegCtxs[i].codedMeta.decoderConfig.insert(std::make_pair(ConfigType::SPS, spsData));
-                trackSegCtxs[i].codedMeta.decoderConfig.insert(std::make_pair(ConfigType::PPS, ppsData));
+                trackSegCtxs[i].codedMeta.format = VCD::MP4::CodedFormat::H265;
+                trackSegCtxs[i].codedMeta.decoderConfig.insert(std::make_pair(VCD::MP4::ConfigType::VPS, vpsData));
+                trackSegCtxs[i].codedMeta.decoderConfig.insert(std::make_pair(VCD::MP4::ConfigType::SPS, spsData));
+                trackSegCtxs[i].codedMeta.decoderConfig.insert(std::make_pair(VCD::MP4::ConfigType::PPS, ppsData));
                 trackSegCtxs[i].codedMeta.width = tilesInfo[i].tileWidth;
                 trackSegCtxs[i].codedMeta.height = tilesInfo[i].tileHeight;
                 trackSegCtxs[i].codedMeta.bitrate.avgBitrate = tileBitRate;
                 trackSegCtxs[i].codedMeta.bitrate.maxBitrate = 0;
-                trackSegCtxs[i].codedMeta.type = FrameType::IDR;
+                trackSegCtxs[i].codedMeta.type = VCD::MP4::FrameType::IDR;
                 trackSegCtxs[i].codedMeta.segmenterMeta.segmentDuration = VCD::MP4::FrameDuration{ 0, 1 }; //?
 
 
@@ -413,15 +437,15 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
 
                 if (m_projType == VCD::OMAF::ProjectionFormat::PF_ERP)
                 {
-                    trackSegCtxs[i].codedMeta.projection = OmafProjectionType::EQUIRECTANGULAR;
+                    trackSegCtxs[i].codedMeta.projection = VCD::MP4::OmafProjectionType::EQUIRECTANGULAR;
                 }
                 else if (m_projType == VCD::OMAF::ProjectionFormat::PF_CUBEMAP)
                 {
-                    trackSegCtxs[i].codedMeta.projection = OmafProjectionType::CUBEMAP;
+                    trackSegCtxs[i].codedMeta.projection = VCD::MP4::OmafProjectionType::CUBEMAP;
                 }
                 else if (m_projType == VCD::OMAF::ProjectionFormat::PF_PLANAR)
                 {
-                    trackSegCtxs[i].codedMeta.projection = OmafProjectionType::PLANAR;
+                    trackSegCtxs[i].codedMeta.projection = VCD::MP4::OmafProjectionType::PLANAR;
                 }
                 else
                 {
@@ -574,6 +598,18 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             trackSegCtx->dashCfg.streamsIdx.push_back(trackSegCtx->trackIdx.GetIndex());
             snprintf(trackSegCtx->dashCfg.trackSegBaseName, 1024, "%s%s_track%d", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
 
+            //setup VCD::MP4::SegmentWriterBase
+            int32_t ret = ERROR_NONE;
+            trackSegCtx->segWriterPluginHdl = m_segWriterPluginHdl;
+            ret = trackSegCtx->CreateDashSegmentWriter();
+            if (ret)
+            {
+                DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
+                DELETE_MEMORY(trackSegCtx);
+
+                return ret;
+            }
+
             //set up DashInitSegmenter
             trackSegCtx->initSegmenter = new DashInitSegmenter(&(trackSegCtx->dashInitCfg));
             if (!(trackSegCtx->initSegmenter))
@@ -582,6 +618,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
                 DELETE_MEMORY(trackSegCtx);
                 return OMAF_ERROR_NULL_PTR;
             }
+            (trackSegCtx->initSegmenter)->SetSegmentWriter(trackSegCtx->segWriter);
 
             //set up DashSegmenter
             trackSegCtx->dashSegmenter = new DashSegmenter(&(trackSegCtx->dashCfg), true);
@@ -592,6 +629,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
                 DELETE_MEMORY(trackSegCtx);
                 return OMAF_ERROR_NULL_PTR;
             }
+            (trackSegCtx->dashSegmenter)->SetSegmentWriter(trackSegCtx->segWriter);
 
             //set up CodedMeta
             trackSegCtx->codedMeta.presIndex = 0;
@@ -601,15 +639,15 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             trackSegCtx->codedMeta.duration = VCD::MP4::FrameDuration{ m_frameRate.den * 1000, m_frameRate.num * 1000};
             trackSegCtx->codedMeta.trackId = trackSegCtx->trackIdx;
             trackSegCtx->codedMeta.inCodingOrder = true;
-            trackSegCtx->codedMeta.format = CodedFormat::H265Extractor;
-            trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(ConfigType::VPS, vpsData));
-            trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(ConfigType::SPS, spsData));
-            trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(ConfigType::PPS, ppsData));
-            trackSegCtx->codedMeta.width = rwpk->packedPicWidth;//tilesInfo[i].tileWidth;
-            trackSegCtx->codedMeta.height = rwpk->packedPicHeight;//tilesInfo[i].tileHeight;
+            trackSegCtx->codedMeta.format = VCD::MP4::CodedFormat::H265Extractor;
+            trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(VCD::MP4::ConfigType::VPS, vpsData));
+            trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(VCD::MP4::ConfigType::SPS, spsData));
+            trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(VCD::MP4::ConfigType::PPS, ppsData));
+            trackSegCtx->codedMeta.width = rwpk->packedPicWidth;
+            trackSegCtx->codedMeta.height = rwpk->packedPicHeight;
             trackSegCtx->codedMeta.bitrate.avgBitrate = 0;
             trackSegCtx->codedMeta.bitrate.maxBitrate = 0;
-            trackSegCtx->codedMeta.type = FrameType::IDR;
+            trackSegCtx->codedMeta.type = VCD::MP4::FrameType::IDR;
             trackSegCtx->codedMeta.segmenterMeta.segmentDuration = VCD::MP4::FrameDuration{ 0, 1 }; //?
             ConvertRwpk(rwpk, &(trackSegCtx->codedMeta));
             ConvertCovi(covi->sphereRegions, &(trackSegCtx->codedMeta));
@@ -618,15 +656,15 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
 
             if (m_projType == VCD::OMAF::ProjectionFormat::PF_ERP)
             {
-                trackSegCtx->codedMeta.projection = OmafProjectionType::EQUIRECTANGULAR;
+                trackSegCtx->codedMeta.projection = VCD::MP4::OmafProjectionType::EQUIRECTANGULAR;
             }
             else if (m_projType == VCD::OMAF::ProjectionFormat::PF_CUBEMAP)
             {
-                trackSegCtx->codedMeta.projection = OmafProjectionType::CUBEMAP;
+                trackSegCtx->codedMeta.projection = VCD::MP4::OmafProjectionType::CUBEMAP;
             }
             else if (m_projType == VCD::OMAF::ProjectionFormat::PF_PLANAR)
             {
-                trackSegCtx->codedMeta.projection = OmafProjectionType::PLANAR;
+                trackSegCtx->codedMeta.projection = VCD::MP4::OmafProjectionType::PLANAR;
             }
             else
             {
@@ -681,7 +719,7 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
 
             TrackConfig trackConfig{};
             trackConfig.meta.trackId = trackSegCtx->trackIdx;
-            trackConfig.meta.timescale = VCD::MP4::FractU64(1, frequency);//m_frameRate.den, m_frameRate.num * 1000); //maybe need to be changed later
+            trackConfig.meta.timescale = VCD::MP4::FractU64(1, frequency);
             trackConfig.meta.type = VCD::MP4::TypeOfMedia::Audio;
             trackConfig.pipelineOutput = DataInputFormat::Audio;
             trackSegCtx->dashInitCfg.tracks.insert(std::make_pair(trackSegCtx->trackIdx, trackConfig));
@@ -699,13 +737,23 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
 
             VCD::MP4::TrackMeta trackMeta{};
             trackMeta.trackId = trackSegCtx->trackIdx;
-            trackMeta.timescale = VCD::MP4::FractU64(1, frequency);//m_frameRate.den, m_frameRate.num * 1000); //?
+            trackMeta.timescale = VCD::MP4::FractU64(1, frequency);
             trackMeta.type = VCD::MP4::TypeOfMedia::Audio;
             trackSegCtx->dashCfg.tracks.insert(std::make_pair(trackSegCtx->trackIdx, trackMeta));
 
             trackSegCtx->dashCfg.useSeparatedSidx = false;
             trackSegCtx->dashCfg.streamsIdx.push_back(strId);
             snprintf(trackSegCtx->dashCfg.trackSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, (DEFAULT_AUDIOTRACK_TRACKIDBASE + (uint64_t)audioId));
+
+            //setup VCD::MP4::SegmentWriterBase
+            int32_t ret = ERROR_NONE;
+            trackSegCtx->segWriterPluginHdl = m_segWriterPluginHdl;
+            ret = trackSegCtx->CreateDashSegmentWriter();
+            if (ret)
+            {
+                DELETE_MEMORY(trackSegCtx);
+                return ret;
+            }
 
             //setup DashInitSegmenter
             trackSegCtx->initSegmenter = new DashInitSegmenter(&(trackSegCtx->dashInitCfg));
@@ -714,6 +762,7 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
                 DELETE_MEMORY(trackSegCtx);
                 return OMAF_ERROR_NULL_PTR;
             }
+            (trackSegCtx->initSegmenter)->SetSegmentWriter(trackSegCtx->segWriter);
 
             //setup DashSegmenter
             trackSegCtx->dashSegmenter = new DashSegmenter(&(trackSegCtx->dashCfg), true);
@@ -723,6 +772,7 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
                 DELETE_MEMORY(trackSegCtx);
                 return OMAF_ERROR_NULL_PTR;
             }
+            (trackSegCtx->dashSegmenter)->SetSegmentWriter(trackSegCtx->segWriter);
 
             trackSegCtx->qualityRanking = DEFAULT_QUALITY_RANK;
 
@@ -733,21 +783,19 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
             trackSegCtx->codedMeta.presTime = VCD::MP4::FrameTime{ 0, 1000 };
             trackSegCtx->codedMeta.trackId = trackSegCtx->trackIdx;
             trackSegCtx->codedMeta.inCodingOrder = true;
-            trackSegCtx->codedMeta.format = CodedFormat::AAC;
+            trackSegCtx->codedMeta.format = VCD::MP4::CodedFormat::AAC;
             trackSegCtx->codedMeta.duration = VCD::MP4::FrameDuration{SAMPLES_NUM_IN_FRAME, frequency};
             trackSegCtx->codedMeta.channelCfg = chlConfig;
             trackSegCtx->codedMeta.samplingFreq = frequency;
-            trackSegCtx->codedMeta.type = FrameType::IDR;
+            trackSegCtx->codedMeta.type = VCD::MP4::FrameType::IDR;
             trackSegCtx->codedMeta.bitrate.avgBitrate = bitRate;
             trackSegCtx->codedMeta.bitrate.maxBitrate = 0;//?
-            trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(ConfigType::AudioSpecificConfig, packedAudioSpecCfg));
+            trackSegCtx->codedMeta.decoderConfig.insert(std::make_pair(VCD::MP4::ConfigType::AudioSpecificConfig, packedAudioSpecCfg));
             trackSegCtx->codedMeta.isEOS = false;
 
             trackSegCtx->isEOS = false;
 
             m_streamSegCtx.insert(std::make_pair(stream, trackSegCtx));
-            //m_streamsIsKey.insert(std::make_pair(stream, true));
-            //m_streamsIsEOS.insert(std::make_pair(stream, false));
         }
     }
 
@@ -824,9 +872,9 @@ int32_t DefaultSegmentation::WriteSegmentForEachVideo(MediaStream *stream, bool 
             return OMAF_ERROR_NULL_PTR;
 
         if (isKeyFrame)
-            trackSegCtxs[tileIdx].codedMeta.type = FrameType::IDR;
+            trackSegCtxs[tileIdx].codedMeta.type = VCD::MP4::FrameType::IDR;
         else
-            trackSegCtxs[tileIdx].codedMeta.type = FrameType::NONIDR;
+            trackSegCtxs[tileIdx].codedMeta.type = VCD::MP4::FrameType::NONIDR;
 
         trackSegCtxs[tileIdx].codedMeta.isEOS = isEOS;
 
@@ -878,9 +926,9 @@ int32_t DefaultSegmentation::WriteSegmentForEachAudio(MediaStream *stream, Frame
         return OMAF_ERROR_NULL_PTR;
 
     if (isKeyFrame)
-        trackSegCtx->codedMeta.type = FrameType::IDR;
+        trackSegCtx->codedMeta.type = VCD::MP4::FrameType::IDR;
     else
-        trackSegCtx->codedMeta.type = FrameType::NONIDR;
+        trackSegCtx->codedMeta.type = VCD::MP4::FrameType::NONIDR;
 
     trackSegCtx->codedMeta.isEOS = isEOS;
     trackSegCtx->isEOS = isEOS;
@@ -935,9 +983,9 @@ int32_t DefaultSegmentation::WriteSegmentForEachExtractorTrack(
         return OMAF_ERROR_NULL_PTR;
 
     if (isKeyFrame)
-        trackSegCtx->codedMeta.type = FrameType::IDR;
+        trackSegCtx->codedMeta.type = VCD::MP4::FrameType::IDR;
     else
-        trackSegCtx->codedMeta.type = FrameType::NONIDR;
+        trackSegCtx->codedMeta.type = VCD::MP4::FrameType::NONIDR;
 
     trackSegCtx->codedMeta.isEOS = isEOS;
 
@@ -1050,11 +1098,6 @@ int32_t DefaultSegmentation::ExtractorTrackSegmentation()
         std::map<uint16_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
         std::map<uint16_t, ExtractorTrack*>::iterator itExtractorTrack;
 
-        //pthread_t threadId = pthread_self();
-        //ExtractorTrack *extractorTrack = m_extractorThreadIds[threadId];
-        //if (!extractorTrack)
-        //    return OMAF_ERROR_NULL_PTR;
-
         for (itExtractorTrack = extractorTracks->begin();
             itExtractorTrack != extractorTracks->end(); itExtractorTrack++)
         {
@@ -1146,11 +1189,6 @@ int32_t DefaultSegmentation::LastExtractorTrackSegmentation()
     {
         std::map<uint16_t, ExtractorTrack*> *extractorTracks = m_extractorTrackMan->GetAllExtractorTracks();
         std::map<uint16_t, ExtractorTrack*>::iterator itExtractorTrack;
-
-        //pthread_t threadId = pthread_self();
-        //ExtractorTrack *extractorTrack = m_extractorThreadIds[threadId];
-        //if (!extractorTrack)
-            //return OMAF_ERROR_NULL_PTR;
 
         for (itExtractorTrack = extractorTracks->begin();
             itExtractorTrack != extractorTracks->end(); itExtractorTrack++)

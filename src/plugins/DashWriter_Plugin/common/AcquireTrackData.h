@@ -35,22 +35,24 @@
 
 #include "Frame.h"
 #include "FrameWrapper.h"
-#include "../include/Index.h"
+#include "../../../isolib/include/Index.h"
 #include "Fraction.h"
-#include "../atoms/DecPts.h"
 
 using namespace std;
 
 VCD_MP4_BEGIN
 
 using PTSTime      = FractS64;
-using SamplePTS    = std::map<PTSTime, DecodePts::SampleIndex>;
 
 class TrackAtom;
 
 class BoxBlockAccess;
 
-typedef Index<uint32_t, struct TrackIdTag> TrackId;
+class TrackIdTag
+{
+};
+
+typedef Index<uint32_t, TrackIdTag> TrackId;
 
 class AcquireTrackData;
 

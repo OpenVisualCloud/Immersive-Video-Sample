@@ -43,8 +43,8 @@ VCD_MP4_BEGIN
 class GetDataOfFrame
 {
 public:
-    GetDataOfFrame();
-    virtual ~GetDataOfFrame();
+    GetDataOfFrame() {};
+    virtual ~GetDataOfFrame() {};
 
     GetDataOfFrame(const GetDataOfFrame& other) = delete;
     GetDataOfFrame& operator=(const GetDataOfFrame&) = delete;

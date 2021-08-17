@@ -43,7 +43,7 @@
 #include "ProjRelatedAtom.h"
 #include "TrackHeaderAtom.h"
 
-#include "SegmentWriter.h"
+#include "MediaData.h"
 
 using namespace std;
 
@@ -57,6 +57,7 @@ struct FileTypeBoxWrapper
     {
     }
 };
+
 
 struct MovieBoxWrapper
 {

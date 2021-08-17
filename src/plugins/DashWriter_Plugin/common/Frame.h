@@ -40,7 +40,7 @@
 #include <list>
 #include <vector>
 
-#include "../include/Common.h"
+#include "../../../isolib/include/Common.h"
 #include "DataItem.h"
 #include "Fraction.h"
 

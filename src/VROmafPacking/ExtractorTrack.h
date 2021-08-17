@@ -40,6 +40,7 @@
 #include "MediaStream.h"
 #include "RegionWisePackingGenerator.h"
 #include "../utils/OmafStructure.h"
+#include "MediaData.h"
 
 #include <list>
 #include <map>
@@ -57,41 +58,6 @@ struct NaluHeader
     uint8_t naluType;
     uint8_t nuhLayerId;
     uint8_t nuhTemporalIdPlus1;
-};
-
-//!
-//! \struct: SampleConstructor
-//! \brief:  define the sample data related information of
-//!          tile for extractor
-//!
-struct SampleConstructor
-{
-    uint8_t  streamIdx;
-    uint8_t  trackRefIndex;
-    int8_t   sampleOffset;
-    uint32_t dataOffset;
-    uint32_t dataLength;
-};
-
-//!
-//! \struct: InlineConstructor
-//! \brief:  define new constructed information for tile
-//!          for extractor, like new slice header
-//!
-struct InlineConstructor
-{
-    uint8_t length;
-    uint8_t *inlineData; //new "sliceHeader" for the tile
-};
-
-//!
-//! \struct: Extractor
-//! \brief:  define the extractor
-//!
-struct Extractor
-{
-    std::list<SampleConstructor*> sampleConstructor;
-    std::list<InlineConstructor*> inlineConstructor;
 };
 
 //!
@@ -176,7 +142,7 @@ public:
     //! \return std::map<uint8_t, Extractor*>*
     //!         the pointer to extractors map
     //!
-    std::map<uint8_t, Extractor*>* GetAllExtractors() { return &m_extractors; };
+    std::map<uint8_t, VCD::MP4::Extractor*>* GetAllExtractors() { return &m_extractors; };
 
     //!
     //! \brief  Get projection type of the video frame
@@ -347,7 +313,7 @@ private:
     VCD::OMAF::ProjectionFormat     m_projType;          //!< projection type of the video frame
     RegionWisePacking               *m_dstRwpk;          //!< pointer to the region wise packing information of extractor track
     ContentCoverage                 *m_dstCovi;          //!< pointer to the content coverage information of extractor track
-    std::map<uint8_t, Extractor*>   m_extractors;        //!< map of all extractors belong to the extractor track
+    std::map<uint8_t, VCD::MP4::Extractor*>   m_extractors;        //!< map of all extractors belong to the extractor track
 
     TilesMergeDirectionInCol        *m_tilesMergeDir;    //!< pointer to the tiles merging direction information
     Nalu                            *m_vps;              //!< pointer to the extractor track VPS nalu information

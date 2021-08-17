@@ -33,6 +33,7 @@
 
 #include "gtest/gtest.h"
 #include "../OmafPackage.h"
+#include "DashWriterPluginAPI.h"
 
 VCD_USE_VRVIDEO;
 
@@ -135,6 +136,9 @@ public:
         m_initInfo->packingPluginName = "HighResPlusFullLowResPacking";
         m_initInfo->videoProcessPluginPath = "/usr/local/lib";
         m_initInfo->videoProcessPluginName = "HevcVideoStreamProcess";
+        m_initInfo->cmafEnabled = false;
+        m_initInfo->segWriterPluginPath = "/usr/local/lib";
+        m_initInfo->segWriterPluginName = "SegmentWriter";
         m_initInfo->bsBuffers = new BSBuffer[2];
         if (!m_initInfo->bsBuffers)
         {

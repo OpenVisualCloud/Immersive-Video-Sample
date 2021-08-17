@@ -212,25 +212,25 @@ ExtractorTrack::~ExtractorTrack()
         m_tilesMergeDir = NULL;
     }
 
-    std::map<uint8_t, Extractor*>::iterator it;
+    std::map<uint8_t, VCD::MP4::Extractor*>::iterator it;
     for (it = m_extractors.begin(); it != m_extractors.end();)
     {
         if (it->second)
         {
-            Extractor *extractor = it->second;
-            std::list<SampleConstructor*>::iterator it1;
+            VCD::MP4::Extractor *extractor = it->second;
+            std::list<VCD::MP4::SampleConstructor*>::iterator it1;
             for (it1 = extractor->sampleConstructor.begin();
                 it1 != extractor->sampleConstructor.end();)
             {
-                SampleConstructor *sampleCtor = *it1;
+                VCD::MP4::SampleConstructor *sampleCtor = *it1;
                 DELETE_MEMORY(sampleCtor);
                 it1 = extractor->sampleConstructor.erase(it1);
             }
-            std::list<InlineConstructor*>::iterator it2;
+            std::list<VCD::MP4::InlineConstructor*>::iterator it2;
             for (it2 = extractor->inlineConstructor.begin();
                 it2 != extractor->inlineConstructor.end();)
             {
-                InlineConstructor *inlineCtor = *it2;
+                VCD::MP4::InlineConstructor *inlineCtor = *it2;
                 DELETE_ARRAY(inlineCtor->inlineData);
                 DELETE_MEMORY(inlineCtor);
                 it2 = extractor->inlineConstructor.erase(it2);
@@ -319,7 +319,7 @@ int32_t ExtractorTrack::GenerateExtractors()
         std::list<SingleTile*>::iterator itTile;
         for (itTile = tileCol->begin(); itTile != tileCol->end(); itTile++)
         {
-            Extractor *extractor = new Extractor;
+            VCD::MP4::Extractor *extractor = new VCD::MP4::Extractor;
             if (!extractor)
                 return OMAF_ERROR_NULL_PTR;
 
@@ -340,14 +340,14 @@ int32_t ExtractorTrack::GenerateExtractors()
             TileInfo *allTiles = video->GetAllTilesInfo();
             TileInfo *tileInfo = &(allTiles[origTileIdx]);
 
-            InlineConstructor *inlineCtor = new InlineConstructor;
+            VCD::MP4::InlineConstructor *inlineCtor = new VCD::MP4::InlineConstructor;
             if (!inlineCtor)
             {
                 DELETE_MEMORY(extractor);
                 return OMAF_ERROR_NULL_PTR;
             }
 
-            memset_s(inlineCtor, sizeof(InlineConstructor), 0);
+            memset_s(inlineCtor, sizeof(VCD::MP4::InlineConstructor), 0);
 
             inlineCtor->inlineData = new uint8_t[256];
             if (!inlineCtor->inlineData)
@@ -414,7 +414,7 @@ int32_t ExtractorTrack::GenerateExtractors()
 
             extractor->inlineConstructor.push_back(inlineCtor);
 
-            SampleConstructor *sampleCtor = new SampleConstructor;
+            VCD::MP4::SampleConstructor *sampleCtor = new VCD::MP4::SampleConstructor;
             if (!sampleCtor)
             {
                 DELETE_MEMORY(extractor);
@@ -445,16 +445,16 @@ int32_t ExtractorTrack::GenerateExtractors()
 
 int32_t ExtractorTrack::DestroyExtractors()
 {
-    std::map<uint8_t, Extractor*>::iterator itExtractor;
+    std::map<uint8_t, VCD::MP4::Extractor*>::iterator itExtractor;
     for (itExtractor = m_extractors.begin(); itExtractor != m_extractors.end();)
     {
-        Extractor *extractor = itExtractor->second;
+        VCD::MP4::Extractor *extractor = itExtractor->second;
 
-        std::list<InlineConstructor*>::iterator itInlineCtor;
+        std::list<VCD::MP4::InlineConstructor*>::iterator itInlineCtor;
         for (itInlineCtor = extractor->inlineConstructor.begin();
             itInlineCtor != extractor->inlineConstructor.end(); )
         {
-            InlineConstructor *inlineCtor = *itInlineCtor;
+            VCD::MP4::InlineConstructor *inlineCtor = *itInlineCtor;
             inlineCtor->length = 0;
             DELETE_ARRAY(inlineCtor->inlineData);
             DELETE_MEMORY(inlineCtor);
@@ -462,11 +462,11 @@ int32_t ExtractorTrack::DestroyExtractors()
         }
         extractor->inlineConstructor.clear();
 
-        std::list<SampleConstructor*>::iterator itSmpCtor;
+        std::list<VCD::MP4::SampleConstructor*>::iterator itSmpCtor;
         for (itSmpCtor = extractor->sampleConstructor.begin();
             itSmpCtor != extractor->sampleConstructor.end(); )
         {
-            SampleConstructor *sampleCtor = *itSmpCtor;
+            VCD::MP4::SampleConstructor *sampleCtor = *itSmpCtor;
             DELETE_MEMORY(sampleCtor);
             extractor->sampleConstructor.erase(itSmpCtor++);
         }
@@ -508,7 +508,7 @@ int32_t ExtractorTrack::UpdateExtractors()
     if (m_extractors.size() == 0)
         return OMAF_ERROR_INVALID_DATA;
 
-    std::map<uint8_t, Extractor*>::iterator itExtractor;
+    std::map<uint8_t, VCD::MP4::Extractor*>::iterator itExtractor;
     std::list<TilesInCol*>::iterator itCol;
     uint16_t tileIdx = 0;
     for (itCol = m_tilesMergeDir->tilesArrangeInCol.begin();
@@ -522,7 +522,7 @@ int32_t ExtractorTrack::UpdateExtractors()
             if (itExtractor == m_extractors.end())
                 return OMAF_ERROR_EXTRACTOR_NOT_FOUND;
 
-            Extractor *extractor = itExtractor->second;
+            VCD::MP4::Extractor *extractor = itExtractor->second;
             if (!extractor)
                 return OMAF_ERROR_NULL_PTR;
 
@@ -540,7 +540,7 @@ int32_t ExtractorTrack::UpdateExtractors()
             TileInfo *allTiles = video->GetAllTilesInfo();
             TileInfo *tileInfo = &(allTiles[origTileIdx]);
 
-            InlineConstructor *inlineCtor = extractor->inlineConstructor.front();
+            VCD::MP4::InlineConstructor *inlineCtor = extractor->inlineConstructor.front();
             if (!inlineCtor)
                 return OMAF_ERROR_NULL_PTR;
 
@@ -580,7 +580,7 @@ int32_t ExtractorTrack::UpdateExtractors()
 
             memset_s(inlineCtor->inlineData, DASH_SAMPLELENFIELD_SIZE, 0xff);
 
-            SampleConstructor *sampleCtor = extractor->sampleConstructor.front();
+            VCD::MP4::SampleConstructor *sampleCtor = extractor->sampleConstructor.front();
             if (!sampleCtor)
             {
                 DELETE_ARRAY(tempData);
