@@ -1,0 +1,153 @@
+diff -Nur a/decklink_common.cpp b/decklink_common.cpp
+--- a/decklink_common.cpp	2021-09-13 11:02:16.962667659 +0800
++++ b/decklink_common.cpp	2021-09-13 10:39:05.192778489 +0800
+@@ -196,6 +196,57 @@
+     return 0;
+ }
+
++int ff_decklink_set_format2(AVFormatContext *avctx,
++                                int width, int height,
++                                int tb_num, int tb_den,
++                                enum AVFieldOrder field_order,
++                                decklink_direction_t direction)
++{
++    struct decklink_cctx *cctx = (struct decklink_cctx *)avctx->priv_data;
++    struct decklink_ctx *ctx = (struct decklink_ctx *)cctx->ctx;
++    IDeckLinkDisplayMode *displaymode;
++    bool support = false;
++    HRESULT res;
++
++    char format_buf[] = "    ";
++    if (cctx->format_code)
++        memcpy(format_buf, cctx->format_code, FFMIN(strlen(cctx->format_code), sizeof(format_buf)));
++    AVRational target_tb = av_make_q(tb_num, tb_den);
++    ctx->bmd_mode = bmdMode8K4320p30;
++    res = ctx->dli->GetDisplayMode(ctx->bmd_mode, &displaymode);
++    if (res != S_OK)
++        return -1;
++    BMDTimeValue bmd_tb_num, bmd_tb_den;
++    int bmd_width  = displaymode->GetWidth();
++    int bmd_height = displaymode->GetHeight();
++    BMDDisplayMode bmd_mode = displaymode->GetDisplayMode();
++    BMDFieldDominance bmd_field_dominance = displaymode->GetFieldDominance();
++
++    displaymode->GetFrameRate(&bmd_tb_num, &bmd_tb_den);
++    AVRational mode_tb = av_make_q(bmd_tb_num, bmd_tb_den);
++
++    ctx->bmd_mode   = bmd_mode;
++    ctx->bmd_width  = bmd_width;
++    ctx->bmd_height = bmd_height;
++    ctx->bmd_tb_den = bmd_tb_den;
++    ctx->bmd_tb_num = bmd_tb_num;
++    ctx->bmd_field_dominance = bmd_field_dominance;
++
++    if (ctx->dli->DoesSupportVideoMode(ctx->video_input, ctx->bmd_mode, (BMDPixelFormat) cctx->raw_format,
++                                       bmdNoVideoInputConversion, bmdSupportedVideoModeDefault,
++                                       NULL, &support) != S_OK || !support)
++        return -1;
++    av_log(avctx, AV_LOG_INFO, "Found Decklink mode %d x %d with rate %.2f%s\n",
++        bmd_width, bmd_height, 1/av_q2d(mode_tb),
++        (ctx->bmd_field_dominance==bmdLowerFieldFirst || ctx->bmd_field_dominance==bmdUpperFieldFirst)?"(i)":"");
++
++    return 0;
++}
++
++int ff_decklink_set_format2(AVFormatContext *avctx, decklink_direction_t direction) {
++    return ff_decklink_set_format2(avctx, 0, 0, 0, 0, AV_FIELD_UNKNOWN, direction);
++}
++
+ int ff_decklink_set_format(AVFormatContext *avctx,
+                                int width, int height,
+                                int tb_num, int tb_den,
+diff -Nur a/decklink_common.h b/decklink_common.h
+--- a/decklink_common.h	2021-09-13 11:02:16.962667659 +0800
++++ b/decklink_common.h	2021-09-13 11:04:13.712658362 +0800
+@@ -198,6 +198,8 @@
+ int ff_decklink_set_configs(AVFormatContext *avctx, decklink_direction_t direction);
+ int ff_decklink_set_format(AVFormatContext *avctx, int width, int height, int tb_num, int tb_den, enum AVFieldOrder field_order, decklink_direction_t direction = DIRECTION_OUT);
+ int ff_decklink_set_format(AVFormatContext *avctx, decklink_direction_t direction);
++int ff_decklink_set_format2(AVFormatContext *avctx, int width, int height, int tb_num, int tb_den, enum AVFieldOrder field_order, decklink_direction_t direction = DIRECTION_OUT);
++int ff_decklink_set_format2(AVFormatContext *avctx, decklink_direction_t direction);
+ int ff_decklink_list_devices(AVFormatContext *avctx, struct AVDeviceInfoList *device_list, int show_inputs, int show_outputs);
+ void ff_decklink_list_devices_legacy(AVFormatContext *avctx, int show_inputs, int show_outputs);
+ int ff_decklink_list_formats(AVFormatContext *avctx, decklink_direction_t direction = DIRECTION_OUT);
+diff -Nur a/decklink_dec.cpp b/decklink_dec.cpp
+--- a/decklink_dec.cpp	2021-09-13 11:02:16.962667659 +0800
++++ b/decklink_dec.cpp	2021-09-13 11:04:50.818655407 +0800
+@@ -823,7 +823,6 @@
+
+             if (videoFrame->GetAncillaryData(&vanc) == S_OK) {
+                 int i;
+-                int64_t line_mask = 1;
+                 BMDPixelFormat vanc_format = vanc->GetPixelFormat();
+                 txt_buf[0] = 0x10;    // data_identifier - EBU_data
+                 txt_buf++;
+@@ -924,8 +923,36 @@
+     BMDVideoInputFormatChangedEvents events, IDeckLinkDisplayMode *mode,
+     BMDDetectedVideoInputFormatFlags)
+ {
+-    ctx->bmd_mode = mode->GetDisplayMode();
+-    return S_OK;
++	HRESULT	result;
++	char*	displayModeName = NULL;
++	BMDPixelFormat	pixelFormat = bmdFormat8BitYUV;
++
++	// Restart streams if either display mode or pixel format have changed
++	if (events & bmdVideoInputDisplayModeChanged)
++	{
++		mode->GetName((const char**)&displayModeName);
++		printf("Video format changed to %s \n", displayModeName);
++
++		if (displayModeName)
++			free(displayModeName);
++
++		if (ctx->dli)
++		{
++			ctx->dli->StopStreams();
++
++			result = ctx->dli->EnableVideoInput(mode->GetDisplayMode(), pixelFormat, bmdVideoInputFlagDefault);
++			if (result != S_OK)
++			{
++				fprintf(stderr, "Failed to switch video mode\n");
++				goto bail;
++			}
++
++			ctx->dli->StartStreams();
++		}
++	}
++
++bail:
++	return S_OK;
+ }
+
+ static int decklink_autodetect(struct decklink_cctx *cctx) {
+@@ -1067,12 +1094,6 @@
+         goto error;
+     }
+
+-    if (ff_decklink_set_configs(avctx, DIRECTION_IN) < 0) {
+-        av_log(avctx, AV_LOG_ERROR, "Could not set input configuration\n");
+-        ret = AVERROR(EIO);
+-        goto error;
+-    }
+-
+     /* List supported formats. */
+     if (ctx->list_formats) {
+         ff_decklink_list_formats(avctx, DIRECTION_IN);
+@@ -1096,15 +1117,7 @@
+         goto error;
+     }
+
+-    if (!cctx->format_code) {
+-        if (decklink_autodetect(cctx) < 0) {
+-            av_log(avctx, AV_LOG_ERROR, "Cannot Autodetect input stream or No signal\n");
+-            ret = AVERROR(EIO);
+-            goto error;
+-        }
+-        av_log(avctx, AV_LOG_INFO, "Autodetected the input mode\n");
+-    }
+-    if (ff_decklink_set_format(avctx, DIRECTION_IN) < 0) {
++    if (ff_decklink_set_format2(avctx, DIRECTION_IN) < 0) {
+         av_log(avctx, AV_LOG_ERROR, "Could not set format code %s for %s\n",
+             cctx->format_code ? cctx->format_code : "(unset)", avctx->url);
+         ret = AVERROR(EIO);
