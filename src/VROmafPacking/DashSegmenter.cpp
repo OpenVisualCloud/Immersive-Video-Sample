@@ -154,25 +154,48 @@ int32_t DashSegmenter::SegmentOneTrack(Nalu *dataNalu, VCD::MP4::CodedMeta coded
 
 int32_t DashSegmenter::WriteSegment(char *baseName)
 {
-    std::ostringstream frameStream;
-    //std::unique_ptr<std::ostringstream> sidxStream;
-
-    m_segWriter->WriteSegments(frameStream, &(m_segNum), m_segName, baseName);
-
-    std::string frameString(frameStream.str());
-
-    if (frameString.size())
+    if (!m_config.cmafEnabled)
     {
-        m_file = fopen(m_segName, "wb+");
-        if (!m_file)
-            return OMAF_ERROR_NULL_PTR;
+        std::ostringstream frameStream;
 
-        m_segSize = frameString.size();
-        fwrite(frameString.c_str(), 1, frameString.size(), m_file);
+        m_segWriter->WriteSegments(frameStream, &(m_segNum), m_segName, baseName, NULL);
 
-        fclose(m_file);
-        m_file = NULL;
+        std::string frameString(frameStream.str());
+
+        if (frameString.size())
+        {
+            m_file = fopen(m_segName, "wb+");
+            if (!m_file)
+                return OMAF_ERROR_NULL_PTR;
+
+            m_segSize = frameString.size();
+            fwrite(frameString.c_str(), 1, frameString.size(), m_file);
+
+            fclose(m_file);
+            m_file = NULL;
+        }
     }
+    else
+    {
+        uint64_t subSegNumInSeg = (uint64_t)(m_config.subsgtDuration.get().m_den / m_config.subsgtDuration.get().m_num);
+
+        m_segWriter->WriteSegments(m_frameStream, &(m_segNum), m_segName, baseName, &m_segSize);
+
+        if (m_segSize > m_prevSegSize)
+        {
+            m_subSegNum++;
+            m_prevSegSize = m_segSize;
+        }
+
+        if (m_subSegNum == subSegNumInSeg)
+        {
+            m_frameStream.str("");
+            m_subSegNum = 0;
+            m_prevSegSize = 0;
+            m_segSize = 0;
+        }
+    }
+
     return ERROR_NONE;
 }
 

@@ -327,7 +327,19 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
 
                 //set GeneralSegConfig
                 trackSegCtxs[i].dashCfg.sgtDuration = VCD::MP4::FractU64(m_videoSegInfo->segDur, 1); //?
-                trackSegCtxs[i].dashCfg.subsgtDuration = trackSegCtxs[i].dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
+                if (!m_isCMAFEnabled)
+                {
+                    trackSegCtxs[i].dashCfg.subsgtDuration = trackSegCtxs[i].dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
+                }
+                else
+                {
+                    trackSegCtxs[i].dashCfg.subsgtDuration = VCD::MP4::FractU64(m_segInfo->chunkDuration, m_segInfo->segDuration * 1000) / VCD::MP4::FrameDuration{ 1, 1};
+                    if (i == 0)
+                    {
+                        uint64_t subSegNumInSeg = (uint64_t)(trackSegCtxs[i].dashCfg.subsgtDuration.get().m_den / trackSegCtxs[i].dashCfg.subsgtDuration.get().m_num);
+                        OMAF_LOG(LOG_INFO, "One CMAF segment contains %ld chunks ! \n", subSegNumInSeg);
+                    }
+                }
                 trackSegCtxs[i].dashCfg.needCheckIDR = true;
 
                 VCD::MP4::TrackMeta trackMeta{};
@@ -339,6 +351,7 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                 trackSegCtxs[i].dashCfg.useSeparatedSidx = false;
                 trackSegCtxs[i].dashCfg.streamsIdx.push_back(it->first);
                 snprintf(trackSegCtxs[i].dashCfg.trackSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, m_trackIdStarter + i);
+                trackSegCtxs[i].dashCfg.cmafEnabled = m_isCMAFEnabled;
 
                 //setup VCD::MP4::SegmentWriterBase
                 int32_t ret = ERROR_NONE;
@@ -393,7 +406,7 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                 trackSegCtxs[i].codedMeta.presIndex = 0;
                 trackSegCtxs[i].codedMeta.codingIndex = 0;
                 trackSegCtxs[i].codedMeta.codingTime = VCD::MP4::FrameTime{ 0, 1 };
-                trackSegCtxs[i].codedMeta.presTime = VCD::MP4::FrameTime{ 0, 1000 };
+                trackSegCtxs[i].codedMeta.presTime = VCD::MP4::FrameTime{(int64_t) (frameRate.den * 1000), (int64_t)(frameRate.num * 1000) };
                 trackSegCtxs[i].codedMeta.duration = VCD::MP4::FrameDuration{ frameRate.den * 1000, frameRate.num * 1000};
                 trackSegCtxs[i].codedMeta.trackId = trackSegCtxs[i].trackIdx;
                 trackSegCtxs[i].codedMeta.inCodingOrder = true;
@@ -585,7 +598,14 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
 
             //set up GeneralSegConfig
             trackSegCtx->dashCfg.sgtDuration = VCD::MP4::FractU64(m_videoSegInfo->segDur, 1); //?
-            trackSegCtx->dashCfg.subsgtDuration = trackSegCtx->dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
+            if (!m_isCMAFEnabled)
+            {
+                trackSegCtx->dashCfg.subsgtDuration = trackSegCtx->dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
+            }
+            else
+            {
+                trackSegCtx->dashCfg.subsgtDuration = VCD::MP4::FractU64(m_segInfo->chunkDuration, m_segInfo->segDuration * 1000) / VCD::MP4::FrameDuration{ 1, 1};
+            }
             trackSegCtx->dashCfg.needCheckIDR = true;
 
             VCD::MP4::TrackMeta trackMeta{};
@@ -597,6 +617,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             trackSegCtx->dashCfg.useSeparatedSidx = false;
             trackSegCtx->dashCfg.streamsIdx.push_back(trackSegCtx->trackIdx.GetIndex());
             snprintf(trackSegCtx->dashCfg.trackSegBaseName, 1024, "%s%s_track%d", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
+            trackSegCtx->dashCfg.cmafEnabled = m_isCMAFEnabled;
 
             //setup VCD::MP4::SegmentWriterBase
             int32_t ret = ERROR_NONE;
@@ -635,7 +656,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             trackSegCtx->codedMeta.presIndex = 0;
             trackSegCtx->codedMeta.codingIndex = 0;
             trackSegCtx->codedMeta.codingTime = VCD::MP4::FrameTime{ 0, 1 };
-            trackSegCtx->codedMeta.presTime = VCD::MP4::FrameTime{ 0, 1000 };
+            trackSegCtx->codedMeta.presTime = VCD::MP4::FrameTime{ (int64_t)(m_frameRate.den * 1000), (int64_t)(m_frameRate.num * 1000) };
             trackSegCtx->codedMeta.duration = VCD::MP4::FrameDuration{ m_frameRate.den * 1000, m_frameRate.num * 1000};
             trackSegCtx->codedMeta.trackId = trackSegCtx->trackIdx;
             trackSegCtx->codedMeta.inCodingOrder = true;
@@ -732,7 +753,14 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
 
             //set GeneralSegConfig
             trackSegCtx->dashCfg.sgtDuration = VCD::MP4::FractU64(m_segInfo->segDuration, 1); //?
-            trackSegCtx->dashCfg.subsgtDuration = trackSegCtx->dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
+            if (!m_isCMAFEnabled)
+            {
+                trackSegCtx->dashCfg.subsgtDuration = trackSegCtx->dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
+            }
+            else
+            {
+                trackSegCtx->dashCfg.subsgtDuration = VCD::MP4::FractU64(m_segInfo->chunkDuration, m_segInfo->segDuration * 1000) / VCD::MP4::FrameDuration{ 1, 1};
+            }
             trackSegCtx->dashCfg.needCheckIDR = true;
 
             VCD::MP4::TrackMeta trackMeta{};
@@ -744,6 +772,7 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
             trackSegCtx->dashCfg.useSeparatedSidx = false;
             trackSegCtx->dashCfg.streamsIdx.push_back(strId);
             snprintf(trackSegCtx->dashCfg.trackSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, (DEFAULT_AUDIOTRACK_TRACKIDBASE + (uint64_t)audioId));
+            trackSegCtx->dashCfg.cmafEnabled = m_isCMAFEnabled;
 
             //setup VCD::MP4::SegmentWriterBase
             int32_t ret = ERROR_NONE;
@@ -884,8 +913,9 @@ int32_t DefaultSegmentation::WriteSegmentForEachVideo(MediaStream *stream, bool 
 
         trackSegCtxs[tileIdx].codedMeta.presIndex++;
         trackSegCtxs[tileIdx].codedMeta.codingIndex++;
-        trackSegCtxs[tileIdx].codedMeta.presTime.m_num += 1000 / (m_frameRate.num / m_frameRate.den);
-        trackSegCtxs[tileIdx].codedMeta.presTime.m_den = 1000;
+        trackSegCtxs[tileIdx].codedMeta.presTime.m_num += 1000;// / (m_frameRate.num / m_frameRate.den);
+        //trackSegCtxs[tileIdx].codedMeta.presTime.m_den = 1000;
+        //cout << "presTime  " << trackSegCtxs[tileIdx].codedMeta.presTime.m_num << endl;
 
         m_segNum = dashSegmenter->GetSegmentsNum();
 
@@ -999,8 +1029,8 @@ int32_t DefaultSegmentation::WriteSegmentForEachExtractorTrack(
 
     trackSegCtx->codedMeta.presIndex++;
     trackSegCtx->codedMeta.codingIndex++;
-    trackSegCtx->codedMeta.presTime.m_num += 1000 / (m_frameRate.num / m_frameRate.den);
-    trackSegCtx->codedMeta.presTime.m_den = 1000;
+    trackSegCtx->codedMeta.presTime.m_num += 1000;// / (m_frameRate.num / m_frameRate.den);
+    //trackSegCtx->codedMeta.presTime.m_den = 1000;
 
 #ifdef _USE_TRACE_
     uint64_t currSegNum = dashSegmenter->GetSegmentsNum();
@@ -1326,7 +1356,8 @@ int32_t DefaultSegmentation::VideoSegmentation()
                         m_segInfo,
                         m_projType,
                         m_frameRate,
-                        m_videosNum);
+                        m_videosNum,
+                        m_isCMAFEnabled);
             if (!m_mpdGen)
                 return OMAF_ERROR_NULL_PTR;
 
@@ -1346,7 +1377,8 @@ int32_t DefaultSegmentation::VideoSegmentation()
                         m_segInfo,
                         m_projType,
                         m_frameRate,
-                        m_videosNum);
+                        m_videosNum,
+                        m_isCMAFEnabled);
         if (!m_mpdGen)
             return OMAF_ERROR_NULL_PTR;
 
@@ -1666,6 +1698,11 @@ int32_t DefaultSegmentation::VideoSegmentation()
             uint64_t before = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
             OMAF_LOG(LOG_INFO, "Complete one seg for video in %lld ms\n", (before - currentT));
             currentT = before;
+            if (m_isCMAFEnabled && m_segInfo->isLive)
+            {
+                m_mpdGen->UpdateMpd(m_segNum, m_framesNum);
+            }
+
         }
 
         if (m_segInfo->isLive)
@@ -1810,7 +1847,8 @@ int32_t DefaultSegmentation::AudioSegmentation()
                         m_segInfo,
                         m_projType,
                         m_frameRate,
-                        0);
+                        0,
+                        m_isCMAFEnabled);
         if (!m_mpdGen)
             return OMAF_ERROR_NULL_PTR;
 

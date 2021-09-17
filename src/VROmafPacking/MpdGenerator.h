@@ -82,7 +82,8 @@ public:
         SegmentationInfo *segInfo,
         VCD::OMAF::ProjectionFormat projType,
         Rational frameRate,
-        uint8_t  videoNum);
+        uint8_t  videoNum,
+        bool cmafEnabled);
 
     MpdGenerator(const MpdGenerator& src);
 
@@ -188,6 +189,7 @@ private:
     uint16_t                                    m_timeScale;           //!< timescale of video stream
     XMLDocument                                 *m_xmlDoc;             //!< XML doc element for writting mpd file created using tinyxml2
     uint8_t                                     m_vsNum;
+    bool                                        m_cmafEnabled;
 };
 
 VCD_NS_END;

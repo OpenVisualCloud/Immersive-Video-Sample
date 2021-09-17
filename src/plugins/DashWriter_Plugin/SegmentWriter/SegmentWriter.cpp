@@ -333,7 +333,7 @@ void WriteSampleData(ostream& outStr, const Segment& oneSeg)
     outStr.seekp(afterMdat);
 }
 
-void WriteInitSegment(ostream& outStr, const InitialSegment& initSegment)
+void WriteInitSegment(ostringstream& outStr, const InitialSegment& initSegment)
 {
     Stream stream;
     initSegment.ftyp->fileTypeBox->ToStream(stream);
@@ -1762,7 +1762,7 @@ void SegmentWriter::SetWriteSegmentHeader(bool toWriteHdr)
     m_needWriteSegmentHeader = toWriteHdr;
 }
 
-void SegmentWriter::WriteInitSegment(ostream& outStr, const bool isFraged)
+void SegmentWriter::WriteInitSegment(ostringstream& outStr, const bool isFraged)
 {
     InitialSegment initSeg = MakeInitSegment(isFraged);
     Stream stream;
@@ -1800,7 +1800,8 @@ void SegmentWriter::WriteSubSegments(ostream& outStr, const list<Segment> subSeg
 void SegmentWriter::WriteSegments(std::ostringstream &frameString,
     uint64_t *segNum,
     char segName[1024],
-    char *baseName)
+    char *baseName,
+    uint64_t *segSize)
 {
     std::list<SegmentList> segments = ExtractSubSegments();
     if (segments.size())

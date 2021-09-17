@@ -200,6 +200,7 @@ private:
     pthread_t                       m_videoThreadId;           //!< thread index of video segmentation thread
     bool                            m_hasAudio;
     pthread_t                       m_audioThreadId;           //!< thread index of audio segmentation thread
+    bool                            m_hasChunkDurCorrected;    //!< whether CMAF chunk duration has been corrected
 };
 
 VCD_NS_END;

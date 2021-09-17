@@ -620,6 +620,7 @@ struct SegmentWriterCfg
     FractU64 segmentDuration;
     DataItem<FractU64> subsegmentDuration;
     size_t skipSubsegments = 0;
+    bool   useSeparatedSidx = false;
 };
 
 struct SidxInfo

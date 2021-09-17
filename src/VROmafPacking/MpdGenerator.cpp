@@ -55,6 +55,7 @@ MpdGenerator::MpdGenerator()
     m_frameRate.num = 0;
     m_frameRate.den = 0;
     m_vsNum = 0;
+    m_cmafEnabled = false;
 }
 
 MpdGenerator::MpdGenerator(
@@ -63,7 +64,8 @@ MpdGenerator::MpdGenerator(
     SegmentationInfo *segInfo,
     VCD::OMAF::ProjectionFormat projType,
     Rational frameRate,
-    uint8_t  videoNum)
+    uint8_t  videoNum,
+    bool     cmafEnabled)
 {
     m_streamSegCtx = streamsSegCtxs;
     m_extractorSegCtx = extractorSegCtxs;
@@ -77,6 +79,7 @@ MpdGenerator::MpdGenerator(
     m_timeScale = 0;
     m_xmlDoc = NULL;
     m_vsNum = videoNum;
+    m_cmafEnabled = cmafEnabled;
 }
 
 MpdGenerator::MpdGenerator(const MpdGenerator& src)
@@ -94,6 +97,7 @@ MpdGenerator::MpdGenerator(const MpdGenerator& src)
     m_frameRate.num = src.m_frameRate.num;
     m_frameRate.den = src.m_frameRate.den;
     m_vsNum         = src.m_vsNum;
+    m_cmafEnabled   = src.m_cmafEnabled;
 }
 
 MpdGenerator& MpdGenerator::operator=(MpdGenerator&& other)
@@ -111,6 +115,7 @@ MpdGenerator& MpdGenerator::operator=(MpdGenerator&& other)
     m_frameRate.num = other.m_frameRate.num;
     m_frameRate.den = other.m_frameRate.den;
     m_vsNum         = other.m_vsNum;
+    m_cmafEnabled   = other.m_cmafEnabled;
 
     return *this;
 }
@@ -225,6 +230,43 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
     essentialEle1->SetAttribute(OMAF_PACKINGTYPE, 0);
     asEle->InsertEndChild(essentialEle1);
 
+    if (m_cmafEnabled && m_segInfo->isLive)
+    {
+        XMLElement *prftEle = m_xmlDoc->NewElement(PRODUCERREFERENCETIME);
+        prftEle->SetAttribute(INDEX, "0");
+        prftEle->SetAttribute(INBAND, "true");
+        prftEle->SetAttribute(TIMETYPE, "encoder");
+
+        uint32_t sec;
+        time_t gTime;
+        struct tm *t;
+        struct timeval now;
+        struct timeb timeBuffer;
+        ftime(&timeBuffer);
+        now.tv_sec = (long)(timeBuffer.time);
+        now.tv_usec = timeBuffer.millitm * 1000;
+        sec = (uint32_t)(now.tv_sec) + NTP_SEC_1900_TO_1970;
+
+        gTime = sec - NTP_SEC_1900_TO_1970;
+        t = gmtime(&gTime);
+        if (!t)
+            return OMAF_ERROR_INVALID_TIME;
+
+        char currTime[1024];
+        memset_s(currTime, 1024, 0);
+        snprintf(currTime, 1024, "%d-%d-%dT%d:%d:%dZ", 1900 + t->tm_year,
+                t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+
+        prftEle->SetAttribute(WALLCLOCKTIME, currTime);
+        prftEle->SetAttribute(PRESENTATIONTIME, "0");
+        asEle->InsertEndChild(prftEle);
+
+        XMLElement *utcEle = m_xmlDoc->NewElement(UTCTIMING);
+        utcEle->SetAttribute(SCHEMEIDURI, SCHEMEIDURI_UTCTIMING);
+        utcEle->SetAttribute(COMMON_VALUE, UTCTIMING_VALUE);
+        prftEle->InsertEndChild(utcEle);
+    }
+
     XMLElement *representationEle = m_xmlDoc->NewElement(REPRESENTATION);
     memset_s(string, 1024, 0);
     snprintf(string, 1024, "%s_track%d", m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
@@ -239,6 +281,16 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
     representationEle->SetAttribute(STARTWITHSAP, 1);
     asEle->InsertEndChild(representationEle);
 
+    if (m_cmafEnabled)
+    {
+        memset_s(string, 1024, 0);
+        snprintf(string, 1024, "%ld", m_segInfo->chunkDuration);
+        XMLElement *resyncEle = m_xmlDoc->NewElement(RESYNC);
+        resyncEle->SetAttribute(RESYNCTYPE, "0");
+        resyncEle->SetAttribute(RESYNCDT, string);
+        representationEle->InsertEndChild(resyncEle);
+    }
+
     memset_s(string, 1024, 0);
     snprintf(string, 1024, "%s_track%d.$Number$.mp4", m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
     XMLElement *sgtTpeEle = m_xmlDoc->NewElement(SEGMENTTEMPLATE);
@@ -247,8 +299,26 @@ int32_t MpdGenerator::WriteTileTrackAS(XMLElement *periodEle, TrackSegmentCtx *p
     snprintf(string, 1024, "%s_track%d.init.mp4", m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
     sgtTpeEle->SetAttribute(INITIALIZATION, string);
     sgtTpeEle->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
-    sgtTpeEle->SetAttribute(STARTNUMBER, 1);
+    if (!m_cmafEnabled || !(m_segInfo->isLive))
+    {
+        sgtTpeEle->SetAttribute(STARTNUMBER, 1);
+    }
+    else
+    {
+        int32_t currSegNum = (int32_t)(trackSegCtx->dashSegmenter->GetSegmentsNum());
+        OMAF_LOG(LOG_INFO, "Write start number %d to MPD \n", currSegNum);
+        sgtTpeEle->SetAttribute(STARTNUMBER, currSegNum);
+    }
+
     sgtTpeEle->SetAttribute(TIMESCALE, m_timeScale);
+
+    if (m_cmafEnabled)
+    {
+        memset_s(string, 1024, 0);
+        snprintf(string, 1024, "%f", ((float)(m_segInfo->segDuration) / 2));
+        sgtTpeEle->SetAttribute(AVAILABILITYTIMEOFFSET, string);
+        sgtTpeEle->SetAttribute(AVAILABILITYTIMECOMPLETE, "false");
+    }
     representationEle->InsertEndChild(sgtTpeEle);
 
     return ERROR_NONE;
@@ -282,6 +352,43 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
     essentialEle->SetAttribute(SCHEMEIDURI, SCHEMEIDURI_RWPK);
     essentialEle->SetAttribute(OMAF_PACKINGTYPE, 0);
     asEle->InsertEndChild(essentialEle);
+
+    if (m_cmafEnabled && m_segInfo->isLive)
+    {
+        XMLElement *prftEle = m_xmlDoc->NewElement(PRODUCERREFERENCETIME);
+        prftEle->SetAttribute(INDEX, "0");
+        prftEle->SetAttribute(INBAND, "true");
+        prftEle->SetAttribute(TIMETYPE, "encoder");
+
+        uint32_t sec;
+        time_t gTime;
+        struct tm *t;
+        struct timeval now;
+        struct timeb timeBuffer;
+        ftime(&timeBuffer);
+        now.tv_sec = (long)(timeBuffer.time);
+        now.tv_usec = timeBuffer.millitm * 1000;
+        sec = (uint32_t)(now.tv_sec) + NTP_SEC_1900_TO_1970;
+
+        gTime = sec - NTP_SEC_1900_TO_1970;
+        t = gmtime(&gTime);
+        if (!t)
+            return OMAF_ERROR_INVALID_TIME;
+
+        char currTime[1024];
+        memset_s(currTime, 1024, 0);
+        snprintf(currTime, 1024, "%d-%d-%dT%d:%d:%dZ", 1900 + t->tm_year,
+                t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+
+        prftEle->SetAttribute(WALLCLOCKTIME, currTime);
+        prftEle->SetAttribute(PRESENTATIONTIME, "0");
+        asEle->InsertEndChild(prftEle);
+
+        XMLElement *utcEle = m_xmlDoc->NewElement(UTCTIMING);
+        utcEle->SetAttribute(SCHEMEIDURI, SCHEMEIDURI_UTCTIMING);
+        utcEle->SetAttribute(COMMON_VALUE, UTCTIMING_VALUE);
+        prftEle->InsertEndChild(utcEle);
+    }
 
     XMLElement *supplementalEle = m_xmlDoc->NewElement(SUPPLEMENTALPROPERTY);
     supplementalEle->SetAttribute(SCHEMEIDURI, SCHEMEIDURI_SRQR);
@@ -345,6 +452,16 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
     representationEle->SetAttribute(FRAMERATE, string);
     asEle->InsertEndChild(representationEle);
 
+    if (m_cmafEnabled)
+    {
+        memset_s(string, 1024, 0);
+        snprintf(string, 1024, "%ld", m_segInfo->chunkDuration);
+        XMLElement *resyncEle = m_xmlDoc->NewElement(RESYNC);
+        resyncEle->SetAttribute(RESYNCTYPE, "0");
+        resyncEle->SetAttribute(RESYNCDT, string);
+        representationEle->InsertEndChild(resyncEle);
+    }
+
     XMLElement *sgtTpeEle = m_xmlDoc->NewElement(SEGMENTTEMPLATE);
     memset_s(string, 1024, 0);
     snprintf(string, 1024, "%s_track%d.$Number$.mp4", m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
@@ -353,8 +470,23 @@ int32_t MpdGenerator::WriteExtractorTrackAS(XMLElement *periodEle, TrackSegmentC
     snprintf(string, 1024, "%s_track%d.init.mp4", m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
     sgtTpeEle->SetAttribute(INITIALIZATION, string);
     sgtTpeEle->SetAttribute(DURATION, m_segInfo->segDuration * m_timeScale);
-    sgtTpeEle->SetAttribute(STARTNUMBER, 1);
+    if (!m_cmafEnabled || !(m_segInfo->isLive))
+    {
+        sgtTpeEle->SetAttribute(STARTNUMBER, 1);
+    }
+    else
+    {
+        sgtTpeEle->SetAttribute(STARTNUMBER, (int32_t)(trackSegCtx->dashSegmenter->GetSegmentsNum()));
+    }
     sgtTpeEle->SetAttribute(TIMESCALE, m_timeScale);
+
+    if (m_cmafEnabled)
+    {
+        memset_s(string, 1024, 0);
+        snprintf(string, 1024, "%f", ((float)(m_segInfo->segDuration) / 2));
+        sgtTpeEle->SetAttribute(AVAILABILITYTIMEOFFSET, string);
+        sgtTpeEle->SetAttribute(AVAILABILITYTIMECOMPLETE, "false");
+    }
     representationEle->InsertEndChild(sgtTpeEle);
 
     return ERROR_NONE;
@@ -443,7 +575,6 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
 
     if (m_segInfo->isLive)
     {
-
         uint32_t sec;
         time_t gTime;
         struct tm *t;
@@ -465,6 +596,13 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
         memcmp_s(m_availableStartTime, 1024, forCmp, 1024, &cmpRet);
         if (0 == cmpRet)
         {
+            snprintf(m_availableStartTime, 1024, "%d-%d-%dT%d:%d:%dZ", 1900 + t->tm_year,
+                t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+        }
+
+        if ((0 != cmpRet) && m_cmafEnabled)
+        {
+            memset_s(m_availableStartTime, 1024, 0);
             snprintf(m_availableStartTime, 1024, "%d-%d-%dT%d:%d:%dZ", 1900 + t->tm_year,
                 t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
         }
@@ -533,6 +671,26 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
         XMLText *text = m_xmlDoc->NewText(m_segInfo->baseUrl);
         baseUrlEle->InsertEndChild(text);
         mpdEle->InsertEndChild(baseUrlEle);
+    }
+
+    if (m_cmafEnabled && m_segInfo->isLive)
+    {
+        XMLElement *serviceEle = m_xmlDoc->NewElement(SERVICEDESCRIPTION);
+        serviceEle->SetAttribute(INDEX, "0");
+        mpdEle->InsertEndChild(serviceEle);
+
+        XMLElement *latencyEle = m_xmlDoc->NewElement(LATENCY);
+        memset_s(string, 1024, 0);
+        snprintf(string, 1024, "%ld", m_segInfo->targetLatency);
+        latencyEle->SetAttribute(TARGETLATENCY, string);
+        memset_s(string, 1024, 0);
+        snprintf(string, 1024, "%ld", m_segInfo->minLatency);
+        latencyEle->SetAttribute(MINLATENCY, string);
+        memset_s(string, 1024, 0);
+        snprintf(string, 1024, "%ld", m_segInfo->maxLatency);
+        latencyEle->SetAttribute(MAXLATENCY, string);
+        latencyEle->SetAttribute(REFERENCEID, "0");
+        serviceEle->InsertEndChild(latencyEle);
     }
 
     XMLElement *periodEle = m_xmlDoc->NewElement(PERIOD);
