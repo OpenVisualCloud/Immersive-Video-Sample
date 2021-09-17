@@ -99,7 +99,7 @@ public:
         bool  isOMAF,
         const CodedMeta& inMetaData);
 
-    void WriteInitSegment(ostream& outStr, const bool isFraged);//const InitialSegment& initSegment);
+    void WriteInitSegment(ostringstream& outStr, const bool isFraged);
 
     void GenPackedExtractors(TrackId trackId, std::vector<uint8_t>& extractorNALUs, Extractor *extractor);
 
@@ -111,7 +111,7 @@ public:
     void SetWriteSegmentHeader(bool toWriteHdr);
 
     void WriteSegments(std::ostringstream &frameString,
-        uint64_t *segNum, char segName[1024], char *baseName);
+        uint64_t *segNum, char segName[1024], char *baseName, uint64_t *segSize);
 
 private:
     void AddTrack(TrackMeta inTrackMeta);

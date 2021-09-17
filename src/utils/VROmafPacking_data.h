@@ -133,6 +133,7 @@ typedef struct SegmentationInfo
     int32_t       extraWindowSize;
     int32_t       needBufedFrames;
     int64_t       segDuration;      //segment duration in second
+    int64_t       chunkDuration;    //chunk duration in millisecond
     uint8_t       extractorTracksPerSegThread;
     int32_t       removeAtExit;
     int32_t       useTemplate;
@@ -142,6 +143,9 @@ typedef struct SegmentationInfo
     const char    *baseUrl;
     const char    *utcTimingUrl;
     bool          isLive;
+    int64_t       targetLatency;    //needed for low latency live streaming in millisecond
+    int64_t       minLatency;       //needed for low latency live streaming in millisecond
+    int64_t       maxLatency;       //needed for low latency live streaming in millisecond to disable content presentation if latency exceeds this value
     int32_t       splitTile;
     bool          hasMainAS;
 }SegmentationInfo;

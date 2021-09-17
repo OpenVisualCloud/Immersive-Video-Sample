@@ -133,14 +133,7 @@ void TrackRunAtom::ToStream(Stream& str)
         }
         if ((GetFlags() & TrackRunFlags::pSampleCompTimeOffsets) != 0)
         {
-            if (GetVersion() == 0)
-            {
-                str.Write32(m_sampleDetails.at(i).version0.pCompTimeOffset);
-            }
-            else
-            {
-                str.Write32(static_cast<uint32_t>(m_sampleDetails.at(i).version1.pCompTimeOffset));
-            }
+            str.Write32(m_sampleDetails.at(i).version0.pCompTimeOffset);
         }
     }
     UpdateSize(str);

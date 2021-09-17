@@ -219,19 +219,14 @@ int32_t DashInitSegmenter::GenerateInitSegment(
     bool hasFirstFramesRemaining = m_firstFrameRemaining.size();
     if (hadFirstFramesRemaining && !hasFirstFramesRemaining)
     {
-        printf("m_config.writeToBitstream %d \n", m_config.writeToBitstream);
         if (m_config.writeToBitstream)
         {
-            //OMAF_LOG(LOG_INFO, "WRITE TO BS FOR track %d\n", trackId.GetIndex());
-            printf("endOfStream %d \n", endOfStream);
             if (!endOfStream)
             {
                 ostringstream frameStream;
-                printf("Will write init seg \n");
                 m_segWriter->WriteInitSegment(frameStream, m_config.fragmented);
 
                 string frameString(frameStream.str());
-                printf("To file %s \n", trackSegCtx->dashInitCfg.initSegName);
                 FILE *fp = fopen(trackSegCtx->dashInitCfg.initSegName, "wb+");
                 if (!fp)
                 {
@@ -240,7 +235,6 @@ int32_t DashInitSegmenter::GenerateInitSegment(
                 }
 
                 m_initSegSize = frameString.size();
-                printf("init seg size %ld \n", m_initSegSize);
                 fwrite(frameString.c_str(), 1, frameString.size(), fp);
                 fclose(fp);
                 fp = NULL;

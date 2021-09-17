@@ -32,6 +32,7 @@
 //!
 
 #include <dlfcn.h>
+#include <math.h>
 
 #include "OmafPackage.h"
 #include "VideoStreamPluginAPI.h"
@@ -49,6 +50,7 @@ OmafPackage::OmafPackage()
     m_videoThreadId = 0;
     m_hasAudio = false;
     m_audioThreadId = 0;
+    m_hasChunkDurCorrected = false;
 }
 
 OmafPackage::OmafPackage(const OmafPackage& src)
@@ -60,6 +62,7 @@ OmafPackage::OmafPackage(const OmafPackage& src)
     m_videoThreadId = src.m_videoThreadId;
     m_hasAudio      = src.m_hasAudio;
     m_audioThreadId = src.m_audioThreadId;
+    m_hasChunkDurCorrected = src.m_hasChunkDurCorrected;
 }
 
 OmafPackage& OmafPackage::operator=(OmafPackage&& other)
@@ -71,6 +74,7 @@ OmafPackage& OmafPackage::operator=(OmafPackage&& other)
     m_videoThreadId = other.m_videoThreadId;
     m_hasAudio      = other.m_hasAudio;
     m_audioThreadId = other.m_audioThreadId;
+    m_hasChunkDurCorrected = other.m_hasChunkDurCorrected;
 
     return *this;
 }
@@ -441,6 +445,49 @@ int32_t OmafPackage::SetFrameInfo(uint8_t streamIdx, FrameBSInfo *frameInfo)
     if (ret)
         return OMAF_ERROR_ADD_FRAMEINFO;
 
+    //correct chunk duration according to GOP size
+    if (m_initInfo->cmafEnabled && !m_hasChunkDurCorrected && (stream->GetMediaType() == VIDEOTYPE))
+    {
+        Rational vsFrameRate = ((VideoStream*)stream)->GetFrameRate();
+        if ((vsFrameRate.num == 0) || (vsFrameRate.den == 0))
+        {
+            OMAF_LOG(LOG_ERROR, "Invalid frame rate ! \n");
+            return OMAF_ERROR_BAD_PARAM;
+        }
+        uint32_t frameRate = (uint32_t)(ceil((float)(vsFrameRate.num) / (float)(vsFrameRate.den)));
+        uint32_t vsGopSize = 0;
+        vsGopSize = ((VideoStream*)stream)->GetGopSize();
+        OMAF_LOG(LOG_INFO, "vsGopSize %d \n", vsGopSize);
+        OMAF_LOG(LOG_INFO, "frameRate %d \n", frameRate);
+        if (vsGopSize)
+        {
+            int64_t gopIntervalTime = (int64_t)((1000 * vsGopSize) / frameRate);
+            OMAF_LOG(LOG_INFO, "gopIntervalTime %ld \n", gopIntervalTime);
+            if (gopIntervalTime == m_initInfo->segmentationInfo->chunkDuration)
+            {
+                //no change
+                OMAF_LOG(LOG_INFO, "There is no change in CMAF chunk duration !\n");
+            }
+            else if (gopIntervalTime > m_initInfo->segmentationInfo->chunkDuration)
+            {
+                m_initInfo->segmentationInfo->chunkDuration = gopIntervalTime;
+                OMAF_LOG(LOG_INFO, "CMAF chunk duration is %ld ms !\n", m_initInfo->segmentationInfo->chunkDuration);
+            }
+            else
+            {
+                uint32_t times = 1;
+                while ((gopIntervalTime * times) < m_initInfo->segmentationInfo->chunkDuration)
+                {
+                    times++;
+                }
+                m_initInfo->segmentationInfo->chunkDuration = gopIntervalTime * times;
+                OMAF_LOG(LOG_INFO, "CMAF chunk duration is %ld ms !\n", m_initInfo->segmentationInfo->chunkDuration);
+            }
+            m_hasChunkDurCorrected = true;
+            OMAF_LOG(LOG_INFO, "The actual CMAF chunk duration is %ld ms !\n", m_initInfo->segmentationInfo->chunkDuration);
+        }
+    }
+
     return ERROR_NONE;
 }
 
@@ -488,7 +535,12 @@ int32_t OmafPackage::OmafPacketStream(uint8_t streamIdx, FrameBSInfo *frameInfo)
             if (stream && (stream->GetMediaType() == VIDEOTYPE))
             {
                 VideoStream *vs = (VideoStream*)stream;
-                if (vs->GetBufferedFrameNum() >= (uint32_t)(m_initInfo->segmentationInfo->needBufedFrames))
+                if (!(m_initInfo->cmafEnabled) && (vs->GetBufferedFrameNum() >= (uint32_t)(m_initInfo->segmentationInfo->needBufedFrames)))
+                {
+                    vsNum++;
+                }
+                else if ((m_initInfo->cmafEnabled) && m_hasChunkDurCorrected &&
+                     (vs->GetBufferedFrameNum() >= (uint32_t)(m_initInfo->segmentationInfo->needBufedFrames)))
                 {
                     vsNum++;
                 }
@@ -502,7 +554,12 @@ int32_t OmafPackage::OmafPacketStream(uint8_t streamIdx, FrameBSInfo *frameInfo)
             if (stream && (stream->GetMediaType() == AUDIOTYPE))
             {
                 AudioStream *as = (AudioStream*)stream;
-                if (as->GetBufferedFrameNum() >= (uint32_t)(m_initInfo->segmentationInfo->needBufedFrames))
+                if (!(m_initInfo->cmafEnabled) && (as->GetBufferedFrameNum() >= (uint32_t)(m_initInfo->segmentationInfo->needBufedFrames)))
+                {
+                    asNum++;
+                }
+                else if ((m_initInfo->cmafEnabled) && m_hasChunkDurCorrected &&
+                    (as->GetBufferedFrameNum() >= (uint32_t)(m_initInfo->segmentationInfo->needBufedFrames)))
                 {
                     asNum++;
                 }

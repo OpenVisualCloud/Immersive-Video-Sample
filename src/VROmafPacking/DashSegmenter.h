@@ -153,6 +153,8 @@ struct GeneralSegConfig
     //std::shared_ptr<Log> log;
 
     char trackSegBaseName[1024];
+
+    bool cmafEnabled = false;
 };
 
 //!
@@ -462,9 +464,12 @@ protected:
 private:
 
     uint64_t                                                          m_segNum = 0;            //!< current segments number
+    uint64_t                                                          m_subSegNum = 0;
+    std::ostringstream                                                m_frameStream;
     FILE                                                              *m_file = NULL;          //!< file pointer to write segments
     char                                                              m_segName[1024];           //!< segment file name string
     uint64_t                                                          m_segSize = 0;
+    uint64_t                                                          m_prevSegSize = 0;
 };
 
 //!
@@ -561,6 +566,7 @@ struct TrackSegmentCtx
         config.segmentDuration = dashConfig->sgtDuration;
         config.subsegmentDuration = dashConfig->subsgtDuration;
         config.checkIDR = dashConfig->needCheckIDR;
+        config.useSeparatedSidx = dashConfig->useSeparatedSidx;
         return config;
     }
 
