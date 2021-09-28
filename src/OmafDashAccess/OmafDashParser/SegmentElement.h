@@ -123,6 +123,34 @@ class SegmentElement : public OmafElementBase {
   MEMBER_SET_AND_GET_FUNC(int32_t, m_timescale, Timescale);
 
   //!
+  //! \brief    Set function for m_availabilityTimeOffset member
+  //!
+  //! \param    [in] double
+  //!           value to set
+  //! \param    [in] m_availabilityTimeOffset
+  //!           m_availabilityTimeOffset member in class
+  //! \param    [in] AvailabilityTimeOffset
+  //!           m_availabilityTimeOffset name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(double, m_availabilityTimeOffset, AvailabilityTimeOffset);
+
+  //!
+  //! \brief    Set function for m_availabilityTimeComplete member
+  //!
+  //! \param    [in] bool
+  //!           value to set
+  //! \param    [in] m_availabilityTimeComplete
+  //!           m_availabilityTimeComplete member in class
+  //! \param    [in] AvailabilityTimeComplete
+  //!           m_availabilityTimeComplete name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(bool, m_availabilityTimeComplete, AvailabilityTimeComplete);
+
+  //!
   //! \brief    Generate the complete URL
   //!
   //! \param    [in] baseURL
@@ -148,6 +176,8 @@ class SegmentElement : public OmafElementBase {
   int32_t m_duration;       //!< the duration attribute
   int32_t m_startNumber;    //!< the startNumber attribute
   int32_t m_timescale;      //!< the timescale attribute
+  double m_availabilityTimeOffset; //!< the availability time offset attribute
+  bool m_availabilityTimeComplete; //!< the availability time complete attribute
 };
 
 VCD_OMAF_END;

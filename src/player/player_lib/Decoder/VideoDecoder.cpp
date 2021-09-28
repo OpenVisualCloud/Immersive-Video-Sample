@@ -30,6 +30,7 @@
 
 #include "VideoDecoder.h"
 #include "../Common/RegionData.h"
+#include "../Common/DataLog.h"
 #include <chrono>
 #ifdef _USE_TRACE_
 #include "../../../trace/MtHQ_tp.h"
@@ -212,6 +213,8 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
         mPktInfo->bCatchup = packet->bCatchup;
         mDecCtx->push_packet(mPktInfo);
         data->rwpk = mRwpk;
+        if (packet->prft)
+            data->producedTime = packet->prft->ntpTimeStamp;
         // data->pts = mPkt->pts;
         data->pts = mPktInfo->pts;
         data->numQuality = packet->numQuality;
@@ -283,6 +286,7 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id, uint64_
     DecodedFrame* frame = new DecodedFrame;
     frame->av_frame = av_frame;
     frame->rwpk  = data->rwpk;
+    frame->producedTime = data->producedTime;
     frame->pts = data->pts;
     frame->bFmtChange = data->bCodecChange;
     frame->numQuality = data->numQuality;
@@ -358,6 +362,7 @@ RenderStatus VideoDecoder::FlushDecoder(uint32_t video_id)
         DecodedFrame* frame = new DecodedFrame;
         frame->av_frame = av_frame;
         frame->rwpk  = data->rwpk;
+        frame->producedTime = data->producedTime;
         frame->pts = data->pts;
         frame->bFmtChange = data->bCodecChange;
         frame->numQuality = data->numQuality;
@@ -537,7 +542,7 @@ RenderStatus VideoDecoder::GetFrame(uint64_t pts, DecodedFrame *&frame, int64_t 
     // correct pts due to fifo over size
     uint32_t max_frame_size = INT_MAX;
     if (mDecodeInfo.frameRate_den != 0)
-        max_frame_size = (mDecodeInfo.frameRate_num / mDecodeInfo.frameRate_den) * mDecodeInfo.segment_duration + 10;
+        max_frame_size = round(float(mDecodeInfo.frameRate_num) / mDecodeInfo.frameRate_den) * mDecodeInfo.segment_duration + 10;
     if (mDecCtx->get_size_of_frame() > max_frame_size && corr_pts != nullptr && !mDecCtx->bPacketEOS) {
         while (mDecCtx->get_size_of_frame() > max_frame_size / 2) {
             DecodedFrame *frame_d = mDecCtx->pop_frame();
@@ -642,7 +647,17 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts, int64_t *corr_pts)
     uint64_t end3 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"process time is:"<<(end3 - start3)<<endl;
     uint64_t start4 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-
+    if (frame->producedTime != 0) {
+        uint64_t update_time = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+        uint64_t current_ntp_time = transferNtpToMSecond(GetNtpTimeStamp());
+        uint64_t produced_time = transferNtpToMSecond(frame->producedTime);
+        DataLog *data_log = DATALOG::GetInstance();
+        LOG(INFO) << "Produced time " << produced_time << " update time " << update_time << " current ntp time " << current_ntp_time << endl;
+        LOG(INFO) <<"Encoder to display latency for pts " << frame->pts << " is " << (current_ntp_time - produced_time) << " mseconds" << endl;
+        if (data_log != nullptr) {
+            data_log->SetSingleE2ELatency(current_ntp_time - produced_time);
+        }
+    }
     // for (uint32_t i = 0; i < bufferNumber; i++){
     //     SAFE_DELETE_ARRAY(buf_info->buffer[i]);
     // }

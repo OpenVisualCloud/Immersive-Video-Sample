@@ -124,6 +124,12 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
   //!
   inline bool IsInitSegmentsParsed() { return bInitSeg_all_ready_.load(); };
 
+  inline bool IsCmafContent() { return (sBrand_ == "cmfc"); };
+
+  int64_t GetStartOffsetPts() { return offset_pts_; };
+
+  void SetStartOffsetPts(int64_t pts) { offset_pts_ = pts; };
+
   uint64_t GetOldestPacketPTSForTrack(int trackId);
   void RemoveOutdatedPacketForTrack(int trackId, uint64_t currPTS);
   void RemoveOutdatedCatchupPacketForTrack(int trackId, uint64_t currPTS);
@@ -158,6 +164,8 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
  private:
   void initSegmentStateChange(std::shared_ptr<OmafSegment>, OmafSegment::State) noexcept;
   void normalSegmentStateChange(std::shared_ptr<OmafSegment>, OmafSegment::State) noexcept;
+  void normalChunkStateChange(std::shared_ptr<OmafSegment>, OmafSegment::State) noexcept;
+  void AddOpenedNode(std::shared_ptr<OmafSegmentNode> opened_dash_node) noexcept;
 
   std::shared_ptr<OmafPacketParams> getPacketParams(uint32_t qualityRanking) noexcept {
     return omaf_packet_params_[qualityRanking];
@@ -221,6 +229,11 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
 
   std::atomic_int initSeg_ready_count_{0};
   std::atomic_bool bInitSeg_all_ready_{false};
+
+  std::string sBrand_;
+
+  int64_t offset_pts_ = -1;
+  uint32_t timeout_for_checkEOS_ = 500;
 };
 // using READERMANAGER = Singleton<OmafReaderManager>;
 VCD_OMAF_END

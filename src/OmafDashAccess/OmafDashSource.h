@@ -108,7 +108,7 @@ class OmafDashSource : public OmafMediaSource, Threadable {
   //!
   //! \brief Download Assigned addtional Segment in dynamic/static mode
   //!
-  int DownloadAssignedSegments(std::map<uint32_t, TracksMap> additional_tracks);
+  int DownloadAssignedSegments(std::map<uint32_t, TracksMap> additional_tracks, uint64_t currentTimeLine);
 
   //!
   //! \brief  Enable tracks adaptation sets according current selected tracks
@@ -180,6 +180,17 @@ class OmafDashSource : public OmafMediaSource, Threadable {
 
   int StartReadThread();
 
+  uint64_t GetChunkDuration() {
+    uint64_t chunkDuration = 0;
+    for (auto it = this->mMapStream.begin(); it != this->mMapStream.end(); it++) {
+      OmafMediaStream* pStream = it->second;
+      DashStreamInfo *stream_info = pStream->GetStreamInfo();
+      if (stream_info == nullptr) continue;
+      chunkDuration = stream_info->chunkDuration;
+    }
+    return chunkDuration;
+  }
+
 private:
     OmafDashSource& operator=(const OmafDashSource& other) { return *this; };
     OmafDashSource(const OmafDashSource& other) { /* do not create copies */ };
@@ -197,6 +208,8 @@ private:
   std::shared_ptr<OmafReaderManager> omaf_reader_mgr_;
   bool mIsLocalMedia;
   pthread_t m_catchupThread; //<! catch up thread ID
+  bool m_enableCMAF = false;
+  uint32_t m_startChunkId = 0;
 };
 
 VCD_OMAF_END;

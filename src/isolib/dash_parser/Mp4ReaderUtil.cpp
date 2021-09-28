@@ -34,6 +34,7 @@
 #include "../atoms/CleanApertureAtom.h"
 #include "../atoms/FormAllocator.h"
 #include "../atoms/HevcConfigAtom.h"
+#include "../atoms/ProducerReferenceTimeAtom.h"
 
 using namespace std;
 
@@ -260,6 +261,16 @@ RWPKPropertyInternal Genrwpk(const RegionWisePackingAtom& inRWPKBox)
     }
 
     return outRWPKProp;
+}
+
+PRFTProperty Genprft(const ProducerReferenceTimeAtom& inPRFTBox)
+{
+    PRFTProperty outPRFTProp{};
+    outPRFTProp.refTrackId = inPRFTBox.GetReferenceTrackId();
+    outPRFTProp.ntpTimeStamp = inPRFTBox.GetNtpTimeStamp();
+    outPRFTProp.mediaTime = inPRFTBox.GetMediaTime();
+
+    return outPRFTProp;
 }
 
 COVIInformationInternal Gencovi(const CoverageInformationAtom& inCOVIBox)

@@ -39,6 +39,7 @@
 #include "EssentialPropertyElement.h"
 #include "RepresentationElement.h"
 #include "SupplementalPropertyElement.h"
+#include "ProducerReferenceTimeElement.h"
 
 VCD_OMAF_BEGIN
 
@@ -222,6 +223,15 @@ public:
     void AddRepresentation(RepresentationElement* representation);
 
     //!
+    //! \brief    Add an instance of ProducerReferenceTime element
+    //!
+    //! \param    [in] producerReferenceTime
+    //!           An Instance of ProducerReferenceTime element class
+    //!
+    //! \return   void
+    void AddProducerReferenceTime(ProducerReferenceTimeElement* producerReferenceTime);
+
+    //!
     //! \brief    Get content converage from member m_supplementalProperties
     //!
     //! \return   PreselValue*
@@ -303,6 +313,14 @@ public:
     //!
     vector<RepresentationElement*>       GetRepresentations() {return m_representations;}
 
+    //!
+    //! \brief    Get all ProducerReferenceTimeElement elements
+    //!
+    //! \return   vector<ProducerReferenceTimeElement*>
+    //!           vector of ProducerReferenceTimeElement Element
+    //!
+    vector<ProducerReferenceTimeElement*>             GetProducerReferenceTimes() {return m_producerReferenceTimes;}
+
 private:
 
     string                               m_id;                     //!< the id attribute
@@ -320,6 +338,7 @@ private:
     vector<EssentialPropertyElement*>    m_essentialProperties;    //!< the EssentialProperties elements
     vector<SupplementalPropertyElement*> m_supplementalProperties; //!< the SupplementalProperty elements
     vector<RepresentationElement*>       m_representations;        //!< the Representations elements
+    vector<ProducerReferenceTimeElement*> m_producerReferenceTimes; //!< the ProducerReferenceTime elements
 };
 
 VCD_OMAF_END

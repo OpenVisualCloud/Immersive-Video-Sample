@@ -123,6 +123,15 @@ ODStatus OmafMPDReader::BuildMPD()
             else
                 OMAF_LOG(LOG_WARNING,"Faild to add period.\n");
         }
+        else if(child->GetName() == "ServiceDescription")
+        {
+            ServiceDescriptionElement* serviceDescription = nullptr;
+            serviceDescription = BuildServiceDescription(child);
+            if (serviceDescription)
+                m_mpd->AddServiceDescription(serviceDescription);
+            else
+                OMAF_LOG(LOG_WARNING,"Failed to add serviceDescription.\n");
+        }
         else
         {
             OMAF_LOG(LOG_INFO,"Can't parse element in BuildMPD.\n");
@@ -187,6 +196,131 @@ PeriodElement* OmafMPDReader::BuildPeriod(OmafXMLElement* xmlPeriod)
     }
 
     return period;
+}
+
+ServiceDescriptionElement* OmafMPDReader::BuildServiceDescription(OmafXMLElement* xmlServiceDescription)
+{
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlServiceDescription, "Failed to read serviceDescription element.\n", LOG_ERROR);
+    ServiceDescriptionElement* serviceDescription = new ServiceDescriptionElement();
+    CheckNullPtr_PrintLog_ReturnNullPtr(serviceDescription, "Failed to create serviceDescription node.\n", LOG_ERROR);
+    serviceDescription->SetId(xmlServiceDescription->GetAttributeVal(INDEX));
+
+    map<string, string> attributes = xmlServiceDescription->GetAttributes();
+    serviceDescription->AddOriginalAttributes(attributes);
+
+    vector<OmafXMLElement*> childElement = xmlServiceDescription->GetChildElements();
+    for(auto child : childElement)
+    {
+        if(!child)
+        {
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in serviceDescription Element.\n");
+            continue;
+        }
+
+        if(child->GetName() == "Latency")
+        {
+            LatencyElement* latency = nullptr;
+            latency = BuildLatency(child);
+            if(latency)
+                serviceDescription->SetLatency(latency);
+            else
+                OMAF_LOG(LOG_WARNING,"Fail to add latency.\n");
+        }
+        else
+        {
+            OMAF_LOG(LOG_INFO,"Can't parse element in BuildServiceDescription.\n");
+        }
+        serviceDescription->AddChildElement(child);
+    }
+
+    return serviceDescription;
+}
+
+LatencyElement* OmafMPDReader::BuildLatency(OmafXMLElement* xmlLatency)
+{
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlLatency, "Failed to read latency element.\n", LOG_ERROR);
+
+    LatencyElement* latency = new LatencyElement();
+    CheckNullPtr_PrintLog_ReturnNullPtr(latency, "Failed to create latency node.\n", LOG_ERROR);
+
+    latency->SetTarget(xmlLatency->GetAttributeVal(TARGET));
+
+    map<string, string> attributes = xmlLatency->GetAttributes();
+    latency->AddOriginalAttributes(attributes);
+
+    vector<OmafXMLElement*> childElement = xmlLatency->GetChildElements();
+    for(auto child : childElement)
+    {
+        if(!child)
+        {
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in Latency Element.\n");
+            continue;
+        }
+
+        latency->AddChildElement(child);
+    }
+
+    return latency;
+}
+
+ResyncElement* OmafMPDReader::BuildResync(OmafXMLElement* xmlResync)
+{
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlResync, "Failed to read resync element.\n", LOG_ERROR);
+
+    ResyncElement* resync = new ResyncElement();
+    CheckNullPtr_PrintLog_ReturnNullPtr(resync, "Failed to create latency node.\n", LOG_ERROR);
+
+    resync->SetType(xmlResync->GetAttributeVal(TYPE));
+
+    resync->SetChunkDuration(xmlResync->GetAttributeVal(DT));
+
+    map<string, string> attributes = xmlResync->GetAttributes();
+    resync->AddOriginalAttributes(attributes);
+
+    vector<OmafXMLElement*> childElement = xmlResync->GetChildElements();
+    for(auto child : childElement)
+    {
+        if(!child)
+        {
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in Resync Element.\n");
+            continue;
+        }
+
+        resync->AddChildElement(child);
+    }
+
+    return resync;
+}
+
+ProducerReferenceTimeElement* OmafMPDReader::BuildProducerReferenceTime(OmafXMLElement* xmlProducerReferenceTime)
+{
+    CheckNullPtr_PrintLog_ReturnNullPtr(xmlProducerReferenceTime, "Failed to read producerReferenceTime element.\n", LOG_ERROR);
+
+    ProducerReferenceTimeElement* producerReferenceTime = new ProducerReferenceTimeElement();
+    CheckNullPtr_PrintLog_ReturnNullPtr(producerReferenceTime, "Failed to create producerReferenceTime node.\n", LOG_ERROR);
+
+    producerReferenceTime->SetId(xmlProducerReferenceTime->GetAttributeVal(INDEX));
+    producerReferenceTime->SetInband(xmlProducerReferenceTime->GetAttributeVal(INBAND));
+    producerReferenceTime->SetType(xmlProducerReferenceTime->GetAttributeVal(TYPE));
+    producerReferenceTime->SetWallclockTime(xmlProducerReferenceTime->GetAttributeVal(WALLCLOCKTIME));
+    producerReferenceTime->SetPresentationTime(xmlProducerReferenceTime->GetAttributeVal(PRESENTATIONTIME));
+
+    map<string, string> attributes = xmlProducerReferenceTime->GetAttributes();
+    producerReferenceTime->AddOriginalAttributes(attributes);
+
+    vector<OmafXMLElement*> childElement = xmlProducerReferenceTime->GetChildElements();
+    for(auto child : childElement)
+    {
+        if(!child)
+        {
+            OMAF_LOG(LOG_WARNING,"Faild to load sub element in PRFT Element.\n");
+            continue;
+        }
+
+        producerReferenceTime->AddChildElement(child);
+    }
+
+    return producerReferenceTime;
 }
 
 AdaptationSetElement* OmafMPDReader::BuildAdaptationSet(OmafXMLElement* xml)
@@ -258,6 +392,15 @@ AdaptationSetElement* OmafMPDReader::BuildAdaptationSet(OmafXMLElement* xml)
                 adaptionSet->AddSupplementalProperty(supplementalProperty);
             else
                 OMAF_LOG(LOG_WARNING,"Fail to add supplementalProperty.\n");
+        }
+        else if(child->GetName() == "ProducerReferenceTime")
+        {
+            ProducerReferenceTimeElement* prft = nullptr;
+            prft = BuildProducerReferenceTime(child);
+            if(prft)
+                adaptionSet->AddProducerReferenceTime(prft);
+            else
+                OMAF_LOG(LOG_WARNING,"Fail to add producerReferenceTime.\n");
         }
         else
         {
@@ -378,6 +521,15 @@ RepresentationElement* OmafMPDReader::BuildRepresentation(OmafXMLElement* xmlRep
             else
                 OMAF_LOG(LOG_WARNING, "Fail to add audio channel configuration.\n");
         }
+        else if (child->GetName() == "Resync")
+        {
+            ResyncElement* resync = nullptr;
+            resync = BuildResync(child);
+            if (resync)
+                representation->SetResync(resync);
+            else
+                OMAF_LOG(LOG_WARNING, "Fail to add resync configuration.\n");
+        }
         else
         {
             OMAF_LOG(LOG_INFO,"Can't parse element in BuildRepresentation.\n");
@@ -428,6 +580,15 @@ SegmentElement* OmafMPDReader::BuildSegment(OmafXMLElement* xmlSegment)
     segment->SetDuration(StringToInt(xmlSegment->GetAttributeVal(DURATION)));
     segment->SetStartNumber(StringToInt(xmlSegment->GetAttributeVal(STARTNUMBER)));
     segment->SetTimescale(StringToInt(xmlSegment->GetAttributeVal(TIMESCALE)));
+    // for low latency mode
+    if (!xmlSegment->GetAttributeVal(AVAILABILITYTIMEOFFSET).empty())
+        segment->SetAvailabilityTimeOffset(atof((const char *)(xmlSegment->GetAttributeVal(AVAILABILITYTIMEOFFSET).c_str())));
+    else
+        segment->SetAvailabilityTimeOffset(0);
+    if (!xmlSegment->GetAttributeVal(AVAILABILITYTIMECOMPLETE).empty())
+        segment->SetAvailabilityTimeComplete(xmlSegment->GetAttributeVal(AVAILABILITYTIMECOMPLETE) == "true");
+    else
+        segment->SetAvailabilityTimeComplete(false);
 
     map<string, string> attributes = xmlSegment->GetAttributes();
     segment->AddOriginalAttributes(attributes);

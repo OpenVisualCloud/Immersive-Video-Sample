@@ -77,6 +77,7 @@ class MediaPacket : public VCD::NonCopyable {
       m_nRealSize = 0;
       m_segID = 0;
     }
+    m_prft = nullptr;
     if (m_rwpk) deleteRwpk();
   };
 
@@ -248,6 +249,11 @@ class MediaPacket : public VCD::NonCopyable {
       m_rwpk->rectRegionPacking = nullptr;
     }
   }
+
+  void SetPRFT(std::shared_ptr<ProducerReferenceTime> prft) { m_prft = std::move(prft); };
+
+  ProducerReferenceTime* GetPRFT() { return m_prft.get(); };
+
   int GetSegID() { return m_segID; };
   void SetSegID(int id) { m_segID = id; };
 
@@ -377,6 +383,7 @@ private:
   int m_segID = 0;
   // RegionWisePacking* m_rwpk;
   std::unique_ptr<RegionWisePacking> m_rwpk;
+  std::shared_ptr<ProducerReferenceTime> m_prft;
   QualityRank m_qualityRanking = HIGHEST_QUALITY_RANKING;
   SRDInfo m_srd;
 

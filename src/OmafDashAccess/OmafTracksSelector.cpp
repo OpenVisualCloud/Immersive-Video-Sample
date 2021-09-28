@@ -34,6 +34,7 @@
 //!
 
 #include "OmafTracksSelector.h"
+#include <math.h>
 
 #define MIN_PTS_INTERVAL_ 5
 
@@ -103,6 +104,8 @@ OmafTracksSelector::~OmafTracksSelector() {
   // SAFE_DELETE(mPose);
 
   mTwoDQualityInfos.clear();
+  mCurrSelectedTracksMap.clear();
+  mASMap.clear();
 }
 
 int OmafTracksSelector::SetInitialViewport(std::vector<Viewport *> &pView, HeadSetInfo *headSetInfo,
@@ -332,10 +335,11 @@ std::map<uint32_t, std::map<int, OmafAdaptationSet*>> OmafTracksSelector::Compar
         OMAF_LOG(LOG_ERROR, "Stream informaiton is empty!\n");
         return diffTracksMap;
     }
-    TracksMap currSelectedTracksMap = GetCurrentTracksMap();
+    mCurrSelectedTracksMap.clear();
+    mCurrSelectedTracksMap = GetCurrentTracksMap();
     //2. get compared tile tracks according to current timeline.
     if (stream_info->framerate_den == 0) return diffTracksMap;
-    uint32_t sampleNumPerSeg = pStream->GetSegmentDuration() * stream_info->framerate_num / stream_info->framerate_den;
+    uint32_t sampleNumPerSeg = pStream->GetSegmentDuration() * round(float(stream_info->framerate_num) / stream_info->framerate_den);
     if (sampleNumPerSeg == 0) return diffTracksMap;
     uint64_t comTimeLine = *currentTimeLine / sampleNumPerSeg * sampleNumPerSeg;
     TracksMap comTracks = m_prevTimedTracksMap[comTimeLine];
@@ -343,7 +347,7 @@ std::map<uint32_t, std::map<int, OmafAdaptationSet*>> OmafTracksSelector::Compar
     // for (auto tks : comTracks) LOG(INFO) << comTimeLine << " " << tks.first << endl;
 
     //3. get different tracks.
-    TracksMap diffTracks = GetDifferentTracks(currSelectedTracksMap, comTracks);
+    TracksMap diffTracks = GetDifferentTracks(mCurrSelectedTracksMap, comTracks);
     //3.1 if no difference
     if (diffTracks.empty())
     {
@@ -371,7 +375,7 @@ std::map<uint32_t, std::map<int, OmafAdaptationSet*>> OmafTracksSelector::Compar
             uint32_t comSegID1 = comTimeLine / sampleNumPerSeg + 1;
             uint32_t comSegID2 = comSegID1 + 1;
             diffTracksMap.insert(make_pair(comSegID1, diffTracks));
-            TracksMap diffTracks2 = GetDifferentTracks(currSelectedTracksMap, m_prevTimedTracksMap[comTimeLine + sampleNumPerSeg]);
+            TracksMap diffTracks2 = GetDifferentTracks(mCurrSelectedTracksMap, m_prevTimedTracksMap[comTimeLine + sampleNumPerSeg]);
             if (!diffTracks2.empty())
             {
                 diffTracksMap.insert(make_pair(comSegID2, diffTracks2));
@@ -386,7 +390,7 @@ std::map<uint32_t, std::map<int, OmafAdaptationSet*>> OmafTracksSelector::Compar
     else if (m_prevTimedTracksMap.find(comTimeLine + sampleNumPerSeg) != m_prevTimedTracksMap.end())//Eg.C25 The moment that changes is very close to the last rendering frame of the segment. So switch the compared segment to the next one.
     {
         uint32_t comSegID = (*currentTimeLine / sampleNumPerSeg + 1) + 1;
-        TracksMap diffTracks = GetDifferentTracks(currSelectedTracksMap, m_prevTimedTracksMap[comTimeLine + sampleNumPerSeg]);
+        TracksMap diffTracks = GetDifferentTracks(mCurrSelectedTracksMap, m_prevTimedTracksMap[comTimeLine + sampleNumPerSeg]);
         diffTracksMap.insert(make_pair(comSegID, diffTracks));
         OMAF_LOG(LOG_INFO, "Eg.C25 download seg id %d\n", comSegID);
     }

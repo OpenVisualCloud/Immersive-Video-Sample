@@ -63,6 +63,11 @@ typedef enum {
 } MediaType;
 
 typedef enum {
+  SegmentType_Omaf = 0,
+  SegmentType_Cmaf,
+} SegmentType;
+
+typedef enum {
   MODE_DEFAULT = 0,
   MODE_TILE_MultiRes,
   MODE_TILE_MultiRate,
@@ -85,6 +90,12 @@ typedef struct SOURCERESOLUTION {
   uint32_t width;   // the width of the quality stream in source
   uint32_t height;  // the height of the quality stream in source
 } SourceResolution;
+
+typedef struct ProducerReferenceTime {
+  uint32_t refTrackId;
+  uint64_t ntpTimeStamp;
+  uint32_t mediaTime;
+} ProducerReferenceTime;
 
 /*
  * avg_bandwidth : average bandwidth since the begin of downloading
@@ -115,6 +126,7 @@ typedef struct DASHSTREAMINFO {
   int32_t framerate_num;
   int32_t framerate_den;
   uint64_t segmentDuration;
+  uint64_t chunkDuration;
   int32_t bit_rate;
   int32_t channels;
   int32_t sample_rate;
@@ -142,6 +154,7 @@ typedef struct DASHMEDIAINFO {
   uint64_t duration;
   DashStreamType streaming_type;
   int32_t stream_count;
+  int32_t target_latency; //!< target latency for low latency DASH mode
   DashStreamInfo stream_info[16];
 } DashMediaInfo;
 
@@ -152,6 +165,7 @@ typedef struct DASHPACKET {
   uint64_t size;
   char* buf;
   RegionWisePacking* rwpk;
+  ProducerReferenceTime* prft;
   int segID;
   int32_t height;
   int32_t width;

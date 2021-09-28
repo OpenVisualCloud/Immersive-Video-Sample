@@ -37,6 +37,7 @@ public:
 
         url_live = "http://10.67.112.194:8080/testOMAFlive/Test.mpd";
         url_static = "http://10.67.112.194:8080/testOMAFstatic/Test.mpd";
+        url_cmaf_live = "http://10.67.112.194:8080/testCMAFlive/Test.mpd";
     }
 
     virtual void TearDown(){
@@ -44,6 +45,7 @@ public:
 
     std::string url_live;
     std::string url_static;
+    std::string url_cmaf_live;
 };
 
 TEST_F(MPDParserTest, Create)
@@ -53,7 +55,7 @@ TEST_F(MPDParserTest, Create)
     delete MPDParser;
 }
 
-TEST_F(MPDParserTest, OpenMedia_static)
+TEST_F(MPDParserTest, ParseMPD_static)
 {
     OmafMPDParser* MPDParser = new OmafMPDParser();
     EXPECT_TRUE(MPDParser != NULL);
@@ -76,7 +78,7 @@ TEST_F(MPDParserTest, OpenMedia_static)
     delete MPDParser;
 }
 
-TEST_F(MPDParserTest, OpenMedia_live)
+TEST_F(MPDParserTest, ParseMPD_live)
 {
     OmafMPDParser* MPDParser = new OmafMPDParser();
     EXPECT_TRUE(MPDParser != NULL);
@@ -95,6 +97,31 @@ TEST_F(MPDParserTest, OpenMedia_live)
     mpdInfo = MPDParser->GetMPDInfo();
     EXPECT_TRUE(mpdInfo != nullptr);
     EXPECT_TRUE(mpdInfo->type == "dynamic");
+
+    delete MPDParser;
+}
+
+TEST_F(MPDParserTest, ParseMPD_cmaf_live)
+{
+    OmafMPDParser* MPDParser = new OmafMPDParser();
+    EXPECT_TRUE(MPDParser != NULL);
+
+    OMAFSTREAMS listStream;
+    int ret = MPDParser->ParseMPD(url_cmaf_live, listStream);
+    EXPECT_TRUE(ret == ERROR_NONE);
+
+    EXPECT_TRUE(listStream.size() > 0);
+    auto stream = listStream.front();
+    DashStreamInfo* sInfo = stream->GetStreamInfo();
+    EXPECT_TRUE(sInfo->height > 0 && sInfo->width > 0);
+    EXPECT_TRUE(sInfo->stream_type == MediaType_Video);
+
+    MPDInfo *mpdInfo = nullptr;
+    mpdInfo = MPDParser->GetMPDInfo();
+    EXPECT_TRUE(mpdInfo != nullptr);
+    EXPECT_TRUE(mpdInfo->type == "dynamic");
+    EXPECT_TRUE(mpdInfo->availabilityStartTime != 0);
+    EXPECT_TRUE(mpdInfo->target_latency != 0);
 
     delete MPDParser;
 }

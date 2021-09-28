@@ -615,6 +615,23 @@ int32_t OmafMP4VRReader::getPropertyRegionWisePacking(uint32_t trackId, uint32_t
 
   return ret;
 }
+
+int32_t OmafMP4VRReader::getProducerReferenceTime(uint32_t initSegmentId, uint32_t segmentId,
+                                                      VCD::OMAF::ProducerReferenceTimePropery& prft) const {
+  if (nullptr == mMP4ReaderImpl) return ERROR_NULL_PTR;
+  VCD::MP4::Mp4Reader* pReader = (VCD::MP4::Mp4Reader*)mMP4ReaderImpl;
+
+  VCD::MP4::PRFTProperty prftProp;
+
+  int32_t ret = ERROR_NONE;
+  OMAF_LOG(LOG_INFO, "prft initSegmentId %d segmentId %d\n", initSegmentId, segmentId);
+  ret = pReader->GetPRFTProp(initSegmentId, segmentId, prftProp);
+
+  prft = prftProp;
+
+  return ret;
+}
+
 int32_t OmafMP4VRReader::getPropertyCoverageInformation(uint32_t trackId, uint32_t sampleId,
                                                         VCD::OMAF::CoverageInformationProperty& coviProperty) const {
   if (nullptr == mMP4ReaderImpl) return ERROR_NULL_PTR;
@@ -711,6 +728,37 @@ int32_t OmafMP4VRReader::parseSegment(OmafSegment* streamInterface, uint32_t ini
   if (nullptr == segment) return ERROR_NULL_PTR;
 
   return pReader->ParseSeg(segment, initSegmentId, segmentId, earliestPTSinTS);
+}
+
+int32_t OmafMP4VRReader::getSegmentHeaderSize(uint32_t ref_cnt, uint64_t& size, uint8_t version) {
+  if (nullptr == mMP4ReaderImpl) return ERROR_NULL_PTR;
+  VCD::MP4::Mp4Reader* pReader = (VCD::MP4::Mp4Reader*)mMP4ReaderImpl;
+
+  uint64_t stypSize = 0, sidxSize = 0;
+  int32_t ret = ERROR_NONE;
+
+  ret = pReader->GetStypSize(stypSize);
+  if (ret != ERROR_NONE) {
+    OMAF_LOG(LOG_ERROR, "Get styp size is invalid\n");
+    return ret;
+  }
+
+  ret = pReader->GetSegIndexSize(version, ref_cnt, sidxSize);
+  if (ret != ERROR_NONE) {
+    OMAF_LOG(LOG_ERROR, "Get segment index size is invalid\n");
+    return ret;
+  }
+
+  size = stypSize + sidxSize;
+
+  return ret;
+}
+
+int32_t OmafMP4VRReader::getSegmentIndexRange(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange) {
+  if (nullptr == mMP4ReaderImpl) return ERROR_NULL_PTR;
+  VCD::MP4::Mp4Reader* pReader = (VCD::MP4::Mp4Reader*)mMP4ReaderImpl;
+
+  return pReader->GetSegIndexRange(indexBuf, size, indexRange);
 }
 
 int32_t OmafMP4VRReader::invalidateSegment(uint32_t initSegmentId, uint32_t segmentId) {

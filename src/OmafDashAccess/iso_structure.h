@@ -65,6 +65,8 @@ using RegionWisePackingRegion = VCD::MP4::RWPKRegion;
 
 using RegionWisePackingProperty = VCD::MP4::RWPKProperty;
 
+using ProducerReferenceTimePropery = VCD::MP4::PRFTProperty;
+
 using CoverageShapeType = VCD::MP4::COVIShapeType;
 
 using CoverageSphereRegion = VCD::MP4::COVIRegion;

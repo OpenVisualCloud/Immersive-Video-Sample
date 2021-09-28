@@ -242,6 +242,7 @@ RenderStatus DecoderManager::UpdateVideoFrame( uint32_t video_id, uint64_t pts, 
         }
     }
     else {
+        ScopeLock lock(m_mapCatchupDecoderLock);
         if(m_mapCatchupVideoDecoder.find(video_id)!=m_mapCatchupVideoDecoder.end()){
             ret = m_mapCatchupVideoDecoder[video_id]->UpdateFrame(pts, nullptr);
 #ifndef _ANDROID_OS_

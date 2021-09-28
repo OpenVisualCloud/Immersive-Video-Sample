@@ -128,11 +128,18 @@ class OmafCurlEasyDownloader : public VCD::NonCopyable {
     SUCCESS = 1,
     STOPPED = 2,
     FAILED = 3,
+    IDLE = 4,
+  };
+
+  enum class Type {
+    DATA = 0,
+    HEADER = 1,
   };
 
  public:
   using onData = std::function<void(std::unique_ptr<StreamBlock>)>;
   using onState = std::function<void(State)>;
+  using onChunkData = std::function<void(std::unique_ptr<StreamBlock>, map<uint32_t, uint32_t>&)>;
   using Ptr = std::shared_ptr<OmafCurlEasyDownloader>;
 
  public:
@@ -143,7 +150,7 @@ class OmafCurlEasyDownloader : public VCD::NonCopyable {
  public:
   OMAF_STATUS init(const CurlParams &params) noexcept;
   OMAF_STATUS open(const std::string &url) noexcept;
-  OMAF_STATUS start(int64_t offset, int64_t size, onData scb, onState fcb) noexcept;
+  OMAF_STATUS start(int64_t offset, int64_t size, onData dcb, onChunkData cdcb, onState scb) noexcept;
   OMAF_STATUS stop() noexcept;
   OMAF_STATUS close() noexcept;
   HttpHeader header() noexcept;
@@ -171,8 +178,31 @@ class OmafCurlEasyDownloader : public VCD::NonCopyable {
     return 0;
   }
 
+  inline size_t totalDataSize() {
+    return total_data_size_;
+  }
+
+  inline void setState(State state) {
+    state_ = state;
+  }
+
+  inline State getState() {
+    return state_;
+  }
+  inline void setType(Type type) {
+    type_ = type;
+  }
+
+  inline Type getType() {
+    return type_;
+  }
+
+  inline map<uint32_t, uint32_t> getIndexRange() {
+    return index_range_;
+  }
+
  private:
-  void receiveSB(std::unique_ptr<StreamBlock>) noexcept;
+  void receiveSB(std::unique_ptr<StreamBlock> sb) noexcept;
   void params(const CurlParams &params) noexcept { curl_params_ = params; }
 
  private:
@@ -181,10 +211,15 @@ class OmafCurlEasyDownloader : public VCD::NonCopyable {
   std::mutex easy_curl_mutex_;
   CURL *easy_curl_ = nullptr;
   std::string url_;
+  size_t data_offset_ = 0;
+  size_t total_data_size_ = 0;
   std::mutex cb_mutex_;
   onData dcb_ = nullptr;
   onState scb_ = nullptr;
-  State state_ = State::DOWNLOADING;
+  onChunkData cdcb_ = nullptr;
+  State state_ = State::IDLE;
+  Type type_ = Type::DATA;
+  map<uint32_t, uint32_t> index_range_;
 };
 
 class OmafCurlEasyDownloaderPool : public VCD::NonCopyable {

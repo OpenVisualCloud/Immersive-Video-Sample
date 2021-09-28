@@ -77,7 +77,7 @@ class OmafDashSegmentHttpClientImpl : public OmafDashSegmentHttpClient {
   OMAF_STATUS stop() noexcept override;
 
  public:
-  OMAF_STATUS open(const SourceParams &ds_params, OnData dcb, OnState scb) noexcept override;
+  OMAF_STATUS open(const SourceParams &ds_params, OnData dcb, OnChunkData cdcb, OnState scb) noexcept override;
   OMAF_STATUS remove(const SourceParams &ds_params) noexcept override;
   OMAF_STATUS check(const SourceParams &ds_params) noexcept override;
   inline void setStatisticsWindows(int32_t time_window) noexcept override;
@@ -246,9 +246,10 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::stop() noexcept {
   }
 }
 
-OMAF_STATUS OmafDashSegmentHttpClientImpl::open(const SourceParams &ds_params, OnData dcb, OnState scb) noexcept {
+OMAF_STATUS OmafDashSegmentHttpClientImpl::open(const SourceParams &ds_params, OnData dcb, OnChunkData cdcb, OnState scb) noexcept {
   try {
-    OmafDownloadTask::Ptr task = OmafDownloadTask::createTask(ds_params.dash_url_, dcb, scb);
+    OMAF_LOG(LOG_INFO, "Create task %s\n", ds_params.dash_url_.c_str());
+    OmafDownloadTask::Ptr task = OmafDownloadTask::createTask(ds_params, dcb, cdcb, scb);
     if (task.get() == nullptr) {
       OMAF_LOG(LOG_ERROR, "Failed to create the task\n");
       return ERROR_INVALID;
@@ -451,6 +452,8 @@ void OmafDashSegmentHttpClientImpl::processDoneTask(OmafDownloadTask::Ptr task) 
     task->taskDoneCallback(state);
 
     // remove from downloading list
+    OMAF_LOG(LOG_INFO, "State is %d\n", state);
+    if (state == OmafDownloadTask::State::STOPPED)// check ? FINISH
     {
       std::lock_guard<std::mutex> lock(downloading_task_mutex_);
       auto it = downloading_tasks_.find(task->url());

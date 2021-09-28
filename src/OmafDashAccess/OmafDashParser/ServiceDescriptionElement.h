@@ -26,43 +26,66 @@
  */
 
 //!
-//! \file:   RepresentationElement.cpp
-//! \brief:  Representation element class
+//! \file:   ServiceDescriptionElement.h
+//! \brief:  ServiceDescription element class
 //!
 
-#include "RepresentationElement.h"
+#ifndef SERVICEDESCRIPTIONELEMENT_H
+#define SERVICEDESCRIPTIONELEMENT_H
+
+#include "LatencyElement.h"
 
 VCD_OMAF_BEGIN
 
-RepresentationElement::RepresentationElement()
+class ServiceDescriptionElement: public OmafElementBase
 {
-    m_segment = nullptr;
-    m_audioChlCfg = nullptr;
-    m_resync = nullptr;
-    m_width = 0;
-    m_height = 0;
-    m_audioSamplingRate = 0;
-    m_bandwidth = 0;
-}
+public:
 
-RepresentationElement::~RepresentationElement()
-{
-    m_id.clear();
-    m_codecs.clear();
-    m_mimeType.clear();
-    m_width = 0;
-    m_height = 0;
-    m_audioSamplingRate = 0;
-    m_frameRate.clear();
-    m_sar.clear();
-    m_startWithSAP.clear();
-    m_qualityRanking.clear();
-    m_bandwidth = 0;
+    //!
+    //! \brief Constructor
+    //!
+    ServiceDescriptionElement();
 
-    SAFE_DELETE(m_segment);
-    SAFE_DELETE(m_audioChlCfg);
-    SAFE_DELETE(m_resync);
-}
+    //!
+    //! \brief Destructor
+    //!
+    virtual ~ServiceDescriptionElement();
 
+    //!
+    //! \brief    Set function for m_id member
+    //!
+    //! \param    [in] string
+    //!           value to set
+    //! \param    [in] m_id
+    //!           m_id member in class
+    //! \param    [in] Id
+    //!           m_id name in class
+    //!
+    //! \return   void
+    //!
+    MEMBER_SET_AND_GET_FUNC(string, m_id, Id);
+
+  //!
+  //! \brief    Set function for m_latency member
+  //!
+  //! \param    [in] LatencyElement
+  //!           value to set
+  //! \param    [in] m_latency
+  //!           m_latency member in class
+  //! \param    [in] Latency
+  //!           m_latency name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(LatencyElement*, m_latency, Latency);
+
+private:
+
+    string  m_id;             //!< the id attribute
+
+    LatencyElement* m_latency; //!< the AdaptationSet elements
+};
 
 VCD_OMAF_END;
+
+#endif //SERVICEDESCRIPTIONELEMENT_H

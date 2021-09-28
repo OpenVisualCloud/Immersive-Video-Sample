@@ -52,6 +52,7 @@ class OmafDashSegmentClient : public VCD::NonCopyable {
     STOPPED = 1,
     TIMEOUT = 2,
     FAILURE = 3,
+    CONTINUE = 4,
   };
 
   struct _perfNode {
@@ -110,6 +111,7 @@ class OmafDashSegmentClient : public VCD::NonCopyable {
   using PerfStatistics = struct _perfStatistics;
   using OnData = std::function<void(std::unique_ptr<VCD::OMAF::StreamBlock>)>;
   using OnState = std::function<void(State)>;
+  using OnChunkData = std::function<void(std::unique_ptr<VCD::OMAF::StreamBlock>, map<uint32_t, uint32_t>&)>;
 
  protected:
   OmafDashSegmentClient() = default;
@@ -122,7 +124,7 @@ class OmafDashSegmentClient : public VCD::NonCopyable {
   virtual OMAF_STATUS stop() noexcept = 0;
 
  public:
-  virtual OMAF_STATUS open(const SourceParams &dash_source, OnData scb, OnState fcb) noexcept = 0;
+  virtual OMAF_STATUS open(const SourceParams &ds_params, OnData dcb, OnChunkData cdcb, OnState scb) noexcept = 0;
   virtual OMAF_STATUS remove(const SourceParams &dash_source) noexcept = 0;
   virtual OMAF_STATUS check(const SourceParams &dash_source) noexcept = 0;
   virtual void setStatisticsWindows(int32_t time_window) noexcept = 0;

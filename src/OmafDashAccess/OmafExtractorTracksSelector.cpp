@@ -47,7 +47,12 @@
 
 VCD_OMAF_BEGIN
 
-OmafExtractorTracksSelector::~OmafExtractorTracksSelector() { mCurrentExtractor = nullptr; }
+OmafExtractorTracksSelector::~OmafExtractorTracksSelector()
+{
+  mSelectedTracks.clear();
+  mASMap.clear();
+  mCurrentExtractor = nullptr;
+}
 
 int OmafExtractorTracksSelector::SelectTracks(OmafMediaStream* pStream, bool isTimed) {
 
@@ -91,9 +96,20 @@ int OmafExtractorTracksSelector::SelectTracks(OmafMediaStream* pStream, bool isT
       }
       if (isTimed)
       {
-          int32_t stream_frame_rate = streamInfo->framerate_num / streamInfo->framerate_den;
-          uint32_t sampleNumPerSeg = pStream->GetSegmentDuration() * stream_frame_rate;
-          m_prevTimedTracksMap.insert(make_pair((static_cast<uint64_t>(pStream->GetSegmentNumber()) - 1) * sampleNumPerSeg, mCurrentExtractor->GetCurrentTracksMap()));
+        int32_t stream_frame_rate = round(float(streamInfo->framerate_num) / streamInfo->framerate_den);
+        uint32_t sampleNumPerSeg = pStream->GetSegmentDuration() * stream_frame_rate;
+        uint64_t curr_pts = (static_cast<uint64_t>(pStream->GetSegmentNumber()) - 1) * sampleNumPerSeg;
+        // if existed, replace it
+        if (m_prevTimedTracksMap.find(curr_pts) != m_prevTimedTracksMap.end())
+        {
+            m_prevTimedTracksMap[curr_pts] = mCurrentExtractor->GetCurrentTracksMap();
+        }
+        else
+        {
+            m_prevTimedTracksMap.insert(make_pair(curr_pts, mCurrentExtractor->GetCurrentTracksMap()));
+        }
+
+        OMAF_LOG(LOG_INFO, "Insert segid %lld tracks into previous map!\n", curr_pts);
       }
       }
   }
@@ -231,9 +247,11 @@ OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pSt
   Param_ViewportOutput paramViewportOutput;
   int32_t selectedTilesNum = I360SCVP_getTilesInViewport(
           tilesInViewport, &paramViewportOutput, m360ViewPortHandle);
-  std::list<int> selectedTracks;
 
-  std::map<int, OmafAdaptationSet*> asMap = pStream->GetMediaAdaptationSet();
+  std::lock_guard<std::mutex> lock(mASMutex);
+  mSelectedTracks.clear();
+  mASMap.clear();
+  mASMap = pStream->GetMediaAdaptationSet();
   std::map<int, OmafAdaptationSet*>::iterator itAS;
 
   if (mProjFmt == ProjectionFormat::PF_ERP)
@@ -243,7 +261,7 @@ OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pSt
           int32_t left = tilesInViewport[index].x;
           int32_t top  = tilesInViewport[index].y;
 
-          for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+          for (itAS = mASMap.begin(); itAS != mASMap.end(); itAS++)
           {
               OmafAdaptationSet *adaptationSet = itAS->second;
               OmafSrd *srd = adaptationSet->GetSRD();
@@ -254,7 +272,7 @@ OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pSt
               if ((qualityRanking == HIGHEST_QUALITY_RANKING) && (tileLeft == left) && (tileTop == top))
               {
                   int trackID = adaptationSet->GetID();
-                  selectedTracks.push_back(trackID);
+                  mSelectedTracks.push_back(trackID);
                   break;
               }
           }
@@ -267,7 +285,7 @@ OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pSt
           int32_t left = tilesInViewport[index].x;
           int32_t top  = tilesInViewport[index].y;
           int32_t faceId = tilesInViewport[index].faceId;
-          for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+          for (itAS = mASMap.begin(); itAS != mASMap.end(); itAS++)
           {
               OmafAdaptationSet *adaptationSet = itAS->second;
               uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
@@ -287,7 +305,7 @@ OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pSt
                   if ((tileLeft == left) && (tileTop == top) && (tileFaceId == faceId))
                   {
                       int trackID = adaptationSet->GetID();
-                      selectedTracks.push_back(trackID);
+                      mSelectedTracks.push_back(trackID);
                       break;
                   }
               }
@@ -305,12 +323,13 @@ OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pSt
 
   OmafExtractor* selectedExtractor = NULL;
   bool included = false;
+  std::lock_guard<std::mutex> lock_et(mExtractorsMutex);
   std::map<int, OmafExtractor*> extractors = pStream->GetExtractors();
   std::map<int, OmafExtractor*>::iterator ie;
   for (ie = extractors.begin(); ie != extractors.end(); ie++)
   {
       std::list<int> refTracks = ie->second->GetDependTrackID();
-      included = IsIncluded(selectedTracks, refTracks);
+      included = IsIncluded(mSelectedTracks, refTracks);
       if (included)
           break;
   }
@@ -325,8 +344,7 @@ OmafExtractor* OmafExtractorTracksSelector::SelectExtractor(OmafMediaStream* pSt
   }
 
   SAFE_DELETE(outCC);
-  delete [] tilesInViewport;
-  tilesInViewport = NULL;
+  DELETE_ARRAY(tilesInViewport);
 
   return selectedExtractor;
 }
@@ -400,7 +418,7 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   DashStreamInfo *stream_info = pStream->GetStreamInfo();
   if (stream_info == nullptr) return extractors;
 
-  int32_t stream_frame_rate = stream_info->framerate_num / stream_info->framerate_den;
+  int32_t stream_frame_rate = round(float(stream_info->framerate_num) / stream_info->framerate_den);
   uint64_t first_predict_pts = current_segment_num > 0 ? (current_segment_num - 1) * stream_frame_rate : 0;
   // 2. predict process
   ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);

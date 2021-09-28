@@ -141,6 +141,18 @@ int OmafMPDParser::ParseMPDInfo() {
 
   mPF = mMpd->GetProjectionFormat();
 
+  ServiceDescriptionElement* dsElem = mMpd->GetServiceDescriptions().empty() ? nullptr : mMpd->GetServiceDescriptions().back();
+  LatencyElement* latency = nullptr;
+  if (dsElem != nullptr) {
+    latency = dsElem->GetLatency();
+    if (latency != nullptr) {
+      mMPDInfo->target_latency = atoi(latency->GetTarget().c_str());
+    }
+  }
+  else {
+    mMPDInfo->target_latency = 0; // not in low latency mode
+  }
+
   return ERROR_NONE;
 }
 

@@ -135,6 +135,8 @@ VCD_OMAF_BEGIN
 #define MEDIA                                   "media"
 #define INITIALIZATION                          "initialization"
 #define STARTNUMBER                             "startNumber"
+#define AVAILABILITYTIMEOFFSET                  "availabilityTimeOffset"
+#define AVAILABILITYTIMECOMPLETE                "availabilityTimeComplete"
 #define SAR                                     "sar"
 #define MINBUFFERTIME                           "minBufferTime"
 #define RESYNCTYPE                              "type"
@@ -143,6 +145,12 @@ VCD_OMAF_BEGIN
 #define MEDIAPRESENTATIONDURATION               "mediaPresentationDuration"
 #define PROFILES                                "profiles"
 #define VALUE                                   "value"
+#define TARGET                                  "target"
+#define TYPE                                    "type"
+#define DT                                      "dT"
+#define INBAND                                  "inband"
+#define WALLCLOCKTIME                           "wallclockTime"
+#define PRESENTATIONTIME                        "presentationTime"
 
 #define MAXSEGMENTDURATION                      "maxSegmentDuration"
 #define AVAILABILITYSTARTTIME                   "availabilityStartTime"
@@ -374,6 +382,7 @@ typedef struct MPDINFO{
     uint32_t                      max_subsegment_duration;             /* expressed in milliseconds */
     std::string                   mpdPathBaseUrl;
     uint32_t                      fetchTime;
+    uint32_t                      target_latency;                      /* expressed in milliseconds */
 }MPDInfo;
 
 typedef struct PRESELVALUE{

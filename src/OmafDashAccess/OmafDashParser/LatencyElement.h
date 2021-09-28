@@ -26,43 +26,47 @@
  */
 
 //!
-//! \file:   RepresentationElement.cpp
-//! \brief:  Representation element class
+//! \file:   LatencyElement.h
+//! \brief:  Latency element class
 //!
 
-#include "RepresentationElement.h"
+#ifndef LATENCYELEMENT_H
+#define LATENCYELEMENT_H
+#include <string>
+#include "OmafElementBase.h"
 
 VCD_OMAF_BEGIN
 
-RepresentationElement::RepresentationElement()
-{
-    m_segment = nullptr;
-    m_audioChlCfg = nullptr;
-    m_resync = nullptr;
-    m_width = 0;
-    m_height = 0;
-    m_audioSamplingRate = 0;
-    m_bandwidth = 0;
-}
+class LatencyElement : public OmafElementBase{
+ public:
+  //!
+  //! \brief Constructor
+  //!
+  LatencyElement();
 
-RepresentationElement::~RepresentationElement()
-{
-    m_id.clear();
-    m_codecs.clear();
-    m_mimeType.clear();
-    m_width = 0;
-    m_height = 0;
-    m_audioSamplingRate = 0;
-    m_frameRate.clear();
-    m_sar.clear();
-    m_startWithSAP.clear();
-    m_qualityRanking.clear();
-    m_bandwidth = 0;
+  //!
+  //! \brief Destructor
+  //!
+  virtual ~LatencyElement();
 
-    SAFE_DELETE(m_segment);
-    SAFE_DELETE(m_audioChlCfg);
-    SAFE_DELETE(m_resync);
-}
+  //!
+  //! \brief    Set function for m_target
+  //!
+  //! \param    [in] str
+  //!           value to set
+  //! \param    [in] m_target
+  //!           m_target member in class
+  //! \param    [in] Target
+  //!           m_target name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(string, m_target, Target);
 
+ private:
+  string m_target; //!< the target attribute
+};
 
 VCD_OMAF_END;
+
+#endif  // LATENCYELEMENT_H

@@ -85,6 +85,12 @@ public:
         return mCurrentExtractor->GetCurrentTracksMap();
     }
 
+    virtual bool hasCurrentTracksMap()
+    {
+        std::lock_guard<std::mutex> lock(mCurrentMutex);
+        return !mCurrentExtractor->GetCurrentTracksMap().empty();
+    }
+
     //!
     //! \brief  update Viewport; each time pose update will be recorded, but only
     //!         the latest will be used when SelectTracks is called.
@@ -129,6 +135,8 @@ private:
 private:
     OmafExtractor                     *mCurrentExtractor;
     ListExtractor                      mCurrentExtractors;
+    std::mutex                         mExtractorsMutex;
+    std::list<int>                     mSelectedTracks;
 };
 
 VCD_OMAF_END;

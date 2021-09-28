@@ -814,6 +814,56 @@ public:
     //!
     int32_t ParseSegIndex(StreamIO* strIO,
                               VarLenArray<SegInfo>& segIndex);
+    //!
+    //! \brief  Get styp box size
+    //!
+    //! \param  [out]  size
+    //!         styp box size
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t GetStypSize(uint64_t& size);
+    //!
+    //! \brief  Get segment index size
+    //!
+    //! \param  [in]  version
+    //!         version
+    //! \param  [in]  ref_cnt
+    //!         reference count for sidx
+    //! \param  [out]  size
+    //!         segment index size
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t GetSegIndexSize(uint8_t version, int32_t ref_cnt, uint64_t& size);
+
+    //!
+    //! \brief  Get segment index range
+    //!
+    //! \param  [out]  segIndexArray
+    //!         segment index range
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t GetSegIndexRange(char *buf, size_t size, IndexMap& segIndexMap);
+
+    //!
+    //! \brief  Get prft prop
+    //!
+    //! \param  [in]  initSegId
+    //!         init segment id
+    //! \param  [in]  segIndex
+    //!         segment id
+    //! \param  [out]  prft
+    //!         producer reference time property
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t GetPRFTProp(uint32_t initSegId, uint32_t segIndex, PRFTProperty &prft) const;
 
 private:
     std::map<InitSegmentId, InitSegmentProperties> m_initSegProps;

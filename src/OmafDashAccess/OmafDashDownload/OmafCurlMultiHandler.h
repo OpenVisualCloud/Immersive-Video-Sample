@@ -96,13 +96,16 @@ class OmafDownloadTask : public VCD::NonCopyable {
     STOPPED = 3,
     TIMEOUT = 4,
     FINISH = 5,
+    CONTINUE = 6,
   };
 
   using TaskDoneCB = std::function<void(OmafDownloadTask::Ptr)>;
+  using SourceParams = DashSegmentSourceParams;
 
  public:
-  OmafDownloadTask(const std::string &url, OmafDashSegmentClient::OnData dcb, OmafDashSegmentClient::OnState scb)
-      : url_(url), dcb_(dcb), scb_(scb) {
+  OmafDownloadTask(const SourceParams &params, OmafDashSegmentClient::OnData dcb, OmafDashSegmentClient::OnChunkData cdcb, OmafDashSegmentClient::OnState scb)
+      : url_(params.dash_url_), dcb_(dcb), cdcb_(cdcb), scb_(scb), header_size_(params.header_size_),
+        chunk_num_(params.chunk_num_), enable_byte_range_(params.enable_byte_range_), downloaded_chunk_id_(params.start_chunk_id_ - 1) {
     id_ = TASK_ID.fetch_add(1);
   };
 
@@ -110,23 +113,28 @@ class OmafDownloadTask : public VCD::NonCopyable {
   virtual ~OmafDownloadTask() {
     dcb_ = nullptr;
     scb_ = nullptr;
+    cdcb_ = nullptr;
     OMAF_LOG(LOG_INFO, "Release the %s\n", this->to_string().c_str());
   }
 
  public:
-  static Ptr createTask(const std::string &url, OmafDashSegmentClient::OnData dcb, OmafDashSegmentClient::OnState scb) {
-    Ptr task = std::make_shared<OmafDownloadTask>(url, dcb, scb);
+  static Ptr createTask(const SourceParams &params, OmafDashSegmentClient::OnData dcb, OmafDashSegmentClient::OnChunkData cdcb, OmafDashSegmentClient::OnState scb) {
+    Ptr task = std::make_shared<OmafDownloadTask>(params, dcb, cdcb, scb);
     return task;
   }
 
  public:
   inline const std::string &url() const noexcept { return url_; }
   inline int64_t streamSize(void) const noexcept { return stream_size_; }
+  inline int64_t lastStreamSize(void) const noexcept { return last_stream_size_; }
+  inline size_t headerSize(void) const noexcept { return header_size_; }
   inline size_t id() const noexcept { return id_; }
+  inline bool enableByteRange() const noexcept { return enable_byte_range_; }
   std::string to_string() const noexcept {
     std::stringstream ss;
     ss << "task, id=" << id_;
     ss << ", url=" << url_;
+    ss << ", header_size=" << header_size_;
     ss << ", stream_size=" << stream_size_;
     ss << ", state=" << static_cast<int>(state_);
     return ss.str();
@@ -145,8 +153,8 @@ class OmafDownloadTask : public VCD::NonCopyable {
       case State::TIMEOUT:
       case State::FINISH:
         if (perf_counter_) {
-          perf_counter_->downloadTime(easy_downloader_->downloadTime());
-          perf_counter_->downloadSpeed(easy_downloader_->speed());
+          perf_counter_->downloadTime(easy_d_downloader_->downloadTime());
+          perf_counter_->downloadSpeed(easy_d_downloader_->speed());
         }
         break;
       default:
@@ -166,12 +174,15 @@ class OmafDownloadTask : public VCD::NonCopyable {
           scb_(OmafDashSegmentClient::State::STOPPED);
         } else if (state == OmafDownloadTask::State::TIMEOUT) {
           scb_(OmafDashSegmentClient::State::TIMEOUT);
+        } else if (state == OmafDownloadTask::State::CONTINUE) {
+          scb_(OmafDashSegmentClient::State::CONTINUE);
         } else {
           scb_(OmafDashSegmentClient::State::FAILURE);
         }
       }
     }
   }
+
   std::chrono::milliseconds transferDuration() const {
     if (perf_counter_) return perf_counter_->transferDuration();
     return std::chrono::milliseconds(0);
@@ -196,13 +207,21 @@ class OmafDownloadTask : public VCD::NonCopyable {
  private:
   std::string url_;
   OmafDashSegmentClient::OnData dcb_;
+  OmafDashSegmentClient::OnChunkData cdcb_;
   OmafDashSegmentClient::OnState scb_;
   State state_ = State::CREATE;
-  OmafCurlEasyDownloader::Ptr easy_downloader_;
+  OmafCurlEasyDownloader::Ptr easy_d_downloader_;
+  OmafCurlEasyDownloader::Ptr easy_h_downloader_;
   int transfer_times_ = 0;
   size_t id_ = 0;
   size_t stream_size_ = 0;
+  size_t last_stream_size_ = 0;
   OmafDownloadTaskPerfCounter::Ptr perf_counter_;
+  size_t header_size_ = 0; // sidx size
+  uint32_t chunk_num_ = 0;
+  bool enable_byte_range_ = false;
+  int32_t downloaded_chunk_id_ = -1;
+  map<uint32_t, uint32_t> index_range_;
 
  private:
   static std::atomic_size_t TASK_ID;
@@ -233,7 +252,7 @@ class OmafCurlMultiDownloader : public VCD::NonCopyable {
   inline size_t size() const noexcept {  // return ready_task_list_.size() + run_task_map_.size();
     int size = task_size_.load();
     if (size < 0) {
-      OMAF_LOG(LOG_FATAL, "The task size is in invalid state!\n");
+      OMAF_LOG(LOG_WARNING, "The task size is in invalid state!\n");
     }
     return static_cast<size_t>(size);
   }
@@ -241,18 +260,25 @@ class OmafCurlMultiDownloader : public VCD::NonCopyable {
  private:
   OMAF_STATUS removeReadyTask(OmafDownloadTask::Ptr task) noexcept;
   OMAF_STATUS removeRunningTask(OmafDownloadTask::Ptr task) noexcept;
-  OMAF_STATUS moveTaskFromRun(OmafDownloadTask::Ptr task, OmafDownloadTask::State to_state) noexcept;
+  OMAF_STATUS moveDataTaskFromRun(OmafDownloadTask::Ptr task, OmafDownloadTask::State to_state) noexcept;
+  OMAF_STATUS moveHeaderTaskFromRun(OmafDownloadTask::Ptr task, OmafDownloadTask::State to_state) noexcept;
   OMAF_STATUS markTaskFinish(OmafDownloadTask::Ptr task) noexcept;
   OMAF_STATUS markTaskTimeout(OmafDownloadTask::Ptr task) noexcept;
+  OMAF_STATUS markTaskContinue(OmafDownloadTask::Ptr task) noexcept;
 
  private:
   void threadRunner(void) noexcept;
   OMAF_STATUS startTaskDownload(void) noexcept;
   size_t retriveDoneTask(int msgNum = -1) noexcept;
-  OMAF_STATUS createTransfer(OmafDownloadTask::Ptr task) noexcept;
-  OMAF_STATUS startTransfer(OmafDownloadTask::Ptr task) noexcept;
-  OMAF_STATUS removeTransfer(OmafDownloadTask::Ptr task) noexcept;
+  OMAF_STATUS ProcessDataTasks() noexcept;
+  OMAF_STATUS createTransferForTask(OmafDownloadTask::Ptr task) noexcept;
+  OMAF_STATUS startTransferForTask(OmafDownloadTask::Ptr task) noexcept;
+  OMAF_STATUS createTransfer(OmafDownloadTask::Ptr task, OmafCurlEasyDownloader::Ptr& downloader) noexcept;
+  OMAF_STATUS startTransfer(OmafDownloadTask::Ptr task, OmafCurlEasyDownloader::Ptr downloader, int64_t offset, int64_t size) noexcept;
+  OMAF_STATUS TriggerNextDataTransfer(OmafDownloadTask::Ptr task) noexcept;
+  OMAF_STATUS removeTransfer(OmafDownloadTask::Ptr task, OmafCurlEasyDownloader::Ptr downloader) noexcept;
   void processTaskDone(OmafDownloadTask::Ptr task) noexcept;
+  void processTaskContinue(OmafDownloadTask::Ptr task) noexcept;
 
  private:
   const long max_parallel_transfers_;
@@ -263,11 +289,13 @@ class OmafCurlMultiDownloader : public VCD::NonCopyable {
   std::mutex ready_task_list_mutex_;
   std::list<OmafDownloadTask::Ptr> ready_task_list_;
   std::mutex run_task_map_mutex_;
-  std::map<void *, OmafDownloadTask::Ptr> run_task_map_;
+  std::map<OmafCurlEasyDownloader::Ptr, OmafDownloadTask::Ptr> run_task_map_;
   std::thread worker_;
   std::atomic_int32_t task_size_{0};
   long max_parallel_ = DEFAULT_MAX_PARALLER_TRANSFERS;
   bool bworking_ = false;
+  std::mutex pending_data_task_list_mutex;
+  std::vector<OmafDownloadTask::Ptr> pending_data_tasks_;
 };
 
 }  // namespace OMAF

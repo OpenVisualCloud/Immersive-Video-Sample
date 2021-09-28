@@ -91,6 +91,7 @@ TEST_F(DownloaderPerfTest, perf_success) {
         EXPECT_TRUE(sb != nullptr);
         EXPECT_TRUE(sb->size() > 0);
       },
+      nullptr,
       [&sync_num](OmafDashSegmentClient::State state) {
         OMAF_LOG(LOG_INFO, "Receive the state: %d\n", static_cast<int>(state));
         EXPECT_TRUE(state == OmafDashSegmentClient::State::SUCCESS);
@@ -120,6 +121,7 @@ TEST_F(DownloaderPerfTest, perf_timeout) {
         EXPECT_TRUE(sb != nullptr);
         EXPECT_TRUE(sb->size() > 0);
       },
+      nullptr,
       [&sync_num](OmafDashSegmentClient::State state) {
         OMAF_LOG(LOG_INFO, "Receive the state:%d\n", static_cast<int>(state));
         EXPECT_TRUE(state == OmafDashSegmentClient::State::TIMEOUT);
@@ -150,6 +152,7 @@ TEST_F(DownloaderPerfTest, perf_success_100) {
           EXPECT_TRUE(sb != nullptr);
           EXPECT_TRUE(sb->size() > 0);
         },
+        nullptr,
         [&sync_num](OmafDashSegmentClient::State state) {
           OMAF_LOG(LOG_INFO, "Receive the state:%d\n", static_cast<int>(state));
           EXPECT_TRUE(state == OmafDashSegmentClient::State::SUCCESS);

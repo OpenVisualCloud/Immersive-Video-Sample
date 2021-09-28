@@ -35,6 +35,7 @@
 #include "OmafElementBase.h"
 #include "AudioChannelCfgElement.h"
 #include "SegmentElement.h"
+#include "ResyncElement.h"
 
 VCD_OMAF_BEGIN
 
@@ -205,6 +206,20 @@ class RepresentationElement : public OmafElementBase {
   //!
   MEMBER_SET_AND_GET_FUNC(SegmentElement*, m_segment, Segment);
 
+  //!
+  //! \brief    Set function for m_resync member
+  //!
+  //! \param    [in] ResyncElement
+  //!           value to set
+  //! \param    [in] m_resync
+  //!           m_resync member in class
+  //! \param    [in] Resync
+  //!           m_resync name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(ResyncElement*, m_resync, Resync);
+
   MEMBER_SET_AND_GET_FUNC(AudioChannelConfigurationElement*, m_audioChlCfg, AudioChlCfg);
 
   //!
@@ -245,6 +260,8 @@ private:
 
   SegmentElement* m_segment;  //!< the SegmentTemplate child elements
   AudioChannelConfigurationElement* m_audioChlCfg;
+
+  ResyncElement* m_resync;        //!< the Resync child element
 };
 
 VCD_OMAF_END;

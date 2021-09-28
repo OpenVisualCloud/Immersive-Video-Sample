@@ -50,14 +50,20 @@ public:
     //! \brief  construct
     //!
     DataLog(){
+        //switch log
         switch_start_time_ = 0;
         switch_end_time_ = 0;
         total_switch_times_ = 0;
         avg_switch_time_ = 0;
         max_switch_time_ = 0;
         min_switch_time_ = __LONG_MAX__;
-        log_file_.open("switch.log");
-        log_file_ << "-=-=-=-=-=-=-switch performance-=-=-=-=-=-=-" << endl;
+        log_file_.open("perf.log");
+        log_file_ << "-=-=-=-=-=-=-M2HQ performance-=-=-=-=-=-=-" << endl;
+        // e2e latency log
+        avg_e2elatency_time_ = 0;
+        max_e2elatency_time_ = 0;
+        min_e2elatency_time_ = __LONG_MAX__;
+        total_record_latency_times_ = 0;
     };
     //!
     //! \brief  de-construct
@@ -136,7 +142,44 @@ public:
                   << "min switch latency : " << min_switch_time_ << " ms" << endl
                   << "--------------------------------------------" << endl;
     }
-
+    //!
+    //! \brief  set single e2e latency and update some characteristics
+    //!
+    void SetSingleE2ELatency(uint64_t time) {
+        if (avg_e2elatency_time_ * total_record_latency_times_ > UINT64_MAX) {
+            LOG(WARNING) << "Too large for the latency profiling! Re-collect the latency data!" << endl;
+            total_record_latency_times_ = 0;
+            max_e2elatency_time_ = 0;
+            min_e2elatency_time_ = __LONG_MAX__;
+            avg_e2elatency_time_ = 0;
+        }
+        if (time > max_e2elatency_time_) max_e2elatency_time_ = time;
+        if (time < min_e2elatency_time_) min_e2elatency_time_ = time;
+        avg_e2elatency_time_ = (avg_e2elatency_time_ * total_record_latency_times_ + time) / (total_record_latency_times_ + 1);
+        total_record_latency_times_++;
+    }
+    //!
+    //! \brief  print latency performance in log
+    //!
+    void PrintE2ELatencyPerformanceInLog() {
+        LOG(INFO) << "-=-=-=-=-=-=-E2E latency performance-=-=-=-=-=-=-" << endl
+                  << "--------------------------------------------" << endl
+                  << "average e2e latency : " << avg_e2elatency_time_ << " ms" << endl
+                  << "max e2e latency : " << max_e2elatency_time_ << " ms" << endl
+                  << "min e2e latency : " << min_e2elatency_time_ << " ms" << endl
+                  << "--------------------------------------------" << endl;
+    }
+    //!
+    //! \brief  print latency performance in file
+    //!
+    void PrintE2ELatencyPerformanceInFile() {
+        log_file_ << "-=-=-=-=-=-=-E2E latency performance-=-=-=-=-=-=-" << endl
+                  << "--------------------------------------------" << endl
+                  << "average switch latency : " << avg_e2elatency_time_ << " ms" << endl
+                  << "max switch latency : " << max_e2elatency_time_ << " ms" << endl
+                  << "min switch latency : " << min_e2elatency_time_ << " ms" << endl
+                  << "--------------------------------------------" << endl;
+    }
 
 private:
     DataLog& operator=(const DataLog& other) { return *this; };
@@ -151,6 +194,11 @@ private:
 
     uint64_t max_switch_time_; //<! max switch time
     uint64_t min_switch_time_; //<! min switch time
+
+    uint64_t avg_e2elatency_time_;
+    uint64_t max_e2elatency_time_;
+    uint64_t min_e2elatency_time_;
+    uint64_t total_record_latency_times_;
 
     ofstream log_file_; //<! log file
 

@@ -55,10 +55,34 @@ OmafSegment::OmafSegment(DashSegmentSourceParams ds_params, int segCnt, bool bIn
   mSampleRate = 0;
 }
 
+OmafSegment::OmafSegment(std::shared_ptr<OmafSegment> seg, std::unique_ptr<StreamBlock> sb) {
+  dash_client_ = seg->dash_client_;
+  state_ = State::OPEN_SUCCES;
+  ds_params_ = seg->ds_params_;
+  dash_stream_.push_back(std::move(sb));
+  buse_stored_file_ = seg->buse_stored_file_;
+  cache_file_ = seg->cache_file_;
+  seg_id_ = seg->seg_id_;
+  initSeg_id_ = seg->initSeg_id_;
+  track_id_ = seg->track_id_;
+  seg_count_ = seg->seg_count_;
+  bInit_segment_ = seg->bInit_segment_;
+  mQualityRanking = seg->mQualityRanking;
+  SetSRDInfo(seg->mSRDInfo);
+  mMediaType = seg->mMediaType;
+  mSegmentType = SegmentType_Omaf;
+  mChlsNum = seg->mChlsNum;
+  mSampleRate = seg->mSampleRate;
+  bCatchup_ = seg->bCatchup_;
+  bExtractor_ = seg->bExtractor_;
+  chunk_num_ = seg->chunk_num_;
+}
+
 OmafSegment::~OmafSegment() {
   if (buse_stored_file_ && !cache_file_.empty()) {
     DOWNLOADMANAGER::GetInstance()->DeleteCacheFile(cache_file_);
   }
+  dash_stream_.clear();
 }
 
 int OmafSegment::Open(std::shared_ptr<OmafDashSegmentClient> dash_client) noexcept {
@@ -73,7 +97,11 @@ int OmafSegment::Open(std::shared_ptr<OmafDashSegmentClient> dash_client) noexce
 
     // mSegElement->StartDownloadSegment((OmafDownloaderObserver *)this);
     dash_client_->open(
+        //dcb
         ds_params_, [this](std::unique_ptr<VCD::OMAF::StreamBlock> sb) { this->dash_stream_.push_back(std::move(sb)); },
+        //cdcb
+        nullptr,
+        //scb
         [this](OmafDashSegmentClient::State s) {
           switch (s) {
             case OmafDashSegmentClient::State::SUCCESS:
@@ -177,6 +205,7 @@ std::string OmafSegment::to_string() const noexcept {
   std::stringstream ss;
   ss << "segment initsegId=" << initSeg_id_;
   ss << ", segId=" << seg_id_;
+  ss << ", processed_chunk_id=" << processed_chunk_id_;
   ss << ", url=" << ds_params_.dash_url_;
   ss << ", file=" << cache_file_;
   return ss.str();

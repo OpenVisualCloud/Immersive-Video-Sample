@@ -48,6 +48,7 @@
 #include "../atoms/SegIndexAtom.h"
 #include "../atoms/TypeAtom.h"
 #include "../atoms/UriMetaSampEntryAtom.h"
+#include "../atoms/ProducerReferenceTimeAtom.h"
 
 #include <limits.h>
 #include <algorithm>
@@ -64,6 +65,8 @@
 using namespace std;
 
 VCD_MP4_BEGIN
+
+#define MAX_CHUNK_NUM 100
 
 using PrestTS = DecodePts::PresentTimeTS;
 const char* ident = "$Id: MP4VR version " MP4_BUILD_VERSION " $";
@@ -577,6 +580,7 @@ int32_t Mp4Reader::ParseSeg(StreamIO* strIO,
     segProps.segmentId     = segIndex;
 
     bool stypFound       = false;
+    bool prftFound       = false;
     bool earliestPTSRead = false;
     std::map<ContextId, PrestTS> earliestPTSTS;
 
@@ -603,7 +607,7 @@ int32_t Mp4Reader::ParseSeg(StreamIO* strIO,
                         if (stypFound == false)
                         {
                             segProps.styp = styp;
-                            stypFound              = true;
+                            stypFound     = true;
                         }
                     }
                 }
@@ -625,6 +629,21 @@ int32_t Mp4Reader::ParseSeg(StreamIO* strIO,
                                 earliestPTSTS[ctxId] =
                                     PrestTS(sidx.GetEarliestPresentationTime());
                             }
+                        }
+                    }
+                }
+                else if (boxType == "prft")
+                {
+                    error = ReadAtom(io, bitstream);
+                    if (!error)
+                    {
+                        ProducerReferenceTimeAtom prft;
+                        prft.FromStream(bitstream);
+
+                        if (prftFound == false)
+                        {
+                            segProps.prft = prft;
+                            prftFound     = true;
                         }
                     }
                 }
@@ -850,6 +869,91 @@ int32_t Mp4Reader::ParseSegIndex(StreamIO* strIO,
         io.strIO->ClearStatus();
     }
     return error;
+}
+
+int32_t Mp4Reader::GetStypSize(uint64_t& size)
+{
+    uint32_t stypBoxSize = 8;//already in bytes
+    uint32_t majorBrandSize = 32;
+    uint32_t minorBrandSize = 32;
+    uint32_t compatibleBrandsSize = 32 * 2;
+    uint64_t totalSizeInBit = majorBrandSize + minorBrandSize + compatibleBrandsSize;
+    size = totalSizeInBit / 8 + stypBoxSize;
+
+    return ERROR_NONE;
+}
+
+int32_t Mp4Reader::GetSegIndexSize(uint8_t version, int32_t ref_cnt, uint64_t& size)
+{
+    uint32_t sidxBoxSize = 8 + 4;//already in bytes
+
+    uint32_t referenceIDSize = 32;
+    uint32_t timescaleSize = 32;
+
+    uint32_t earliestPresentationTimeSize = 0;
+    uint32_t firstOffsetSize = 0;
+    if (version == 0) {
+        earliestPresentationTimeSize = 32;
+        firstOffsetSize = 32;
+    }
+    else if (version == 1) {
+        earliestPresentationTimeSize = 64;
+        firstOffsetSize = 64;
+    }
+    else {
+        ISO_LOG(LOG_ERROR, "SegmentIndexAtom supports only 'sidx' version 0 or 1\n");
+        throw Exception();
+    }
+    uint32_t reservedSize = 16;
+    uint32_t referenceCountSize = 16;
+
+    uint32_t referenceTypeSize = 1;
+    uint32_t referencedSizeSize = 31;
+    uint32_t subsegmentDurationSize = 32;
+    uint32_t startsWithSAPSize = 1;
+    uint32_t sapTypeSize = 3;
+    uint32_t sapDeltaTimeSize = 28;
+
+    //free box
+    uint32_t freeBoxSize = (MAX_CHUNK_NUM - ref_cnt) * 32 * 3;
+    //total size calculation
+    uint64_t totalSizeInBit = referenceIDSize + timescaleSize + earliestPresentationTimeSize + firstOffsetSize + reservedSize + referenceCountSize +
+                                ref_cnt * uint64_t(referenceTypeSize + referencedSizeSize + subsegmentDurationSize + startsWithSAPSize + sapTypeSize + sapDeltaTimeSize) +
+                                freeBoxSize;
+
+    size = totalSizeInBit / 8 + sidxBoxSize;
+
+    return ERROR_NONE;
+}
+
+int32_t Mp4Reader::GetSegIndexRange(char* buf, size_t size, IndexMap& segIndexMap)
+{
+    Stream bitstream;
+    SegmentIndexAtom sidx;
+
+    std::vector<uint8_t> data;
+    uint64_t stypSize = 0;
+    GetStypSize(stypSize);
+
+    char *sidxBuf = buf + stypSize;
+
+    data.insert(data.end(), sidxBuf, sidxBuf + size - stypSize);
+
+    bitstream.Clear();
+    bitstream.Reset();
+    bitstream.WriteArray(data, size - stypSize);
+    sidx.FromStream(bitstream);
+
+    std::vector<SegmentIndexAtom::Reference> ref = sidx.GetReferences();
+
+    segIndexMap.clear();
+    for (uint32_t i = 0; i < ref.size(); i++) {
+        // LOG(INFO) << "Push back " << i << " size " << ref[i].referencedSize << endl;
+        uint32_t chunk_id = i; // index from 0
+        uint32_t referencedSize = ref[i].referencedSize;
+        segIndexMap.insert(std::make_pair(chunk_id, referencedSize));
+    }
+    return ERROR_NONE;
 }
 
 void Mp4Reader::IsInited() const
@@ -1935,6 +2039,26 @@ TypeToIdsMap Mp4Reader::GetSampGroupIds(TrackAtom* trackAtom) const
     }
 
     return sampleGroupIdsMap;
+}
+
+int32_t Mp4Reader::GetPRFTProp(uint32_t initSegId, uint32_t segIndex, PRFTProperty &prft) const
+{
+    if (!m_initSegProps.count(initSegId))
+    {
+        return OMAF_INVALID_SEGMENT;
+    }
+
+    bool isSegment = !!m_initSegProps.at(initSegId).segPropMap.count(segIndex);
+    if (isSegment)
+    {
+        auto& segProps = m_initSegProps.at(initSegId).segPropMap.at(segIndex);
+        ProducerReferenceTimeAtom prftAtom = segProps.prft;
+        prft.refTrackId = prftAtom.GetReferenceTrackId();
+        prft.ntpTimeStamp = prftAtom.GetNtpTimeStamp();
+        prft.mediaTime = prftAtom.GetMediaTime();
+    }
+
+    return (isSegment) ? ERROR_NONE : OMAF_INVALID_SEGMENT;
 }
 
 pair<TrackBasicInfo, TrackDecInfo> Mp4Reader::ExtractTrackDecInfo(TrackAtom* trackAtom,
