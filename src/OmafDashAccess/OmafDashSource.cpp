@@ -387,6 +387,7 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
       }
       int ret = omaf_reader_mgr_->GetNextPacket(trackNumber, pkt, needParams);
       if (ret == ERROR_NONE) {
+        pkt->SetPTS(pkt->GetPTS() - omaf_reader_mgr_->GetStartOffsetPts());
         pkts->push_back(pkt);
       }
       // add catch up packets
@@ -397,6 +398,7 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
       std::list<MediaPacket*>::iterator itPacket;
       for (itPacket = mergedPackets.begin(); itPacket != mergedPackets.end(); itPacket++) {
         MediaPacket* onePacket = *itPacket;
+        onePacket->SetPTS(onePacket->GetPTS() - omaf_reader_mgr_->GetStartOffsetPts());
         pkts->push_back(onePacket);
       }
       mergedPackets.clear();
@@ -423,6 +425,7 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
       std::list<MediaPacket*>::iterator itPacket;
       for (itPacket = mergedPackets.begin(); itPacket != mergedPackets.end(); itPacket++) {
         MediaPacket* onePacket = *itPacket;
+        onePacket->SetPTS(onePacket->GetPTS() - omaf_reader_mgr_->GetStartOffsetPts());
         pkts->push_back(onePacket);
       }
       mergedPackets.clear();
@@ -455,6 +458,8 @@ int OmafDashSource::SetupHeadSetInfo(HeadSetInfo* clientInfo) {
 }
 
 int OmafDashSource::ChangeViewport(HeadPose* pose) {
+  if (omaf_reader_mgr_->GetStartOffsetPts() < 0) return ERROR_NONE;
+  pose->pts += omaf_reader_mgr_->GetStartOffsetPts();
   int ret = m_selector->UpdateViewport(pose);
 
   return ret;
@@ -468,8 +473,10 @@ int OmafDashSource::GetMediaInfo(DashMediaInfo* media_info) {
   media_info->stream_count = this->GetStreamCount();
   if (mInfo->type == TYPE_STATIC) {
     media_info->streaming_type = DASH_STREAM_STATIC;
+    media_info->target_latency = 0;
   } else {
     media_info->streaming_type = DASH_STREAM_DYNMIC;
+    media_info->target_latency = mInfo->target_latency; // for LL-DASH
   }
 
   for (int i = 0; i < media_info->stream_count; i++) {
@@ -489,6 +496,7 @@ int OmafDashSource::GetMediaInfo(DashMediaInfo* media_info) {
     media_info->stream_info[i].source_number = pStreamInfo->source_number;
     media_info->stream_info[i].source_resolution = pStreamInfo->source_resolution;
     media_info->stream_info[i].segmentDuration = pStreamInfo->segmentDuration;
+    media_info->stream_info[i].chunkDuration = pStreamInfo->chunkDuration;
     media_info->stream_info[i].tileRowNum = pStreamInfo->tileRowNum;
     media_info->stream_info[i].tileColNum = pStreamInfo->tileColNum;
     memcpy_s(const_cast<char*>(media_info->stream_info[i].codec), 1024, pStreamInfo->codec, 1024);
@@ -529,9 +537,10 @@ int OmafDashSource::DownloadSegments(bool bFirst) {
         if (omaf_dash_params_.syncer_params_.enable_) {
           pStream->SetupSegmentSyncer(omaf_dash_params_);
         }
+        m_startChunkId = pStream->GetStartChunkId();
       }
     }
-    pStream->DownloadSegments();
+    pStream->DownloadSegments(m_enableCMAF);
   }
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
@@ -720,6 +729,8 @@ void OmafDashSource::thread_dynamic() {
     isInitSegParsed = omaf_reader_mgr_->IsInitSegmentsParsed();
   }
 
+  m_enableCMAF = omaf_reader_mgr_->IsCmafContent();
+
   while ((ERROR_NONE != StartReadThread())) {
     ::usleep(1000);
   }
@@ -768,8 +779,17 @@ void OmafDashSource::thread_dynamic() {
 
     /// 1/2 segment duration ahead of time to fetch segment.
     // uint32_t wait_time = (info.max_segment_duration * 3) / 4 - interval;
-    uint32_t wait_time = mMPDinfo->max_segment_duration > interval ? mMPDinfo->max_segment_duration - interval : 0;
+    uint32_t wait_time = 0;
+    if (m_enableCMAF) {
+      uint64_t chunkDuration = GetChunkDuration();
 
+      if (bFirst)
+        wait_time = mMPDinfo->max_segment_duration > m_startChunkId * chunkDuration ? mMPDinfo->max_segment_duration - m_startChunkId * chunkDuration : 0;
+      else
+        wait_time = mMPDinfo->max_segment_duration > interval ? mMPDinfo->max_segment_duration - interval : 0;
+    }
+    else
+      wait_time = mMPDinfo->max_segment_duration > interval ? mMPDinfo->max_segment_duration - interval : 0;
     ::usleep(wait_time * 1000);
 
     uLastSegTime = sys_clock();
@@ -809,6 +829,7 @@ void OmafDashSource::thread_static() {
     }
     isInitSegParsed = omaf_reader_mgr_->IsInitSegmentsParsed();
   }
+  m_enableCMAF = omaf_reader_mgr_->IsCmafContent();
 
   while ((ERROR_NONE != StartReadThread())) {
     ::usleep(1000);
@@ -910,7 +931,6 @@ void OmafDashSource::thread_catchup()
   std::map<uint32_t, uint32_t> catchupTimesInSeg;
   uint32_t maxRecordNum = 50;
   while (go_on) {
-    OMAF_LOG(LOG_INFO, "Start to do catch up thread!\n");
     if (STATUS_EXITING == GetStatus() || STATUS_STOPPED == GetStatus()) {
       OMAF_LOG(LOG_INFO, "Catch up thread for downloading is exit!\n");
       break;
@@ -923,8 +943,8 @@ void OmafDashSource::thread_catchup()
       continue;
     }
 
-    std::map<int, OmafAdaptationSet*> currSelectedTracksMap = m_selector->GetCurrentTracksMap();
-    if (currSelectedTracksMap.empty())
+    bool isReady = m_selector->hasCurrentTracksMap();
+    if (!isReady)
     {
       OMAF_LOG(LOG_ERROR, "Current selected tracks map is empty!\n");
       usleep(sleepUS);
@@ -970,7 +990,7 @@ void OmafDashSource::thread_catchup()
       for (auto tracks = new_tracks.begin(); tracks != new_tracks.end(); tracks++) {
         uint32_t del_num = tracks->second.size() > max_catchup_num ? tracks->second.size() - max_catchup_num : 0;
         for (auto tk = tracks->second.begin(); tk != tracks->second.end() && del_num > 0;) {
-          tracks->second.erase(tk++);
+          tk = tracks->second.erase(tk);
           del_num--;
         }
       }
@@ -1002,7 +1022,7 @@ void OmafDashSource::thread_catchup()
         pStream->AddCatchupTriggerPTS(currentTimeLine);
       }
       //4. download assigned segments
-      ret = DownloadAssignedSegments(new_tracks);
+      ret = DownloadAssignedSegments(new_tracks, currentTimeLine);
       if (ERROR_NONE != ret) {
         OMAF_LOG(LOG_INFO, "Failed to download assigned segments!\n");
         usleep(sleepUS);
@@ -1035,14 +1055,14 @@ void OmafDashSource::thread_catchup()
   return;
 }
 
-int OmafDashSource::DownloadAssignedSegments(std::map<uint32_t, TracksMap> additional_tracks)
+int OmafDashSource::DownloadAssignedSegments(std::map<uint32_t, TracksMap> additional_tracks, uint64_t currentTimeLine)
 {
   int ret = ERROR_NONE;
   OMAF_LOG(LOG_INFO, "Download assigned segment!\n");
   std::map<int, OmafMediaStream*>::iterator it;
   for (it = this->mMapStream.begin(); it != this->mMapStream.end(); it++) {
     OmafMediaStream* pStream = it->second;
-    ret = pStream->DownloadAssignedSegments(additional_tracks);
+    ret = pStream->DownloadAssignedSegments(additional_tracks, currentTimeLine, m_enableCMAF);
     if (ERROR_NONE != ret)
     {
       OMAF_LOG(LOG_ERROR, "Failed to download assigned segments!\n");
@@ -1067,7 +1087,7 @@ std::map<uint32_t, std::map<int, OmafAdaptationSet*>> OmafDashSource::GetNewTrac
         if (addi->first == downloaded->first && tk->first == downloaded->second) // found downloaded one
         {
           isFound = true;
-          addi->second.erase(tk++);
+          tk = addi->second.erase(tk);
           break;
         }
       }
@@ -1075,7 +1095,7 @@ std::map<uint32_t, std::map<int, OmafAdaptationSet*>> OmafDashSource::GetNewTrac
     }
     if (addi->second.empty())
     {
-      additional_tracks.erase(addi++);
+      addi = additional_tracks.erase(addi);
     }
     else
     {
@@ -1087,8 +1107,8 @@ std::map<uint32_t, std::map<int, OmafAdaptationSet*>> OmafDashSource::GetNewTrac
   {
     if (catchupTimesInSeg.find(iter->first) != catchupTimesInSeg.end() && catchupTimesInSeg[iter->first] >= omaf_dash_params_.max_response_times_in_seg)
     {
-      // OMAF_LOG(LOG_INFO, "Already catchup select seg id %d for %d times\n", iter->first, catchupTimesInSeg[iter->first]);
-      additional_tracks.erase(iter++);
+      // LOG(INFO) << "Already excel the max response times! seg id " << iter->first << endl;
+      iter = additional_tracks.erase(iter);
     }
     else
     {

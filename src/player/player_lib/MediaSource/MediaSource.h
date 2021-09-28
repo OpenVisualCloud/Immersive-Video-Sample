@@ -126,6 +126,7 @@ public:
         mAudioInfo.clear();
         mActiveAudioID = 0;
         mActiveVideoID = 0;
+        mTargetLatency = 0;
 
     };
     ~MediaInfo()=default;
@@ -174,6 +175,7 @@ public:
     std::map<int32_t, AudioInfo>     mAudioInfo;
     uint64_t      mDuration;
     int32_t       mStreamingType;
+    int32_t       mTargetLatency; //ms
     int32_t       mActiveVideoID;
     int32_t       mActiveAudioID;
 };

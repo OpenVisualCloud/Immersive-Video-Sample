@@ -51,6 +51,7 @@ typedef struct PacketInfo{
      uint64_t  pts;
      uint32_t  video_id;
      bool      bCatchup;
+     uint64_t  producedTime;
 }PacketInfo;
 
 typedef struct DecodedFrame{
@@ -63,6 +64,7 @@ typedef struct DecodedFrame{
      uint32_t           video_id;
      bool               bEOS;
      bool               bCatchup;
+     uint64_t           producedTime;
 }DecodedFrame;
 
 typedef struct FrameData{
@@ -73,6 +75,7 @@ typedef struct FrameData{
      bool               bCodecChange;
      uint32_t           video_id;
      bool               bCatchup;
+     uint64_t           producedTime = 0;
 }FrameData;
 
 class DecoderContext

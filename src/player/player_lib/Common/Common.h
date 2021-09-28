@@ -37,6 +37,7 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
+#include <sys/time.h>
 #include "../../../utils/ns_def.h"
 #include "RenderType.h"
 #include "data_type.h"
@@ -50,8 +51,35 @@
 #define ANDROID_LOGD(...) __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
 #endif
 
+#define NTP_OFFSET 2208988800ULL
+#define NTP_OFFSET_US (NTP_OFFSET * 1000000ULL)
+
 #define SAFE_DELETE(x) if(NULL != (x)) { delete (x); (x)=NULL; };
 #define SAFE_FREE(x)   if(NULL != (x)) { free((x));    (x)=NULL; };
 #define SAFE_DELETE_ARRAY(x) if(NULL != (x)) { delete [] (x); (x)=NULL; };
+
+static uint64_t GetNtpTimeStamp() {
+	struct timeval currT;
+    gettimeofday(&currT, NULL);
+    uint64_t time = currT.tv_sec * 1000000 + currT.tv_usec;
+    uint64_t ntpTimeUS = (time / 1000) * 1000 + NTP_OFFSET_US;
+    uint64_t ntpTimeNormal, fracTime, sec;
+	uint32_t usec;
+	sec = ntpTimeUS / 1000000;
+	usec = ntpTimeUS % 1000000;
+	fracTime = usec * 0xFFFFFFFFULL;
+	fracTime /= 1000000;
+	ntpTimeNormal = sec << 32;
+	ntpTimeNormal |= fracTime;
+	return ntpTimeNormal;
+}
+
+static uint64_t transferNtpToMSecond(uint64_t last_ntp_time) {
+    uint64_t seconds = ((last_ntp_time >> 32) & 0xffffffff) - NTP_OFFSET;
+    uint64_t fraction  = (last_ntp_time & 0xffffffff);
+    double useconds = ((double) fraction / 0xffffffff);
+    uint64_t base_time = seconds * 1000 + useconds * 1000;
+    return base_time;
+}
 
 #endif /* _COMMON_H_ */

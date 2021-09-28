@@ -74,6 +74,13 @@ MPDElement::~MPDElement()
             SAFE_DELETE(period);
         m_periods.clear();
     }
+
+    if(m_serviceDescriptions.size())
+    {
+        for(auto serviceDescription : m_serviceDescriptions)
+            SAFE_DELETE(serviceDescription);
+        m_serviceDescriptions.clear();
+    }
 }
 
 void MPDElement::AddEssentialProperty(EssentialPropertyElement* essentialProperty)
@@ -104,6 +111,16 @@ void MPDElement::AddPeriod(PeriodElement* period)
         return;
     }
     m_periods.push_back(period);
+}
+
+void MPDElement::AddServiceDescription(ServiceDescriptionElement* serviceDescription)
+{
+    if(!serviceDescription)
+    {
+        OMAF_LOG(LOG_ERROR,"Fail to add serviceDescription in MPDElement.\n");
+        return;
+    }
+    m_serviceDescriptions.push_back(serviceDescription);
 }
 
 void MPDElement::AddProfile(string profile)

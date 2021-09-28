@@ -204,6 +204,7 @@ OMAF_STATUS OmafCurlEasyDownloader::open(const std::string &url) noexcept {
   try {
     std::lock_guard<std::mutex> lock(easy_curl_mutex_);
     url_ = url;
+
     OMAF_LOG(LOG_INFO, "To open the url: %s\n", url.c_str());
     if (easy_curl_ == nullptr) {
       OMAF_LOG(LOG_ERROR, "curl easy handler is invalid!\n");
@@ -229,23 +230,27 @@ OMAF_STATUS OmafCurlEasyDownloader::open(const std::string &url) noexcept {
   }
 }
 
-OMAF_STATUS OmafCurlEasyDownloader::start(int64_t offset, int64_t size, onData dcb, onState scb) noexcept {
+OMAF_STATUS OmafCurlEasyDownloader::start(int64_t offset, int64_t size, onData dcb, onChunkData cdcb, onState scb) noexcept {
   try {
     std::lock_guard<std::mutex> lock(easy_curl_mutex_);
     if (offset > 0 || size > 0) {
       std::stringstream ss;
-      if (offset > 0) {
+
+      if (offset >= 0) {
         ss << offset;
       }
       ss << "-";
+
+      // Need to check if request data don't have enough length.
       if (size > 0) {
-        ss << size;
+        ss << offset + size - 1;
       }
-      // OMAF_LOG(LOG_INFO, "To download the range: %s\n", ss.str());
+      OMAF_LOG(LOG_INFO, "To download the range: %s\n", ss.str().c_str());
       curl_easy_setopt(easy_curl_, CURLOPT_RANGE, ss.str().c_str());
     }
     dcb_ = dcb;
     scb_ = scb;
+    cdcb_ = cdcb;
 
     // TODO, easy mode
     if (work_mode_ == CurlWorkMode::EASY_MODE) {
@@ -275,6 +280,7 @@ OMAF_STATUS OmafCurlEasyDownloader::start(int64_t offset, int64_t size, onData d
 OMAF_STATUS OmafCurlEasyDownloader::stop() noexcept {
   {
     std::lock_guard<std::mutex> lock(cb_mutex_);
+    state_ = OmafCurlEasyDownloader::State::IDLE;
     dcb_ = nullptr;
     scb_ = nullptr;
   }
@@ -292,6 +298,9 @@ OMAF_STATUS OmafCurlEasyDownloader::close() noexcept {
       curl_easy_cleanup(easy_curl_);
       easy_curl_ = nullptr;
     }
+
+    data_offset_ = 0;
+
     return ERROR_NONE;
   } catch (const std::exception &ex) {
     OMAF_LOG(LOG_ERROR, "Exception when close curl easy hanlder, ex: %s\n", ex.what());
@@ -325,6 +334,12 @@ void OmafCurlEasyDownloader::receiveSB(std::unique_ptr<StreamBlock> sb) noexcept
       std::lock_guard<std::mutex> lock(cb_mutex_);
       if (dcb_ != nullptr) {
         dcb_(std::move(sb));
+      }
+      else if (cdcb_ != nullptr) {
+        cdcb_(std::move(sb), index_range_);
+        // for (auto index : index_range_) {
+        //   LOG(INFO) << "Index " << index.first << " Range " << index.second << endl;
+        // }
       }
     }
 
@@ -363,6 +378,7 @@ size_t OmafCurlEasyDownloader::curlBodyCallback(char *ptr, size_t size, size_t n
     return bsize;
   }
 }
+
 OmafCurlEasyDownloaderPool::~OmafCurlEasyDownloaderPool() {
   try {
     std::lock_guard<std::mutex> lock(easy_downloader_pool_mutex_);

@@ -253,7 +253,8 @@ RenderStatus VideoDecoder_hw::SendPacket(DashPacket* packet)
         data->rwpk->rectRegionPacking = new RectangularRegionWisePacking[mRwpk->numRegions];
         memcpy_s(data->rwpk->rectRegionPacking, mRwpk->numRegions * sizeof(RectangularRegionWisePacking),
            mRwpk->rectRegionPacking, mRwpk->numRegions * sizeof(RectangularRegionWisePacking));
-
+        if (packet->prft)
+            data->producedTime = packet->prft->ntpTimeStamp;
         // data->pts = mPkt->pts;
         data->pts = mPktInfo->pts;
         data->numQuality = packet->numQuality;
@@ -339,6 +340,7 @@ RenderStatus VideoDecoder_hw::DecodeFrame(DashPacket *pkt, uint32_t video_id)
         DecodedFrame *frame = new DecodedFrame;
         frame->output_surface = mDecCtx->mOutputSurface;
         frame->rwpk = data->rwpk;
+        frame->producedTime = data->producedTime;
         frame->pts = data->pts;
         ANDROID_LOGD("data->pts %ld, video id %d", data->pts, mVideoId);
         frame->bFmtChange = data->bCodecChange;
@@ -455,6 +457,7 @@ RenderStatus VideoDecoder_hw::FlushDecoder(uint32_t video_id)
         DecodedFrame *frame = new DecodedFrame;
         frame->output_surface = mDecCtx->mOutputSurface;
         frame->rwpk = data->rwpk;
+        frame->producedTime = data->producedTime;
         frame->pts = data->pts;
         frame->bFmtChange = data->bCodecChange;
         frame->numQuality = data->numQuality;
@@ -492,7 +495,13 @@ RenderStatus VideoDecoder_hw::FlushDecoder(uint32_t video_id)
             ANDROID_LOGD("CHANGE: successfully decode one catch up frame at pts %ld", frame->pts);
         else
             ANDROID_LOGD("CHANGE: successfully decode one frame at pts %ld video id %d", frame->pts, mVideoId);
-
+        if (frame->producedTime != 0) {
+            uint64_t update_time = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+            uint64_t current_ntp_time = transferNtpToMSecond(GetNtpTimeStamp());
+            uint64_t produced_time = transferNtpToMSecond(frame->producedTime);
+            ANDROID_LOGD("Produced time %ld, update time %ld, current ntp time %ld", produced_time, update_time, current_ntp_time);
+            ANDROID_LOGD("Encoder to display latency for pts %ld, is %ld", frame->pts, (current_ntp_time - produced_time));
+        }
         ANDROID_LOGD("mNextInputPts %d, video id %d", mNextInputPts, mVideoId);
         mDecCtx->push_frame(frame);
         //swift deocde when needing drop frame, and for wait and normal situation, do as follows.

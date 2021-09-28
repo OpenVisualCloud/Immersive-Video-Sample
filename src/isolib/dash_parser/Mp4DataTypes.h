@@ -52,6 +52,7 @@
 #include "../atoms/RestSchemeInfoAtom.h"
 #include "../atoms/DecPts.h"
 #include "../atoms/TypeAtom.h"
+#include "../atoms/ProducerReferenceTimeAtom.h"
 
 #include "Mp4StreamIO.h"
 #include "../atoms/TrackExtAtom.h"
@@ -178,6 +179,13 @@ struct RWPKProperty
     uint16_t packedPicWidth;
     uint16_t packedPicHeight;
     VarLenArray<RWPKRegion> regions;
+};
+
+struct PRFTProperty
+{
+    uint32_t refTrackId;
+    uint64_t ntpTimeStamp;
+    uint32_t mediaTime;
 };
 
 struct COVIInformation
@@ -495,6 +503,7 @@ typedef std::vector<uint32_t> IdVector;
 typedef VectorT<ContextId> ContextIdVector;
 typedef std::vector<uint8_t> DataVector;
 typedef std::vector<TStamp> TStampVector;
+typedef std::map<uint32_t, uint32_t> IndexMap;
 typedef std::map<TStamp, ItemId> TStampMap;
 typedef std::map<FourCCInt, IdVector> TypeToIdsMap;
 typedef std::map<FourCCInt, ContextIdVector> TypeToCtxIdsMap;
@@ -675,6 +684,7 @@ struct TrackBasicInfo
     std::map<SmpDesIndex, SampleRes> sampleRes;
     std::map<SmpDesIndex, ProjFormat> pfrmProperties;
     std::map<SmpDesIndex, RWPKPropertyInternal> rwpkProperties;
+    std::map<SmpDesIndex, PRFTProperty> prftProperties;
     std::map<SmpDesIndex, Rotation> rotnProperties;
     std::map<SmpDesIndex, VideoFramePackingType> stviProperties;
     std::map<SmpDesIndex, COVIInformationInternal> coviProperties;
@@ -720,6 +730,8 @@ struct SegmentProperties
     SegmentIO io;
 
     SegmentTypeAtom styp;
+
+    ProducerReferenceTimeAtom prft;
 
     std::map<ContextId, TrackDecInfo> trackDecInfos;
     ItemToParameterSetMap itemToParameterSetMap;

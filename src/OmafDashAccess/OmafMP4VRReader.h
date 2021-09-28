@@ -128,6 +128,8 @@ public:  // MP4VR specific methods
 
     virtual int32_t getPropertyRegionWisePacking(uint32_t trackId, uint32_t sampleId, RegionWisePacking *rwpk) const  ;
 
+    virtual int32_t getProducerReferenceTime(uint32_t initSegmentId, uint32_t segmentId, VCD::OMAF::ProducerReferenceTimePropery& prft) const  ;
+
     virtual int32_t getPropertyCoverageInformation(uint32_t trackId, uint32_t sampleId, VCD::OMAF::CoverageInformationProperty& coviProperty) const  ;
 
     virtual int32_t getPropertyProjectionFormat(uint32_t trackId, uint32_t sampleId, VCD::OMAF::ProjectionFormatProperty& projectionFormatProperty) const  ;
@@ -150,6 +152,34 @@ public:  // MP4VR segment parsing methods (DASH/Streaming)
                                   uint64_t earliestPTSinTS = UINT64_MAX) ;
 
     virtual int32_t invalidateSegment(uint32_t initSegmentId, uint32_t segmentId) ;
+    //!
+    //! \brief  get segment header size
+    //!
+    //!
+    //! \param  [in]  ref_cnt
+    //!         reference count
+    //! \param  [out]  size
+    //!         header size of segment
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t getSegmentHeaderSize(uint32_t ref_cnt, uint64_t& size, uint8_t version = 0);
+    //!
+    //! \brief  get segment header size
+    //!
+    //!
+    //! \param  [in]  indexBuf
+    //!         input index buffer
+    //! \param  [in]  size
+    //!         index buffer size
+    //! \param  [out] indexRange
+    //!         index range of chunks in segment
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t getSegmentIndexRange(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange);
 
 private:
     void*  mMP4ReaderImpl;

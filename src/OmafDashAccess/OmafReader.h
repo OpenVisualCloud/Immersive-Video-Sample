@@ -542,6 +542,22 @@ public:
     virtual int32_t getPropertyRegionWisePacking(uint32_t trackId, uint32_t sampleId, RegionWisePacking *rwpk) const = 0;
 
     //!
+    //! \brief  Get produced reference time information for
+    //!         specified sample in specified track
+    //!
+    //! \param  [in]  trackId
+    //!         index of specific track
+    //! \param  [in]  sampleId
+    //!         index of specified sample
+    //! \param  [out] prft
+    //!         output produced reference time property
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t getProducerReferenceTime(uint32_t initSegmentId, uint32_t segmentId, VCD::OMAF::ProducerReferenceTimePropery& prft) const = 0;
+
+    //!
     //! \brief  Get content coverage information for
     //!         specified sample in specified track
     //!
@@ -690,7 +706,34 @@ public:
                                   uint32_t initSegmentId,
                                   uint32_t segmentId,
                                   uint64_t earliestPTSinTS = UINT64_MAX)  = 0;
-
+    //!
+    //! \brief  get segment header size
+    //!
+    //!
+    //! \param  [in]  ref_cnt
+    //!         reference count
+    //! \param  [out]  size
+    //!         header size of segment
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t getSegmentHeaderSize(uint32_t ref_cnt, uint64_t& size, uint8_t version = 0) = 0;
+    //!
+    //! \brief  get segment header size
+    //!
+    //!
+    //! \param  [in]  indexBuf
+    //!         input index buffer
+    //! \param  [in]  size
+    //!         index buffer size
+    //! \param  [out] indexRange
+    //!         index range of chunks in segment
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t getSegmentIndexRange(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange) = 0;
     //!
     //! \brief  Invalidate specified segment for specified track
     //!         Disable the data buffer pointer to the specified

@@ -45,6 +45,10 @@ class DownloaderTest : public testing::Test {
     valid_url = "http://10.67.112.194:8080/testOMAFlive/Test.mpd";
 
     invalid_url = invalid_url + "invalid";
+
+    valid_cmaf_url = "http://10.67.112.194:8080/testCMAFstatic/Test_track1.1.mp4";
+    invalid_cmaf_url = valid_cmaf_url + "invalid";
+
     no_proxy = "127.0.0.1,*.intel.com,10.67.112.194";
     proxy_url = "http://child-prc.intel.com:913";
     invalid_proxy_url = "http://chil-prc.intel.com:913";
@@ -72,6 +76,8 @@ class DownloaderTest : public testing::Test {
 
   std::string valid_url;
   std::string invalid_url;
+  std::string valid_cmaf_url;
+  std::string invalid_cmaf_url;
   std::string outsite_url;
   std::string proxy_url;
   std::string invalid_proxy_url;
@@ -91,6 +97,7 @@ TEST_F(DownloaderTest, downloadSuccess) {
   DashSegmentSourceParams ds;
   ds.dash_url_ = valid_url;
   ds.timeline_point_ = 1;
+  ds.enable_byte_range_ = false;
 
   bool isState = false;
   dash_client_->open(
@@ -99,6 +106,7 @@ TEST_F(DownloaderTest, downloadSuccess) {
         EXPECT_TRUE(sb != nullptr);
         EXPECT_TRUE(sb->size() > 0);
       },
+      nullptr,
       [&isState](OmafDashSegmentClient::State state) {
         OMAF_LOG(LOG_INFO, "Receive the state: %d\n", static_cast<int>(state));
         EXPECT_TRUE(state == OmafDashSegmentClient::State::SUCCESS);
@@ -108,17 +116,91 @@ TEST_F(DownloaderTest, downloadSuccess) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 }
+
+TEST_F(DownloaderTest, downloadCMAFSuccess) {
+  OMAF_STATUS ret = dash_client_->start();
+  EXPECT_TRUE(ret == ERROR_NONE);
+
+  DashSegmentSourceParams ds;
+  ds.dash_url_ = valid_cmaf_url;
+  ds.timeline_point_ = 1;
+  ds.header_size_ = 1264;
+  ds.enable_byte_range_ = true;
+  ds.chunk_num_ = 5;
+  map<uint32_t, uint32_t> indexRange;
+  indexRange.insert(std::make_pair(0, 5899));
+  indexRange.insert(std::make_pair(1, 14012));
+  indexRange.insert(std::make_pair(2, 19248));
+  indexRange.insert(std::make_pair(3, 18124));
+  indexRange.insert(std::make_pair(4, 18183));
+
+  OmafDashSegmentClient::State isState = OmafDashSegmentClient::State::STOPPED;
+  size_t accum_size = 0;
+  dash_client_->open(
+      ds,
+      [&accum_size](std::unique_ptr<VCD::OMAF::StreamBlock> sb) {
+        EXPECT_TRUE(sb != nullptr);
+        EXPECT_TRUE(sb->size() > 0);
+        accum_size += sb->size();
+      },
+      [indexRange](std::unique_ptr<VCD::OMAF::StreamBlock> sb, map<uint32_t, uint32_t>& index_range) {
+        EXPECT_TRUE(sb != nullptr);
+        EXPECT_TRUE(sb->size() > 0);
+        index_range = indexRange;
+      },
+      [&isState](OmafDashSegmentClient::State state) {
+        OMAF_LOG(LOG_INFO, "Receive the state: %d\n", static_cast<int>(state));
+        isState = state;
+      }
+      );
+  while (isState != OmafDashSegmentClient::State::SUCCESS) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+}
+
 TEST_F(DownloaderTest, downloadFailure) {
   OMAF_STATUS ret = dash_client_->start();
   EXPECT_TRUE(ret == ERROR_NONE);
   DashSegmentSourceParams ds;
   ds.dash_url_ = invalid_url;
   ds.timeline_point_ = 1;
+  ds.enable_byte_range_ = false;
   bool isState = false;
   dash_client_->open(
       ds,
       [](std::unique_ptr<VCD::OMAF::StreamBlock> sb) {
 
+      },
+      nullptr,
+      [&isState](OmafDashSegmentClient::State state) {
+        OMAF_LOG(LOG_INFO, "Receive the state: %d\n", static_cast<int>(state));
+        EXPECT_TRUE(state == OmafDashSegmentClient::State::TIMEOUT);
+        isState = true;
+      });
+  while (!isState) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+}
+
+TEST_F(DownloaderTest, downloadCMAFFailure) {
+  OMAF_STATUS ret = dash_client_->start();
+  EXPECT_TRUE(ret == ERROR_NONE);
+  DashSegmentSourceParams ds;
+  ds.dash_url_ = invalid_cmaf_url;
+  ds.timeline_point_ = 1;
+  ds.enable_byte_range_ = true;
+  ds.header_size_ = 1;
+  map<uint32_t, uint32_t> indexRange;
+  indexRange.insert(std::make_pair(0,1));
+
+  bool isState = false;
+  dash_client_->open(
+      ds,
+      [](std::unique_ptr<VCD::OMAF::StreamBlock> sb) {
+
+      },
+      [indexRange](std::unique_ptr<VCD::OMAF::StreamBlock> sb, map<uint32_t, uint32_t> &index_range) {
+        index_range = indexRange;
       },
       [&isState](OmafDashSegmentClient::State state) {
         OMAF_LOG(LOG_INFO, "Receive the state: %d\n", static_cast<int>(state));
@@ -129,6 +211,7 @@ TEST_F(DownloaderTest, downloadFailure) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 }
+
 TEST_F(DownloaderTest, proxy_success) {
   DashSegmentSourceParams ds;
   ds.dash_url_ = outsite_url;
@@ -150,6 +233,7 @@ TEST_F(DownloaderTest, proxy_success) {
         EXPECT_TRUE(sb != nullptr);
         EXPECT_TRUE(sb->size() > 0);
       },
+      nullptr,
       [&isState](OmafDashSegmentClient::State state) {
         OMAF_LOG(LOG_INFO, "Receive the state: %d\n", static_cast<int>(state));
         EXPECT_TRUE(state == OmafDashSegmentClient::State::SUCCESS);
@@ -180,6 +264,7 @@ TEST_F(DownloaderTest, invalid_proxy) {
       [](std::unique_ptr<VCD::OMAF::StreamBlock> sb) {
 
       },
+      nullptr,
       [&isState](OmafDashSegmentClient::State state) {
         OMAF_LOG(LOG_INFO, "Receive the state: %d\n", static_cast<int>(state));
         EXPECT_TRUE(state == OmafDashSegmentClient::State::TIMEOUT);
@@ -208,6 +293,7 @@ TEST_F(DownloaderTest, no_proxy_success) {
         EXPECT_TRUE(sb != nullptr);
         EXPECT_TRUE(sb->size() > 0);
       },
+      nullptr,
       [&isState](OmafDashSegmentClient::State state) {
         OMAF_LOG(LOG_INFO, "Receive the state: %d\n", static_cast<int>(state));
         EXPECT_TRUE(state == OmafDashSegmentClient::State::SUCCESS);

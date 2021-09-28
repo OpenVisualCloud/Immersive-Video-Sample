@@ -132,6 +132,50 @@ public:
     virtual PeriodElement* BuildPeriod(OmafXMLElement* xmlPeriod) = 0;
 
     //!
+    //! \brief    Build ServiceDescription Element according to XML element
+    //!
+    //! \param    [in] xmlServiceDescription
+    //!           ServiceDescription XML Element
+    //!
+    //! \return   ServiceDescriptionElement
+    //!           OMAF ServiceDescription Element
+    //!
+    virtual ServiceDescriptionElement* BuildServiceDescription(OmafXMLElement* xmlServiceDescription) = 0;
+
+    //!
+    //! \brief    Build Latency Element according to XML element
+    //!
+    //! \param    [in] xmlLatency
+    //!           Latency XML Element
+    //!
+    //! \return   LatencyElement
+    //!           OMAF Latency Element
+    //!
+    virtual LatencyElement* BuildLatency(OmafXMLElement* xmlLatency) = 0;
+
+    //!
+    //! \brief    Build Resync Element according to XML element
+    //!
+    //! \param    [in] xmlResync
+    //!           Resync XML Element
+    //!
+    //! \return   ResyncElement
+    //!           OMAF Resync Element
+    //!
+    virtual ResyncElement* BuildResync(OmafXMLElement* xmlResync) = 0;
+
+    //!
+    //! \brief    Build ProducerReferenceTime Element according to XML element
+    //!
+    //! \param    [in] xmlProducerReferenceTime
+    //!           ProducerReferenceTime XML Element
+    //!
+    //! \return   ProducerReferenceTimeElement
+    //!           OMAF ProducerReferenceTime Element
+    //!
+    virtual ProducerReferenceTimeElement* BuildProducerReferenceTime(OmafXMLElement* xmlProducerReferenceTime) = 0;
+
+    //!
     //! \brief    Build AdaptationSet Element according to XML element
     //!
     //! \param    [in] xml

@@ -40,6 +40,7 @@
 #include "Mp4DataTypes.h"
 #include "Mp4ReaderImpl.h"
 #include "../atoms/UriMetaSampEntryAtom.h"
+#include "../atoms/ProducerReferenceTimeAtom.h"
 
 using namespace std;
 
@@ -58,6 +59,8 @@ SphericalVideoV1Property GenSphericalVideoV1Property(const SphericalVideoV1Atom&
 SphericalVideoV2Property Gensv3d(const SphericalVideoV2Atom* inSpheVideoBox);
 
 RWPKPropertyInternal Genrwpk(const RegionWisePackingAtom& inRWPKBox);
+
+PRFTProperty Genprft(const ProducerReferenceTimeAtom& inPRFTBox);
 
 COVIInformationInternal Gencovi(const CoverageInformationAtom& inCOVIBox);
 

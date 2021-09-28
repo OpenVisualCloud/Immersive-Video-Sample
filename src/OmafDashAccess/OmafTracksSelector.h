@@ -84,6 +84,8 @@ class OmafTracksSelector {
   //!
   virtual map<int, OmafAdaptationSet*> GetCurrentTracksMap() = 0;
 
+  virtual bool hasCurrentTracksMap() = 0;
+
   //!
   //! \brief  Set Init viewport
   //!
@@ -158,6 +160,7 @@ private:
   int mSize;
   std::mutex mMutex;
   std::mutex mCurrentMutex;
+  std::mutex mASMutex;
   HeadPose *mPose;
   void *m360ViewPortHandle;
   param_360SCVP *mParamViewport;
@@ -172,6 +175,8 @@ private:
   uint32_t                      mSegmentDur;
   PluginDef                     mI360ScvpPlugin;
   uint64_t                      mLastCatchupPTS;
+  TracksMap                     mCurrSelectedTracksMap;
+  std::map<int, OmafAdaptationSet*>  mASMap;
 };
 
 VCD_OMAF_END;

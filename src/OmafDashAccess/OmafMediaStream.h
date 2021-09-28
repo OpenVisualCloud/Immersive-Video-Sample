@@ -96,6 +96,18 @@ class OmafMediaStream {
   //! \return
   int UpdateStartNumber(uint64_t nAvailableStartTime);
 
+  uint32_t GetStartChunkId() {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (!mMediaAdaptationSet.empty()) {
+      OmafAdaptationSet *pAS = mMediaAdaptationSet.begin()->second;
+      if (pAS) return pAS->GetStartChunkId();
+      else return 0;
+    }
+    else {
+      return 0;
+    }
+  };
+
   int SetupSegmentSyncer(const OmafDashParams& params);
   //!
   //! \brief  download initialize segment for each AdaptationSet
@@ -105,7 +117,7 @@ class OmafMediaStream {
   //!
   //! \brief  download all segments for all AdaptationSets.
   //!
-  int DownloadSegments();
+  int DownloadSegments(bool enableCMAF);
 
   //!
   //! \brief  Add extractor Adaptation Set
@@ -148,12 +160,20 @@ class OmafMediaStream {
   //!
   //! \brief  get all extractors relative to this stream
   //!
-  std::map<int, OmafExtractor*> GetExtractors() { return mExtractors; };
+  std::map<int, OmafExtractor*> GetExtractors()
+  {
+    std::lock_guard<std::mutex> lock(mExtractorsMutex);
+    return mExtractors;
+  };
 
   //!
   //! \brief  get all Adaptation set relative to this stream
   //!
-  std::map<int, OmafAdaptationSet*> GetMediaAdaptationSet() { return mMediaAdaptationSet; };
+  std::map<int, OmafAdaptationSet*> GetMediaAdaptationSet()
+  {
+    std::lock_guard<std::mutex> lock(mMutex);
+    return mMediaAdaptationSet;
+  };
 
   //!
   //! \brief  Update selected extractor after viewport changed
@@ -204,11 +224,16 @@ class OmafMediaStream {
     return size;
   };
 
-  int32_t GetTotalExtractorSize() { return mExtractors.size(); };
+  int32_t GetTotalExtractorSize()
+  {
+    std::lock_guard<std::mutex> lock(mExtractorsMutex);
+    return mExtractors.size();
+  };
 
   void ClearEnabledExtractors() { mCurrentExtractors.clear(); };
 
   OmafExtractor* AddEnabledExtractor(int extractorTrackIdx) {
+    std::lock_guard<std::mutex> lock(mExtractorsMutex);
     auto it = mExtractors.find(extractorTrackIdx);
     if (it != mExtractors.end()) {
       mCurrentExtractors.push_back(it->second);
@@ -221,7 +246,11 @@ class OmafMediaStream {
   //!
   //! \brief  Check whether extractor tracks exists
   //!
-  bool HasExtractor() { return !(0 == mExtractors.size()); };
+  bool HasExtractor()
+  {
+    std::lock_guard<std::mutex> lock(mExtractorsMutex);
+    return !(0 == mExtractors.size());
+  };
 
   //!
   //! \brief  Get segment duration
@@ -276,7 +305,7 @@ class OmafMediaStream {
   //!
   //! \brief  Download assigned additional segments
   //!
-  int DownloadAssignedSegments(std::map<uint32_t, TracksMap> additional_tracks);
+  int DownloadAssignedSegments(std::map<uint32_t, TracksMap> additional_tracks, uint64_t currentTimeLine, bool enableCMAF);
 
   void Close();
 
@@ -350,6 +379,8 @@ private:
   std::mutex mCurrentMutex;
   //<! for synchronization of m_catchupTileTracks
   std::mutex mCatchUpMutex;
+
+  std::mutex mExtractorsMutex;
   //<! flag for end of stream
   bool m_bEOS;
   OmafDashSourceSyncHelper syncer_helper_;

@@ -26,43 +26,62 @@
  */
 
 //!
-//! \file:   RepresentationElement.cpp
-//! \brief:  Representation element class
+//! \file:   ResyncElement.h
+//! \brief:  Resync element class
 //!
 
-#include "RepresentationElement.h"
+#ifndef RESYNCELEMENT_H
+#define RESYNCELEMENT_H
+#include <string>
+#include "OmafElementBase.h"
 
 VCD_OMAF_BEGIN
 
-RepresentationElement::RepresentationElement()
-{
-    m_segment = nullptr;
-    m_audioChlCfg = nullptr;
-    m_resync = nullptr;
-    m_width = 0;
-    m_height = 0;
-    m_audioSamplingRate = 0;
-    m_bandwidth = 0;
-}
+class ResyncElement : public OmafElementBase{
+ public:
+  //!
+  //! \brief Constructor
+  //!
+  ResyncElement();
 
-RepresentationElement::~RepresentationElement()
-{
-    m_id.clear();
-    m_codecs.clear();
-    m_mimeType.clear();
-    m_width = 0;
-    m_height = 0;
-    m_audioSamplingRate = 0;
-    m_frameRate.clear();
-    m_sar.clear();
-    m_startWithSAP.clear();
-    m_qualityRanking.clear();
-    m_bandwidth = 0;
+  //!
+  //! \brief Destructor
+  //!
+  virtual ~ResyncElement();
 
-    SAFE_DELETE(m_segment);
-    SAFE_DELETE(m_audioChlCfg);
-    SAFE_DELETE(m_resync);
-}
+  //!
+  //! \brief    Set function for m_type
+  //!
+  //! \param    [in] string
+  //!           value to set
+  //! \param    [in] m_type
+  //!           m_type member in class
+  //! \param    [in] Type
+  //!           m_type name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(string, m_type, Type);
 
+  //!
+  //! \brief    Set function for m_chunkDuration
+  //!
+  //! \param    [in] string
+  //!           value to set
+  //! \param    [in] m_chunkDuration
+  //!           m_chunkDuration member in class
+  //! \param    [in] ChunkDuration
+  //!           m_chunkDuration name in class
+  //!
+  //! \return   void
+  //!
+  MEMBER_SET_AND_GET_FUNC(string, m_chunkDuration, ChunkDuration);
+
+ private:
+  string m_type;           //!< the type attribute
+  string m_chunkDuration;  //!< the dT attribute
+};
 
 VCD_OMAF_END;
+
+#endif  // RESYNCELEMENT_H

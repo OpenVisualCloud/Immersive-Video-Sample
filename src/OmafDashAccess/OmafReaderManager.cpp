@@ -127,7 +127,7 @@ class OmafSegmentNode : public VCD::NonCopyable {
 
  public:
   OmafSegmentNode(std::shared_ptr<OmafReaderManager> mgr, OmafDashMode mode, ProjectionFormat projFmt, std::shared_ptr<OmafReader> reader,
-                  std::shared_ptr<OmafSegment> segment, size_t depends_size = 0, bool isExtractor = false, bool isCatchup = false)
+                  std::shared_ptr<OmafSegment> segment, size_t depends_size = 0, bool isExtractor = false, bool isCatchup = false, uint32_t chunk_id = 0)
       : omaf_reader_mgr_(mgr),
         mode_(mode),
         projection_fmt_(projFmt),
@@ -135,7 +135,8 @@ class OmafSegmentNode : public VCD::NonCopyable {
         segment_(segment),
         depends_size_(depends_size),
         bExtractor_(isExtractor),
-        bCatchup_(isCatchup) {}
+        bCatchup_(isCatchup),
+        chunk_id_(chunk_id) {}
 
   virtual ~OmafSegmentNode() {
     OMAF_LOG(LOG_INFO, "Release the segment node %s packet size=%lld\n", to_string().c_str(), media_packets_.size());
@@ -163,7 +164,7 @@ class OmafSegmentNode : public VCD::NonCopyable {
     std::stringstream ss;
 
     ss << "node, timeline=" << getTimelinePoint();
-
+    ss << ", chunk id=" << chunk_id_;
     if (segment_) {
       ss << ", " << segment_->to_string();
     }
@@ -239,6 +240,7 @@ class OmafSegmentNode : public VCD::NonCopyable {
   OmafDashMode GetMode() const noexcept { return mode_; }
   bool isReady() const noexcept;
   size_t GetSamplesNum() { return samples_num_; };
+  uint32_t GetChunkId() { return chunk_id_; };
 
   // FIXME, who own the media packets
   // const std::list<MediaPacket *> packets() const { return media_packets_; }
@@ -328,6 +330,8 @@ class OmafSegmentNode : public VCD::NonCopyable {
   const bool bCatchup_ = false;
 
   size_t samples_num_ = 0;
+
+  uint32_t chunk_id_ = 0;
 };
 
 uint32_t buildDashTrackId(uint32_t id) noexcept { return id & static_cast<uint32_t>(0xffff); }
@@ -450,9 +454,16 @@ OMAF_STATUS OmafReaderManager::OpenSegment(std::shared_ptr<OmafSegment> pSeg, bo
       depends_size = d_it->second.size();
     }
 
-    pSeg->RegisterStateChange([this](std::shared_ptr<OmafSegment> segment, OmafSegment::State state) {
-      this->normalSegmentStateChange(std::move(segment), state);
-    });
+    if (pSeg->GetSegmentType() == SegmentType_Omaf) {
+      pSeg->RegisterStateChange([this](std::shared_ptr<OmafSegment> segment, OmafSegment::State state) {
+        this->normalSegmentStateChange(std::move(segment), state);
+      });
+    }
+    else if (pSeg->GetSegmentType() == SegmentType_Cmaf) {
+      pSeg->RegisterStateChange([this](std::shared_ptr<OmafSegment> segment, OmafSegment::State state) {
+        this->normalChunkStateChange(std::move(segment), state);
+      });
+    }
 
     OmafDashMode work_mode = work_params_.mode_;
     if (isCatchup) work_mode = OmafDashMode::LATER_BINDING;
@@ -555,7 +566,7 @@ OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPa
             //OMAF_LOG(LOG_INFO, "timeline_point_ is %ld in GetNextPacket, bpacket_readed %d\n", timeline_point_, bpacket_readed);
             if (0 == node->packetQueueSize()) {
               //OMAF_LOG(LOG_INFO, "Node count=%d. %s\n", node.use_count(), node->to_string().c_str());
-              nodeset.segment_nodes_.erase(it);
+              it = nodeset.segment_nodes_.erase(it);
             }
 
             break;
@@ -622,14 +633,21 @@ OMAF_STATUS OmafReaderManager::GetNextPacketWithPTS(uint32_t trackID, uint64_t p
               // OMAF_LOG(LOG_INFO, "PACKET Get correct packet with pts %lld, track id %d\n", pts, trackID);
               bpacket_readed = true;
               timeline_point_ = node->getTimelinePoint();
+              if (0 == node->packetQueueSize()) {
+                OMAF_LOG(LOG_INFO, "Erase Parsed Node count=%d. %s\n", node.use_count(), node->to_string().c_str());
+                it = nodeset.segment_nodes_.erase(it);
+              }
+              break;
             }
-
-            if (0 == node->packetQueueSize()) {
-              //OMAF_LOG(LOG_INFO, "Node count=%d. %s\n", node.use_count(), node->to_string().c_str());
-              nodeset.segment_nodes_.erase(it);
+            else if (ret == ERROR_NULL_PACKET) {// in catch up mode, download start chunk id may not equal catchup stitch start chunk id
+              // LOG(INFO) << "PACKET Get null packet " << endl;
+              if (0 == node->packetQueueSize()) {
+                OMAF_LOG(LOG_INFO, "Erase Parsed Node count=%d. %s\n", node.use_count(), node->to_string().c_str());
+                it = nodeset.segment_nodes_.erase(it);
+              }
+              else it++;
+              continue;
             }
-
-            break;
           }
           it++;
         }
@@ -699,7 +717,7 @@ bool OmafReaderManager::checkEOS(int64_t segment_num) noexcept {
     if (media_source_ == nullptr) {
       return true;
     }
-
+    static uint32_t curr_time_cnt = 0;
     bool eos = true;
 
     // set EOS when all stream meet eos
@@ -716,6 +734,12 @@ bool OmafReaderManager::checkEOS(int64_t segment_num) noexcept {
         totalSegNum = abs(tmpSegNum - totalSegNum) < 1e-6 ? totalSegNum : totalSegNum + 1;
         if (segment_num < totalSegNum) {
           eos = false;
+          break;
+        }
+        else if (curr_time_cnt < timeout_for_checkEOS_ && work_params_.mode_ == OmafDashMode::EXTRACTOR) {
+          eos = false;
+          OMAF_LOG(LOG_INFO, "Wait for eos time out!\n");
+          curr_time_cnt++;
           break;
         }
       }
@@ -884,6 +908,9 @@ void OmafReaderManager::buildInitSegmentInfo(void) noexcept {
             auto dash_track_id = buildDashTrackId(track->trackId);
             pAS->SetTrackNumber(static_cast<int>(dash_track_id));
             pAS->GetInitSegment()->SetTrackId(dash_track_id);
+            FourCC majorBrand;
+            reader_->getMajorBrand(majorBrand, track->initSegmentId);
+            sBrand_ = majorBrand.item;
             initSeg_trackIds_map_[track->initSegmentId] = dash_track_id;
             trackIds_initSeg_map_[dash_track_id] = track->initSegmentId;
             OMAF_LOG(LOG_INFO, "Initse id=%u, trackid=%u\n", track->initSegmentId, dash_track_id);
@@ -978,7 +1005,7 @@ void OmafReaderManager::normalSegmentStateChange(std::shared_ptr<OmafSegment> se
             auto &node = (*(*it).get());
             if (node == segment) {
               opened_dash_node = std::move(*it);
-              nodeset.segment_nodes_.erase(it);
+              it = nodeset.segment_nodes_.erase(it);
               break;
             }
             it++;
@@ -992,146 +1019,213 @@ void OmafReaderManager::normalSegmentStateChange(std::shared_ptr<OmafSegment> se
       return;
     }
 
-#ifndef _ANDROID_NDK_OPTION_
-#ifdef _USE_TRACE_
-    //trace
-    if (opened_dash_node.get() != nullptr) {
-        if (opened_dash_node->isExtractor()) {
-            const char *trackType = "extractor_track";
-            uint64_t streamSize = segment->GetStreamSize();
+  // 2. push new opened node to opened list
+  AddOpenedNode(std::move(opened_dash_node));
 
-            char tileRes[128] = { 0 };
-            snprintf(tileRes, 128, "%s", "none");
-            int trackIndex = segment->GetTrackId();
-            uint32_t nSegID = segment->GetSegID();
-            tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, streamSize);
-        }
-        else {
-            const char *trackType = "tile_track";
-            uint64_t streamSize = segment->GetStreamSize();
-
-            char tileRes[128] = { 0 };
-            snprintf(tileRes, 128, "%s", "none");
-            int trackIndex = segment->GetTrackId();
-            uint32_t nSegID = segment->GetSegID();
-            tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, streamSize);
-        }
-    }
-#endif
-#endif
-
-
-    // 2. append to the dash opened list
-    {
-      std::lock_guard<std::mutex> lock(segment_opened_mutex_);
-      bool new_timeline_point = true;
-      if (opened_dash_node->GetMode() == OmafDashMode::EXTRACTOR) {
-        // this is a dash node built from extractor
-        // build depends based on extractor
-        if (opened_dash_node->isExtractor()) {
-          for (auto &nodeset : segment_opened_list_) {
-            if (nodeset.timeline_point_ == opened_dash_node->getTimelinePoint()) {
-              new_timeline_point = false;
-              std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
-
-              // put all depends node into depend
-              const auto &depends = initSegId_depends_map_[opened_dash_node->getInitSegId()];
-
-              while (it != nodeset.segment_nodes_.end()) {
-                // check whether this dash node is belong the target dash's depends
-                auto initSeg_id = (*it)->getInitSegId();
-                auto is_in_depend = false;
-                for (auto id : depends) {
-                  if (id == initSeg_id) {
-                    is_in_depend = true;
-                    break;
-                  }
-                }  // end for id
-
-                if (is_in_depend) {
-                  // remove from the list and push to depends
-                  opened_dash_node->pushDepends(std::move(*it));
-                  // it will move to next when calling erase
-                  it = nodeset.segment_nodes_.erase(it);
-                } else {
-                  it++;
-                }
-              }  // end while
-
-              nodeset.segment_nodes_.push_back(std::move(opened_dash_node));
-              break;
-            }  // end for if same timeslide
-          }    // end for dash_opened_list loop
-        } else {
-          // this is a dash node built from the general segment
-          for (auto &nodeset : segment_opened_list_) {
-            if (nodeset.timeline_point_ == opened_dash_node->getTimelinePoint()) {
-              new_timeline_point = false;
-              // while loop all node in the dash nodes,
-              // the opend_dash_node maybe added to more than one dash node who built from extractor
-              // the detail structure depend on the media stream's extractor logic
-              // FIXME, if one segment belong to different extractor at the same time, the logix has bug now.
-              // it should update the logic of parse in the dash_node
-              //
-              bool bfind_extractor = false;
-              for (auto &node : nodeset.segment_nodes_) {
-                // this is a extractor
-                if (node->isExtractor()) {
-                  const auto &depends = initSegId_depends_map_[node->getInitSegId()];
-                  for (auto id : depends) {
-                    // this dash node is in depends of the node
-                    if (id == opened_dash_node->getInitSegId()) {
-                      bfind_extractor = true;
-                      node->pushDepends(std::move(opened_dash_node));
-                      break;
-                    }
-                  }  // end for auto id
-                }
-              }  // end for auto node
-              if (!bfind_extractor) {
-                nodeset.segment_nodes_.push_back(std::move(opened_dash_node));
-              }
-              break;
-            }
-          }  // end for nodeset
-        }
-      } else {
-        // not extractor mode
-        for (auto &nodeset : segment_opened_list_) {
-          if (nodeset.timeline_point_ == opened_dash_node->getTimelinePoint()) {
-            nodeset.segment_nodes_.push_back(std::move(opened_dash_node));
-            new_timeline_point = false;
-            break;
-          }
-        }
-      }
-
-      if (new_timeline_point) {
-        bool to_append = true;
-        if (!segment_opened_list_.empty()) {
-          auto &tail_nodeset = segment_opened_list_.back();
-          // the nodeset queue's timeline should increase one by one
-          if (opened_dash_node->getTimelinePoint() <= tail_nodeset.timeline_point_) {
-            OMAF_LOG(LOG_WARNING, "Try to insert the timeline: %lld, which <= %lld\n", opened_dash_node->getTimelinePoint(), tail_nodeset.timeline_point_);
-            to_append = false;
-          }
-        }
-        if (to_append) {
-          OmafSegmentNodeTimedSet nodeset;
-          nodeset.timeline_point_ = opened_dash_node->getTimelinePoint();
-          nodeset.create_time_ = std::chrono::steady_clock::now();
-          nodeset.segment_nodes_.push_back(std::move(opened_dash_node));
-          segment_opened_list_.emplace_back(nodeset);
-        }
-      }
-
-      // TODO, refine the logic,
-      // we may send the notify by checking all segment ready for extractor mode
-      segment_opened_cv_.notify_all();
-    }  // end of append to the dash opened list
   } catch (const std::exception &ex) {
     OMAF_LOG(LOG_ERROR, "Exception when set up track map, ex: %s\n", ex.what());
   }
+}
+
+void OmafReaderManager::normalChunkStateChange(std::shared_ptr<OmafSegment> segment, OmafSegment::State state) noexcept {
+  try {
+    // 0. check params
+    if (segment.get() == nullptr) {
+      OMAF_LOG(LOG_ERROR, "Empty segment!\n");
+      return;
+    }
+    size_t depends_size = 0;
+    auto d_it = initSegId_depends_map_.find(segment->GetInitSegID());
+    if (d_it != initSegId_depends_map_.end()) {
+      depends_size = d_it->second.size();
+    }
+    // 1. get chunk stream block in input segment
+    std::unique_ptr<StreamBlock> chunk_block = segment->PopOneStreamBlock();
+    // LOG(INFO) << "State change chunk stream size " << chunk_block->size() << "track is " << segment->GetTrackId() << "segment is " << segment->GetSegID() << endl;
+
+    if (chunk_block == nullptr) {
+      OMAF_LOG(LOG_INFO, "Segment %d, track id %d has not chunk yet!\n", segment->GetSegID(), segment->GetTrackId());
+      return;
+    }
+
+    // 2. create a new opened node according to given chunk stream block
+    OmafSegment::Ptr opened_segment = std::make_shared<OmafSegment>(segment, std::move(chunk_block));
+    OmafDashMode work_mode = work_params_.mode_;
+    if (segment->IsCatchup()) work_mode = OmafDashMode::LATER_BINDING;
+
+    OmafSegmentNode::Ptr opened_dash_node = std::make_shared<OmafSegmentNode>(shared_from_this(), work_mode, work_params_.proj_fmt_, reader_,
+                                                                      std::move(opened_segment), depends_size, segment->IsExtractor(), segment->IsCatchup(), segment->GetProcessedChunkId());
+
+    // 3. push new opened node to opened list
+    AddOpenedNode(std::move(opened_dash_node));
+    // 4. erase input segment from opening list when all the chunks finished
+    // LOG(INFO) << "segment->HasProcessDone()" << segment->HasProcessDone() << "info " << segment->to_string().c_str() << endl;
+    if (segment->HasProcessDone()) {
+      std::lock_guard<std::mutex> lock(segment_opening_mutex_);
+      for (auto &nodeset : segment_opening_list_) {
+        if (nodeset.timeline_point_ == segment->GetTimelinePoint()) {
+          std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
+          while (it != nodeset.segment_nodes_.end()) {
+            auto &node = (*(*it).get());
+            if (node == segment) {
+              it = nodeset.segment_nodes_.erase(it);
+              LOG(INFO) << "Erase opening node " << node.to_string() << endl;
+              break;
+            }
+            it++;
+          }
+        }
+      }
+    }
+  } catch (const std::exception &ex) {
+    OMAF_LOG(LOG_ERROR, "Exception when set up track map, ex: %s\n", ex.what());
+  }
+}
+
+void OmafReaderManager::AddOpenedNode(std::shared_ptr<OmafSegmentNode> opened_dash_node) noexcept {
+#ifndef _ANDROID_NDK_OPTION_
+#ifdef _USE_TRACE_
+  //trace
+  if (opened_dash_node.get() != nullptr) {
+      if (opened_dash_node->isExtractor()) {
+          const char *trackType = "extractor_track";
+          uint64_t streamSize = segment->GetStreamSize();
+
+          char tileRes[128] = { 0 };
+          snprintf(tileRes, 128, "%s", "none");
+          int trackIndex = segment->GetTrackId();
+          uint32_t nSegID = segment->GetSegID();
+          tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, streamSize);
+      }
+      else {
+          const char *trackType = "tile_track";
+          uint64_t streamSize = segment->GetStreamSize();
+
+          char tileRes[128] = { 0 };
+          snprintf(tileRes, 128, "%s", "none");
+          int trackIndex = segment->GetTrackId();
+          uint32_t nSegID = segment->GetSegID();
+          tracepoint(bandwidth_tp_provider, packed_segment_size, trackIndex, trackType, tileRes, nSegID, streamSize);
+      }
+  }
+#endif
+#endif
+
+
+  // 2. append to the dash opened list
+  {
+    std::lock_guard<std::mutex> lock(segment_opened_mutex_);
+    bool new_timeline_point = true;
+    if (opened_dash_node->GetMode() == OmafDashMode::EXTRACTOR) {
+      // this is a dash node built from extractor
+      // build depends based on extractor
+      if (opened_dash_node->isExtractor()) {
+        for (auto &nodeset : segment_opened_list_) {
+          if (nodeset.timeline_point_ == opened_dash_node->getTimelinePoint()) {
+            new_timeline_point = false;
+            std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
+
+            // put all depends node into depend
+            const auto &depends = initSegId_depends_map_[opened_dash_node->getInitSegId()];
+
+            while (it != nodeset.segment_nodes_.end()) {
+              // check whether this dash node is belong the target dash's depends
+              if ((*it)->GetChunkId() != opened_dash_node->GetChunkId()) {
+                it++;
+                continue;
+              }
+              auto initSeg_id = (*it)->getInitSegId();
+              auto is_in_depend = false;
+              for (auto id : depends) {
+                if (id == initSeg_id) {
+                  is_in_depend = true;
+                  break;
+                }
+              }  // end for id
+
+              if (is_in_depend) {
+                // remove from the list and push to depends
+                opened_dash_node->pushDepends(std::move(*it));
+                // it will move to next when calling erase
+                it = nodeset.segment_nodes_.erase(it);
+              } else {
+                it++;
+              }
+            }  // end while
+
+            nodeset.segment_nodes_.push_back(std::move(opened_dash_node));
+            break;
+          }  // end for if same timeslide
+        }    // end for dash_opened_list loop
+      } else {
+        // this is a dash node built from the general segment
+        for (auto &nodeset : segment_opened_list_) {
+          if (nodeset.timeline_point_ == opened_dash_node->getTimelinePoint()) {
+            new_timeline_point = false;
+            // while loop all node in the dash nodes,
+            // the opend_dash_node maybe added to more than one dash node who built from extractor
+            // the detail structure depend on the media stream's extractor logic
+            // FIXME, if one segment belong to different extractor at the same time, the logix has bug now.
+            // it should update the logic of parse in the dash_node
+            //
+            bool bfind_extractor = false;
+            for (auto &node : nodeset.segment_nodes_) {
+              if (opened_dash_node.get() == nullptr) break;
+              // this is a extractor
+              if (node->isExtractor() && node->GetChunkId() == opened_dash_node->GetChunkId()) {
+                const auto &depends = initSegId_depends_map_[node->getInitSegId()];
+                for (auto id : depends) {
+                  // this dash node is in depends of the node
+                  if (id == opened_dash_node->getInitSegId()) {
+                    bfind_extractor = true;
+                    node->pushDepends(std::move(opened_dash_node));
+                    break;
+                  }
+                }  // end for auto id
+              }
+            }  // end for auto node
+            if (!bfind_extractor) {
+              nodeset.segment_nodes_.push_back(std::move(opened_dash_node));
+            }
+            break;
+          }
+        }  // end for nodeset
+      }
+    } else {
+      // not extractor mode
+      for (auto &nodeset : segment_opened_list_) {
+        if (nodeset.timeline_point_ == opened_dash_node->getTimelinePoint()) {
+          // LOG(INFO) << "Push back opened node to list " << opened_dash_node->to_string().c_str() << endl;
+          nodeset.segment_nodes_.push_back(std::move(opened_dash_node));
+          new_timeline_point = false;
+          break;
+        }
+      }
+    }
+
+    if (new_timeline_point) {
+      bool to_append = true;
+      if (!segment_opened_list_.empty()) {
+        auto &tail_nodeset = segment_opened_list_.back();
+        // the nodeset queue's timeline should increase one by one
+        if (opened_dash_node->getTimelinePoint() <= tail_nodeset.timeline_point_) {
+          OMAF_LOG(LOG_WARNING, "Try to insert the timeline: %lld, which <= %lld\n", opened_dash_node->getTimelinePoint(), tail_nodeset.timeline_point_);
+          to_append = false;
+        }
+      }
+      if (to_append) {
+        OmafSegmentNodeTimedSet nodeset;
+        nodeset.timeline_point_ = opened_dash_node->getTimelinePoint();
+        nodeset.create_time_ = std::chrono::steady_clock::now();
+        // LOG(INFO) << "Push back opened node to list " << opened_dash_node->to_string().c_str() << endl;
+        nodeset.segment_nodes_.push_back(std::move(opened_dash_node));
+        segment_opened_list_.emplace_back(nodeset);
+      }
+    }
+    // TODO, refine the logic,
+    // we may send the notify by checking all segment ready for extractor mode
+    segment_opened_cv_.notify_all();
+  }  // end of append to the dash opened list
 }
 
 void OmafReaderManager::threadRunner() noexcept {
@@ -1186,7 +1280,7 @@ void OmafReaderManager::threadRunner() noexcept {
         for (auto &nodeset : segment_parsed_list_) {
           if (nodeset.timeline_point_ == timeline_point) {
             // if (ready_dash_node->isCatchup())
-            // LOG(INFO) << "Push catch up parsed node PTS " << nodeset.timeline_point_ << " with track id " << ready_dash_node->getTrackId() << " into parsed list" << endl;
+            // LOG(INFO) << "Push parsed node PTS " << nodeset.timeline_point_ << " with track id " << ready_dash_node->getTrackId() << "with chunk id " << ready_dash_node->GetChunkId() << " into parsed list" << endl;
             nodeset.segment_nodes_.push_back(std::move(ready_dash_node));
             new_timeline_point = false;
             break;
@@ -1197,7 +1291,7 @@ void OmafReaderManager::threadRunner() noexcept {
           nodeset.timeline_point_ = timeline_point;
           nodeset.create_time_ = std::chrono::steady_clock::now();
           // if (ready_dash_node->isCatchup())
-          //   LOG(INFO) << "Push catch up parsed node PTS " << nodeset.timeline_point_ << " with track id " << ready_dash_node->getTrackId() << " into parsed list" << endl;
+          // LOG(INFO) << "Push parsed node PTS " << nodeset.timeline_point_ << " with track id " << ready_dash_node->getTrackId() << "with chunk id " << ready_dash_node->GetChunkId() << " into parsed list" << endl;
           nodeset.segment_nodes_.push_back(std::move(ready_dash_node));
           segment_parsed_list_.emplace_back(nodeset);
         }
@@ -1251,7 +1345,7 @@ OmafSegmentNode::Ptr OmafReaderManager::findReadySegmentNode() noexcept {
 
       // 1.1.2 find the ready node, exit and return
       if (ready_dash_node.get() != nullptr) {
-        nodeset.segment_nodes_.erase(it);
+        it = nodeset.segment_nodes_.erase(it);
         OMAF_LOG(LOG_INFO, "Get ready segment node with timeline %ld\n", nodeset.timeline_point_);
         break;
       }
@@ -1682,15 +1776,17 @@ int OmafSegmentNode::getPacketWithPTS(MediaPacket *&pPacket, bool requireParams,
     int64_t pkt_pts = -1;
 
     do {
-      if (media_packets_.size() > 0) {
-        pPacket = media_packets_.front();
-        pkt_pts = pPacket->GetPTS();
-        media_packets_.pop();
-      }
-      else {
-        usleep(5000);
-      }
-    } while (pkt_pts < (int64_t)pts);
+      pPacket = media_packets_.front();
+      pkt_pts = pPacket->GetPTS();
+      media_packets_.pop();
+      // LOG(INFO) << "Require pts " << pts << " packet in list " << pkt_pts << endl;
+    } while (pkt_pts < (int64_t)pts && media_packets_.size() > 0);
+
+    if (pkt_pts < (int64_t)pts) {
+      OMAF_LOG(LOG_INFO, "There is no packet in this node when running out\n");
+      pPacket = nullptr;
+      return ERROR_NULL_PACKET;
+    }
 
     if (pPacket->GetMediaType() == MediaType_Video)
     {
@@ -1737,7 +1833,7 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
       OMAF_LOG(LOG_ERROR, "Failed to find the sample range for segment. %s\n", this->to_string().c_str());
       return ERROR_INVALID;
     }
-    samples_num_ = sample_end - sample_begin;
+    samples_num_ = (sample_end - sample_begin) * segment_->GetChunkNum();
     OMAF_LOG(LOG_INFO, "segment %s has samples num %ld\n", this->to_string().c_str(), samples_num_);
 #if 0
     if (sample_begin < 1) {
@@ -1747,6 +1843,20 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
     }
 #endif
     if (segment_->GetMediaType() == MediaType_Video) {
+      // for each segment node, get prft information
+      std::shared_ptr<ProducerReferenceTime> pPrft = make_shared<ProducerReferenceTime>();
+
+      ProducerReferenceTimePropery prftProp;
+      ret = reader->getProducerReferenceTime(segment_->GetInitSegID(), segment_->GetSegID(), prftProp);// is an option param
+      if (ret != ERROR_NONE) {
+        OMAF_LOG(LOG_WARNING, "Failed to read produced reference time data from reader, code= %d\n", ret);
+      }
+      else {
+        pPrft->refTrackId = prftProp.refTrackId;
+        pPrft->ntpTimeStamp = prftProp.ntpTimeStamp;
+        pPrft->mediaTime = prftProp.mediaTime;
+      }
+
       auto packet_params = (bExtractor_ == true) ? getPacketParamsForExtractors() : getPacketParams();
       for (size_t sample = sample_begin; sample < sample_end; sample++) {
         uint32_t reader_track_id = buildReaderTrackId(segment_->GetTrackId(), segment_->GetInitSegID());
@@ -1801,10 +1911,24 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
           return ret;
         }
         packet->SetRwpk(std::move(pRwpk));
+
+        packet->SetPRFT(pPrft);
+
         if (reader->GetSegSampleSize() == 0) {
           reader->SetSegSampleSize(track_info->sampleProperties.size);
         }
-        packet->SetPTS(reader->GetSegSampleSize() * (segment_->GetSegID() - 1) + sample_begin + sample);
+
+        auto reader_mgr = omaf_reader_mgr_.lock();
+        if (reader_mgr) {
+          if (segment_->GetSegID() == 1 && reader_mgr->GetStartOffsetPts() == -1) {// set start offset pts when segment id is 1
+            reader_mgr->SetStartOffsetPts(chunk_id_ * track_info->sampleProperties.size);
+          }
+        }
+        OMAF_LOG(LOG_INFO, "segment_->GetChunkNum() %d\n", segment_->GetChunkNum());
+        // packet->SetPTS(reader->GetSegSampleSize() * (segment_->GetSegID() - 1) + sample_begin + sample);
+        packet->SetPTS(segment_->GetChunkNum() * reader->GetSegSampleSize() * (segment_->GetSegID() - 1)
+                        + chunk_id_ * reader->GetSegSampleSize()
+                        + sample_begin + sample);
         if ((sample + 1) == sample_end)
         {
             packet->SetSegmentEnded(true);

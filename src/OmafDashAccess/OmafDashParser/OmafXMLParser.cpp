@@ -78,7 +78,7 @@ std::string OmafXMLParser::DownloadXMLFile(string url, string cache_dir) {
             } else {
               OMAF_LOG(LOG_ERROR, "The file is not in open state, file: %s\n", fileName.c_str());
             }
-          },
+          }, nullptr,
           [url](OmafCurlEasyDownloader::State s) {
             OMAF_LOG(LOG_INFO, "Download state: %d for url: %s\n", static_cast<int>(s), url.c_str());
           });

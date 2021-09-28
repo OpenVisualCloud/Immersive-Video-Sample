@@ -50,6 +50,7 @@ VCD_OMAF_BEGIN
 
 OmafTileTracksSelector::~OmafTileTracksSelector()
 {
+    mASMap.clear();
     if (m_currentTracks.size())
         m_currentTracks.clear();
 }
@@ -97,7 +98,7 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream, bool isTimed)
     int ret = ERROR_NONE;
     if (streamInfo->stream_type == MediaType_Video)
     {
-        TracksMap selectedTracks;
+        std::lock_guard<std::mutex> lock(mCurrentMutex);
         uint32_t rowSize = pStream->GetRowSize();
         uint32_t colSize = pStream->GetColSize();
         if (mUsePrediction && mPoseHistory.size() >= POSE_SIZE) // using prediction
@@ -105,7 +106,7 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream, bool isTimed)
             std::vector<std::pair<ViewportPriority, TracksMap>>  predictedTracksArray = GetTileTracksByPosePrediction(pStream);
             if (predictedTracksArray.empty()) // Prediction error occurs
             {
-                selectedTracks = GetTileTracksByPose(pStream);
+                m_SelectedTracks = GetTileTracksByPose(pStream);
             }
             else
             {
@@ -119,9 +120,9 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream, bool isTimed)
                     for ( ; iter != oneTracks.end(); iter++)
                     {
                         // ignore when key is identical and have tracks selection limitation.
-                        if (selectedTracks.size() <= rowSize * colSize / 2 || selectedTracks.size() < oneTracks.size())
+                        if (m_SelectedTracks.size() <= rowSize * colSize / 2 || m_SelectedTracks.size() < oneTracks.size())
                         {
-                            selectedTracks.insert(*iter);
+                            m_SelectedTracks.insert(*iter);
                         }
                         else break;
                     }
@@ -139,14 +140,13 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream, bool isTimed)
         }
         else // not using prediction
         {
-            selectedTracks = GetTileTracksByPose(pStream);
+            m_SelectedTracks = GetTileTracksByPose(pStream);
         }
-        {
-        std::lock_guard<std::mutex> lock(mCurrentMutex);
-        if (selectedTracks.empty() && m_currentTracks.empty())
+
+        if (m_SelectedTracks.empty() && m_currentTracks.empty())
             return ERROR_INVALID;
 
-        bool isPoseChanged = IsSelectionChanged(m_currentTracks, selectedTracks);
+        bool isPoseChanged = IsSelectionChanged(m_currentTracks, m_SelectedTracks);
 
         if (m_currentTracks.empty() || isPoseChanged)
         {
@@ -154,11 +154,11 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream, bool isTimed)
             {
                 m_currentTracks.clear();
             }
-            m_currentTracks = selectedTracks;
+            m_currentTracks = m_SelectedTracks;
         }
         if (isTimed)
         {
-            int32_t stream_frame_rate = streamInfo->framerate_num / streamInfo->framerate_den;
+            int32_t stream_frame_rate = round(float(streamInfo->framerate_num) / streamInfo->framerate_den);
             uint32_t sampleNumPerSeg = pStream->GetSegmentDuration() * stream_frame_rate;
             uint64_t curr_pts = (static_cast<uint64_t>(pStream->GetSegmentNumber()) - 1) * sampleNumPerSeg;
             // if existed, replace it
@@ -173,8 +173,7 @@ int OmafTileTracksSelector::SelectTracks(OmafMediaStream* pStream, bool isTimed)
 
             OMAF_LOG(LOG_INFO, "Insert segid %lld tracks into previous map!\n", curr_pts);
         }
-        }
-        selectedTracks.clear();
+        m_SelectedTracks.clear();
     }
 
     return ret;
@@ -186,6 +185,7 @@ int OmafTileTracksSelector::UpdateEnabledTracks(OmafMediaStream* pStream)
     int ret = ERROR_NONE;
     if (streamInfo->stream_type == MediaType_Video)
     {
+        std::lock_guard<std::mutex> lock(mCurrentMutex);
         ret = pStream->UpdateEnabledTileTracks(m_currentTracks);
     }
     else if (streamInfo->stream_type == MediaType_Audio)
@@ -245,7 +245,7 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
     }
 
     // to select tile tracks;
-    OMAF_LOG(LOG_INFO, "Start to select tile tracks!\n");
+    // OMAF_LOG(LOG_INFO, "Start to select tile tracks!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
         // trace
@@ -286,6 +286,8 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     ret = I360SCVP_process(mParamViewport, m360ViewPortHandle);
     if (ret)
         return selectedTracks;
+
+    std::lock_guard<std::mutex> lock(mASMutex);
     TileDef *tilesInViewport = new TileDef[1024];
     if (!tilesInViewport)
         return selectedTracks;
@@ -307,7 +309,8 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
         return selectedTracks;
     }
 
-    std::map<int, OmafAdaptationSet*> asMap = pStream->GetMediaAdaptationSet();
+    mASMap.clear();
+    mASMap = pStream->GetMediaAdaptationSet();
     std::map<int, OmafAdaptationSet*>::iterator itAS;
 
     // insert all tile tracks in viewport into selected tile tracks map
@@ -326,7 +329,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
             int32_t left = tilesInViewport[index].x;
             int32_t top  = tilesInViewport[index].y;
 
-            for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+            for (itAS = mASMap.begin(); itAS != mASMap.end(); itAS++)
             {
                 OmafAdaptationSet *adaptationSet = itAS->second;
                 OmafSrd *srd = adaptationSet->GetSRD();
@@ -350,7 +353,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
             int32_t left = tilesInViewport[index].x;
             int32_t top  = tilesInViewport[index].y;
             int32_t faceId = tilesInViewport[index].faceId;
-            for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+            for (itAS = mASMap.begin(); itAS != mASMap.end(); itAS++)
             {
                 OmafAdaptationSet *adaptationSet = itAS->second;
                 uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
@@ -397,7 +400,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
             corresQualityRanking = itStrQua->second;
             OMAF_LOG(LOG_INFO, "Selected tile from stream %d with quality ranking %d\n", strId, corresQualityRanking);
 
-            for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+            for (itAS = mASMap.begin(); itAS != mASMap.end(); itAS++)
             {
                 OmafAdaptationSet *adaptationSet = itAS->second;
                 OmafSrd *srd = adaptationSet->GetSRD();
@@ -417,7 +420,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
 
         if (needAddtionalTile)
         {
-            for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+            for (itAS = mASMap.begin(); itAS != mASMap.end(); itAS++)
             {
                 OmafAdaptationSet *adaptationSet = itAS->second;
                 uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
@@ -433,7 +436,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
 
     if (needAddtionalTile && (mProjFmt != ProjectionFormat::PF_PLANAR))
     {
-        for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+        for (itAS = mASMap.begin(); itAS != mASMap.end(); itAS++)
         {
             OmafAdaptationSet *adaptationSet = itAS->second;
             uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
@@ -448,7 +451,7 @@ TracksMap OmafTileTracksSelector::SelectTileTracks(
     // insert all tile tracks from low qulity video into selected tile tracks map when projection type is not PF_PLANAR
     if (mProjFmt != ProjectionFormat::PF_PLANAR)
     {
-        for (itAS = asMap.begin(); itAS != asMap.end(); itAS++)
+        for (itAS = mASMap.begin(); itAS != mASMap.end(); itAS++)
         {
             OmafAdaptationSet *adaptationSet = itAS->second;
             uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
@@ -516,7 +519,7 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
     DashStreamInfo *stream_info = pStream->GetStreamInfo();
     if (stream_info == nullptr) return predictedTracks;
 
-    int32_t stream_frame_rate = stream_info->framerate_num / stream_info->framerate_den;
+    int32_t stream_frame_rate = round(float(stream_info->framerate_num) / stream_info->framerate_den);
     uint64_t first_predict_pts = current_segment_num > 0 ? (current_segment_num - 1) * stream_frame_rate : 0;
     // 2. predict process
     ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);

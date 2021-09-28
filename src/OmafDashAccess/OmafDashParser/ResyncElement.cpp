@@ -26,43 +26,20 @@
  */
 
 //!
-//! \file:   RepresentationElement.cpp
-//! \brief:  Representation element class
+//! \file:   ResyncElement.cpp
+//! \brief:  Resync element class
 //!
 
-#include "RepresentationElement.h"
+#include "ResyncElement.h"
 
 VCD_OMAF_BEGIN
 
-RepresentationElement::RepresentationElement()
-{
-    m_segment = nullptr;
-    m_audioChlCfg = nullptr;
-    m_resync = nullptr;
-    m_width = 0;
-    m_height = 0;
-    m_audioSamplingRate = 0;
-    m_bandwidth = 0;
+ResyncElement::ResyncElement() {
 }
 
-RepresentationElement::~RepresentationElement()
-{
-    m_id.clear();
-    m_codecs.clear();
-    m_mimeType.clear();
-    m_width = 0;
-    m_height = 0;
-    m_audioSamplingRate = 0;
-    m_frameRate.clear();
-    m_sar.clear();
-    m_startWithSAP.clear();
-    m_qualityRanking.clear();
-    m_bandwidth = 0;
-
-    SAFE_DELETE(m_segment);
-    SAFE_DELETE(m_audioChlCfg);
-    SAFE_DELETE(m_resync);
+ResyncElement::~ResyncElement() {
+  m_type.clear();
+  m_chunkDuration.clear();
 }
-
 
 VCD_OMAF_END;

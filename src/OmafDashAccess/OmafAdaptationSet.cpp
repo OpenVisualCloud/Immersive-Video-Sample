@@ -35,6 +35,7 @@
 
 #include "OmafAdaptationSet.h"
 #include "OmafReaderManager.h"
+#include "CmafSegment.h"
 
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
@@ -42,6 +43,7 @@
 #endif
 #endif
 #include <sys/time.h>
+#include <math.h>
 //#include <sys/timeb.h>
 
 VCD_OMAF_BEGIN
@@ -62,9 +64,11 @@ OmafAdaptationSet::OmafAdaptationSet() {
   mActiveSegNum = 1;
   mSegNum = 1;
   mStartSegNum = 1;
+  mStartChunkId = 0;
   mReEnable = false;
   mPF = PF_UNKNOWN;
   mSegmentDuration = 0;
+  mChunkDuration = 0;
   mTrackNumber = 0;
   mStartNumber = 1;
   mID = 0;
@@ -143,7 +147,15 @@ int OmafAdaptationSet::Initialize(AdaptationSetElement* pAdaptationSet) {
   if (nullptr != segment) {
     mStartNumber = segment->GetStartNumber();
     mSegmentDuration = segment->GetDuration() / segment->GetTimescale();
+    mChunkDuration = mSegmentDuration * 1000;
     OMAF_LOG(LOG_INFO, "Segment duration %ld\n", mSegmentDuration);
+  }
+
+  ResyncElement* resync = mRepresentation->GetResync();
+
+  if (nullptr != resync && nullptr != segment) {
+    mChunkDuration = StringToInt(resync->GetChunkDuration()); // ms
+    OMAF_LOG(LOG_INFO, "Chunk duration %ld\n", mChunkDuration);
   }
 
   // mAudioInfo.sample_rate = parse_int(
@@ -405,7 +417,7 @@ int OmafAdaptationSet::DownloadInitializeSegment() {
   return ret;
 }
 
-int OmafAdaptationSet::DownloadSegment() {
+int OmafAdaptationSet::DownloadSegment(bool enableCMAF) {
   int ret = ERROR_NONE;
 
   if (!mEnable) {
@@ -443,8 +455,21 @@ int OmafAdaptationSet::DownloadSegment() {
   params.dash_url_ = seg->GenerateCompleteURL(mBaseURL, repID, mActiveSegNum);
   params.priority_ = TaskPriority::NORMAL;
   params.timeline_point_ = static_cast<int64_t>(mSegNum);
+  params.start_chunk_id_ = (mSegNum == 1) ? mStartChunkId : 0; // start chunk from 0
+  params.chunk_num_ = (mChunkDuration == 0) ? 1 : mSegmentDuration * 1000 / mChunkDuration;
+  params.header_size_ = 0;
 
-  OmafSegment::Ptr pSegment = std::make_shared<OmafSegment>(params, mSegNum, false);
+  OmafSegment::Ptr pSegment = nullptr;
+  if (enableCMAF) {
+    params.enable_byte_range_ = true;
+    pSegment = std::make_shared<CmafSegment>(params, mSegNum, false);
+    pSegment->SetSegmentType(SegmentType_Cmaf);
+  }
+  else {
+    params.enable_byte_range_ = false;
+    pSegment = std::make_shared<OmafSegment>(params, mSegNum, false);
+    pSegment->SetSegmentType(SegmentType_Omaf);
+  }
 
 #endif
   // reset the re-enable flag, since it will be updated with different viewport
@@ -472,6 +497,8 @@ int OmafAdaptationSet::DownloadSegment() {
 
     pSegment->SetSegID(mSegNum);
     pSegment->SetTrackId(this->mInitSegment->GetTrackId());
+    pSegment->SetExtractor(IsExtractor());
+    pSegment->SetCatchup(false);
     ret = omaf_reader_mgr_->OpenSegment(std::move(pSegment), IsExtractor());
 
     if (ERROR_NONE != ret) {
@@ -497,7 +524,7 @@ int OmafAdaptationSet::DownloadSegment() {
   }
 }
 
-int OmafAdaptationSet::DownloadAssignedSegment(uint32_t trackID, uint32_t segID)
+int OmafAdaptationSet::DownloadAssignedSegment(uint32_t trackID, uint32_t segID, uint64_t currentTimeLine, bool enableCMAF)
 {
   int ret = ERROR_NONE;
 
@@ -520,13 +547,37 @@ int OmafAdaptationSet::DownloadAssignedSegment(uint32_t trackID, uint32_t segID)
 
   auto repID = mRepresentation->GetId();
 
+  //find the nearest I-frame chunk id
+  int start_chunk_id = 0;
+  if (mChunkDuration != 0 && mVideoInfo.frame_Rate.den != 0) {
+    int chunk_num = mSegmentDuration * 1000 / mChunkDuration;
+    // assume that stream has the same segment duration and chunk number in each segment
+    uint32_t framerate = round(float(mVideoInfo.frame_Rate.num) / mVideoInfo.frame_Rate.den);
+
+    if (chunk_num == 0) return ERROR_INVALID;
+    uint32_t chunkSize = framerate * mSegmentDuration / chunk_num;
+    start_chunk_id = currentTimeLine > (segID - 1) * framerate * mSegmentDuration ? (currentTimeLine % (framerate * mSegmentDuration)) / chunkSize : 0;// start chunk id in its segment, index from 0
+  }
   DashSegmentSourceParams params;
 
   params.dash_url_ = seg->GenerateCompleteURL(mBaseURL, repID, realSegNum);
   params.priority_ = TaskPriority::NORMAL;
   params.timeline_point_ = static_cast<int64_t>(segID);
+  params.start_chunk_id_ = start_chunk_id;
+  params.chunk_num_ = (mChunkDuration == 0) ? 1 : mSegmentDuration * 1000 / mChunkDuration;
+  params.header_size_ = 0;
 
-  OmafSegment::Ptr pSegment = std::make_shared<OmafSegment>(params, segID, false);
+  OmafSegment::Ptr pSegment = nullptr;
+  if (enableCMAF) {
+    params.enable_byte_range_ = true;
+    pSegment = std::make_shared<CmafSegment>(params, segID, false);
+    pSegment->SetSegmentType(SegmentType_Cmaf);
+  }
+  else {
+    params.enable_byte_range_ = false;
+    pSegment = std::make_shared<OmafSegment>(params, segID, false);
+    pSegment->SetSegmentType(SegmentType_Omaf);
+  }
 
   // reset the re-enable flag, since it will be updated with different viewport
   // if (mReEnable) mReEnable = false;
@@ -553,7 +604,9 @@ int OmafAdaptationSet::DownloadAssignedSegment(uint32_t trackID, uint32_t segID)
 
     pSegment->SetSegID(segID);
     pSegment->SetTrackId(trackID);
+    pSegment->SetExtractor(IsExtractor());
     bool isCatchup = true;
+    pSegment->SetCatchup(isCatchup);
     ret = omaf_reader_mgr_->OpenSegment(std::move(pSegment), false, isCatchup);
 
     if (ERROR_NONE != ret) {
@@ -583,20 +636,18 @@ std::string OmafAdaptationSet::GetUrl(const SegmentSyncNode& node) const {
 
 /////read relative methods
 int OmafAdaptationSet::UpdateStartNumberByTime(uint64_t nAvailableStartTime) {
-  time_t gTime;
-  struct tm* t;
+  time_t gTime, gUTime;
   struct timeval now;
-  struct timezone tz;
-  gettimeofday(&now, &tz);
+
+  gettimeofday(&now, NULL);
   // struct timeb timeBuffer;
   // ftime(&timeBuffer);
   // now.tv_sec = (long)(timeBuffer.time);
   // now.tv_usec = timeBuffer.millitm * 1000;
   gTime = now.tv_sec;
-  t = gmtime(&gTime);
+  gUTime = now.tv_usec;
 
-  uint64_t current = timegm(t);
-  current *= 1000;
+  uint64_t current = (gTime * 1000000 + gUTime) / 1000;//ms
 
   if (current < nAvailableStartTime) {
     OMAF_LOG(LOG_ERROR, "Unreasonable current time %lld which is earlier than available time %lld\n", current, nAvailableStartTime);
@@ -606,8 +657,12 @@ int OmafAdaptationSet::UpdateStartNumberByTime(uint64_t nAvailableStartTime) {
   mActiveSegNum = (current - nAvailableStartTime) / (mSegmentDuration * 1000) + mStartNumber;
   mStartSegNum = mActiveSegNum;
 
+  if (mChunkDuration == 0) mStartChunkId = 0;
+  else mStartChunkId = (current - nAvailableStartTime) % (mSegmentDuration * 1000) / mChunkDuration;
+
   OMAF_LOG(LOG_INFO, "Current time= %lld and available time= %lld.\n", current, nAvailableStartTime);
   OMAF_LOG(LOG_INFO, "Set start segment index= %d\n", mActiveSegNum);
+  OMAF_LOG(LOG_INFO, "Start chunk id is %d\n", mStartChunkId);
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
   tracepoint(E2E_latency_tp_provider,

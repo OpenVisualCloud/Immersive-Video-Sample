@@ -215,6 +215,13 @@ int OmafAccess_GetPacket(Handler hdl, int stream_id, DashPacket *packet, int *si
           SourceResolution *srcRes = new SourceResolution[pPkt->GetQualityNum()];
           memcpy_s(srcRes, pPkt->GetQualityNum() * sizeof(SourceResolution), pPkt->GetSourceResolutions(),
                    pPkt->GetQualityNum() * sizeof(SourceResolution));
+          ProducerReferenceTime *newPrft = new ProducerReferenceTime;
+          ProducerReferenceTime *pPrft = pPkt->GetPRFT();
+          if (pPrft != nullptr) {
+            newPrft->refTrackId = pPrft->refTrackId;
+            newPrft->ntpTimeStamp = pPrft->ntpTimeStamp;
+            newPrft->mediaTime = pPrft->mediaTime;
+          }
           packet[i].rwpk = newRwpk;
           packet[i].buf = pPkt->MovePayload();
           packet[i].size = pPkt->Size();
@@ -230,6 +237,7 @@ int OmafAccess_GetPacket(Handler hdl, int stream_id, DashPacket *packet, int *si
           packet[i].tileColNum = pPkt->GetVideoTileColNum();
           packet[i].bEOS = pPkt->GetEOS();
           packet[i].bCatchup = pPkt->IsCatchup();
+          packet[i].prft = newPrft;
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
           string tag = "sgmtIdx:" + to_string(pPkt->GetSegID());

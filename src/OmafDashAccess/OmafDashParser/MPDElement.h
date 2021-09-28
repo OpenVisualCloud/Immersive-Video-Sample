@@ -37,6 +37,7 @@
 #include "EssentialPropertyElement.h"
 #include "BaseUrlElement.h"
 #include "PeriodElement.h"
+#include "ServiceDescriptionElement.h"
 
 VCD_OMAF_BEGIN
 
@@ -295,6 +296,16 @@ public:
     void AddPeriod(PeriodElement* period);
 
     //!
+    //! \brief    Add an instance of ServiceDescription element
+    //!
+    //! \param    [in] serviceDescription
+    //!           An Instance of ServiceDescription element class
+    //!
+    //! \return   void
+    //!
+    void AddServiceDescription(ServiceDescriptionElement* serviceDescription);
+
+    //!
     //! \brief    Add an string item of Period attribute
     //!
     //! \param    [in] period
@@ -337,6 +348,14 @@ public:
     vector<PeriodElement*>            GetPeriods() {return m_periods;}
 
     //!
+    //! \brief    Get all ServiceDescription elements
+    //!
+    //! \return   vector<ServiceDescriptionElement*>
+    //!           vector of ServiceDescription Element
+    //!
+    vector<ServiceDescriptionElement*>            GetServiceDescriptions() {return m_serviceDescriptions;}
+
+    //!
     //! \brief    Get all items in vector m_profiles
     //!
     //! \return   vector<string>
@@ -366,6 +385,7 @@ private:
     vector<EssentialPropertyElement*> m_essentialProperties;        //!< the EssentialProperty child elements
     vector<BaseUrlElement*>           m_baseUrls;                   //!< the BaseUrl child elements
     vector<PeriodElement*>            m_periods;                    //!< the Period child elements
+    vector<ServiceDescriptionElement*> m_serviceDescriptions;       //!< the ServiceDescription child elements
 };
 
 VCD_OMAF_END

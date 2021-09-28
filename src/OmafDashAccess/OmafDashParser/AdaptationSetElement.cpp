@@ -81,6 +81,13 @@ AdaptationSetElement::~AdaptationSetElement()
         }
         m_supplementalProperties.clear();
     }
+
+    if(m_producerReferenceTimes.size())
+    {
+        for(auto prft : m_producerReferenceTimes)
+            SAFE_DELETE(prft);
+        m_producerReferenceTimes.clear();
+    }
 }
 
 void AdaptationSetElement::AddViewport(ViewportElement* viewport)
@@ -122,6 +129,17 @@ void AdaptationSetElement::AddRepresentation(RepresentationElement* representati
     }
     m_representations.push_back(representation);
 }
+
+void AdaptationSetElement::AddProducerReferenceTime(ProducerReferenceTimeElement* prft)
+{
+    if(!prft)
+    {
+        OMAF_LOG(LOG_ERROR,"Fail to add prft in Element.\n");
+        return;
+    }
+    m_producerReferenceTimes.push_back(prft);
+}
+
 
 ProjectionFormat AdaptationSetElement::GetProjectionFormat()
 {

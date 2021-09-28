@@ -42,7 +42,7 @@
 namespace VCD {
 namespace OMAF {
 
-const long DEFAULT_MAX_PARALLEL_TRANSFERS = 20;
+const long DEFAULT_MAX_PARALLEL_TRANSFERS = 50;
 const int32_t DEFAULT_SEGMENT_OPEN_TIMEOUT = 3000;
 
 class OmafDashHttpProxy {
@@ -72,6 +72,7 @@ class OmafDashHttpParams {
   int32_t retry_times_ = -1;
   bool bssl_verify_peer_ = false;
   bool bssl_verify_host_ = false;
+  bool enable_byte_range_ = false;
   std::string to_string() {
     std::stringstream ss;
     ss << "http params: {" << std::endl;
@@ -80,6 +81,7 @@ class OmafDashHttpParams {
     ss << "\tretry times: " << retry_times_ << "" << std::endl;
     ss << "\tssl verify peer state: " << bssl_verify_peer_ << "" << std::endl;
     ss << "\tssl verify host state: " << bssl_verify_host_ << "" << std::endl;
+    ss << "\tbyte range: " << enable_byte_range_ << "" << std::endl;
     ss << "}";
     return ss.str();
   }
@@ -186,11 +188,21 @@ class DashSegmentSourceParams {
   int64_t timeline_point_ = -1;
   std::string dash_url_;  // unique in the system
   TaskPriority priority_ = TaskPriority::LOW;
+  // for chunked structure in segment
+  uint32_t start_chunk_id_ = 0;
+  uint32_t chunk_num_ = 0;
+  uint64_t header_size_ = 0;
+  bool enable_byte_range_ = false;
+
   std::string to_string() const noexcept {
     std::stringstream ss;
     ss << "url=" << dash_url_;
     ss << ", priority=" << priority(priority_);
     ss << ", timeline_point=" << timeline_point_;
+    ss << ", start_chunk_id=" << start_chunk_id_;
+    ss << ", chunk num=" << chunk_num_;
+    ss << ", header_size=" << header_size_;
+    ss << ", enable_byte_range=" << enable_byte_range_;
     return ss.str();
   }
 };

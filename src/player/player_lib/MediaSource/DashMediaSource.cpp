@@ -261,6 +261,7 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo) {
 
   mMediaInfo.mDuration = dashMediaInfo->duration;
   mMediaInfo.mStreamingType = dashMediaInfo->streaming_type;
+  mMediaInfo.mTargetLatency = dashMediaInfo->target_latency;
   VideoInfo vi;
   AudioInfo ai;
   int32_t vidx = 0;
@@ -314,7 +315,7 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo) {
   }
 
   LOG(INFO) << "------------------------------------------" << std::endl;
-  LOG(INFO) << "Player [config]: fps               " << vi.framerate_num / vi.framerate_den << std::endl;
+  LOG(INFO) << "Player [config]: fps               " << round(float(vi.framerate_num) / vi.framerate_den) << std::endl;
   // LOG(INFO)<<"Player [config]: render resolution
   // "<<m_mediaSourceInfo.sourceWH->width[0]<<"x"<<m_mediaSourceInfo.sourceWH->height[0]<<std::endl;
   LOG(INFO) << "Player [config]: packed resolution " << vi.width << "x" << vi.height << std::endl;
@@ -325,11 +326,11 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo) {
   }
 #ifndef _ANDROID_OS_
 #ifdef _USE_TRACE_
-  int32_t frameNum = round(float(mMediaInfo.mDuration) / 1000 * (vi.framerate_num / vi.framerate_den));
+  int32_t frameNum = round(float(mMediaInfo.mDuration) / 1000 * round(float(vi.framerate_num) / vi.framerate_den));
   const char *dash_mode = (dashMediaInfo->streaming_type == 1) ? "static" : "dynamic";
   tracepoint(mthq_tp_provider, stream_information, (char *)dash_mode, vi.mProjFormat, dashMediaInfo->stream_info[0].segmentDuration,
-             dashMediaInfo->duration, vi.framerate_num / vi.framerate_den, frameNum, vi.width, vi.height);
-  tracepoint(bandwidth_tp_provider, segmentation_info, (char *)dash_mode, dashMediaInfo->stream_info[0].segmentDuration, vi.framerate_num / vi.framerate_den, (uint32_t)dashMediaInfo->stream_count, (uint64_t*)&(dashMediaInfo->stream_info[0].bit_rate), frameNum, mMediaInfo.mDuration/1000);
+             dashMediaInfo->duration, round(float(vi.framerate_num) / vi.framerate_den), frameNum, vi.width, vi.height);
+  tracepoint(bandwidth_tp_provider, segmentation_info, (char *)dash_mode, dashMediaInfo->stream_info[0].segmentDuration, round(float(vi.framerate_num) / vi.framerate_den), (uint32_t)dashMediaInfo->stream_count, (uint64_t*)&(dashMediaInfo->stream_info[0].bit_rate), frameNum, mMediaInfo.mDuration/1000);
 #endif
 #endif
   return RENDER_STATUS_OK;
@@ -423,6 +424,7 @@ void DashMediaSource::ProcessVideoPacket() {
     SAFE_FREE(dashPkt[i].buf);
     if (dashPkt[i].rwpk) SAFE_DELETE_ARRAY(dashPkt[i].rwpk->rectRegionPacking);
     SAFE_DELETE(dashPkt[i].rwpk);
+    SAFE_DELETE(dashPkt[i].prft);
     SAFE_DELETE_ARRAY(dashPkt[i].qtyResolution);
   }
 }

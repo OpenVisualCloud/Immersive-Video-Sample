@@ -49,7 +49,7 @@
 
 VCD_OMAF_BEGIN
 
-class OmafSegment : public VCD::NonCopyable, public VCD::MP4::StreamIO, public enable_shared_from_this<OmafSegment> {
+class OmafSegment : public VCD::MP4::StreamIO, public enable_shared_from_this<OmafSegment> {
  public:
   using Ptr = std::shared_ptr<OmafSegment>;
 
@@ -82,6 +82,8 @@ class OmafSegment : public VCD::NonCopyable, public VCD::MP4::StreamIO, public e
   // @brief constructor with dash source
   //
   OmafSegment(DashSegmentSourceParams ds_params, int segCnt, bool bInitSegment = false);
+
+  OmafSegment(std::shared_ptr<OmafSegment> seg, std::unique_ptr<StreamBlock> sb);
 
   //!
   //! \brief  de-construct
@@ -153,7 +155,7 @@ class OmafSegment : public VCD::NonCopyable, public VCD::MP4::StreamIO, public e
   //
   // @return void
   // @brief
-  inline void RegisterStateChange(OnStateChange cb) noexcept { state_change_cb_ = cb; }
+  inline void RegisterStateChange(OnStateChange cb) noexcept { state_change_cb_ = cb; };
 
   //
   // @brief get dash segment cache file path
@@ -208,7 +210,10 @@ class OmafSegment : public VCD::NonCopyable, public VCD::MP4::StreamIO, public e
   //
   // @return int
   // @brief calling success or not
-  int Open(std::shared_ptr<OmafDashSegmentClient> dash_client) noexcept;
+  virtual int Open(std::shared_ptr<OmafDashSegmentClient> dash_client) noexcept;
+
+  virtual std::unique_ptr<StreamBlock> PopOneStreamBlock() noexcept { return nullptr; };
+
   int Stop() noexcept;
   // int Read(uint8_t* data, size_t len);
   // int Peek(uint8_t* data, size_t len);
@@ -241,6 +246,10 @@ class OmafSegment : public VCD::NonCopyable, public VCD::MP4::StreamIO, public e
 
   MediaType GetMediaType() { return mMediaType; };
 
+  void SetSegmentType(SegmentType type) { mSegmentType = type; };
+
+  SegmentType GetSegmentType() { return mSegmentType; };
+
   void SetAudioChlNum(uint32_t chlNum) { mChlsNum = chlNum; };
 
   uint32_t GetAudioChlNum() { return mChlsNum; };
@@ -249,17 +258,39 @@ class OmafSegment : public VCD::NonCopyable, public VCD::MP4::StreamIO, public e
 
   uint32_t GetAudioSampleRate() { return mSampleRate; };
 
+  void SetCatchup(bool isCatchup) { bCatchup_ = isCatchup; };
+
+  bool IsCatchup() { return bCatchup_; };
+
+  void SetExtractor(bool isExtractor) { bExtractor_ = isExtractor; };
+
+  bool IsExtractor() { return bExtractor_; };
+
+  virtual bool HasProcessDone() { return true; };
+
+  int32_t GetProcessedChunkId() { return processed_chunk_id_; };
+
+  uint32_t GetChunkNum() { return chunk_num_; };
+
  private:
   //!
   //!  \brief save the memory data to file.
   //!
   int CacheToFile() noexcept;
 
- private:
+ protected:
   std::shared_ptr<OmafDashSegmentClient> dash_client_;
+  State state_ = State::CREATE;
   DashSegmentSourceParams ds_params_;
-
   StreamBlocks dash_stream_;
+
+  OnStateChange state_change_cb_;
+
+  int32_t processed_chunk_id_ = -1;
+
+  uint32_t chunk_num_ = 1;
+
+ private:
 
   // SegmentElement* mSegElement;  //<! SegmentElement
   //<! flag to indicate whether the segment should be stored
@@ -267,10 +298,6 @@ class OmafSegment : public VCD::NonCopyable, public VCD::MP4::StreamIO, public e
   bool buse_stored_file_ = false;
   //<! the file name for downloaded segment file
   std::string cache_file_;
-  //<! status of the segment
-
-  OnStateChange state_change_cb_;
-  State state_ = State::CREATE;
 
   //<! the total size of data downloaded for this segment
   uint64_t seg_size_ = 0;
@@ -292,8 +319,14 @@ class OmafSegment : public VCD::NonCopyable, public VCD::MP4::StreamIO, public e
 
   MediaType mMediaType;
 
+  SegmentType mSegmentType = SegmentType::SegmentType_Omaf;
+
   uint32_t mChlsNum;
   uint32_t mSampleRate;
+
+  bool bCatchup_ = false;
+
+  bool bExtractor_ = false;
 
  private:
   static std::atomic_uint32_t INITSEG_ID;
@@ -301,4 +334,4 @@ class OmafSegment : public VCD::NonCopyable, public VCD::MP4::StreamIO, public e
 
 VCD_OMAF_END
 
-#endif /* MEDIASEGMENT_H */
+#endif /* OMAFSEGMENT_H */

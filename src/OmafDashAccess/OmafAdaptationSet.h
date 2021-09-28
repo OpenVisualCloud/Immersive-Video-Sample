@@ -99,11 +99,11 @@ class OmafAdaptationSet {
   //!
   //! \brief  Download Segment for reading.
   //!
-  int DownloadSegment();
+  int DownloadSegment(bool enableCMAF);
 
   //! \brief  Download Segment for assigned tracks .
   //!
-  int DownloadAssignedSegment(uint32_t trackID, uint32_t segID);
+  int DownloadAssignedSegment(uint32_t trackID, uint32_t segID, uint64_t currentTimeLine, bool enableCMAF);
 
   //!
   //! \brief  Select representation from
@@ -166,6 +166,8 @@ class OmafAdaptationSet {
   AudioInfo GetAudioInfo() { return mAudioInfo; };
   MediaType GetMediaType() { return mType; };
   uint64_t GetSegmentDuration() { return mSegmentDuration; };
+  uint64_t GetChunkDuration() { return mChunkDuration; };
+  uint32_t GetStartChunkId() { return mStartChunkId; };
   uint32_t GetStartNumber() { return mStartNumber; };
   std::string GetRepresentationId() { return mRepresentation->GetId(); };
   uint32_t GetGopSize() { return mGopSize; };
@@ -234,6 +236,7 @@ class OmafAdaptationSet {
   // std::list<OmafSegment*>               mSegments;         //<! active
   // segments list OmafSegment*                          mInitSegment;      //<!
   // Initialize Segmentation
+  bool enableCMAF = false;
   std::list<OmafSegment::Ptr> mSegments;
   OmafSegment::Ptr mInitSegment;
   OmafSrd* mSRD;                     //<! SRD information
@@ -248,10 +251,12 @@ class OmafAdaptationSet {
   int mID;                           //<! the ID of this adaption Set. ?trackID
   std::vector<int> mDependIDs;       //<! the ID this adaption Set depends on
   uint64_t mSegmentDuration;         //<! Segment duration as advertised in the MPD
+  uint64_t mChunkDuration;           //<! Chunk duration in Resync element in the MPD
   int mStartNumber;                  //<! the first number of segment after getting
                                      //<! mpd which is used to get first segment for downloading
   int mActiveSegNum;                 //<! the segment are being processed
   int mStartSegNum;                  //<! the real start segment num
+  int mStartChunkId;                 //<! the available start chunk id in the real start segment
   int mSegNum;                       //<! the segment count
   bool m_bMain;                      //<! whether this AdaptationSet is Main or not. each stream
                                      //<! has one main AdaptationSet

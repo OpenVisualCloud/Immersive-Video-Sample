@@ -46,14 +46,14 @@ namespace OMAF {
 //! \class  StreamBlock
 //! \brief  Stream Information, including data and data size
 //!
-class StreamBlock : public VCD::NonCopyable {
+class StreamBlock {
  public:
   //!
   //! \brief Constructor
   //!
   StreamBlock() = default;
 
-  StreamBlock(char *data, int64_t size) : data_(data), size_(size), capacity_(size), bOwner_(false) {}
+  StreamBlock(char *data, int64_t size) : data_(data), size_(size), capacity_(size) {}
   //!
   //! \brief Destructor
   //!
@@ -103,10 +103,12 @@ private:
   const bool bOwner_ = true;
 };
 
-class StreamBlocks : public VCD::NonCopyable, public VCD::MP4::StreamIO {
+class StreamBlocks : public VCD::MP4::StreamIO {
  public:
   StreamBlocks() = default;
   ~StreamBlocks() {}
+
+  StreamBlocks(const StreamBlocks& sbs) {}
 
  public:
   offset_t ReadStream(char *buffer, offset_t size) {
@@ -146,6 +148,46 @@ class StreamBlocks : public VCD::NonCopyable, public VCD::MP4::StreamIO {
     return readSize;
   };
 
+  offset_t ReadStreamFromOffset(char *buffer, offset_t input_offset, offset_t size) {
+    std::lock_guard<std::mutex> lock(stream_mutex_);
+
+    offset_t offset = input_offset;
+
+    if (stream_size_ < input_offset + size) {
+      OMAF_LOG(LOG_WARNING, "dash stream has not enough data for offset %ld, size %ld\n", input_offset, size);
+      return 0;
+    }
+
+    std::list<std::unique_ptr<StreamBlock>>::const_iterator it = stream_blocks_.cbegin();
+    while (it != stream_blocks_.cend()) {
+      if (offset < (*it)->size()) {
+        break;
+      }
+      offset -= (*it)->size();
+      ++it;
+    }
+
+    offset_t readSize = 0;
+    while (it != stream_blocks_.cend()) {
+      if (readSize >= size) break;
+
+      offset_t copySize = 0;
+      offset_t dataSize = (*it)->size() - offset;
+      if ((size - readSize) >= dataSize) {
+        copySize = dataSize;
+      } else {
+        copySize = size - readSize;
+      }
+
+      memcpy_s(buffer + readSize, copySize, (*it)->cbuf() + offset, copySize);
+      readSize += copySize;
+      offset = 0;  // set offset to 0 for coming blocks
+      ++it;
+    }
+
+    return readSize;
+  };
+
   bool SeekAbsoluteOffset(offset_t offset) {
     std::lock_guard<std::mutex> lock(stream_mutex_);
     offset_ = offset;  // FIXME same logic with old file solution
@@ -164,6 +206,23 @@ class StreamBlocks : public VCD::NonCopyable, public VCD::MP4::StreamIO {
     std::lock_guard<std::mutex> lock(stream_mutex_);
     stream_size_ += sb->size();
     stream_blocks_.push_back(std::move(sb));
+  }
+
+  std::unique_ptr<StreamBlock> pop_front() noexcept {
+    std::lock_guard<std::mutex> lock(stream_mutex_);
+    std::unique_ptr<StreamBlock> sb = std::move(stream_blocks_.front());
+    stream_size_ -= sb->size();
+    stream_blocks_.pop_front();
+    return sb;
+  }
+
+  void clear() noexcept {
+    while (!stream_blocks_.empty()) {
+      stream_blocks_.pop_front();
+    }
+    std::lock_guard<std::mutex> lock(stream_mutex_);
+    stream_size_ = 0;
+    offset_ = 0;
   }
 
   bool cacheToFile(std::string &filename) noexcept {
@@ -186,7 +245,9 @@ class StreamBlocks : public VCD::NonCopyable, public VCD::MP4::StreamIO {
     }
   }
 
- private:
+  uint32_t GetStreamBlockSize() { return stream_blocks_.size(); }
+
+ public:
   std::list<std::unique_ptr<StreamBlock>> stream_blocks_;
 
   std::mutex stream_mutex_;

@@ -233,6 +233,9 @@ RenderStatus MediaPlayer_Linux::Play()
     if (data_log != nullptr) {
         data_log->PrintSwitchPerformanceInLog();
         data_log->PrintSwitchPerformanceInFile();
+        data_log->PrintE2ELatencyPerformanceInLog();
+        data_log->PrintE2ELatencyPerformanceInFile();
+
     }
     return RENDER_STATUS_OK;
 }
