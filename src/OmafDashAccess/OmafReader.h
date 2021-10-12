@@ -648,11 +648,19 @@ public:
     //!
     //! \brief  set the segment sample size
     //!
-    void SetSegSampleSize(uint32_t size) { mSegSampleSize = size; };
+    void SetVideoSegSampleSize(uint32_t size) { mVideoSegSampleSize = size; };
     //!
     //! \brief  get the segment sample size
     //!
-    uint32_t GetSegSampleSize() { return mSegSampleSize; };
+    uint32_t GetVideoSegSampleSize() { return mVideoSegSampleSize; };
+    //!
+    //! \brief  set the segment sample size
+    //!
+    void SetAudioSegSampleSize(uint32_t size) { mAudioSegSampleSize = size; };
+    //!
+    //! \brief  get the segment sample size
+    //!
+    uint32_t GetAudioSegSampleSize() { return mAudioSegSampleSize; };
 
 public:
 
@@ -764,7 +772,8 @@ public:
 
 private:
     std::map<int, int>  mMapInitTrk;           //!< the map of <initSegmentId, trackId>
-    uint32_t mSegSampleSize = 0;               //!< segment sample size
+    uint32_t mVideoSegSampleSize = 0;          //!< segment sample size for video track
+    uint32_t mAudioSegSampleSize = 0;          //!< segment sample size for audio track
 };
 
 VCD_OMAF_END;
