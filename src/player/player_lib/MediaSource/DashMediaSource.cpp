@@ -203,9 +203,11 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   }
 #endif
   DecodeInfo decode_info;
-  decode_info.frameRate_den = mediaInfo.stream_info[0].framerate_den;
-  decode_info.frameRate_num = mediaInfo.stream_info[0].framerate_num;
-  decode_info.segment_duration = mediaInfo.stream_info[0].segmentDuration;
+  VideoInfo vi;
+  mMediaInfo.GetActiveVideoInfo(vi);
+  decode_info.frameRate_den = mediaInfo.stream_info[vi.streamID].framerate_den;
+  decode_info.frameRate_num = mediaInfo.stream_info[vi.streamID].framerate_num;
+  decode_info.segment_duration = mediaInfo.stream_info[vi.streamID].segmentDuration;
   m_DecoderManager->SetDecodeInfo(decode_info);
   RenderStatus ret = m_DecoderManager->Initialize(m_rsFactory);
   if (RENDER_STATUS_OK != ret) {
@@ -219,8 +221,8 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   pCtxDashStreaming = NULL;
   free(clientInfo.pose);
   clientInfo.pose = NULL;
-  SAFE_DELETE_ARRAY(mediaInfo.stream_info[0].codec);
-  SAFE_DELETE_ARRAY(mediaInfo.stream_info[0].mime_type);
+  SAFE_DELETE_ARRAY(mediaInfo.stream_info[vi.streamID].codec);
+  SAFE_DELETE_ARRAY(mediaInfo.stream_info[vi.streamID].mime_type);
   return RENDER_STATUS_OK;
 }
 
@@ -328,9 +330,9 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo) {
 #ifdef _USE_TRACE_
   int32_t frameNum = round(float(mMediaInfo.mDuration) / 1000 * round(float(vi.framerate_num) / vi.framerate_den));
   const char *dash_mode = (dashMediaInfo->streaming_type == 1) ? "static" : "dynamic";
-  tracepoint(mthq_tp_provider, stream_information, (char *)dash_mode, vi.mProjFormat, dashMediaInfo->stream_info[0].segmentDuration,
+  tracepoint(mthq_tp_provider, stream_information, (char *)dash_mode, vi.mProjFormat, dashMediaInfo->stream_info[vi.streamID].segmentDuration,
              dashMediaInfo->duration, round(float(vi.framerate_num) / vi.framerate_den), frameNum, vi.width, vi.height);
-  tracepoint(bandwidth_tp_provider, segmentation_info, (char *)dash_mode, dashMediaInfo->stream_info[0].segmentDuration, round(float(vi.framerate_num) / vi.framerate_den), (uint32_t)dashMediaInfo->stream_count, (uint64_t*)&(dashMediaInfo->stream_info[0].bit_rate), frameNum, mMediaInfo.mDuration/1000);
+  tracepoint(bandwidth_tp_provider, segmentation_info, (char *)dash_mode, dashMediaInfo->stream_info[vi.streamID].segmentDuration, round(float(vi.framerate_num) / vi.framerate_den), (uint32_t)dashMediaInfo->stream_count, (uint64_t*)&(dashMediaInfo->stream_info[vi.streamID].bit_rate), frameNum, mMediaInfo.mDuration/1000);
 #endif
 #endif
   return RENDER_STATUS_OK;
@@ -432,6 +434,26 @@ void DashMediaSource::ProcessVideoPacket() {
 void DashMediaSource::ProcessAudioPacket() {
   AudioInfo ai;
   mMediaInfo.GetActiveAudioInfo(ai);
+  if (ai.streamID < 0) return;
+  // not supported yet
+  DashPacket dashPkt[MAX_PACKETS];
+  memset(dashPkt, 0, MAX_PACKETS * sizeof(DashPacket));
+  int dashPktNum = 0;
+  static bool needHeaders = true;
+  uint64_t pts = 0;
+  int ret =
+      OmafAccess_GetPacket(m_handler, ai.streamID, &(dashPkt[0]), &dashPktNum, (uint64_t *)&pts, needHeaders, false);
+  if (ERROR_NONE != ret) {
+    // LOG(INFO) << "Get packet failed: stream_id:" << vi.streamID << ", ret:" << ret << std::endl;
+    return;
+  }
+  // delete audio data
+  for (int i = 0; i < dashPktNum; i++) {
+    SAFE_FREE(dashPkt[i].buf);
+    if (dashPkt[i].rwpk) SAFE_DELETE_ARRAY(dashPkt[i].rwpk->rectRegionPacking);
+    SAFE_DELETE(dashPkt[i].rwpk);
+    SAFE_DELETE_ARRAY(dashPkt[i].qtyResolution);
+  }
 }
 
 void DashMediaSource::Run() {
@@ -444,6 +466,7 @@ void DashMediaSource::Run() {
     {
       ScopeLock lock(m_Lock);
       ProcessVideoPacket();
+      ProcessAudioPacket();
     }
     usleep(1000);
   }

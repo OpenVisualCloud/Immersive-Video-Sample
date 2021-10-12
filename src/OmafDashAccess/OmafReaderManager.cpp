@@ -1914,8 +1914,8 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
 
         packet->SetPRFT(pPrft);
 
-        if (reader->GetSegSampleSize() == 0) {
-          reader->SetSegSampleSize(track_info->sampleProperties.size);
+        if (reader->GetVideoSegSampleSize() == 0) {
+          reader->SetVideoSegSampleSize(track_info->sampleProperties.size);
         }
 
         auto reader_mgr = omaf_reader_mgr_.lock();
@@ -1926,8 +1926,8 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
         }
         OMAF_LOG(LOG_INFO, "segment_->GetChunkNum() %d\n", segment_->GetChunkNum());
         // packet->SetPTS(reader->GetSegSampleSize() * (segment_->GetSegID() - 1) + sample_begin + sample);
-        packet->SetPTS(segment_->GetChunkNum() * reader->GetSegSampleSize() * (segment_->GetSegID() - 1)
-                        + chunk_id_ * reader->GetSegSampleSize()
+        packet->SetPTS(segment_->GetChunkNum() * reader->GetVideoSegSampleSize() * (segment_->GetSegID() - 1)
+                        + chunk_id_ * reader->GetVideoSegSampleSize()
                         + sample_begin + sample);
         if ((sample + 1) == sample_end)
         {
@@ -2049,10 +2049,10 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
           return ret;
         }
 
-        if (reader->GetSegSampleSize() == 0) {
-          reader->SetSegSampleSize(track_info->sampleProperties.size);
+        if (reader->GetAudioSegSampleSize() == 0) {
+          reader->SetAudioSegSampleSize(track_info->sampleProperties.size);
         }
-        packet->SetPTS(reader->GetSegSampleSize() * (segment_->GetSegID() - 1) + sample_begin + sample);
+        packet->SetPTS(reader->GetAudioSegSampleSize() * (segment_->GetSegID() - 1) + sample_begin + sample);
         if ((sample + 1) == sample_end)
         {
             packet->SetSegmentEnded(true);

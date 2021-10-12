@@ -367,7 +367,7 @@ class MediaPacket : public VCD::NonCopyable {
   void     SetADTSHdr(std::vector<uint8_t> audioParams)
   {
       m_audioADTSHdr = audioParams;
-      printf("m_audioADTSHdr size %ld\n", m_audioADTSHdr.size());
+      // printf("m_audioADTSHdr size %ld\n", m_audioADTSHdr.size());
   };
 
 private:
