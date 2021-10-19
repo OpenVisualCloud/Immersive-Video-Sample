@@ -35,6 +35,8 @@
 
 #include "OmafTracksSelector.h"
 
+#define MIN_PTS_INTERVAL_ 5
+
 VCD_OMAF_BEGIN
 
 OmafTracksSelector::OmafTracksSelector(int size) {
@@ -48,6 +50,7 @@ OmafTracksSelector::OmafTracksSelector(int size) {
   mProjFmt = ProjectionFormat::PF_ERP;
   mSegmentDur = 0;
   mQualityRanksNum = 0;
+  mLastCatchupPTS = 0;
   memset_s(&(mI360ScvpPlugin), sizeof(PluginDef), 0);
 }
 
@@ -97,7 +100,7 @@ OmafTracksSelector::~OmafTracksSelector() {
 
   mUsePrediction = false;
 
-  SAFE_DELETE(mPose);
+  // SAFE_DELETE(mPose);
 
   mTwoDQualityInfos.clear();
 }
@@ -242,7 +245,6 @@ int OmafTracksSelector::UpdateViewport(HeadPose *pose) {
 
   if (!(input_pose)) return ERROR_NULL_PTR;
   memcpy_s(input_pose, sizeof(HeadPose), pose, sizeof(HeadPose));
-
   mPoseHistory.push_front(input_pose);
   if (mPoseHistory.size() > (uint32_t)(this->mSize)) {
     auto pit = mPoseHistory.back();
@@ -311,6 +313,114 @@ int OmafTracksSelector::InitializePredictPlugins() {
   }
   mPredictPluginMap.insert(std::pair<std::string, ViewportPredictPlugin *>(mPredictPluginName, plugin));
   return ERROR_NONE;
+}
+
+std::map<uint32_t, std::map<int, OmafAdaptationSet*>> OmafTracksSelector::CompareTracksAndGetDifference(OmafMediaStream* pStream, uint64_t *currentTimeLine)
+{
+    //first: segID, second: TracksMap
+    std::map<uint32_t, std::map<int, OmafAdaptationSet*>> diffTracksMap;
+    //1. get current tile tracks timeline.
+    {
+    std::lock_guard<std::mutex> lock(mMutex);
+    *currentTimeLine = mPoseHistory.empty() ? 0 : mPoseHistory.front()->pts;
+    if (mLastCatchupPTS != 0 && *currentTimeLine - mLastCatchupPTS < MIN_PTS_INTERVAL_) { // too short time to get the difference
+      return diffTracksMap;
+    }
+    }
+    auto stream_info = pStream->GetStreamInfo();
+    if (nullptr == stream_info) {
+        OMAF_LOG(LOG_ERROR, "Stream informaiton is empty!\n");
+        return diffTracksMap;
+    }
+    TracksMap currSelectedTracksMap = GetCurrentTracksMap();
+    //2. get compared tile tracks according to current timeline.
+    if (stream_info->framerate_den == 0) return diffTracksMap;
+    uint32_t sampleNumPerSeg = pStream->GetSegmentDuration() * stream_info->framerate_num / stream_info->framerate_den;
+    if (sampleNumPerSeg == 0) return diffTracksMap;
+    uint64_t comTimeLine = *currentTimeLine / sampleNumPerSeg * sampleNumPerSeg;
+    TracksMap comTracks = m_prevTimedTracksMap[comTimeLine];
+    // LOG(INFO) << "comTimeLine " << comTimeLine << endl;
+    // for (auto tks : comTracks) LOG(INFO) << comTimeLine << " " << tks.first << endl;
+
+    //3. get different tracks.
+    TracksMap diffTracks = GetDifferentTracks(currSelectedTracksMap, comTracks);
+    //3.1 if no difference
+    if (diffTracks.empty())
+    {
+        OMAF_LOG(LOG_INFO, "There is no difference between current tracks and former timed-download tracks\n");
+        return diffTracksMap;
+    }
+    // for (auto df : diffTracks)
+    // {
+    //   OMAF_LOG(LOG_INFO, "Diff is %d\n", df.first);
+    // }
+    OMAF_LOG(LOG_INFO, "Additional tiles occurs at PTS %lld! Trigger catch-up path!\n", *currentTimeLine);
+    mLastCatchupPTS = *currentTimeLine;
+    //3.2 have difference - 3 conditions to handle
+    uint32_t thresholdFrameNum = 10;
+    if (*currentTimeLine - comTimeLine <= sampleNumPerSeg - thresholdFrameNum)
+    {
+        if (m_prevTimedTracksMap.find(comTimeLine + 1 * sampleNumPerSeg) == m_prevTimedTracksMap.end()) //Eg.C70 The moment that changes is in the front of the rendering in the segment.
+        {
+            uint32_t comSegID = comTimeLine / sampleNumPerSeg + 1;
+            diffTracksMap.insert(make_pair(comSegID, diffTracks));
+            OMAF_LOG(LOG_INFO, "Eg.C70 download seg id %d\n", comSegID);
+        }
+        else //Eg.C105 Need to download the additional tiles for 2 segments.
+        {
+            uint32_t comSegID1 = comTimeLine / sampleNumPerSeg + 1;
+            uint32_t comSegID2 = comSegID1 + 1;
+            diffTracksMap.insert(make_pair(comSegID1, diffTracks));
+            TracksMap diffTracks2 = GetDifferentTracks(currSelectedTracksMap, m_prevTimedTracksMap[comTimeLine + sampleNumPerSeg]);
+            if (!diffTracks2.empty())
+            {
+                diffTracksMap.insert(make_pair(comSegID2, diffTracks2));
+            }
+            else
+            {
+                OMAF_LOG(LOG_WARNING, "Abnormal happens in condition 2 for multi-segment additional downloading!\n");
+            }
+            OMAF_LOG(LOG_INFO, "Eg.C105 download two segs id is %d %d\n", comSegID1, comSegID2);
+        }
+    }
+    else if (m_prevTimedTracksMap.find(comTimeLine + sampleNumPerSeg) != m_prevTimedTracksMap.end())//Eg.C25 The moment that changes is very close to the last rendering frame of the segment. So switch the compared segment to the next one.
+    {
+        uint32_t comSegID = (*currentTimeLine / sampleNumPerSeg + 1) + 1;
+        TracksMap diffTracks = GetDifferentTracks(currSelectedTracksMap, m_prevTimedTracksMap[comTimeLine + sampleNumPerSeg]);
+        diffTracksMap.insert(make_pair(comSegID, diffTracks));
+        OMAF_LOG(LOG_INFO, "Eg.C25 download seg id %d\n", comSegID);
+    }
+    else // in this case, the change will be detected and render soon(Means the latency of (render - download) is less than thresholdFrameNum). Need not catch up. Eg.C25-D30-R30
+    {
+      if (m_prevTimedTracksMap.rbegin() != m_prevTimedTracksMap.rend()) {
+        OMAF_LOG(LOG_WARNING, "Abnormal happens outside of all 3 conditions! The current time line is %lld and last timeline in prevTracks is %lld\n", *currentTimeLine, m_prevTimedTracksMap.rbegin()->first);
+      }
+    }
+
+    return diffTracksMap;
+}
+
+TracksMap OmafTracksSelector::GetDifferentTracks(TracksMap tracks1, TracksMap tracks2) // tracks1 - tracks2
+{
+  TracksMap diffTracks;
+
+  if (tracks1.empty() || tracks2.empty())
+  {
+    OMAF_LOG(LOG_INFO, "Tracks are empty!\n");
+    return diffTracks;
+  }
+  //1. convert map to vector
+  std::vector<pair<int, OmafAdaptationSet*>> convertedTracksList1, convertedTracksList2, convertedDiffTracks;
+  std::copy(tracks1.begin(), tracks1.end(), back_inserter(convertedTracksList1));
+  std::copy(tracks2.begin(), tracks2.end(), back_inserter(convertedTracksList2));
+  //2. calculate convertedTracksList1 - convertedTracksList2
+  set_difference(convertedTracksList1.begin(), convertedTracksList1.end(), convertedTracksList2.begin(), convertedTracksList2.end(), back_inserter(convertedDiffTracks));
+  //3. convert vector to map
+  for (auto track : convertedDiffTracks)
+  {
+    diffTracks.insert(make_pair(track.first, track.second));
+  }
+  return diffTracks;
 }
 
 VCD_OMAF_END

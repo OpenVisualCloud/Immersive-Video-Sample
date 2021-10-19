@@ -36,6 +36,7 @@
 #include <dirent.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <algorithm>
 #include "../../../utils/tinyxml2.h"
 #include "../../player_lib/Common/Common.h"
 #include "../../player_lib/Api/MediaPlayer_Linux.h"
@@ -84,11 +85,11 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
     if (urlElem != NULL)
     {
       renderConfig.url = new char[1024];
-      memcpy_s(renderConfig.url, 1024, (char *)urlElem->GetText(), 1024);
-      string url_string = renderConfig.url;
-      // string fileType(renderConfig.url + strlen(renderConfig.url) - 3, renderConfig.url + strlen(renderConfig.url));
-      string fileType = url_string.substr(url_string.size() - 3);
-      if (fileType != "mpd") {
+      memset_s(renderConfig.url, 1024*sizeof(char), 0);
+      int n = std::min(int(strlen(urlElem->GetText())), 1024 - 1);
+      memcpy_s(renderConfig.url, n * sizeof(char), (char *)urlElem->GetText(), n * sizeof(char));
+      // check url is "mpd" or not
+      if ((n <= 3) || (n - 3 > 0 && (renderConfig.url[n-1] != 'd' || renderConfig.url[n-2] != 'p' || renderConfig.url[n-3] != 'm'))) {
         LOG(ERROR) << "---INVALID url input! (only remote mpd file supported)---" << std::endl;
         return RENDER_ERROR;
       }
@@ -173,7 +174,9 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
     if (pathElem != NULL)
     {
       renderConfig.cachePath = new char[1024];
-      memcpy_s(renderConfig.cachePath, 1024, (char *)pathElem->GetText(), 1024);
+      memset_s(renderConfig.cachePath, 1024 * sizeof(char), 0);
+      int n = std::min(int(strlen(pathElem->GetText())), 1024 -1);
+      memcpy_s(renderConfig.cachePath, n * sizeof(char), (char *)pathElem->GetText(), n * sizeof(char));
     }
     else
     {
@@ -268,6 +271,33 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       }
     }
 
+    // in time viewport update option
+    XMLElement *viewportUpdate = info->FirstChildElement("intimeviewportupdate");
+    if (viewportUpdate) {
+      const XMLAttribute *enable = viewportUpdate->FirstAttribute();
+      if (NULL == enable) return RENDER_ERROR;
+      renderConfig.enableInTimeViewportUpdate = atoi(enable->Value());
+      renderConfig.maxResponseTimesInOneSeg = 0;
+      renderConfig.maxCatchupWidth = 0;
+      renderConfig.maxCatchupHeight = 0;
+      XMLElement* responseElem = viewportUpdate->FirstChildElement("responseTimesInOneSeg");
+      XMLElement* maxWidthElem = viewportUpdate->FirstChildElement("maxCatchupWidth");
+      XMLElement* maxHeightElem = viewportUpdate->FirstChildElement("maxCatchupHeight");
+      if (renderConfig.enableInTimeViewportUpdate) {
+        if (responseElem != NULL && maxWidthElem != NULL && maxHeightElem != NULL)
+        {
+          renderConfig.maxResponseTimesInOneSeg = atoi(responseElem->GetText());
+          renderConfig.maxCatchupWidth = atoi(maxWidthElem->GetText());
+          renderConfig.maxCatchupHeight = atoi(maxHeightElem->GetText());
+        }
+        else
+        {
+          LOG(ERROR) << "Invalid params in viewport update!" << endl;
+          return RENDER_ERROR;
+        }
+      }
+    }
+
     // PathOf360SCVPPlugins
     XMLElement* pathof360SCVPPlugin = info->FirstChildElement("PathOf360SCVPPlugins");
     if (pathof360SCVPPlugin != NULL)
@@ -315,24 +345,29 @@ int main(int32_t argc, char *argv[]) {
     SAFE_DELETE_ARRAY(renderConfig.pathof360SCVPPlugin);
     SAFE_DELETE_ARRAY(renderConfig.url);
     SAFE_DELETE_ARRAY(renderConfig.cachePath);
+    if (renderConfig.enablePredictor) {
+      SAFE_DELETE_ARRAY(renderConfig.libPath);
+      SAFE_DELETE_ARRAY(renderConfig.predictPluginName);
+    }
     return RENDER_ERROR;
   }
   GlogWrapper m_glogWrapper((char*)"glogRender", renderConfig.minLogLevel);
 
-  string cacheDir = renderConfig.cachePath;
-  DIR *dir = opendir(cacheDir.c_str());
+  DIR *dir = opendir(renderConfig.cachePath);
   if (dir) {
     closedir(dir);
   } else {
-    LOG(INFO) << "Failed to open the cache path: " << cacheDir << " , create a folder with this path!" << endl;
-    int checkdir = mkdir(cacheDir.c_str(), 0777);
+    LOG(INFO) << "Failed to open the cache path: " << renderConfig.cachePath << " , create a folder with this path!" << endl;
+    int checkdir = mkdir(renderConfig.cachePath, 0777);
     if (checkdir) {
       SAFE_DELETE_ARRAY(renderConfig.pathof360SCVPPlugin);
       SAFE_DELETE_ARRAY(renderConfig.url);
       SAFE_DELETE_ARRAY(renderConfig.cachePath);
-      SAFE_DELETE_ARRAY(renderConfig.libPath);
-      SAFE_DELETE_ARRAY(renderConfig.predictPluginName);
-      LOG(ERROR) << "Uable to create cache path: " << cacheDir << endl;
+      if (renderConfig.enablePredictor) {
+        SAFE_DELETE_ARRAY(renderConfig.libPath);
+        SAFE_DELETE_ARRAY(renderConfig.predictPluginName);
+      }
+      LOG(ERROR) << "Uable to create cache path! " << endl;
       return RENDER_ERROR;
     }
   }
@@ -353,6 +388,10 @@ int main(int32_t argc, char *argv[]) {
   SAFE_DELETE_ARRAY(renderConfig.pathof360SCVPPlugin);
   SAFE_DELETE_ARRAY(renderConfig.url);
   SAFE_DELETE_ARRAY(renderConfig.cachePath);
+  if (renderConfig.enablePredictor) {
+    SAFE_DELETE_ARRAY(renderConfig.libPath);
+    SAFE_DELETE_ARRAY(renderConfig.predictPluginName);
+  }
   return 0;
 }
 #endif

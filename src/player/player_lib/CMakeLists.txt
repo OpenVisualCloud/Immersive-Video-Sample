@@ -29,6 +29,10 @@ PROJECT(player_lib)
 
 ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -fpermissive")
 
+IF(USE_SAFE_MEM)
+ADD_DEFINITIONS("-D_SAFE_MEM_")
+ENDIF()
+
 IF(USE_OMAF)
   ADD_DEFINITIONS("-D_ENABLE_DASH_SOURCE_")
 ENDIF()
@@ -86,7 +90,7 @@ ENDIF()
 
 IF(USE_WEBRTC)
   SET(LINK_LIB ${LINK_LIB}
-      owt sioclient_tls ssl crypto boost_system dl)
+      owt sioclient_tls ssl crypto dl)
 ENDIF()
 
 IF(USE_TRACE)
@@ -96,12 +100,18 @@ ENDIF()
 IF(LINUX_OS)
 SET(LINK_LIB ${LINK_LIB}
     avfilter avformat avcodec avdevice avutil swscale swresample
-    360SCVP GL GLU X11 pthread lzma z glog EGL GLESv2 dl safestring_shared)
+    360SCVP GL GLU X11 pthread lzma z glog EGL GLESv2 dl)
+IF(USE_SAFE_MEM)
+SET(LINK_LIB ${LINK_LIB} safestring_shared)
+ENDIF()
 ENDIF()
 
 IF(ANDROID_OS)
 SET(LINK_LIB ${LINK_LIB}
-    360SCVP glog safestring_shared android mediandk OpenMAXAL log GLESv2 GLESv3)
+    360SCVP glog android mediandk OpenMAXAL log GLESv2 GLESv3)
+IF(USE_SAFE_MEM)
+SET(LINK_LIB ${LINK_LIB} safestring_shared)
+ENDIF()
 ENDIF()
 
 TARGET_LINK_LIBRARIES(MediaPlayer ${LINK_LIB})

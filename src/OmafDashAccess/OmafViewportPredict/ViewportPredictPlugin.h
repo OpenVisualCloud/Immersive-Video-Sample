@@ -48,7 +48,7 @@ typedef void* Handler;
 // define function point of plugin interfaces
 typedef Handler (*INIT_FUNC)(PredictOption);
 typedef int32_t (*SETVIEWPORT_FUNC)(Handler, ViewportAngle*);
-typedef int32_t (*PREDICTPOSE_FUNC)(Handler, uint64_t, std::map<uint64_t, ViewportAngle*>&);
+typedef int32_t (*PREDICTPOSE_FUNC)(Handler, uint64_t, std::map<uint64_t, ViewportAngle*>&, float*);
 typedef int32_t (*DESTROY_FUNC)(Handler);
 
 class ViewportPredictPlugin
@@ -94,7 +94,7 @@ public:
     //! \return int
     //!         ERROR code
     //!
-    int Predict(uint64_t pre_first_pts, std::map<uint64_t, ViewportAngle*>& predict_viewport_list);
+    int Predict(uint64_t pre_first_pts, std::map<uint64_t, ViewportAngle*>& predict_viewport_list, float *possibilityOfHalting);
     //!
     //! \brief viewport prediction destroy function
     //!

@@ -40,11 +40,11 @@
 
 TstitchStream::TstitchStream()
 {
-    m_pOutTile = new TileDef[1000];
+    m_pOutTile = new TileDef[MAX_TILE_NUM];
     m_pUpLeft = new point[6];
     m_pDownRight = new point[6];
-    m_pNalInfo[0] = new nal_info[1000];
-    m_pNalInfo[1] = new nal_info[1000];
+    m_pNalInfo[0] = new nal_info[MAX_TILE_NUM];
+    m_pNalInfo[1] = new nal_info[MAX_TILE_NUM];
     m_hevcState = new HEVCState;
     if (m_hevcState)
     {
@@ -69,6 +69,7 @@ TstitchStream::TstitchStream()
     m_hrTilesInCol = 1;
     m_lrTilesInRow = 1;
     m_lrTilesInCol = 1;
+    m_bVPSReady = 0;
     m_bSPSReady = 0;
     m_bPPSReady = 0;
     m_tileWidthCountSel[0] = 0;
@@ -101,20 +102,22 @@ TstitchStream::TstitchStream()
     m_createPlugin = NULL;
     m_destroyPlugin = NULL;
     m_bNeedPlugin = false;
+    m_tilesInfo = new ITileInfo[MAX_TILE_NUM];
+    m_mapFaceInfo = new MapFaceInfo[6];
 }
 
 TstitchStream::TstitchStream(TstitchStream& other)
 {
-    m_pOutTile = new TileDef[1000];
-    memcpy_s(m_pOutTile, 1000 * sizeof(TileDef), other.m_pOutTile, 1000 * sizeof(TileDef));
+    m_pOutTile = new TileDef[MAX_TILE_NUM];
+    memcpy_s(m_pOutTile, MAX_TILE_NUM * sizeof(TileDef), other.m_pOutTile, MAX_TILE_NUM * sizeof(TileDef));
     m_pUpLeft = new point[6];
     memcpy_s(m_pUpLeft, 6 * sizeof(point), other.m_pUpLeft, 6 * sizeof(point));
     m_pDownRight = new point[6];
     memcpy_s(m_pDownRight, 6 * sizeof(point), other.m_pDownRight, 6 * sizeof(point));
-    m_pNalInfo[0] = new nal_info[1000];
-    memcpy_s(m_pNalInfo[0], 1000 * sizeof(nal_info), other.m_pNalInfo[0], 1000 * sizeof(nal_info));
-    m_pNalInfo[1] = new nal_info[1000];
-    memcpy_s(m_pNalInfo[1], 1000 * sizeof(nal_info), other.m_pNalInfo[1], 1000 * sizeof(nal_info));
+    m_pNalInfo[0] = new nal_info[MAX_TILE_NUM];
+    memcpy_s(m_pNalInfo[0], MAX_TILE_NUM * sizeof(nal_info), other.m_pNalInfo[0], MAX_TILE_NUM * sizeof(nal_info));
+    m_pNalInfo[1] = new nal_info[MAX_TILE_NUM];
+    memcpy_s(m_pNalInfo[1], MAX_TILE_NUM * sizeof(nal_info), other.m_pNalInfo[1], MAX_TILE_NUM * sizeof(nal_info));
     m_hevcState = new HEVCState;
     if (m_hevcState)
     {
@@ -140,6 +143,7 @@ TstitchStream::TstitchStream(TstitchStream& other)
     m_hrTilesInCol = other.m_hrTilesInCol;
     m_lrTilesInRow = other.m_lrTilesInRow;
     m_lrTilesInCol = other.m_lrTilesInCol;
+    m_bVPSReady = other.m_bVPSReady;
     m_bSPSReady = other.m_bSPSReady;
     m_bPPSReady = other.m_bPPSReady;
     m_tileWidthCountSel[0] = other.m_tileWidthCountSel[0];
@@ -180,6 +184,10 @@ TstitchStream::TstitchStream(TstitchStream& other)
     m_createPlugin = NULL;
     m_destroyPlugin = NULL;
     m_bNeedPlugin = false;
+    m_tilesInfo = new ITileInfo[MAX_TILE_NUM];
+    memcpy_s(m_tilesInfo, MAX_TILE_NUM * sizeof(ITileInfo), other.m_tilesInfo, MAX_TILE_NUM * sizeof(ITileInfo));
+    m_mapFaceInfo = new MapFaceInfo[6];
+    memcpy_s(m_mapFaceInfo, 6 * sizeof(int32_t), other.m_mapFaceInfo, 6 * sizeof(int32_t));
 }
 
 TstitchStream& TstitchStream::operator=(const TstitchStream& other)
@@ -187,8 +195,8 @@ TstitchStream& TstitchStream::operator=(const TstitchStream& other)
     if (&other == this)
         return *this;
     SAFE_DELETE_ARRAY(m_pOutTile);
-    m_pOutTile = new TileDef[1000];
-    memcpy_s(m_pOutTile, 1000 * sizeof(TileDef), other.m_pOutTile, 1000 * sizeof(TileDef));
+    m_pOutTile = new TileDef[MAX_TILE_NUM];
+    memcpy_s(m_pOutTile, MAX_TILE_NUM * sizeof(TileDef), other.m_pOutTile, MAX_TILE_NUM * sizeof(TileDef));
     SAFE_DELETE_ARRAY(m_pUpLeft);
     m_pUpLeft = new point[6];
     memcpy_s(m_pUpLeft, 6 * sizeof(point), other.m_pUpLeft, 6 * sizeof(point));
@@ -196,11 +204,11 @@ TstitchStream& TstitchStream::operator=(const TstitchStream& other)
     m_pDownRight = new point[6];
     memcpy_s(m_pDownRight, 6 * sizeof(point), other.m_pDownRight, 6 * sizeof(point));
     SAFE_DELETE_ARRAY(m_pNalInfo[0]);
-    m_pNalInfo[0] = new nal_info[1000];
-    memcpy_s(m_pNalInfo[0], 1000 * sizeof(nal_info), other.m_pNalInfo[0], 1000 * sizeof(nal_info));
+    m_pNalInfo[0] = new nal_info[MAX_TILE_NUM];
+    memcpy_s(m_pNalInfo[0], MAX_TILE_NUM * sizeof(nal_info), other.m_pNalInfo[0], MAX_TILE_NUM * sizeof(nal_info));
     SAFE_DELETE_ARRAY(m_pNalInfo[1]);
-    m_pNalInfo[1] = new nal_info[1000];
-    memcpy_s(m_pNalInfo[1], 1000 * sizeof(nal_info), other.m_pNalInfo[1], 1000 * sizeof(nal_info));
+    m_pNalInfo[1] = new nal_info[MAX_TILE_NUM];
+    memcpy_s(m_pNalInfo[1], MAX_TILE_NUM * sizeof(nal_info), other.m_pNalInfo[1], MAX_TILE_NUM * sizeof(nal_info));
     SAFE_DELETE(m_hevcState);
     m_hevcState = new HEVCState;
     if (m_hevcState)
@@ -227,6 +235,7 @@ TstitchStream& TstitchStream::operator=(const TstitchStream& other)
     m_hrTilesInCol = other.m_hrTilesInCol;
     m_lrTilesInRow = other.m_lrTilesInRow;
     m_lrTilesInCol = other.m_lrTilesInCol;
+    m_bVPSReady = other.m_bVPSReady;
     m_bSPSReady = other.m_bSPSReady;
     m_bPPSReady = other.m_bPPSReady;
     m_tileWidthCountSel[0] = other.m_tileWidthCountSel[0];
@@ -269,6 +278,12 @@ TstitchStream& TstitchStream::operator=(const TstitchStream& other)
     m_createPlugin = NULL;
     m_destroyPlugin = NULL;
     m_bNeedPlugin = false;
+    SAFE_DELETE_ARRAY(m_tilesInfo);
+    m_tilesInfo = new ITileInfo[MAX_TILE_NUM];
+    memcpy_s(m_tilesInfo, MAX_TILE_NUM * sizeof(ITileInfo), other.m_tilesInfo, MAX_TILE_NUM * sizeof(ITileInfo));
+    SAFE_DELETE_ARRAY(m_mapFaceInfo);
+    m_mapFaceInfo = new MapFaceInfo[6];
+    memcpy_s(m_mapFaceInfo, 6 * sizeof(int32_t), other.m_mapFaceInfo, 6 * sizeof(int32_t));
 
     return *this;
 }
@@ -284,6 +299,8 @@ TstitchStream::~TstitchStream()
     SAFE_DELETE(m_hevcState);
     SAFE_DELETE_ARRAY(m_specialInfo[0]);
     SAFE_DELETE_ARRAY(m_specialInfo[1]);
+    SAFE_DELETE_ARRAY(m_tilesInfo);
+    SAFE_DELETE_ARRAY(m_mapFaceInfo);
 }
 
 int32_t TstitchStream::initViewport(Param_ViewPortInfo* pViewPortInfo, int32_t tilecolCount, int32_t tilerowCount)
@@ -367,13 +384,164 @@ int32_t TstitchStream::SetLogCallBack(LogFunction logFunction)
     return ERROR_NONE;
 }
 
+static int32_t tile_faceId_init(param_360SCVP* pParamStitchStream, int32_t* tileNumCol, int32_t* tileNumRow, ITileInfo* dstTileInfo)
+{
+    ITileInfo* tileInfo = dstTileInfo;
+    int32_t highResNumRegions = tileNumCol[0] * tileNumRow[0];
+    int32_t lowResNumRegions = tileNumCol[1] * tileNumRow[1];
+    uint8_t faceRowId, faceColId;
+    uint8_t regColId, regRowId;
+    int32_t idxInPic = 0;
+    int32_t mappedFaceId;
+    if ((pParamStitchStream->paramViewPort.paramVideoFP.rows == 2) && (pParamStitchStream->paramViewPort.paramVideoFP.cols == 3)) {
+        for (idxInPic = 0; idxInPic < highResNumRegions; idxInPic++) {
+            regColId = idxInPic % tileNumCol[0];
+            regRowId = idxInPic / tileNumCol[0];
+            faceRowId = (uint8_t)(regRowId / pParamStitchStream->paramViewPort.tileNumRow);
+            faceColId = (uint8_t)(regColId / pParamStitchStream->paramViewPort.tileNumCol);
+            mappedFaceId = pParamStitchStream->paramViewPort.paramVideoFP.faces[faceRowId][faceColId].idFace;
+            if (mappedFaceId == OMAF_FACE_PY)
+                tileInfo->faceId = FACE_PY;
+            else if (mappedFaceId == OMAF_FACE_PX)
+                tileInfo->faceId = FACE_PX;
+            else if (mappedFaceId == OMAF_FACE_NY)
+                tileInfo->faceId = FACE_NY;
+            else if (mappedFaceId == OMAF_FACE_NZ)
+                tileInfo->faceId = FACE_NZ;
+            else if (mappedFaceId == OMAF_FACE_NX)
+                tileInfo->faceId = FACE_NX;
+            else if (mappedFaceId == OMAF_FACE_PZ)
+                tileInfo->faceId = FACE_PZ;
+            tileInfo++;
+        }
+        int32_t tileNumColLow = pParamStitchStream->paramViewPort.tileNumCol / (pParamStitchStream->frameWidth / pParamStitchStream->frameWidthLow);
+        int32_t tileNumRowLow = pParamStitchStream->paramViewPort.tileNumRow / (pParamStitchStream->frameHeight / pParamStitchStream->frameHeightLow);
+        for (int32_t idxInPic = 0; idxInPic < lowResNumRegions; idxInPic++) {
+            regColId = idxInPic % tileNumCol[1];
+            regRowId = idxInPic / tileNumCol[1];
+            faceRowId = (uint8_t)(regRowId / tileNumRowLow);
+            faceColId = (uint8_t)(regColId / tileNumColLow);
+            mappedFaceId = pParamStitchStream->paramViewPort.paramVideoFP.faces[faceRowId][faceColId].idFace;
+            if (mappedFaceId == OMAF_FACE_PY)
+                tileInfo->faceId = FACE_PY;
+            else if (mappedFaceId == OMAF_FACE_PX)
+                tileInfo->faceId = FACE_PX;
+            else if (mappedFaceId == OMAF_FACE_NY)
+                tileInfo->faceId = FACE_NY;
+            else if (mappedFaceId == OMAF_FACE_NZ)
+                tileInfo->faceId = FACE_NZ;
+            else if (mappedFaceId == OMAF_FACE_NX)
+                tileInfo->faceId = FACE_NX;
+            else if (mappedFaceId == OMAF_FACE_PZ)
+                tileInfo->faceId = FACE_PZ;
+            tileInfo++;
+        }
+    }
+    return ERROR_NONE;
+}
+
+static int32_t tile_localPos_init(param_360SCVP* pParamStitchStream, int32_t* tileNumCol, int32_t* tileNumRow, ITileInfo* dstTileInfo)
+{
+    ITileInfo* tileInfo = dstTileInfo;
+    if (tileInfo == NULL) {
+        SCVP_LOG(LOG_ERROR, "TilesInfo is not allocated!\n");
+        return ERROR_NULL_PTR;
+    }
+    int32_t highResNumRegions = tileNumCol[0] * tileNumRow[0];
+    int32_t lowResNumRegions = tileNumCol[1] * tileNumRow[1];
+
+    int32_t tileWidth = pParamStitchStream->paramViewPort.faceWidth / pParamStitchStream->paramViewPort.tileNumCol;
+    int32_t tileHeight = pParamStitchStream->paramViewPort.faceHeight / pParamStitchStream->paramViewPort.tileNumRow;
+    int32_t regColId, regRowId;
+    int32_t regColInFace, regRowInFace;
+    int32_t localX, localY;
+    if ((pParamStitchStream->paramViewPort.paramVideoFP.rows == 2) && (pParamStitchStream->paramViewPort.paramVideoFP.cols == 3)) {
+        for (int32_t idxInPic = 0; idxInPic < highResNumRegions; idxInPic++) {
+            regColId = idxInPic % tileNumCol[0];
+            regRowId = idxInPic / tileNumCol[0];
+            regColInFace = regColId % pParamStitchStream->paramViewPort.tileNumCol;
+            regRowInFace = regRowId % pParamStitchStream->paramViewPort.tileNumRow;
+            localX = tileWidth * regColInFace;
+            localY = tileHeight * regRowInFace;
+            if (tileInfo->faceId == FACE_PZ) {
+                tileInfo->vertPos = pParamStitchStream->paramViewPort.faceWidth - tileWidth - localX;
+                tileInfo->horzPos = localY;
+            }
+            else if (tileInfo->faceId == FACE_NZ) {
+                tileInfo->vertPos = localX;
+                tileInfo->horzPos = pParamStitchStream->paramViewPort.faceHeight - tileHeight - localY;
+            }
+            else {
+                tileInfo->horzPos = localX;
+                tileInfo->vertPos = localY;
+            }
+            tileInfo++;
+        }
+        int32_t faceWidthLow = pParamStitchStream->paramViewPort.faceWidth / (pParamStitchStream->frameWidth / pParamStitchStream->frameWidthLow);
+        int32_t faceHeightLow = pParamStitchStream->paramViewPort.faceHeight / (pParamStitchStream->frameHeight / pParamStitchStream->frameHeightLow);
+        int32_t tileWidthLow = pParamStitchStream->frameWidthLow / tileNumCol[1];
+        int32_t tileHeightLow = pParamStitchStream->frameHeightLow / tileNumRow[1];
+        int32_t tileNumColLow = faceWidthLow / tileWidthLow;
+        int32_t tileNumRowLow = faceHeightLow / tileHeightLow;
+        for (int32_t idxInPic = 0; idxInPic < lowResNumRegions; idxInPic++) {
+            regColId = idxInPic % tileNumCol[1];
+            regRowId = idxInPic / tileNumCol[1];
+            regColInFace = regColId % tileNumColLow;
+            regRowInFace = regRowId % tileNumRowLow;
+            localX = tileWidthLow * regColInFace;
+            localY = tileHeightLow * regRowInFace;
+            if (tileInfo->faceId == FACE_PZ) {
+                tileInfo->vertPos = faceWidthLow - tileWidthLow - localX;
+                tileInfo->horzPos = localY;
+            }
+            else if (tileInfo->faceId == FACE_NZ) {
+                tileInfo->vertPos = localX;
+                tileInfo->horzPos = faceHeightLow - tileHeightLow - localY;
+            }
+            else {
+                tileInfo->horzPos = localX;
+                tileInfo->vertPos = localY;
+            }
+            tileInfo++;
+        }
+    }
+    return ERROR_NONE;
+}
+
+int32_t TstitchStream::initTileInfo(param_360SCVP* pParamStitchStream)
+{
+    ITileInfo* tileInfo = m_tilesInfo;
+    if (tileInfo == NULL) {
+        SCVP_LOG(LOG_ERROR, "TilesInfo is not allocated!\n");
+        return ERROR_NULL_PTR;
+    }
+    tile_faceId_init(pParamStitchStream, m_tileWidthCountOri, m_tileHeightCountOri, m_tilesInfo);
+
+    if (pParamStitchStream->paramViewPort.usageType == E_MERGE_AND_VIEWPORT) {
+        if ((pParamStitchStream->paramViewPort.paramVideoFP.rows == 2) && (pParamStitchStream->paramViewPort.paramVideoFP.cols == 3)) {
+            tile_localPos_init(pParamStitchStream, m_tileWidthCountOri, m_tileHeightCountOri, m_tilesInfo);
+            for (int32_t i = 0; i < 2; i++) {
+                for (int32_t j = 0; j < 3; j++) {
+                    m_mapFaceInfo[i * 3 + j].mappedStandardFaceId = pParamStitchStream->paramViewPort.paramVideoFP.faces[i][j].idFace;
+                    m_mapFaceInfo[i * 3 + j].transformType = pParamStitchStream->paramViewPort.paramVideoFP.faces[i][j].rotFace;
+                }
+            }
+        }
+        else {
+            SCVP_LOG(LOG_WARNING, "Will support tile arrangement other than 2x3 further...\n");
+            return ERROR_BAD_PARAM;
+        }
+    }
+    return ERROR_NONE;
+}
+
 int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t sliceSize)
 {
     m_mergeStreamParam.pOutputBitstream = pParamStitchStream->pOutputBitstream;
     m_mergeStreamParam.inputBistreamsLen = pParamStitchStream->inputBitstreamLen;
 
-    m_mergeStreamParam.highRes.width = pParamStitchStream->paramViewPort.faceWidth;
-    m_mergeStreamParam.highRes.height = pParamStitchStream->paramViewPort.faceHeight;
+    m_mergeStreamParam.highRes.width = pParamStitchStream->frameWidth;
+    m_mergeStreamParam.highRes.height = pParamStitchStream->frameHeight;
     m_mergeStreamParam.highRes.num_tile_columns = m_tileWidthCountSel[0];
 
     m_mergeStreamParam.highRes.num_tile_rows = m_tileHeightCountSel[0];
@@ -599,6 +767,9 @@ int32_t TstitchStream::initMerge(param_360SCVP* pParamStitchStream, int32_t slic
     }
 
     m_pMergeStream = tile_merge_Init(&m_mergeStreamParam);
+    if (pParamStitchStream->paramViewPort.geoTypeInput == E_SVIDEO_CUBEMAP)
+        initTileInfo(pParamStitchStream);
+
     return 0;
 }
 
@@ -725,18 +896,16 @@ int32_t TstitchStream::init(param_360SCVP* pParamStitchStream)
         parseNals(pParamStitchStream, E_MERGE_AND_VIEWPORT, NULL, 1);
         int32_t tilecolCount = m_tileWidthCountOri[0];
         int32_t tilerowCount = m_tileHeightCountOri[0];
-
         // Init the viewport library
-        ret = initViewport(&pParamStitchStream->paramViewPort, tilecolCount* pParamStitchStream->paramViewPort.paramVideoFP.cols, tilerowCount* pParamStitchStream->paramViewPort.paramVideoFP.rows);
+        ret = initViewport(&pParamStitchStream->paramViewPort, tilecolCount, tilerowCount);
 
-        int32_t sliceHeight = pParamStitchStream->paramViewPort.faceHeight / tilerowCount;
-        int32_t sliceWidth = pParamStitchStream->paramViewPort.faceWidth / tilecolCount;
+        int32_t sliceHeight = pParamStitchStream->paramViewPort.faceHeight / (tilerowCount / pParamStitchStream->paramViewPort.paramVideoFP.rows);
+        int32_t sliceWidth = pParamStitchStream->paramViewPort.faceWidth / (tilecolCount / pParamStitchStream->paramViewPort.paramVideoFP.cols);
         int32_t sliceSize = sliceHeight * sliceWidth * 3 / 2;
 
         //according to the FOV information, get the tiles in the viewport area
         m_maxSelTiles = getViewPortTiles();
         genViewport_setMaxSelTiles(m_pViewport, m_maxSelTiles);
-
         // Init the merge library
         ret = initMerge(pParamStitchStream, sliceSize);
     }
@@ -891,11 +1060,13 @@ int32_t TstitchStream::parseNals(param_360SCVP* pParamStitchStream, int32_t pars
             return -1;
         }
         oneStream_info * pSlice = pGenTilesStream->pTiledBitstreams[0];
-        if (((pGenTilesStream->parseType == E_PARSER_ONENAL)) && m_bSPSReady && m_bPPSReady)
+        if (((pGenTilesStream->parseType == E_PARSER_ONENAL)) && m_bVPSReady && m_bSPSReady && m_bPPSReady)
         {
-            memcpy_s(pSlice->hevcSlice->sps, 6 * sizeof(HEVC_SPS), m_hevcState->sps,  6 * sizeof(HEVC_SPS));
+            memcpy_s(pSlice->hevcSlice->vps, 16 * sizeof(HEVC_VPS), m_hevcState->vps, 16 * sizeof(HEVC_VPS));
+            pSlice->hevcSlice->last_parsed_vps_id = m_hevcState->last_parsed_vps_id;
+            memcpy_s(pSlice->hevcSlice->sps, 16 * sizeof(HEVC_SPS), m_hevcState->sps, 16 * sizeof(HEVC_SPS));
             pSlice->hevcSlice->last_parsed_sps_id = m_hevcState->last_parsed_sps_id;
-            memcpy_s(pSlice->hevcSlice->pps, 16 * sizeof(HEVC_PPS), m_hevcState->pps, 16 * sizeof(HEVC_PPS));
+            memcpy_s(pSlice->hevcSlice->pps, 64 * sizeof(HEVC_PPS), m_hevcState->pps, 64 * sizeof(HEVC_PPS));
             pSlice->hevcSlice->last_parsed_pps_id = m_hevcState->last_parsed_pps_id;
         }
 
@@ -905,15 +1076,24 @@ int32_t TstitchStream::parseNals(param_360SCVP* pParamStitchStream, int32_t pars
             memcpy_s(m_hevcState, sizeof(HEVCState), pSlice->hevcSlice, sizeof(HEVCState));
         else
         {
+            if (GenStreamParam.nalType == GTS_HEVC_NALU_VID_PARAM)
+            {
+                memcpy_s(m_hevcState->vps, 16 * sizeof(HEVC_VPS), pSlice->hevcSlice->vps, 16 * sizeof(HEVC_VPS));
+                m_hevcState->last_parsed_vps_id = pSlice->hevcSlice->last_parsed_vps_id;
+                m_bVPSReady = 1;
+            }
+
             if (GenStreamParam.nalType == GTS_HEVC_NALU_SEQ_PARAM)
             {
+                //memcpy_s(m_hevcState->vps, 16 * sizeof(HEVC_VPS), pSlice->hevcSlice->vps, 16 * sizeof(HEVC_VPS));
+                //m_hevcState->last_parsed_vps_id = pSlice->hevcSlice->last_parsed_vps_id;
                 memcpy_s(m_hevcState->sps, 16 * sizeof(HEVC_SPS), pSlice->hevcSlice->sps, 16 * sizeof(HEVC_SPS));
                 m_hevcState->last_parsed_sps_id = pSlice->hevcSlice->last_parsed_sps_id;
                 m_bSPSReady = 1;
             }
             if (GenStreamParam.nalType == GTS_HEVC_NALU_PIC_PARAM)
             {
-                memcpy_s(m_hevcState->pps, 16 * sizeof(HEVC_SPS), pSlice->hevcSlice->pps, 16 * sizeof(HEVC_PPS));
+                memcpy_s(m_hevcState->pps, 64 * sizeof(HEVC_SPS), pSlice->hevcSlice->pps, 64 * sizeof(HEVC_PPS));
                 m_hevcState->last_parsed_pps_id = pSlice->hevcSlice->last_parsed_pps_id;
                 m_bPPSReady = 1;
             }
@@ -937,7 +1117,32 @@ int32_t TstitchStream::parseNals(param_360SCVP* pParamStitchStream, int32_t pars
         ret = genTiledStream_unInit(pGenStream);
     }
     return ret;
- }
+}
+
+int32_t TstitchStream::ConvertTilesIdx(uint16_t tilesNum)
+ {
+     if (!m_pOutTile)
+         return ERROR_NULL_PTR;
+     TileDef* pSelectedTile = m_pOutTile;
+
+     for (uint16_t idx = 0; idx < tilesNum; idx++)
+     {
+         for (uint8_t regIdx = 0; regIdx < (m_tileWidthCountOri[0] * m_tileHeightCountOri[0]); regIdx++)
+         {
+             ITileInfo* tileInfo = &(m_tilesInfo[regIdx]);
+             if (((int32_t)(tileInfo->horzPos) == pSelectedTile->x) &&
+                 ((int32_t)(tileInfo->vertPos) == pSelectedTile->y) &&
+                 (tileInfo->faceId == pSelectedTile->faceId))
+             {
+                 pSelectedTile->idx = regIdx;
+                 break;
+             }
+         }
+         pSelectedTile++;
+     }
+
+     return ERROR_NONE;
+}
 
 int32_t TstitchStream::feedParamToGenStream(param_360SCVP* pParamStitchStream)
 {
@@ -963,6 +1168,8 @@ int32_t TstitchStream::feedParamToGenStream(param_360SCVP* pParamStitchStream)
         m_mergeStreamParam.bWroteHeader = 0;
     }
 
+    if (m_pViewportParam.m_input_geoType == E_SVIDEO_CUBEMAP)
+        ConvertTilesIdx(m_tileHeightCountSel[0] * m_tileWidthCountSel[0]);
     for (int32_t i = 0; i < m_tileHeightCountSel[0]; i++)
     {
         for (int32_t j = 0; j < m_tileWidthCountSel[0]; j++)
@@ -972,7 +1179,6 @@ int32_t TstitchStream::feedParamToGenStream(param_360SCVP* pParamStitchStream)
 
             pTmpHigh[idx]->inputBufferLen = (pTmpTile->idx!=0) ? m_pNalInfo[0][pTmpTile->idx].nalLen : m_pNalInfo[0][pTmpTile->idx].nalLen- m_specialDataLen[0];
             pTmpHigh[idx]->pTiledBitstreamBuffer = (pTmpTile->idx != 0) ? m_pNalInfo[0][pTmpTile->idx].pNalStream : m_pNalInfo[0][pTmpTile->idx].pNalStream + m_specialDataLen[0];
-            SCVP_LOG(LOG_INFO, "Get the %d th tile \n", pTmpTile->idx);
             pTmpTile++;
             idx++;
         }
@@ -987,7 +1193,6 @@ int32_t TstitchStream::feedParamToGenStream(param_360SCVP* pParamStitchStream)
 
             pTmpLow[idx]->inputBufferLen = (idx != 0) ? m_pNalInfo[1][idx].nalLen : m_pNalInfo[1][idx].nalLen - m_specialDataLen[1];
             pTmpLow[idx]->pTiledBitstreamBuffer = (idx != 0) ? m_pNalInfo[1][idx].pNalStream : m_pNalInfo[1][idx].pNalStream + m_specialDataLen[1];
-            SCVP_LOG(LOG_INFO, "Get the %d th tile \n", idx);
             idx++;
         }
     }
@@ -1006,10 +1211,7 @@ int32_t TstitchStream::getViewPortTiles()
         m_pDownRight[i].faceId = -1;
     }
 
-    if(m_pViewportParam.m_input_geoType == E_SVIDEO_EQUIRECT)
-        ret = genViewport_postprocess(&m_pViewportParam, m_pViewport);
-    else
-        ret = 0;
+    ret = genViewport_postprocess(&m_pViewportParam, m_pViewport);
     if (ret)
     {
         SCVP_LOG(LOG_ERROR, "gen viewport process error!\n");
@@ -1035,6 +1237,21 @@ int32_t TstitchStream::getViewPortTiles()
         m_xTopLeftNet = m_pViewportParam.m_pUpLeft->x;
         m_yTopLeftNet = m_pViewportParam.m_pUpLeft->y;
 
+    }
+    else if (m_pViewportParam.m_input_geoType == SVIDEO_CUBEMAP)
+    {
+        int32_t widthViewport = 0;
+        int32_t heightViewport = 0;
+        for (int32_t i = 0; i < m_pViewportParam.m_numFaces; i++)
+        {
+            widthViewport += (m_pViewportParam.m_pDownRight[i].x - m_pViewportParam.m_pUpLeft[i].x);
+            heightViewport = (m_pViewportParam.m_pDownRight[i].y - m_pViewportParam.m_pUpLeft[i].y);
+        }
+        m_tileWidthCountSel[0] = m_pViewportParam.m_viewportDestWidth / (m_pViewportParam.m_iInputWidth / (m_pViewportParam.m_tileNumCol / m_pViewportParam.m_paramVideoFP.cols));
+        m_tileHeightCountSel[0] = m_pViewportParam.m_viewportDestHeight / (m_pViewportParam.m_iInputHeight / (m_pViewportParam.m_tileNumRow / m_pViewportParam.m_paramVideoFP.rows));
+
+        m_dstWidthNet = widthViewport;
+        m_dstHeightNet = heightViewport;
     }
     return ret;
 }
@@ -1080,6 +1297,7 @@ int32_t TstitchStream::doMerge(param_360SCVP* pParamStitchStream)
     if (pParamStitchStream == NULL)
         return -1;
     ret = tile_merge_Process(&m_mergeStreamParam, m_pMergeStream);
+
     if (ret < 0)
         return -1;
     hevc_mergeStream *mergeStream = (hevc_mergeStream *)m_pMergeStream;
@@ -1104,7 +1322,6 @@ int32_t TstitchStream::doMerge(param_360SCVP* pParamStitchStream)
 
     if(GenerateRwpkInfo(&m_dstRwpk) == 0)
         ret = EncRWPKSEI(&m_dstRwpk, pParamStitchStream->pOutputSEI, &pParamStitchStream->outputSEILen);
-
     pParamStitchStream->outputBitstreamLen = m_mergeStreamParam.outputiledbistreamlen;
     memcpy_s(pParamStitchStream->pOutputBitstream, m_mergeStreamParam.outputiledbistreamlen, m_mergeStreamParam.pOutputBitstream, m_mergeStreamParam.outputiledbistreamlen);
 
@@ -1166,6 +1383,11 @@ int TstitchStream::GenerateRwpkInfo(RegionWisePacking *dstRwpk)
 {
     if (!dstRwpk)
         return -1;
+    if ((m_pViewportParam.m_input_geoType != E_SVIDEO_EQUIRECT) && (m_pViewportParam.m_input_geoType != E_SVIDEO_CUBEMAP)) {
+        SCVP_LOG(LOG_ERROR, "The input media projection type is not supported!!\n");
+        return ERROR_INVALID;
+    }
+
     TileDef* pSelectTiles = getSelectedTile();
     dstRwpk->projPicHeight = m_mergeStreamParam.highRes.height;
     dstRwpk->projPicWidth = m_mergeStreamParam.highRes.width;
@@ -1182,14 +1404,17 @@ int TstitchStream::GenerateRwpkInfo(RegionWisePacking *dstRwpk)
     for (uint8_t regionIdx = 0; regionIdx < dstRwpk->numRegions; regionIdx++)
     {
         RectangularRegionWisePacking *rwpk = &(dstRwpk->rectRegionPacking[regionIdx]);
-        rwpk->transformType = 0;
         rwpk->guardBandFlag = false;
         if (regionIdx < highTilesNum)
         {
+            if (m_pViewportParam.m_input_geoType == E_SVIDEO_EQUIRECT)
+                rwpk->transformType = 0;
+            else if (m_pViewportParam.m_input_geoType == E_SVIDEO_CUBEMAP)
+                rwpk->transformType = m_mapFaceInfo[m_tilesInfo[pSelectTiles->idx].faceId].transformType;
             rwpk->projRegWidth = highRes_tile_width;
             rwpk->projRegHeight = highRes_tile_height;
-            rwpk->projRegTop = pSelectTiles->y;
-            rwpk->projRegLeft = pSelectTiles->x;
+            rwpk->projRegTop = (pSelectTiles->idx / m_tileWidthCountOri[0]) * highRes_tile_height;
+            rwpk->projRegLeft = (pSelectTiles->idx % m_tileWidthCountOri[0]) * highRes_tile_width;
 
             rwpk->packedRegWidth = rwpk->projRegWidth;
             rwpk->packedRegHeight = rwpk->projRegHeight;
@@ -1210,13 +1435,17 @@ int TstitchStream::GenerateRwpkInfo(RegionWisePacking *dstRwpk)
         else
         {
             int lowIdx = regionIdx - highTilesNum;
-            rwpk->projRegWidth = lowRes_tile_width;
-            rwpk->projRegHeight = lowRes_tile_height;
-            rwpk->projRegTop = (lowIdx / m_tileWidthCountOri[1]) * lowRes_tile_height;
-            rwpk->projRegLeft = (lowIdx % m_tileWidthCountOri[1]) * lowRes_tile_width;
+            if (m_pViewportParam.m_input_geoType == E_SVIDEO_EQUIRECT)
+                rwpk->transformType = 0;
+            else if (m_pViewportParam.m_input_geoType == E_SVIDEO_CUBEMAP)
+                rwpk->transformType = m_mapFaceInfo[m_tilesInfo[lowIdx + m_tileWidthCountOri[0]* m_tileHeightCountOri[0]].faceId].transformType;
 
-            rwpk->packedRegWidth = rwpk->projRegWidth;
-            rwpk->packedRegHeight = rwpk->projRegHeight;
+            rwpk->packedRegWidth = lowRes_tile_width;
+            rwpk->packedRegHeight = lowRes_tile_height;
+            rwpk->projRegWidth  = lowRes_tile_width * m_mergeStreamParam.highRes.width / m_mergeStreamParam.lowRes.width;
+            rwpk->projRegHeight = lowRes_tile_height * m_mergeStreamParam.highRes.height / m_mergeStreamParam.lowRes.height;
+            rwpk->projRegTop  = (lowIdx / m_tileWidthCountOri[1] * rwpk->projRegHeight);
+            rwpk->projRegLeft = (lowIdx % m_tileWidthCountOri[1] * rwpk->projRegWidth);
             rwpk->packedRegTop = (lowIdx % m_lrTilesInCol) * lowRes_tile_height;
             rwpk->packedRegLeft = (lowIdx / m_lrTilesInCol) * lowRes_tile_width + highRes_tile_width * m_hrTilesInRow;
 
@@ -1801,7 +2030,10 @@ int32_t  TstitchStream::GenerateSliceHdr(param_360SCVP* pParam360SCVP, int32_t n
 {
     int32_t ret = -1;
     GTS_BitStream *bsWrite = NULL;
-    HEVCState hevcTmp;
+    HEVCState *hevcTmp;
+    uint32_t origWidth, origHeight;
+    bool origFirstSliceFlag;
+    uint32_t origSliceSegAddr;
     if (!pParam360SCVP)
         return -1;
 
@@ -1828,13 +2060,17 @@ int32_t  TstitchStream::GenerateSliceHdr(param_360SCVP* pParam360SCVP, int32_t n
             return ret;
         }
         // modify the sliceheader
-        memcpy_s(&hevcTmp, sizeof(HEVCState), m_hevcState, sizeof(HEVCState));
+        origWidth = m_hevcState->sps[0].width;
+        origHeight = m_hevcState->sps[0].height;
+        origFirstSliceFlag = m_hevcState->s_info.first_slice_segment_in_pic_flag;
+        origSliceSegAddr = m_hevcState->s_info.slice_segment_address;
 
-        HEVC_SPS *sps = &(hevcTmp.sps[0]);
+        hevcTmp = m_hevcState;
+        HEVC_SPS *sps = &(hevcTmp->sps[0]);
         sps->width = pParam360SCVP->destWidth;
         sps->height = pParam360SCVP->destHeight;
 
-        HEVCSliceInfo *si = &hevcTmp.s_info;
+        HEVCSliceInfo *si = &(hevcTmp->s_info);
         if (!si)
             return -1;
         si->first_slice_segment_in_pic_flag = 1;
@@ -1843,7 +2079,12 @@ int32_t  TstitchStream::GenerateSliceHdr(param_360SCVP* pParam360SCVP, int32_t n
         si->slice_segment_address = newSliceAddr;
 
         // write the new sliceheader
-        hevc_write_slice_header(bsWrite, &hevcTmp);
+        hevc_write_slice_header(bsWrite, hevcTmp);
+        m_hevcState->sps[0].width = origWidth;
+        m_hevcState->sps[0].height = origHeight;
+        m_hevcState->s_info.first_slice_segment_in_pic_flag = origFirstSliceFlag;
+        m_hevcState->s_info.slice_segment_address = origSliceSegAddr;
+
         pParam360SCVP->outputBitstreamLen = gts_bs_get_position(bsWrite);
         gts_bs_del(bsWrite);
         ret = 0;

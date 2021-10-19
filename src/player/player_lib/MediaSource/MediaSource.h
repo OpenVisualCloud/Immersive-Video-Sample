@@ -42,7 +42,7 @@
 #include <map>
 #include "RenderSourceFactory.h"
 
-#define MAX_SURFACE_NUM 5
+#define MAX_SURFACE_NUM 10
 
 VCD_NS_BEGIN
 
@@ -265,7 +265,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, RENDER_EOS if reach EOS
     //!
-    virtual RenderStatus UpdateFrames(uint64_t pts) = 0;
+    virtual RenderStatus UpdateFrames(uint64_t pts, int64_t *corr_pts) = 0;
 
     //! \brief get isAllValid
     //!
@@ -378,7 +378,10 @@ public:
         }
     };
 
+    int32_t GetStatus() { return m_status; };
+
 protected:
+    int32_t                   m_status = STATUS_UNKNOWN;
     MediaInfo                 mMediaInfo;         //! media information
     RenderSourceFactory      *m_rsFactory;        //! Render Source list for rendering to RenderTarget
     struct MediaSourceInfo    m_mediaSourceInfo;  //! deprecated

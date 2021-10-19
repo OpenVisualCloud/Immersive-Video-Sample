@@ -102,14 +102,20 @@ public:
     //!
     RenderStatus Close();
 
-    uint32_t GetStatus() { return m_status; };
+    uint32_t GetStatus() {
+        if (m_mediaSource->GetStatus() == STATUS_STOPPED) {
+            return STOPPED;
+        }
+        else
+            return m_status;
+    };
 
     bool IsPlaying() { return m_status == PLAY; };
 
     void SetCurrentPosition(HeadPose pose)
     {
         m_renderManager->SetViewport(&pose);
-        m_renderManager->ChangeViewport(&pose, 0);//pose.pts is useless in android
+        m_renderManager->ChangeViewport(&pose, pose.pts);
         return;
     };
 
@@ -119,11 +125,7 @@ public:
 
     int32_t GetProjectionFormat() { return m_mediaSource->GetMediaInfo().mVideoInfo[0].mProjFormat; };
 
-    int UpdateDisplayTex(int render_count)
-    {
-        m_renderManager->UpdateFrames(render_count);
-        return m_renderManager->UpdateDisplayTex();
-    };
+    int UpdateDisplayTex(int render_count);
 
     void SetDecodeSurface(jobject surface, int tex_id, int video_id)
     {

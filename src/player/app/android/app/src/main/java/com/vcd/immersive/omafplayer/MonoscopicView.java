@@ -144,7 +144,7 @@ public final class MonoscopicView extends GLSurfaceView {
             if (pose.pitch < -90) pose.pitch = -90.0f;
             if (pose.pitch > 90) pose.pitch = 90.0f;
 //            Log.e(TAG, "YAW is " + pose.yaw + " PITCH is " + pose.pitch);
-            renderer.scene.SetCurrentPosition(pose);
+            renderer.scene.AddCurrentPose(pose);
 
             // Rotate from Android coordinates to OpenGL coordinates. Android's coordinate system
             // assumes Y points North and Z points to the sky. OpenGL has Y pointing up and Z pointing
@@ -307,8 +307,10 @@ public final class MonoscopicView extends GLSurfaceView {
             screenWidth = width;
             screenHeight = height;
             GLES20.glViewport(0, 0, width, height);
-            Matrix.perspectiveM(
-                    projectionMatrix, 0, mediaLoader.mediaPlayer.mConfig.viewportVFOV, (float) width / height, Z_NEAR, Z_FAR);
+            if (mediaLoader.mediaPlayer != null && mediaLoader.mediaPlayer.mConfig != null) {
+                Matrix.perspectiveM(
+                        projectionMatrix, 0, mediaLoader.mediaPlayer.mConfig.viewportVFOV, (float) width / height, Z_NEAR, Z_FAR);
+            }
         }
 
         @Override
@@ -316,13 +318,15 @@ public final class MonoscopicView extends GLSurfaceView {
             // Combine touch & sensor data.
             // Orientation = pitch * sensor * yaw since that is closest to what most users expect the
             // behavior to be.
-            synchronized (this) {
-                Matrix.multiplyMM(tempMatrix, 0, deviceOrientationMatrix, 0, touchYawMatrix, 0);
-                Matrix.multiplyMM(viewMatrix, 0, touchPitchMatrix, 0, tempMatrix, 0);
+            if (mediaLoader.mediaPlayer != null && mediaLoader.mediaPlayer.GetStatus() == mediaLoader.mediaPlayer.PLAY) {
+                synchronized (this) {
+                    Log.i(TAG, "onDrawFrame");
+                    Matrix.multiplyMM(tempMatrix, 0, deviceOrientationMatrix, 0, touchYawMatrix, 0);
+                    Matrix.multiplyMM(viewMatrix, 0, touchPitchMatrix, 0, tempMatrix, 0);
+                }
+                Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
+                scene.glDrawFrame(viewProjectionMatrix, Type.MONOCULAR, screenWidth, screenHeight);
             }
-
-            Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
-            scene.glDrawFrame(viewProjectionMatrix, Type.MONOCULAR, screenWidth, screenHeight);
         }
 
         /** Adjusts the GL camera's rotation based on device rotation. Runs on the sensor thread. */

@@ -132,7 +132,7 @@ class WebRTCMediaSource : public MediaSource, public WebRTCVideoPacketListener {
   //! \return RenderStatus
   //!         RENDER_STATUS_OK if success, RENDER_EOS if reach EOS
   //!
-  virtual RenderStatus UpdateFrames(uint64_t pts) override;
+  virtual RenderStatus UpdateFrames(uint64_t pts, int64_t *corr_pts) override;
 
   //! \brief SeekTo
   //!
@@ -161,6 +161,8 @@ class WebRTCMediaSource : public MediaSource, public WebRTCVideoPacketListener {
  private:
   void parseOptions();
   void setMediaInfo();
+  void initDump();
+  void dump(const uint8_t* buf, int len, FILE* fp);
 
   int32_t m_source_width;
   int32_t m_source_height;
@@ -174,6 +176,7 @@ class WebRTCMediaSource : public MediaSource, public WebRTCVideoPacketListener {
   std::string m_subId;
   int m_yaw;
   int m_pitch;
+  uint32_t m_frame_count;
   std::mutex m_mutex;
   std::condition_variable m_cond;
 
@@ -186,6 +189,8 @@ class WebRTCMediaSource : public MediaSource, public WebRTCVideoPacketListener {
   void* m_parserRWPKHandle;
 
   bool m_ready;
+  bool m_enableBsDump;
+  FILE* m_bsDumpfp;
 };
 
 class SimpleBuffer {

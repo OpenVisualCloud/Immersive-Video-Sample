@@ -136,10 +136,8 @@ RUN source /opt/rh/devtoolset-7/enable && \
     make install && ldconfig && \
     cd ../ && rm -rf lttng-ust-2.11.*
 
-# Copy source
-RUN mkdir -p save
-COPY ./Update-buffer-operation-and-fix-stream-loop-coredump.patch ${WORKDIR}/save
-COPY ./Disable_cxx11_abi_for_thrift.patch ${WORKDIR}/save
+# Copy patches
+COPY ./*.patch ${WORKDIR}/
 
 # Install Thrift
 ARG THRIFT_VER=0.12.0
@@ -147,7 +145,7 @@ ARG THRIFT_REPO=http://apache.osuosl.org/thrift/${THRIFT_VER}/thrift-${THRIFT_VE
 RUN wget -O - ${THRIFT_REPO} | tar xz && \
     cd thrift-${THRIFT_VER} && \
     source /opt/rh/devtoolset-7/enable && \
-    patch configure ../save/Disable_cxx11_abi_for_thrift.patch && \
+    patch configure ../Disable_cxx11_abi_for_thrift.patch && \
     sed -i '21 a #  include <unistd.h>' ./lib/cpp/src/thrift/transport/PlatformSocket.h && \
     ./configure --with-boost=/usr/local --with-boost-libdir=/usr/local/lib --with-libevent=/usr --with-java=0 && \
     make -j`nproc` && \
@@ -161,24 +159,25 @@ RUN git clone https://github.com/OpenHEVC/openHEVC.git && \
     git config --global user.email "you@example.com" && \
     git config --global user.name "Your Name" && \
     git checkout ffmpeg_update && \
-    git am --whitespace=fix ../save/Update-buffer-operation-and-fix-stream-loop-coredump.patch && \
+    git am --whitespace=fix ../Update-buffer-operation-and-fix-stream-loop-coredump.patch && \
     ./configure --libdir=/usr/lib64 --disable-sdl2 && \
     make -j `nproc` && \
     make install && \
     cd ${WORKDIR} && rm -rf ./openHEVC
 
-# Build Nginx
-ARG NGINX_VER=1.13.1
-ARG NGINX_REPO=http://nginx.org/download/nginx-${NGINX_VER}.tar.gz
-RUN wget -O - ${NGINX_REPO} | tar xz && \
-    cd nginx-${NGINX_VER} && \
+# Build safe string lib
+RUN git clone https://github.com/intel/safestringlib.git && \
+    cd safestringlib && \
     source /opt/rh/devtoolset-7/enable && \
-    ./configure --with-http_ssl_module && \
-    make -j `nproc` && \
-    make install && \
-    cd ${WORKDIR} && rm -rf ./nginx*
-EXPOSE 443
-EXPOSE 8080
+    cmake . && \
+    make -j `nproc` -f Makefile && \
+    cp libsafestring_shared.so /usr/local/lib/ && \
+    mkdir -p /usr/local/include/safestringlib/ && \
+    cp ./include/* /usr/local/include/safestringlib/ && \
+    cd ${WORKDIR} && rm -rf ./safestringlib
+
+# Remove all intermediate files
+RUN cd ${WORKDIR} && rm -rf *
 
 # Unset proxy if necessary
 RUN if [ -n "${http_proxy}" ]; then \

@@ -37,9 +37,7 @@
 
 #include <sstream>
 #include <string>
-extern "C" {
-#include "safestringlib/safe_mem_lib.h"
-}
+#include "../utils/safe_mem.h"
 
 namespace VCD {
 namespace OMAF {
@@ -145,6 +143,11 @@ class OmafDashParams {
   // for stitch
   uint32_t max_decode_width_;
   uint32_t max_decode_height_;
+  // for catch up
+  bool enable_in_time_viewport_update;
+  uint32_t max_response_times_in_seg;
+  uint32_t max_catchup_width;
+  uint32_t max_catchup_height;
 
   std::string to_string() {
     std::stringstream ss;

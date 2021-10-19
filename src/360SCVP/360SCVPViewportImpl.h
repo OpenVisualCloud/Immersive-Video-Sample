@@ -33,6 +33,9 @@
 #include <vector>
 #include <list>
 
+/* The compare threshold of two double variables */
+#define DOUBLE_COMPARE_THRESH (-double(1e-8))
+
 ///< for cubemap, given the facesize (960x960), the maxsimum viewport size is defined in the below table
 typedef struct SIZE_DEF
 {
@@ -52,14 +55,6 @@ enum FOVAngle
     FOV_80,
     FOV_70,
     FOV_Angle_NUM
-};
-
-SIZE Max_Viewport_Size[FOV_Angle_NUM][4] =
-{
-    {{478, 959}, {423,  355}, {473,  356}, {564,  959}},
-    {{350, 959}, {349,  201}, {349,  202}, {607,  959}},
-    {{479, 959}, {134,  161}, {134,  160}, {394,  959}},
-    {{351, 946}, {437,  944}, {0,    0  }, {0,    0  }}
 };
 
 enum CubeFace
@@ -128,7 +123,8 @@ public:
     int32_t       m_maxTileNum;
     UsageType     m_usageType;
     Param_VideoFPStruct m_paramVideoFP;
-    SpherePoint   *m_pViewportHorizontalBoudaryPoints;
+    SpherePoint   *m_pViewportHorizontalBoundaryPoints;
+    SpherePoint   *m_pViewportVerticalBoundaryPoints;
     inline int32_t round(POSType t) { return (int32_t)(t+ (t>=0? 0.5 :-0.5)); }
 
 public:
@@ -142,11 +138,13 @@ public:
     void     destroy();    ///< destroy option handling class
     int32_t  parseCfg(  );  ///< parse configuration file to fill member variables
     int32_t  convert();
-    int32_t  ERPselectregion(short inputWidth, short inputHeight, short dstWidth, short dstHeight);
+    int32_t  ERPSelectRegion(short inputWidth, short inputHeight, short dstWidth, short dstHeight);
+    int32_t  cubemapSelectRegion();
     //analysis;
     bool     isInside(int32_t x, int32_t y, int32_t width, int32_t height, int32_t faceId);
-    int32_t  CubemapIsInsideFaces();
+    //int32_t  CubemapIsInsideFaces();
     int32_t  calcTilesInViewport(ITileInfo* pTileInfo, int32_t tileCol, int32_t tileRow);
+    int32_t  CalculateViewportBoundaryPoints();
     int32_t  CubemapCalcTilesGrid();
     int32_t  getContentCoverage(CCDef* pOutCC, int32_t coverageShapeType);
 
@@ -158,7 +156,7 @@ private:
      *        maxLongiOffset: The maximum longitude offset       *
      *    Return:                                                *
      *        The point longitude                                */
-    float    calculateLongitudeFromThita(float Latti, float phi, float maxLongiOffset);
+    double    calculateLongitudeFromThita(double Latti, double phi, double maxLongiOffset);
     /* calculateLattitudeFromPhi:                                *
      *    Param:                                                 *
      *        phi:   The angle to the sphere center              *
@@ -166,7 +164,7 @@ private:
      *               current great circle                        *
      *    Return:                                                *
      *        The point lattitude                                */
-    float    calculateLattitudeFromPhi(float phi, float pitch);
+    double    calculateLattitudeFromPhi(double phi, double pitch);
     /* calculateLatti:                                *
      *    Param:                                                 *
      *        pitch: The lattitude of the center point of the    *
@@ -174,7 +172,7 @@ private:
      *        hFOV: The horizontal FOV of the viewport           *
      *    Return:                                                *
      *        The viewport's topleft point lattitude             */
-    float    calculateLatti(float pitch, float hFOV);
+    double    calculateLatti(double pitch, double hFOV);
     /* calculateLatti:                                *
      *    Param:                                                 *
      *        pitch: The lattitude of the center point of the    *
@@ -211,15 +209,13 @@ private:
      *                             offen in the up or left direction  *
      *        downRightPoint:      The second given point which is    *
      *                             in the down or right direction     *
-     *        faceWidth:           The face width                     *
-     *        faceHeight:          The face height                    *
      *        crossBoundaryPoints: The list which stores the crossing *
      *                             point of the cube's boundary and   *
      *                             connection line of the two input   *
      *                             points                             *
      *    Return:                                                     *
      *        Error code                                              */
-    int32_t CubemapGetFaceBoundaryCrossingPoints(SpherePoint* upLeftPoint, SpherePoint* downRightPoint, int32_t faceWidth, int32_t faceHeight, std::list<SpherePoint>* crossBoundaryPoints);
+    int32_t CubemapGetFaceBoundaryCrossingPoints(SpherePoint* upLeftPoint, SpherePoint* downRightPoint, std::list<SpherePoint>* crossBoundaryPoints);
      /* CubemapGetViewportProjInFace:  Calculate the projection of   *
       *                                the viewport on the give      *
       *                                cube face                     *

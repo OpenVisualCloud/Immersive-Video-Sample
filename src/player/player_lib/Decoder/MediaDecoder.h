@@ -47,6 +47,7 @@ public:
         mStartPts = 0;
         m_status = STATUS_UNKNOWN;
         m_nativeSurface = nullptr;
+        mIsCatchup = false;
         memset_s(&mDecodeInfo, sizeof(mDecodeInfo), 0);
     };
     virtual ~MediaDecoder(){};
@@ -70,7 +71,7 @@ public:
      //!
      //! \brief  udpate frame to destination with the callback class FrameHandler
      //!
-     virtual RenderStatus UpdateFrame(uint64_t pts) = 0;
+     virtual RenderStatus UpdateFrame(uint64_t pts, int64_t *corr_pts) = 0;
 
      //!
      //! \brief  send a coded packet to decoder
@@ -104,10 +105,15 @@ public:
 
      virtual bool IsReady(uint64_t pts) = 0;
 
+     void SetCatchupFlag(bool bCatchup) { mIsCatchup = bCatchup; };
+
+     bool IsCatchup() { return mIsCatchup; };
+
 protected:
     ThreadStatus m_status;
     void*    m_nativeSurface;
     DecodeInfo mDecodeInfo;
+    bool       mIsCatchup;
 private:
     bool     mbEOS;
     uint64_t mStartPts;

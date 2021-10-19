@@ -238,11 +238,15 @@ WebRTCMediaSource::WebRTCMediaSource()
       m_source_height(0),
       m_source_framerate_den(1),
       m_source_framerate_num(30),
+      m_frame_count(0),
       m_yaw(0),
       m_pitch(0),
       m_rtcp_feedback(nullptr),
       m_parserRWPKHandle(nullptr),
-      m_ready(false) {
+      m_ready(false),
+      m_enableBsDump(false),
+      m_bsDumpfp(nullptr) {
+
   LOG(INFO) << __FUNCTION__ << std::endl;
 
   s_CurObj = this;
@@ -258,6 +262,11 @@ WebRTCMediaSource::~WebRTCMediaSource() {
   if (m_parserRWPKHandle) {
     I360SCVP_unInit(m_parserRWPKHandle);
     m_parserRWPKHandle = nullptr;
+  }
+
+  if (m_bsDumpfp) {
+    fclose(m_bsDumpfp);
+    m_bsDumpfp = nullptr;
   }
 }
 
@@ -283,6 +292,11 @@ void WebRTCMediaSource::parseOptions() {
     exit(-1);
   }
   m_serverAddress = std::string(server_url);
+
+  if (!strcmp(info->FirstChildElement("enableDump")->GetText(), "true")) {
+    m_enableBsDump = true;
+  }
+
 }
 
 void WebRTCMediaSource::setMediaInfo() {
@@ -331,6 +345,27 @@ void WebRTCMediaSource::setMediaInfo() {
 
     m_rsFactory->SetHighTileRow(vi.sourceHighTileRow);
     m_rsFactory->SetHighTileCol(vi.sourceHighTileCol);
+    m_rsFactory->SetProjectionFormat(vi.mProjFormat);
+  }
+}
+
+void WebRTCMediaSource::initDump() {
+  if (m_enableBsDump) {
+    char dumpFileName[128];
+    snprintf(dumpFileName, 128, "/tmp/webrtcsource-%p.%s", this, "hevc");
+    m_bsDumpfp = fopen(dumpFileName, "wb");
+    if (m_bsDumpfp) {
+      LOG(INFO) << "Enable bitstream dump " << dumpFileName << std::endl;
+    } else {
+      LOG(ERROR) << "Can not open dump file " << dumpFileName << std::endl;
+    }
+  }
+}
+
+void WebRTCMediaSource::dump(const uint8_t* buf, int len, FILE* fp) {
+  if (fp) {
+    fwrite(buf, 1, len, fp);
+    fflush(fp);
   }
 }
 
@@ -338,6 +373,7 @@ RenderStatus WebRTCMediaSource::Initialize(struct RenderConfig renderConfig,
                                            RenderSourceFactory* rsFactory) {
   m_rsFactory = rsFactory;
   setMediaInfo();
+  initDump();
 
   m_DecoderManager = std::make_shared<DecoderManager>();
   RenderStatus ret = m_DecoderManager->Initialize(rsFactory);
@@ -430,11 +466,11 @@ RenderStatus WebRTCMediaSource::Start() {
 }
 
 
-RenderStatus WebRTCMediaSource::UpdateFrames(uint64_t pts) {
+RenderStatus WebRTCMediaSource::UpdateFrames(uint64_t pts, int64_t *corr_pts) {
   if (NULL == m_DecoderManager)
     return RENDER_NO_MATCHED_DECODER;
 
-  RenderStatus ret = m_DecoderManager->UpdateVideoFrames(pts);
+  RenderStatus ret = m_DecoderManager->UpdateVideoFrames(pts, corr_pts);
   if (RENDER_STATUS_OK != ret) {
     LOG(INFO) << "UpdateFrames failed with code:" << ret << std::endl;
   }
@@ -464,6 +500,9 @@ bool WebRTCMediaSource::OnVideoPacket(
   std::shared_ptr<SimpleBuffer> bitstream_buf =
       std::make_shared<SimpleBuffer>();
   bitstream_buf->insert(frame->buffer, frame->length);
+  if (m_enableBsDump) {
+    dump(frame->buffer, frame->length, m_bsDumpfp);
+  }
 
   std::shared_ptr<SimpleBuffer> sei_buf = std::make_shared<SimpleBuffer>();
   filter_RWPK_SEI(bitstream_buf, sei_buf);
@@ -510,9 +549,10 @@ bool WebRTCMediaSource::OnVideoPacket(
 
   dashPkt.buf = buf;
   dashPkt.size = bitstream_buf->size();
-  dashPkt.pts = frame->time_stamp;
+  dashPkt.pts = m_frame_count++; // TODO: consider how to use the frame->time_stamp propertly in future.
   dashPkt.rwpk = rwpk;
   dashPkt.bEOS = false;
+  dashPkt.bCatchup = false;
 
   RenderStatus ret = m_DecoderManager->SendVideoPackets(&dashPkt, 1);
   if (RENDER_STATUS_OK != ret) {

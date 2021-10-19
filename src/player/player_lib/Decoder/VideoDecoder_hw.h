@@ -50,6 +50,7 @@ typedef struct PacketInfo{
      bool      bEOS;
      uint64_t  pts;
      uint32_t  video_id;
+     bool      bCatchup;
 }PacketInfo;
 
 typedef struct DecodedFrame{
@@ -61,6 +62,7 @@ typedef struct DecodedFrame{
      SourceResolution   *qtyResolution;
      uint32_t           video_id;
      bool               bEOS;
+     bool               bCatchup;
 }DecodedFrame;
 
 typedef struct FrameData{
@@ -70,6 +72,7 @@ typedef struct FrameData{
      SourceResolution*  qtyResolution;
      bool               bCodecChange;
      uint32_t           video_id;
+     bool               bCatchup;
 }FrameData;
 
 class DecoderContext
@@ -240,7 +243,7 @@ public:
      //!
      //! \brief  udpate frame to destination with the callback class FrameHandler
      //!
-     virtual RenderStatus UpdateFrame(uint64_t pts);
+     virtual RenderStatus UpdateFrame(uint64_t pts, int64_t *corr_pts);
 
      //!
      //! \brief
@@ -290,7 +293,7 @@ private:
      //!
      //! \brief  get frame from decoded frame list according to pts.
      //!
-     DecodedFrame* GetFrame(uint64_t pts);
+     RenderStatus GetFrame(uint64_t pts, DecodedFrame *&frame);
 
      OutputSurface* GetOutputSurface(uint64_t pts);
 
@@ -314,6 +317,7 @@ private:
      uint32_t                     mHeight;
      long long int                mCnt;
      FILE*                        mDump_YuvFile;
+     uint64_t                     mNextInputPts;
 };
 
 VCD_NS_END

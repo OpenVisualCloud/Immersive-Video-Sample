@@ -72,7 +72,17 @@ class OmafTracksSelector {
   //!         information stored in mPoseHistory can be used for prediction for
   //!         further movement
   //!
-  virtual int SelectTracks(OmafMediaStream *pStream) = 0;
+  virtual int SelectTracks(OmafMediaStream* pStream, bool isTimed) = 0;
+
+  //!
+  //! \brief  Enable tracks adaptation sets according current selected tracks
+  //!
+  virtual int UpdateEnabledTracks(OmafMediaStream* pStream) = 0;
+
+  //!
+  //! \brief  Get current tracks map after select tracks
+  //!
+  virtual map<int, OmafAdaptationSet*> GetCurrentTracksMap() = 0;
 
   //!
   //! \brief  Set Init viewport
@@ -122,6 +132,16 @@ class OmafTracksSelector {
       mI360ScvpPlugin.pluginLibPath = i360scvp_plugin.pluginLibPath;
   };
 
+  //!
+  //! \brief  Compare current tracks and prev tracks and get the different tracks.
+  //!
+  std::map<uint32_t, std::map<int, OmafAdaptationSet*>> CompareTracksAndGetDifference(OmafMediaStream* pStream, uint64_t *currentTimeLine);
+
+  //!
+  //! \brief  Get the different tracks (tracks1 - tracks2)
+  //!
+  TracksMap GetDifferentTracks(TracksMap track1, TracksMap track2);
+
 private:
     OmafTracksSelector& operator=(const OmafTracksSelector& other) { return *this; };
     OmafTracksSelector(const OmafTracksSelector& other) { /* do not create copies */ };
@@ -134,8 +154,10 @@ private:
 
  protected:
   std::list<HeadPose*> mPoseHistory;
+  std::map<uint64_t, std::map<int, OmafAdaptationSet*>> m_prevTimedTracksMap;
   int mSize;
   std::mutex mMutex;
+  std::mutex mCurrentMutex;
   HeadPose *mPose;
   void *m360ViewPortHandle;
   param_360SCVP *mParamViewport;
@@ -149,6 +171,7 @@ private:
   map<int32_t, int32_t>         mTwoDStreamQualityMap;
   uint32_t                      mSegmentDur;
   PluginDef                     mI360ScvpPlugin;
+  uint64_t                      mLastCatchupPTS;
 };
 
 VCD_OMAF_END;

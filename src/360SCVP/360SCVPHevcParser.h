@@ -26,6 +26,7 @@
 #ifndef _360SCVP_HEVC_PARSER_H_
 #define _360SCVP_HEVC_PARSER_H_
 
+#include <vector>
 #include "360SCVPBitstream.h"
 #include "360SCVPCommonDef.h"
 #include "360SCVPAPI.h"
@@ -232,10 +233,56 @@ typedef struct
 
 typedef struct
 {
+    bool     inter_ref_pic_set_prediction_flag;
+    uint32_t index_num;
+    bool     delta_rps_sign;
+    uint32_t index_num_absolute;
+    bool     used_by_curr_pic_flag[256];
+    bool     used_delta_flag[256];
     uint32_t num_negative_pics;
     uint32_t num_positive_pics;
-    int32_t delta_poc[16];
+    int32_t  delta_poc[16];
+    int32_t  delta_poc0[16];
+    bool     used_by_curr_pic_s0_flag[16];
+    int32_t  delta_poc1[16];
+    bool     used_by_curr_pic_s1_flag[16];
 } HEVC_ReferencePictureSets;
+
+#define MAX_CPB_CNT 32
+#define MAX_LHVC_LAYERS    7
+#define NUM_LAYER_SETS_MAX 1024
+
+typedef struct
+{
+    bool fixed_pic_rate_flag;
+    bool fixed_pic_rate_within_cvs_flag;
+    uint32_t pic_dur_inTc_minus1;
+    bool low_delay_hrd_flag;
+    uint32_t cpb_cnt_minus1;
+    uint32_t bitrate_val_minus1[MAX_CPB_CNT][2];
+    uint32_t cpb_size_value[MAX_CPB_CNT][2];
+    uint32_t du_cpb_size_value[MAX_CPB_CNT][2];
+    bool cbr_flag[MAX_CPB_CNT][2];
+    uint32_t du_bitrate_value[MAX_CPB_CNT][2];
+} HEVC_HrdSubLayerInfo;
+
+typedef struct
+{
+    bool nal_hrd_param_present_flag;
+    bool vcl_hrd_param_present_flag;
+    bool sub_pic_cpb_param_present_flag;
+    uint32_t tick_divisor_minus2;
+    uint32_t du_cpb_removal_delay_len_minus1;
+    bool sub_pic_cpb_param_in_picTSEI_flag;
+    uint32_t dpb_out_delay_du_len_minus1;
+    uint32_t bit_rate_scale;
+    uint32_t cpb_size_scale;
+    uint32_t du_cpb_size_scale;
+    uint32_t init_cpb_removal_delay_len_minus1;
+    uint32_t cpb_removal_delay_len_minus1;
+    uint32_t dpb_out_delay_len_minus1;
+    HEVC_HrdSubLayerInfo hrd_sub_layer_infos[MAX_LHVC_LAYERS];
+} HEVC_HrdInfo;
 
 typedef struct
 {
@@ -304,7 +351,7 @@ typedef struct
     bool dependent_slice_segments_enabled_flag, tiles_enabled_flag, uniform_spacing_flag, constrained_intra_pred_flag, org_tiles_enabled_flag;
     uint32_t num_extra_slice_header_bits, num_ref_idx_l0_default_active, num_ref_idx_l1_default_active;
     bool slice_segment_header_extension_present_flag, output_flag_present_flag, lists_modification_present_flag, cabac_init_present_flag;
-    bool weighted_pred_flag, weighted_bipred_flag, slice_chroma_qp_offsets_present_flag, deblocking_filter_override_enabled_flag, loop_filter_across_slices_enabled_flag, entropy_coding_sync_enabled_flag;
+    bool weighted_pred_flag, weighted_bipred_flag, slice_chroma_qp_offsets_present_flag, deblocking_filter_control_present_flag, deblocking_filter_override_enabled_flag, loop_filter_across_slices_enabled_flag, entropy_coding_sync_enabled_flag;
     bool loop_filter_across_tiles_enabled_flag, pps_loop_filter_across_slices_enabled_flag, cu_qp_delta_enabled_flag;
 
     uint32_t num_tile_columns, num_tile_rows, pic_init_qp_minus26, diff_cu_qp_delta_depth;
@@ -321,36 +368,18 @@ typedef struct RepFormat
     uint8_t separate_colour_plane_flag;
 } HEVC_RepFormat;
 
-
-
-#define MAX_LHVC_LAYERS    4
-#define NUM_LAYER_SETS_MAX 1024
+//#define MAX_LHVC_LAYERS    7
+//#define NUM_LAYER_SETS_MAX 1024
 typedef struct
 {
-    int32_t id;
-    bool vps_extension_found;
-    bool temporal_id_nesting;
-    bool base_layer_internal_flag;
-    bool base_layer_available_flag;
     uint8_t num_profile_tier_level;
     uint8_t num_output_layer_sets;
-    int32_t bit_pos_vps_extensions;
-    uint32_t max_layers;
-    uint32_t max_sub_layers;
-    uint32_t max_layer_id;
-    uint32_t num_layer_sets;
-    uint32_t vps_max_dec_pic_buffering_minus1;
-    uint32_t vps_max_num_reorder_pics;
-    uint32_t vps_max_latency_increase_plus1;
     uint32_t num_rep_formats;
-    uint32_t state;
-    uint32_t crc;
     uint32_t rep_format_idx[16];
     uint32_t scalability_mask[16];
     uint32_t dimension_id[MAX_LHVC_LAYERS][16];
     uint32_t layer_id_in_nuh[MAX_LHVC_LAYERS];
     uint32_t layer_id_in_vps[MAX_LHVC_LAYERS];
-    HEVC_ProfileTierLevel ptl;
     bool output_layer_flag[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
     bool alt_output_layer_flag[MAX_LHVC_LAYERS];
     bool necessary_layers_flag[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
@@ -360,10 +389,61 @@ typedef struct
     uint8_t num_necessary_layers[MAX_LHVC_LAYERS];
     uint8_t LayerSetLayerIdList[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
     uint8_t LayerSetLayerIdListMax[MAX_LHVC_LAYERS];
-    uint32_t profile_level_tier_idx[MAX_LHVC_LAYERS];
     HEVC_ProfileTierLevel ext_ptl[MAX_LHVC_LAYERS];
-    HEVC_SublayerPTL sub_ptl[8];
     HEVC_RepFormat rep_formats[16];
+} HEVC_VPSEx;
+
+typedef struct
+{
+    int32_t id;
+    bool vps_extension_flag;
+    bool temporal_id_nesting;
+    bool base_layer_internal_flag;
+    bool base_layer_available_flag;
+    //uint8_t num_profile_tier_level;
+    //uint8_t num_output_layer_sets;
+    int32_t bit_pos_vps_extensions;
+    bool     timing_info_present_flag;
+    uint32_t num_units_in_tick;
+    int32_t num_ticks_poc_diff_one;
+    bool    poc_proportional_to_timing_flag;
+    uint32_t time_scale;
+    uint32_t max_layers;
+    uint32_t max_sub_layers;
+    uint32_t max_layer_id;
+    uint32_t num_layer_sets;
+    uint32_t sub_layer_ordering_info_present_flag;
+    uint32_t vps_max_dec_pic_buffering_minus1[MAX_LHVC_LAYERS];
+    uint32_t vps_max_num_reorder_pics[MAX_LHVC_LAYERS];
+    uint32_t vps_max_latency_increase_plus1[MAX_LHVC_LAYERS];
+    uint8_t  layer_id_included_flag[MAX_LHVC_LAYERS][64];
+    std::vector<uint32_t> hrd_layer_set_idx;
+    std::vector<bool> cprms_present_flags;
+    //uint32_t num_rep_formats;
+    uint32_t state;
+    uint32_t crc;
+    //uint32_t rep_format_idx[16];
+    //uint32_t scalability_mask[16];
+    //uint32_t dimension_id[MAX_LHVC_LAYERS][16];
+    //uint32_t layer_id_in_nuh[MAX_LHVC_LAYERS];
+    //uint32_t layer_id_in_vps[MAX_LHVC_LAYERS];
+    HEVC_ProfileTierLevel ptl;
+    //bool output_layer_flag[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
+    //bool alt_output_layer_flag[MAX_LHVC_LAYERS];
+    //bool necessary_layers_flag[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
+    //uint8_t num_layers_in_id_list[NUM_LAYER_SETS_MAX];
+    //uint8_t direct_dependency_flag[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
+    //uint8_t profile_tier_level_idx[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
+    //uint8_t num_necessary_layers[MAX_LHVC_LAYERS];
+    //uint8_t LayerSetLayerIdList[MAX_LHVC_LAYERS][MAX_LHVC_LAYERS];
+    //uint8_t LayerSetLayerIdListMax[MAX_LHVC_LAYERS];
+    //uint32_t profile_level_tier_idx[MAX_LHVC_LAYERS];
+    //HEVC_ProfileTierLevel ext_ptl[MAX_LHVC_LAYERS];
+    HEVC_SublayerPTL sub_ptl[8];
+    //HEVC_RepFormat rep_formats[16];
+    uint32_t num_hrd_parameters;
+    std::vector<HEVC_HrdInfo> hrd_infos;
+    HEVC_VPSEx vps_extension;
 } HEVC_VPS;
 
 
@@ -390,9 +470,12 @@ typedef struct
 
 } HEVC_SEI;
 
+#define MAX_NUM_LONG_TERM_REF_PICS 33
+
 typedef struct
 {
     uint8_t nal_unit_type;
+    uint8_t temporal_id;
     uint32_t frame_num, poc_lsb, slice_type;
 
     int32_t redundant_pic_cnt, short_term_ref_pic_set_idx;
@@ -402,12 +485,34 @@ typedef struct
     int32_t frame_num_offset, frame_num_offset_prev;
 
     bool dependent_slice_segment_flag, short_term_ref_pic_set_sps_flag, slice_sao_luma_flag, slice_sao_chroma_flag;
+    bool no_output_of_prior_pics_flag;
+    int32_t index_hevc_pps;
+    uint32_t slice_reserved_flag[16];
+    bool pic_output_flag;
+    uint32_t colour_plane_id;
+    uint32_t count_hevc_lts, count_hevc_ltp;
+    uint8_t  lt_idx_sps[MAX_NUM_LONG_TERM_REF_PICS];
+    uint32_t poc_lsb_lt[MAX_NUM_LONG_TERM_REF_PICS];
+    uint8_t  used_by_curr_pic_lt_flag[MAX_NUM_LONG_TERM_REF_PICS];
+    uint8_t  delta_poc_msb_present_flag[MAX_NUM_LONG_TERM_REF_PICS];
+    uint8_t  poc_MCL_del[MAX_NUM_LONG_TERM_REF_PICS];
+    uint32_t count_index_reference_0, count_index_reference_1;
+    uint8_t  mvd_l1_zero_flag, cabac_init_flag;
+    bool     info_of_cl0;
+    uint32_t collocated_ref_idx;
+    uint32_t five_minus_max_num_merge_cand;
+    bool     info_of_dfof, info_of_sdfdf;
+    int32_t  slice_beta_offset_div2, slice_tc_offset_div2;
+    bool     slice_loop_filter_across_slices_enabled_flag;
     bool first_slice_segment_in_pic_flag, num_ref_idx_active_override_flag, slice_temporal_mvp_enabled_flag;
     uint32_t slice_segment_address;
     uint8_t prev_layer_id_plus1;
 
     //bit offset of the num_entry_point (if present) field
     int32_t entry_point_start_bits;
+    uint32_t num_entry_point_offsets;
+    uint32_t offset_len;
+    //uint32_t entry_point_offset_minus1[1024];
     //byte offset of the payload start (after byte alignment)
     int32_t payload_start_offset;
 
@@ -415,8 +520,11 @@ typedef struct
     HEVC_PPS *pps;
 
     int32_t slice_qp_delta, slice_cb_qp_offset, slice_cr_qp_offset;
-    bool used_by_curr_pic_s0_flag[16];
+    //bool used_by_curr_pic_s0_flag[16];
     HEVC_ReferencePictureSets rps[64];
+
+    uint32_t size_ext;
+    std::vector<uint8_t> ext_bytes;
 } HEVCSliceInfo;
 
 typedef struct _hevc_state

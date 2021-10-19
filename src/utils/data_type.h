@@ -42,6 +42,8 @@
 extern "C" {
 #endif
 
+#define OFFSET_VIDEO_ID_FOR_CATCHUP 5
+
 typedef enum {
   VideoCodec_NONE = 0,
   VideoCodec_AVC,
@@ -158,6 +160,7 @@ typedef struct DASHPACKET {
   uint32_t tileRowNum;              //! til row after aggregation
   uint32_t tileColNum;              //! til row after aggregation
   bool bEOS;
+  bool bCatchup;
 } DashPacket;
 
 typedef enum {
@@ -167,8 +170,8 @@ typedef enum {
 }PredictionMode;
 
 typedef struct PREDICTOPTION {
-  PredictionMode mode;
-  bool usingFeedbackAngleAdjust;
+  PredictionMode mode = UNKNOWN;
+  bool usingFeedbackAngleAdjust = false;
 }PredictOption;
 
 #ifdef __cplusplus

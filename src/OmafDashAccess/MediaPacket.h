@@ -44,10 +44,6 @@
 
 #include <memory>
 
-extern "C" {
-#include "safestringlib/safe_mem_lib.h"
-}
-
 namespace VCD {
 namespace OMAF {
 
@@ -350,6 +346,14 @@ class MediaPacket : public VCD::NonCopyable {
 
   bool     GetSegmentEnded() { return m_segmentEnded; };
 
+  void     SetCatchupFlag(bool isCatchup) { m_isCatchup = isCatchup; };
+
+  bool     IsCatchup() { return m_isCatchup; };
+
+  void     SetKeyFrame(bool isKeyFrame) { m_isKeyFrame = isKeyFrame; };
+
+  bool     IsKeyFrame() { return m_isKeyFrame; };
+
   void     SetMediaType(MediaType mediaType) { m_mediaType = mediaType; };
 
   MediaType GetMediaType() { return m_mediaType; };
@@ -395,6 +399,8 @@ private:
   bool     m_segmentEnded = false;
   MediaType m_mediaType = MediaType_Video;
   std::vector<uint8_t> m_audioADTSHdr;
+  bool m_isCatchup = false;
+  bool m_isKeyFrame = false;
 
   void deleteRwpk() {
     if (m_rwpk) {

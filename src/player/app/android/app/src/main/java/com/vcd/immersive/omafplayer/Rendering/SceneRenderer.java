@@ -24,6 +24,11 @@ import android.view.ViewGroup;
 import com.google.vr.sdk.controller.Orientation;
 import com.vcd.immersive.omafplayer.MediaPlayer.NativeMediaPlayer;
 import com.vcd.immersive.omafplayer.VideoUiView;
+
+import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Controls and renders the GL Scene.
@@ -36,12 +41,14 @@ public final class SceneRenderer {
     private static final String TAG = "SceneRenderer";
     private static final long Interval = 33;
     private static final int MULTI_DECODER_MAX_NUM = 5;
+    private static final int MAX_CATCHUP_SURFACE_NUM = 1;
     // This is the primary interface between the Media Player and the GL Scene.
-    private Surface[] decodeSurface = new Surface[MULTI_DECODER_MAX_NUM];
+    private Surface[] decodeSurface = new Surface[MULTI_DECODER_MAX_NUM + MAX_CATCHUP_SURFACE_NUM];
     private Surface displaySurface;
     public SurfaceTexture displayTexture;
-    private SurfaceTexture[] decodeTexture = new SurfaceTexture[MULTI_DECODER_MAX_NUM];
+    private SurfaceTexture[] decodeTexture = new SurfaceTexture[MULTI_DECODER_MAX_NUM + MAX_CATCHUP_SURFACE_NUM];
     private final AtomicBoolean frameAvailable = new AtomicBoolean();
+    private final AtomicBoolean catchupFrameAvailable = new AtomicBoolean();
     // Used to notify clients that displayTexture has a new frame. This requires synchronized access.
     @Nullable
     private OnFrameAvailableListener externalFrameListener;
@@ -53,11 +60,15 @@ public final class SceneRenderer {
     @Nullable
     private Mesh requestedDisplayMesh;
     public int displayTexId;
-    public int[] decodeTexId = new int[MULTI_DECODER_MAX_NUM];
+    public int[] decodeTexId = new int[MULTI_DECODER_MAX_NUM + MAX_CATCHUP_SURFACE_NUM];
+
+    private Deque<NativeMediaPlayer.HeadPose> pose_history = new ArrayDeque<>();
 
     private int drawTimes = 0;
 
     private int renderCount = 0;
+
+    private boolean isWrittenCatchup = false;
 
     private int cnt = 0;
 
@@ -142,7 +153,7 @@ public final class SceneRenderer {
         checkGlError();
 
         // Create the texture used to render each frame of video.
-        for (int i = 0; i < MULTI_DECODER_MAX_NUM; i++) {
+        for (int i = 0; i < MULTI_DECODER_MAX_NUM + MAX_CATCHUP_SURFACE_NUM; i++) {
             decodeTexId[i] = Utils.glCreateExternalTexture();
             decodeTexture[i] = new SurfaceTexture(decodeTexId[i]);
             checkGlError();
@@ -162,7 +173,19 @@ public final class SceneRenderer {
                         }
                     }
                 });
+        decodeTexture[MULTI_DECODER_MAX_NUM].setOnFrameAvailableListener(
+                new OnFrameAvailableListener() {
+                    @Override
+                    public void onFrameAvailable(SurfaceTexture surfaceTexture) {
+                        catchupFrameAvailable.set(true);
 
+                        synchronized (SceneRenderer.this) {
+                            if (externalFrameListener != null) {
+                                externalFrameListener.onFrameAvailable(surfaceTexture);
+                            }
+                        }
+                    }
+                });
         if (canvasQuad != null) {
             canvasQuad.glInit();
         }
@@ -256,10 +279,15 @@ public final class SceneRenderer {
      */
     public void glDrawFrame(float[] viewProjectionMatrix, int eyeType, int width, int height) {
         Log.i(TAG, "begin to draw frame !");
-        if (mediaPlayer != null) {
-            mediaPlayer.SetCurrentStatus(1);
+        if (mediaPlayer == null) {
+            return;
         }
-        else{
+        if (mediaPlayer.GetStatus() == mediaPlayer.STOPPED) {
+            Log.e(TAG, "Media player set to stopped!");
+            return;
+        }
+        if (mediaPlayer.GetStatus() != mediaPlayer.PLAY) {
+            Log.i(TAG, "Media player is not in PLAY mode!");
             return;
         }
         if (!glConfigureScene()) {
@@ -267,7 +295,8 @@ public final class SceneRenderer {
             Log.e(TAG, "gl configure scene is not ready!");
             return;
         }
-
+        // set current pose to native player
+        SetCurrentPosition(cnt);
         // glClear isn't strictly necessary when rendering fully spherical panoramas, but it can improve
         // performance on tiled renderers by causing the GPU to discard previous data.
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
@@ -277,6 +306,14 @@ public final class SceneRenderer {
         GLES20.glEnable(GLES20.GL_BLEND);
 
         Log.i(TAG, "begin to update display image!");
+        if (catchupFrameAvailable.compareAndSet(true, false))
+        {
+            for (int i = MULTI_DECODER_MAX_NUM; i < MULTI_DECODER_MAX_NUM + MAX_CATCHUP_SURFACE_NUM; i++){
+                decodeTexture[i].updateTexImage();
+            }
+            isWrittenCatchup = true;
+            Log.i(TAG, "update catch up tex image at pts " + cnt);
+        }
         if (frameAvailable.compareAndSet(true, false))
         {
             for (int i = 0; i < MULTI_DECODER_MAX_NUM; i++){
@@ -284,13 +321,23 @@ public final class SceneRenderer {
             }
             Log.i(TAG, "update tex image at pts " + cnt++);
         }
-        if (drawTimes++ % 2 == 0)
+        if (drawTimes++ % 2 == 0 && cnt > renderCount)
         {
             Log.i(TAG, "begin to update display tex!");
             int ret = 0;
 
             ret = mediaPlayer.UpdateDisplayTex(renderCount);
-            if (ret == 0) renderCount++;
+            if (ret == 0) {
+                Log.i(TAG, "update display tex at pts " + renderCount);
+                renderCount++;
+                if (isWrittenCatchup) {
+                    for (int i = MULTI_DECODER_MAX_NUM; i < MULTI_DECODER_MAX_NUM + MAX_CATCHUP_SURFACE_NUM; i++) {
+                        decodeTexture[i].releaseTexImage();
+                        isWrittenCatchup = false;
+                        Log.i(TAG, "release catch up tex image at pts " + renderCount);
+                    }
+                }
+            }
             checkGlError();
             if (ret == 0 && !hasTransformTypeSent) {
                 transformType = mediaPlayer.GetTransformType();
@@ -402,10 +449,28 @@ public final class SceneRenderer {
         externalFrameListener = videoFrameListener;
     }
 
-    public void SetCurrentPosition(NativeMediaPlayer.HeadPose pose)
+    public void SetCurrentPosition(int pts)
     {
-        if (mediaPlayer != null && mediaPlayer.GetCurrentStatus() != 0) {
-            mediaPlayer.SetCurrentPosition(pose);
+        synchronized (this) {
+            if (mediaPlayer != null && mediaPlayer.GetStatus() != 0 && pose_history.size() != 0) {
+                NativeMediaPlayer.HeadPose pose = pose_history.getFirst();
+                pose.pts = pts;
+                mediaPlayer.SetCurrentPosition(pose);
+                Log.i(TAG, "Set current position to native player and pts is " + pose.pts);
+            }
+        }
+    }
+
+    public void AddCurrentPose(NativeMediaPlayer.HeadPose pose)
+    {
+        synchronized (this) {
+            if (pose != null) {
+                pose_history.addFirst(pose);
+            }
+            int max_pose_number = 100;
+            if (pose_history.size() > max_pose_number) {
+                pose_history.removeLast();
+            }
         }
     }
 }

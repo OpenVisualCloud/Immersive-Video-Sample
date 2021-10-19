@@ -264,7 +264,7 @@ int32_t get_merge_solution(hevc_mergeStream *mergeStream)
         }
 
         // Check if the input tile number is legitimate
-        if(height == 0 || HR_hc == 0 || height % LR_tile_h || HR_ntile % HR_hc || LR_ntile % (height / LR_tile_h))
+        if(height == 0 || HR_hc == 0 || height % LR_tile_h || HR_ntile % HR_hc)
         {
             SCVP_LOG(LOG_ERROR, "The input tile number is not legitimate!\n");
             return -1;
@@ -274,6 +274,10 @@ int32_t get_merge_solution(hevc_mergeStream *mergeStream)
         uint32_t HR_wc = HR_ntile / HR_hc;
         int32_t LR_wc = LR_ntile / LR_hc;
 
+        if (LR_ntile > LR_hc * LR_wc) {
+            SCVP_LOG(LOG_INFO, "The low-resolution tiles %d cannot be exactly divided by the tile rows %d!\n", LR_ntile, LR_hc);
+            LR_wc++;
+        }
         pps->num_tile_columns = HR_wc + LR_wc;
         for (uint32_t i = 0; i < pps->num_tile_columns; i++)
         {
@@ -396,8 +400,9 @@ void* tile_merge_Init(param_mergeStream *mergeStreamParams)
     copy_tile_params(&(mergeStream->highRes), &(mergeStreamParams->highRes));
     copy_tile_params(&(mergeStream->lowRes), &(mergeStreamParams->lowRes));
 
-    mergeStream->slice_segment_address = (int32_t *)malloc((HR_ntile+LR_ntile) * sizeof(int32_t));
-    memset_s(mergeStream->slice_segment_address, (HR_ntile+LR_ntile) * sizeof(int32_t), 0);
+    int32_t totalTileNum = HR_ntile + LR_ntile;
+    mergeStream->slice_segment_address = (int32_t *)malloc(totalTileNum * sizeof(int32_t));
+    memset_s(mergeStream->slice_segment_address, totalTileNum * sizeof(int32_t), 0);
 
     mergeStream->inputBistreamsLen = 0;
 

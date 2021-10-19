@@ -125,6 +125,12 @@ Handler OmafAccess_Init(DashStreamingClient *pCtx) {
   if (omaf_params.max_decode_height > 0) {
     omaf_dash_params.max_decode_height_ = omaf_params.max_decode_height;
   }
+  // for catch up
+  omaf_dash_params.enable_in_time_viewport_update = omaf_params.enable_in_time_viewport_update;
+  omaf_dash_params.max_response_times_in_seg = omaf_params.max_response_times_in_seg;
+  omaf_dash_params.max_catchup_width = omaf_params.max_catchup_width;
+  omaf_dash_params.max_catchup_height = omaf_params.max_catchup_height;
+
   OMAF_LOG(LOG_INFO,"Dash parameter %s\n", omaf_dash_params.to_string().c_str());
   pSource->SetOmafDashParams(omaf_dash_params);
 
@@ -197,7 +203,7 @@ int OmafAccess_GetPacket(Handler hdl, int stream_id, DashPacket *packet, int *si
       *size -= 1;
       continue;
     }
-    if (!(pPkt->GetEOS())) {
+    if (!(pPkt->GetEOS()) || pPkt->IsCatchup()) {
       if (pPkt->GetMediaType() == MediaType_Video)
       {
           RegionWisePacking *newRwpk = new RegionWisePacking;
@@ -223,6 +229,7 @@ int OmafAccess_GetPacket(Handler hdl, int stream_id, DashPacket *packet, int *si
           packet[i].tileRowNum = pPkt->GetVideoTileRowNum();
           packet[i].tileColNum = pPkt->GetVideoTileColNum();
           packet[i].bEOS = pPkt->GetEOS();
+          packet[i].bCatchup = pPkt->IsCatchup();
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
           string tag = "sgmtIdx:" + to_string(pPkt->GetSegID());

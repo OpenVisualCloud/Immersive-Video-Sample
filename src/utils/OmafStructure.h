@@ -98,6 +98,7 @@ VCD_OMAF_BEGIN
 #define CODECS                                  "codecs"
 #define MAXWIDTH                                "maxWidth"
 #define MAXHEIGHT                               "maxHeight"
+#define GOPSIZE                                 "gopSize"
 #define MAXFRAMERATE                            "maxFramerate"
 #define SEGMENTALIGNMENT                        "segmentAlignment"
 #define SUBSEGMENTALIGNMENT                     "subsegmentAlignment"

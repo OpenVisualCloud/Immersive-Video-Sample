@@ -205,6 +205,7 @@ RUN cd external && \
     cd .. && rm -rf `ls | grep -v Sample-Videos`
 
 COPY run.sh ${WORKDIR}/Sample-Videos
+COPY src/ffmpeg/dependency/*.xml ${WORKDIR}/Sample-Videos/
 
 # Unset proxy if necessary
 RUN if [ -n "${http_proxy}" ]; then \

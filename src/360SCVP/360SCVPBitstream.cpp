@@ -25,9 +25,7 @@
  */
 #include "360SCVPBitstream.h"
 #include "assert.h"
-extern "C" {
-    #include "safestringlib/safe_mem_lib.h"
-}
+#include "../utils/safe_mem.h"
 
 void* gts_malloc(size_t size)
 {
@@ -59,6 +57,13 @@ size_t gts_fwrite(const void *ptr, size_t size, size_t nmemb,
 uint64_t gts_fseek(FILE *fp, int64_t offset, int32_t whence)
 {
     return (uint64_t)fseek(fp, (long)offset, whence);
+}
+
+uint32_t gts_get_bit_size(uint32_t MaxVal)
+{
+    uint32_t k = 0;
+    while ((int32_t)MaxVal > ((1 << k) - 1)) k += 1;
+    return k;
 }
 
 GTS_BitStream *gts_bs_new(const int8_t *buffer, uint64_t BufferSize, uint32_t mode)

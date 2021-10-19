@@ -34,6 +34,7 @@
 #ifndef VCD_UTILS_COMMON_H
 #define VCD_UTILS_COMMON_H
 #include <memory>
+#include "../utils/safe_mem.h"
 
 namespace VCD {
 class NonCopyable {

@@ -36,10 +36,7 @@
 #include "HevcNaluParser.h"
 #include "OmafPackingLog.h"
 
-extern "C"
-{
-#include "safestringlib/safe_mem_lib.h"
-}
+#include "../../utils/safe_mem.h"
 
 class HevcNaluParserTest : public testing::Test
 {
@@ -243,9 +240,9 @@ TEST_F(HevcNaluParserTest, ParseHevcHeader)
     fread(vpsData, 1, vpsLen, fp);
 
     int32_t diff = 0;
-    errno_t compRet = EOK;
+    int compRet = 0;
     compRet = memcmp_s(vpsNalu->data, vpsLen, vpsData, vpsLen, &diff);
-    EXPECT_TRUE(compRet == EOK);
+    EXPECT_TRUE(compRet == 0);
     EXPECT_TRUE(vpsNalu->dataSize == vpsLen);
     EXPECT_TRUE(diff == 0);
     EXPECT_TRUE(vpsNalu->startCodesSize == 4);
@@ -280,7 +277,7 @@ TEST_F(HevcNaluParserTest, ParseHevcHeader)
     fread(spsData, 1, spsLen, fp);
 
     compRet = memcmp_s(spsNalu->data, spsLen, spsData, spsLen, &diff);
-    EXPECT_TRUE(compRet == EOK);
+    EXPECT_TRUE(compRet == 0);
     EXPECT_TRUE(spsNalu->dataSize == spsLen); //includes start codes
     EXPECT_TRUE(diff == 0);
     EXPECT_TRUE(spsNalu->startCodesSize == 4);
@@ -315,7 +312,7 @@ TEST_F(HevcNaluParserTest, ParseHevcHeader)
     fread(ppsData, 1, ppsLen, fp);
 
     compRet = memcmp_s(ppsNalu->data, ppsLen, ppsData, ppsLen, &diff);
-    EXPECT_TRUE(compRet == EOK);
+    EXPECT_TRUE(compRet == 0);
     EXPECT_TRUE(ppsNalu->dataSize == ppsLen); //includes start codes
     EXPECT_TRUE(diff == 0);
     EXPECT_TRUE(ppsNalu->startCodesSize == 4);

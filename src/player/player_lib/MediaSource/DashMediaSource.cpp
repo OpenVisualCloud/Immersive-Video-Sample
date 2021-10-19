@@ -48,7 +48,7 @@
 #define MIN_LIST_REMAIN 2
 #define DECODE_THREAD_COUNT 16
 #define MAX_PACKETS 16
-#define WAIT_PACKET_TIME_OUT 5000 // 5s
+#define WAIT_PACKET_TIME_OUT 10000 // 10s
 #define TEST_GET_PACKET_ONLY 0
 #define MAX_DUMP_FILE_NUM 10
 using namespace tinyxml2;
@@ -60,7 +60,12 @@ DashMediaSource::DashMediaSource() {
   m_status = STATUS_UNKNOWN;
   m_handler = NULL;
   m_DecoderManager = NULL;
+  m_needStreamDumped = false;
+  m_maxVideoWidth = 0;
+  m_maxVideoHeight = 0;
+#ifndef _ANDROID_OS_
   GetStreamDumpedOptionParams();
+#endif
   m_singleFile = NULL;
   if (m_needStreamDumped) {
     for (uint32_t i = 0; i < MAX_DUMP_FILE_NUM; i++)
@@ -128,6 +133,12 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   pCtxDashStreaming->omaf_params.synchronizer_params.segment_range_size = 20;  // 20
   pCtxDashStreaming->omaf_params.max_decode_width = renderConfig.maxVideoDecodeWidth;
   pCtxDashStreaming->omaf_params.max_decode_height = renderConfig.maxVideoDecodeHeight;
+  pCtxDashStreaming->omaf_params.enable_in_time_viewport_update = renderConfig.enableInTimeViewportUpdate;
+  pCtxDashStreaming->omaf_params.max_response_times_in_seg = renderConfig.maxResponseTimesInOneSeg;
+  pCtxDashStreaming->omaf_params.max_catchup_width = renderConfig.maxCatchupWidth;
+  pCtxDashStreaming->omaf_params.max_catchup_height = renderConfig.maxCatchupHeight;
+  m_maxVideoWidth = renderConfig.maxVideoDecodeWidth;
+  m_maxVideoHeight = renderConfig.maxVideoDecodeHeight;
   PluginDef def;
   def.pluginLibPath = renderConfig.pathof360SCVPPlugin;
   pCtxDashStreaming->plugin_def = def;
@@ -190,11 +201,12 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
     // ANDROID_LOGD("dash media source : set surface at i : %d surface is %p", m_nativeSurface[i].first, m_nativeSurface[i].second);
     m_DecoderManager->SetSurface(i, m_nativeSurface[i].first, m_nativeSurface[i].second);
   }
+#endif
   DecodeInfo decode_info;
   decode_info.frameRate_den = mediaInfo.stream_info[0].framerate_den;
   decode_info.frameRate_num = mediaInfo.stream_info[0].framerate_num;
+  decode_info.segment_duration = mediaInfo.stream_info[0].segmentDuration;
   m_DecoderManager->SetDecodeInfo(decode_info);
-#endif
   RenderStatus ret = m_DecoderManager->Initialize(m_rsFactory);
   if (RENDER_STATUS_OK != ret) {
     LOG(INFO) << "m_DecoderManager::Initialize failed" << std::endl;
@@ -361,27 +373,42 @@ void DashMediaSource::ProcessVideoPacket() {
     if (currentWaitTime > WAIT_PACKET_TIME_OUT) // wait 5s but get packet failed
     {
       m_status = STATUS_TIMEOUT;
+#ifdef _ANDROID_OS_
+      ANDROID_LOGD("Wait too long to get packet from Omaf Dash Access library! Force to quit!");
+#endif
       LOG(ERROR) << " Wait too long to get packet from Omaf Dash Access library! Force to quit! " << std::endl;
     }
     return;
   }
   currentWaitTime = 0;
-  if (dashPkt[0].bEOS) {
+  if (dashPkt[0].bEOS && !dashPkt[0].bCatchup) {
     m_status = STATUS_STOPPED;
   }
-  LOG(INFO) << "Get packet has done! and pts is " << dashPkt[0].pts << std::endl;
+  for (uint32_t i = 0; i < dashPktNum; i++) {
+    LOG(INFO) << "[FrameSequences][Packet]: Get packet has done! and pts is " << dashPkt[i].pts  << " video id " << dashPkt[i].videoID << " catch up flag is " << dashPkt[i].bCatchup << std::endl;
+    // ANDROID_LOGD("Get packet has done! and pts is %lld, video id %d\n", dashPkt[i].pts, dashPkt[i].videoID);
+  }
+  if (!dashPkt[0].bCatchup) {
 #ifndef _ANDROID_OS_
 #ifdef _USE_TRACE_
   // trace
   tracepoint(mthq_tp_provider, T8_get_packet, dashPkt[0].pts);
 #endif
 #endif
+  }
   if (m_needStreamDumped && !m_dumpedFile.empty()) {
     for (uint32_t i = 0; i < dashPktNum; i++)
     {
-      fwrite(dashPkt[i].buf, 1, dashPkt[i].size, m_dumpedFile[i]);
+        fwrite(dashPkt[i].buf, 1, dashPkt[i].size, m_dumpedFile[dashPkt[i].videoID]);
     }
   }
+#ifdef _ANDROID_OS_
+  if (dashPktNum == 1 && (dashPkt[0].width > m_maxVideoWidth || dashPkt[0].height > m_maxVideoHeight) && !dashPkt[0].bCatchup) {//ET mode
+    ANDROID_LOGD("Cannot start VR Player due to codec capacity! please check maxDecWidth/maxDecHeight settings! w %d, h %d", dashPkt[0].width, dashPkt[0].height);
+    m_status = STATUS_STOPPED;
+    return;
+  }
+#endif
 #if !TEST_GET_PACKET_ONLY
   if (NULL != m_DecoderManager) {
     RenderStatus ret = m_DecoderManager->SendVideoPackets(&(dashPkt[0]), dashPktNum);
@@ -420,10 +447,10 @@ void DashMediaSource::Run() {
   }
 }
 
-RenderStatus DashMediaSource::UpdateFrames(uint64_t pts) {
+RenderStatus DashMediaSource::UpdateFrames(uint64_t pts, int64_t *corr_pts) {
   if (NULL == m_DecoderManager) return RENDER_NO_MATCHED_DECODER;
 
-  RenderStatus ret = m_DecoderManager->UpdateVideoFrames(pts);
+  RenderStatus ret = m_DecoderManager->UpdateVideoFrames(pts, corr_pts);
 
   if (RENDER_STATUS_OK != ret) {
     LOG(INFO) << "DashMediaSource::UpdateFrames failed with code:" << ret << std::endl;

@@ -553,6 +553,7 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
         uint16_t maxWidth = 0;
         uint16_t maxHeight = 0;
         uint64_t maxRes = 0;
+        uint32_t gopSize = 0;
         std::map<MediaStream*, TrackSegmentCtx*>::iterator it = m_streamSegCtx->begin();
         for ( ; it != m_streamSegCtx->end(); it++)
         {
@@ -560,6 +561,7 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
             if (stream->GetMediaType() == VIDEOTYPE)
             {
                 VideoStream *vs = (VideoStream*)stream;
+                gopSize = vs->GetGopSize();
                 uint16_t width = vs->GetSrcWidth();
                 uint16_t height = vs->GetSrcHeight();
                 uint64_t resolution = (uint64_t)(width) * (uint64_t)(height);
@@ -582,6 +584,7 @@ int32_t MpdGenerator::WriteMpd(uint64_t totalFramesNum)
         asEle->SetAttribute(SEGMENTALIGNMENT, 1);
         asEle->SetAttribute(MAXWIDTH, mainWidth);
         asEle->SetAttribute(MAXHEIGHT, mainHeight);
+        asEle->SetAttribute(GOPSIZE, gopSize);
         asEle->SetAttribute(BITSTREAMSWITCHING, "false");
         periodEle->InsertEndChild(asEle);
 

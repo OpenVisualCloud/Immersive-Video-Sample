@@ -94,7 +94,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, RENDER_EOS if reach EOS
     //!
-    virtual RenderStatus UpdateFrames(uint64_t pts);
+    virtual RenderStatus UpdateFrames(uint64_t pts, int64_t *corr_pts);
 
     //!
     //! \brief  Thread functionality Pure virtual function  , it will be re implemented in derived classes
@@ -158,13 +158,14 @@ private:
 private:
 
     void                               *m_handler;//Dash Source handle
-    int32_t                             m_status;
     pthread_mutex_t                     m_frameMutex;
     DecoderManager                     *m_DecoderManager;
     ThreadLock                          m_Lock;
     bool                                m_needStreamDumped;
     vector<FILE*>                       m_dumpedFile;
     FILE*                               m_singleFile;
+    uint32_t                            m_maxVideoWidth;
+    uint32_t                            m_maxVideoHeight;
 };
 
 VCD_NS_END

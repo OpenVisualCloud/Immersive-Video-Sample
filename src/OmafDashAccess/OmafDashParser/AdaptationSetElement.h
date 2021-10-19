@@ -113,6 +113,20 @@ public:
     MEMBER_SET_AND_GET_FUNC(string, m_maxHeight, MaxHeight);
 
     //!
+    //! \brief    Set function for m_gopSize member
+    //!
+    //! \param    [in] string
+    //!           value to set
+    //! \param    [in] m_gopSize
+    //!           m_gopSize member in class
+    //! \param    [in] GopSize
+    //!           m_gopSize name in class
+    //!
+    //! \return   void
+    //!
+    MEMBER_SET_AND_GET_FUNC(string, m_gopSize, GopSize);
+
+    //!
     //! \brief    Set function for m_maxFrameRate member
     //!
     //! \param    [in] string
@@ -298,6 +312,7 @@ private:
     string                               m_maxHeight;              //!< the maxHeight attribute
     string                               m_maxFrameRate;           //!< the maxFramerate attribute
     string                               m_audioSamplingRate;
+    string                               m_gopSize;                //!< the gop size attribute
 
     string                               m_segmentAlignment;       //!< the segmentAlignment attribute
     string                               m_subsegmentAlignment;    //!< the subsegmentAlignment attribute

@@ -15,5 +15,11 @@
         "enable": false,
         "name": "",
         "path": ""
+    },
+    "intimeviewportupdate": {
+        "enable": false,
+        "responseTimesInOneSeg": 1,
+        "maxCatchupWidth": 2560,
+        "maxCatchupHeight": 2560
     }
 }

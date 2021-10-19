@@ -1,5 +1,10 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
+OPTION(USE_TRACE
+       "Use trace"
+       OFF
+)
+
 OPTION(LINUX_OS
        "Use linux os"
        ON
@@ -11,6 +16,10 @@ OPTION(ANDROID_OS
 )
 
 PROJECT(app)
+
+IF(USE_SAFE_MEM)
+ADD_DEFINITIONS("-D_SAFE_MEM_")
+ENDIF()
 
 IF(LINUX_OS)
   ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -fpermissive")
@@ -25,35 +34,45 @@ IF(ANDROID_OS)
 ENDIF()
 
 IF(LINUX_OS)
-  INCLUDE_DIRECTORIES(/usr/local/include ../../utils)
-  LINK_DIRECTORIES(/usr/local/lib)
+  IF(DEFINED WEBRTC_LINUX_SDK)
+      INCLUDE_DIRECTORIES("${WEBRTC_LINUX_SDK}/include")
+      LINK_DIRECTORIES("${WEBRTC_LINUX_SDK}/lib")
+  ENDIF()
+  IF(USE_TRACE)
+    ADD_DEFINITIONS("-D_USE_TRACE_")
+    INCLUDE_DIRECTORIES(/usr/local/include ../../utils ../../trace)
+    LINK_DIRECTORIES(/usr/local/lib ../../trace)
+  ELSE()
+    INCLUDE_DIRECTORIES(/usr/local/include ../../utils)
+    LINK_DIRECTORIES(/usr/local/lib)
+  ENDIF()
 ENDIF()
 
 AUX_SOURCE_DIRECTORY(. DIR_SRC)
 AUX_SOURCE_DIRECTORY(android ANDROID_SRC)
 AUX_SOURCE_DIRECTORY(linux LINUX_SRC)
 IF(LINUX_OS)
-  SET(DIR_SRC
-      ${DIR_SRC}
-      ${LINUX_SRC}
-      )
-  IF(DEFINED WEBRTC_LINUX_SDK)
-      INCLUDE_DIRECTORIES("${WEBRTC_LINUX_SDK}/include")
-      LINK_DIRECTORIES("${WEBRTC_LINUX_SDK}/lib")
+  SET(DIR_SRC ${DIR_SRC} ${LINUX_SRC})
+  IF(NOT DEFINED WEBRTC_LINUX_SDK)
+      SET(LINK_LIB ${LINK_LIB} OmafDashAccess)
   ENDIF()
+  IF(USE_TRACE)
+    SET(LINK_LIB ${LINK_LIB} trace lttng-ust)
+ENDIF()
+
 ENDIF()
 
 IF(ANDROID_OS)
-  SET(DIR_SRC
-      ${DIR_SRC}
-      ${ANDROID_SRC}
-      )
+  SET(DIR_SRC ${DIR_SRC} ${ANDROID_SRC})
 ENDIF()
 
 ADD_EXECUTABLE(render ${DIR_SRC})
 
 IF(LINUX_OS)
-  SET(LINK_LIB ${LINK_LIB} MediaPlayer glog glfw GL GLU safestring_shared)
+  SET(LINK_LIB ${LINK_LIB} MediaPlayer glog glfw GL GLU dl)
+  IF(USE_SAFE_MEM)
+    SET(LINK_LIB ${LINK_LIB} safestring_shared)
+  ENDIF()
 ENDIF()
 
 TARGET_LINK_LIBRARIES(render ${LINK_LIB})

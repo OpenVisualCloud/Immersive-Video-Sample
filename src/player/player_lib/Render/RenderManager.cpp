@@ -73,18 +73,19 @@ RenderManager::~RenderManager() {
 
 void RenderManager::UpdateFrames(int64_t pts)
 {
-  m_mediaSource->UpdateFrames(pts);
+  m_mediaSource->UpdateFrames(pts, nullptr);
   return;
 }
 
-RenderStatus RenderManager::Render(int64_t pts) {
+RenderStatus RenderManager::Render(int64_t pts, int64_t *corr_pts) {
   uint32_t width = m_renderConfig.windowWidth;
   uint32_t height = m_renderConfig.windowHeight;
   std::chrono::high_resolution_clock clock;
   uint64_t start1 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-  if (RENDER_STATUS_OK != m_mediaSource->UpdateFrames(pts)) {
+  RenderStatus ret = m_mediaSource->UpdateFrames(pts, corr_pts);
+  if (RENDER_STATUS_OK != ret) {
     LOG(INFO) << "UpdateFrames error!" << endl;
-    return RENDER_NO_FRAME;
+    return ret;
   }
   uint64_t end1 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
   LOG(INFO) << "UpdateFrames cost time:" << (end1 - start1) << endl;

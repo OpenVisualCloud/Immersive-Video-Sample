@@ -28,9 +28,15 @@
     <ProjectionType>ERP</ProjectionType>
     <frameRate>30</frameRate>
     <frameNum>100</frameNum>
+    <enableDump>false</enableDump>
     <predict enable="0">
      <!-- <plugin>libViewportPredict_LR.so</plugin>
      <path>../plugins/ViewportPredict_Plugin/predict_LR/</path> -->
     </predict>
+    <intimeviewportupdate enable="0">
+     <responseTimesInOneSeg>2</responseTimesInOneSeg>
+     <maxCatchupWidth>2560</maxCatchupWidth>
+     <maxCatchupHeight>2560</maxCatchupHeight>
+    </intimeviewportupdate>
     <!-- <PathOf360SCVPPlugins>/usr/local/lib/libPanZoomTileSelection.so</PathOf360SCVPPlugins> -->
 </info>

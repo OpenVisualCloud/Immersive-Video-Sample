@@ -62,13 +62,11 @@ sudo ssh-copy-id root@<server ip>
 - Test Command for 4K Video:
 ```bash
   cd /path/to/Immersive-Video-Sample/src/build/server/ffmpeg
-  echo "ip local port 9090" > config_high.txt
-  echo "ip local port 9089" > config_low.txt
   ffmpeg -re -i [rtmp://localhost/demo/1.flv] -input_type 1 -rc 1 \
       -c:v:0 distributed_encoder -s:0 3840x1920 -tile_row:0 6 -tile_column:0 10 \
-      -config_file:0 config_high.txt -g:0 15 -b:0 30M -map 0:v \
+      -config_file:0 config_high.xml -g:0 15 -b:0 30M -map 0:v \
       -c:v:1 distributed_encoder -s:1 1024x640 -sws_flags neighbor -tile_row:1 2 -tile_column:1 4 \
-      -config_file:1 config_low.txt -g:1 15 -b:1 5M -map 0:v \
+      -config_file:1 config_low.xml -g:1 15 -b:1 5M -map 0:v \
       -f omaf_packing -is_live 1 -split_tile 1 -seg_duration 1 -window_size 20 -extra_window_size 30 \
       -base_url http://[ServerIP]/OMAFLive_4k/ -out_name Test /usr/local/nginx/html/OMAFLive_4k/
 ```
@@ -76,13 +74,11 @@ sudo ssh-copy-id root@<server ip>
 - Test Command for 8K Video:
 ```bash
   cd /path/to/Immersive-Video-Sample/src/build/server/ffmpeg
-  echo "ip local port 9090 numa 1" > config_high.txt
-  echo "ip local port 9089 numa 2" > config_low.txt
   numactl -c 1 ffmpeg -re -i [rtmp://192.168.1.10:1935/live/video] -input_type 1 -rc 1 \
       -c:v:0 distributed_encoder -s:0 7680x3840 -g:0 25 -tile_row:0 6 -tile_column:0 12 \
-      -la_depth:0 0 -config_file:0 config_high.txt -b:0 50M -map 0:v \
+      -la_depth:0 0 -config_file:0 config_high.xml -b:0 50M -map 0:v \
       -c:v:1 distributed_encoder -s:1 1280x1280 -sws_flags neighbor -g:1 25 -tile_row:1 2 -tile_column:1 2 \
-      -la_depth:1 0 -config_file:1 config_low.txt -b:1 2M -map 0:v \
+      -la_depth:1 0 -config_file:1 config_low.xml -b:1 2M -map 0:v \
       -f omaf_packing -is_live 1 -split_tile 1 -seg_duration 1 -extractors_per_thread 4 \
       -base_url http://[ServerIP]/OMAFLive_8k/ -out_name Test /usr/local/nginx/html/OMAFLive_8k/
 ```
@@ -92,13 +88,11 @@ sudo ssh-copy-id root@<server ip>
 - Test Command for 4K Video:
 ```bash
   cd /path/to/Immersive-Video-Sample/src/build/server/ffmpeg
-  echo "ip local port 9090" > config_high.txt
-  echo "ip local port 9089" > config_low.txt
   ffmpeg -i [file] -input_type 1 -rc 1 \
       -c:v:0 distributed_encoder -s:0 3840x1920 -tile_row:0 6 -tile_column:0 10 \
-      -config_file:0 config_high.txt -g:0 15 -b:0 30M -map 0:v \
+      -config_file:0 config_high.xml -g:0 15 -b:0 30M -map 0:v \
       -c:v:1 distributed_encoder -s:1 1024x640 -sws_flags neighbor -tile_row:1 2 -tile_column:1 4 \
-      -config_file:1 config_low.txt -g:1 15 -b:1 5M -map 0:v \
+      -config_file:1 config_low.xml -g:1 15 -b:1 5M -map 0:v \
       -f omaf_packing -is_live 0 -split_tile 1 -seg_duration 1 -window_size 20 -extra_window_size 30 \
       -base_url http://[ServerIP]]/OMAFStatic_4k/ -out_name Test /usr/local/nginx/html/OMAFStatic_4k/
 ```
@@ -106,13 +100,11 @@ sudo ssh-copy-id root@<server ip>
 - Test Command for 8K Video:
 ```bash
   cd /path/to/Immersive-Video-Sample/src/build/server/ffmpeg
-  echo "ip local port 9090 numa 1" > config_high.txt
-  echo "ip local port 9089 numa 2" > config_low.txt
   numactl -c 1 ffmpeg -i [file] -input_type 1 -rc 1 \
       -c:v:0 distributed_encoder -s:0 7680x3840 -g:0 25 -tile_row:0 6 -tile_column:0 12 \
-      -la_depth:0 0 -config_file:0 config_high.txt -b:0 50M -map 0:v \
+      -la_depth:0 0 -config_file:0 config_high.xml -b:0 50M -map 0:v \
       -c:v:1 distributed_encoder -s:1 1280x1280 -sws_flags neighbor -g:1 25 -tile_row:1 2 -tile_column:1 2 \
-      -la_depth:1 0 -config_file:1 config_low.txt -b:1 2M -map 0:v \
+      -la_depth:1 0 -config_file:1 config_low.xml -b:1 2M -map 0:v \
       -f omaf_packing -is_live 0 -split_tile 1 -seg_duration 1 -extractors_per_thread 4 \
       -base_url http://[ServerIP]/OMAFStatic_8k/ -out_name Test /usr/local/nginx/html/OMAFStatic_8k/
 ```

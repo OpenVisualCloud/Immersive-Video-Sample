@@ -14,7 +14,6 @@ build_server(){
     if [ "${PREBUILD_FLAG}" == "y" ] ; then
         ./prebuild.sh server
     fi
-    ./install_safestringlib.sh
     mkdir -p ../build/server
     cd ../build/server
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
@@ -23,7 +22,7 @@ build_server(){
         thrift -r --gen cpp shared.thrift
         patch gen-cpp/shared_types.h Implement_operator_RegionInformation.patch
         cd -
-        cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server -DDE_FLAG=true ../..
+        cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server -DDE_FLAG=true -DUSE_SAFE_MEM_LIB=OFF ../..
     else
         sudo cp ../../ffmpeg/dependency/*.so /usr/local/lib/
         sudo cp ../../ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
@@ -33,13 +32,13 @@ build_server(){
     fi
     make -j $(nproc)
     sudo make install
+    cp ../../ffmpeg/dependency/*.xml ffmpeg
 }
 
 build_client(){
     if [ "${PREBUILD_FLAG}" == "y" ] ; then
         ./prebuild.sh client
     fi
-    ./install_safestringlib.sh
     mkdir -p ../build/client
     cd ../build/client
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
@@ -51,6 +50,7 @@ build_client(){
 
 build_ci(){
     source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-ruby23/enable
     PREBUILD_FLAG="n"
     GIT_SHORT_HEAD=`git rev-parse --short HEAD`
 
@@ -82,19 +82,6 @@ build_ci(){
     # Build client
     cd ${EX_PATH} && ./install_FFmpeg.sh client
     cd ${EX_PATH} && build_client
-
-    if [ "$1" == "oss" ] ; then
-        cd ${EX_PATH}/../build/external && mkdir -p ffmpeg_client_so
-        sudo cp ffmpeg_client/libavcodec/libavcodec.so.58 ffmpeg_client_so/libavcodec.so.58
-        sudo cp ffmpeg_client/libavutil/libavutil.so.56 ffmpeg_client_so/libavutil.so.56
-        sudo cp ffmpeg_client/libavformat/libavformat.so.58 ffmpeg_client_so/libavformat.so.58
-        sudo cp ffmpeg_client/libavfilter/libavfilter.so.7 ffmpeg_client_so/libavfilter.so.7
-        sudo cp ffmpeg_client/libavdevice/libavdevice.so.58 ffmpeg_client_so/libavdevice.so.58
-        sudo cp ffmpeg_client/libswscale/libswscale.so.5 ffmpeg_client_so/libswscale.so.5
-        sudo cp ffmpeg_client/libswresample/libswresample.so.3 ffmpeg_client_so/libswresample.so.3
-        sudo cp /usr/local/lib/libpostproc.so.55 ffmpeg_client_so/libpostproc.so.55
-        # cd ${EX_PATH} && ./fpm.sh client ${GIT_SHORT_HEAD}
-    fi
 }
 
 build_test(){
@@ -127,8 +114,12 @@ build_test(){
 
     # Compile 360SCVP test
     cd build/test/360SCVP && \
-        g++ ${BASIC_CONFIG} ${EX_PATH}/../360SCVP/test/testI360SCVP.cpp && \
-        g++ testI360SCVP.o ${SHARED_CONFIG} -o testI360SCVP
+        g++ ${BASIC_CONFIG} ${EX_PATH}/../360SCVP/test/testI360SCVP_common.cpp && \
+        g++ ${BASIC_CONFIG} ${EX_PATH}/../360SCVP/test/testI360SCVP_erp.cpp && \
+        g++ ${BASIC_CONFIG} ${EX_PATH}/../360SCVP/test/testI360SCVP_cubemap.cpp && \
+        g++ testI360SCVP_common.o ${SHARED_CONFIG} -o testI360SCVP_common && \
+        g++ testI360SCVP_erp.o ${SHARED_CONFIG} -o testI360SCVP_erp && \
+        g++ testI360SCVP_cubemap.o ${SHARED_CONFIG} -o testI360SCVP_cubemap
 
     # Compile OmafDashAccess test
     DA_TEST_PATH="${SRC_PATH}/OmafDashAccess/test"
@@ -167,8 +158,8 @@ build_test(){
                         `"-I/usr/local/include/thrift -I/usr/local/include/svt-hevc "`
                         `"-lthrift -lthriftnb -lSvtHevcEnc -lopenhevc -levent -lz "`
                         `"-lavutil -lavdevice -lavfilter -lavformat -lavcodec "`
-                        `"-lswscale -lswresample -lva-drm -lva-x11 -lva -lXv -lX11 "`
-                        `"-lXext -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes -llzma "
+                        `"-lswscale -lswresample -lXv -lX11 -llzma "`
+                        `"-lXext -lxcb -lxcb-shm -lxcb-shape -lxcb-xfixes "
         cd ../distributed_encoder && \
             g++ ${DE_BASIC_CONFIG} ${DE_TEST_PATH}/testMainEncoder.cpp && \
             g++ ${DE_BASIC_CONFIG} ${DE_TEST_PATH}/testWorkSession.cpp && \

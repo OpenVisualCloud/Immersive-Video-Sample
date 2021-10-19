@@ -50,6 +50,7 @@
 #include "../../../trace/MtHQ_tp.h"
 #endif
 #include "../Common/RegionData.h"
+#include "../Common/DataLog.h"
 
 VCD_NS_BEGIN
 
@@ -143,6 +144,7 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
     static uint64_t start = 0;
     static uint64_t totalChangedTime = 0;
     static uint32_t changedCount = 0;
+    DataLog *data_log = DATALOG::GetInstance();
     for (uint32_t i = 0; i < TilesInViewport.size(); i++)
     {
         std::vector<TileInformation> listBest = mQualityRankingInfo.mapQualitySelection[mQualityRankingInfo.mainQualityRanking];
@@ -152,7 +154,10 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
             if (m_isAllHighQualityInView) // firt time to be blur
             {
                 start = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-                LOG(INFO)<<"low resolution part occurs! pts is " << pts <<std::endl;
+                if (data_log != nullptr) {
+                    data_log->SetSwitchStartTime(start);
+                }
+                LOG(INFO)<<"[FrameSequences][Low]: low resolution part occurs! pts is " << pts <<std::endl;
 #ifdef _USE_TRACE_
                 //trace
                 tracepoint(mthq_tp_provider, T0_change_to_lowQ, changedCount+1, pts);
@@ -164,7 +169,10 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
     if (isAllHighFlag && !m_isAllHighQualityInView) // first time to be clear
     {
         uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-        LOG(INFO)<<"T9' All high resolution part! pts is " << pts <<std::endl<<"cost time : "<<(end-start)<<"ms"<<std::endl;
+        if (data_log != nullptr) {
+            data_log->SetSwitchEndTime(end);
+        }
+        LOG(INFO)<<"[FrameSequences][High]: T9' All high resolution part! pts is " << pts <<" cost time : "<<(end-start)<<"ms"<<std::endl;
 #ifdef _USE_TRACE_
         //trace
         tracepoint(mthq_tp_provider, T12_change_to_highQ, changedCount+1, pts);
@@ -172,7 +180,7 @@ RenderStatus ERPRenderTarget::Update( float yaw, float pitch, float hFOV, float 
         totalChangedTime += end - start;
         changedCount++;
         m_avgChangedTime = (float)totalChangedTime / changedCount;
-
+        LOG(INFO) << "total change time " << changedCount << std::endl;
     }
     m_isAllHighQualityInView = isAllHighFlag;
 
@@ -343,7 +351,6 @@ int32_t ERPRenderTarget::findQuality(RegionData *regionInfo, RectangularRegionWi
             tile_info.packedPicWidth  = regionInfo->GetRegionWisePacking()->packedPicWidth;
             tile_info.packedPicHeight = regionInfo->GetRegionWisePacking()->packedPicHeight;
             tile_info.video_id        = video_id;
-
             std::pair<uint32_t, uint32_t> coord(tile_info.projRegLeft / tile_info.projRegWidth, tile_info.projRegTop / tile_info.projRegHeight);
             int32_t source_idx = 0;
             int32_t quality = findQuality(regionInfo, regionInfo->GetRegionWisePacking()->rectRegionPacking[idx], source_idx);

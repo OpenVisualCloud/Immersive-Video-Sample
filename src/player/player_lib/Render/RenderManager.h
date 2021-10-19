@@ -67,7 +67,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus Render(int64_t pts);
+    virtual RenderStatus Render(int64_t pts, int64_t *corr_pts);
 
     //!
     //! \brief check player is end or not

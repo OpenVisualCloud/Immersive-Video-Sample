@@ -14,6 +14,10 @@ ADD_DEFINITIONS("-g -c -fPIC -lglog -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0
                  -fPIE -fPIC -pie -O2 -D_FORTIFY_SOURCE=2 -Wformat
                  -Wformat-security -Wl,-S -Wall -Werror")
 
+IF(USE_SAFE_MEM)
+ADD_DEFINITIONS("-D_SAFE_MEM_")
+ENDIF()
+
 IF(USE_TRACE)
   ADD_DEFINITIONS("-D_USE_TRACE_")
   INCLUDE_DIRECTORIES(/usr/local/include ../utils ../360SCVP ../isolib ../trace ../plugins/StreamProcess_Plugin)
@@ -33,7 +37,9 @@ ADD_LIBRARY(VROmafPacking SHARED ${DIR_SRC})
 TARGET_LINK_LIBRARIES(VROmafPacking dashwriter)
 TARGET_LINK_LIBRARIES(VROmafPacking glog)
 TARGET_LINK_LIBRARIES(VROmafPacking dl)
+IF(USE_SAFE_MEM)
 TARGET_LINK_LIBRARIES(VROmafPacking safestring_shared)
+ENDIF()
 IF(USE_TRACE)
   TARGET_LINK_LIBRARIES(VROmafPacking trace)
   TARGET_LINK_LIBRARIES(VROmafPacking lttng-ust)

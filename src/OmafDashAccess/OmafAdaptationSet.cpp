@@ -61,6 +61,7 @@ OmafAdaptationSet::OmafAdaptationSet() {
   m_bMain = false;
   mActiveSegNum = 1;
   mSegNum = 1;
+  mStartSegNum = 1;
   mReEnable = false;
   mPF = PF_UNKNOWN;
   mSegmentDuration = 0;
@@ -72,6 +73,7 @@ OmafAdaptationSet::OmafAdaptationSet() {
   mRwpkType = RWPK_UNKNOWN;
   mTileInfo = NULL;
   mIsExtractorTrack = false;
+  mGopSize = 0;
   memset(&mVideoInfo, 0, sizeof(VideoInfo));
   memset(&mAudioInfo, 0, sizeof(AudioInfo));
 }
@@ -132,6 +134,10 @@ int OmafAdaptationSet::Initialize(AdaptationSetElement* pAdaptationSet) {
 
   mID = stoi(mAdaptationSet->GetId());
   OMAF_LOG(LOG_INFO, "ID of AS %d\n", mID);
+  if (mID ==  0 && !mAdaptationSet->GetGopSize().empty()) {// main
+      mGopSize = stoi(mAdaptationSet->GetGopSize());
+      OMAF_LOG(LOG_INFO, "get gop size %d\n", mGopSize);
+  }
   SegmentElement* segment = mRepresentation->GetSegment();
 
   if (nullptr != segment) {
@@ -491,6 +497,78 @@ int OmafAdaptationSet::DownloadSegment() {
   }
 }
 
+int OmafAdaptationSet::DownloadAssignedSegment(uint32_t trackID, uint32_t segID)
+{
+  int ret = ERROR_NONE;
+
+  int realSegNum = segID + mStartSegNum - 1;
+
+  OMAF_LOG(LOG_INFO, "[FrameSequences][CatchUp][Download]: Download Catchup OmafSegment id %d for AdaptationSet: %d\n", segID, trackID);
+  // ANDROID_LOGD("Download Catchup OmafSegment id %d for AdaptationSet: %d\n", segID, trackID);
+
+  if (omaf_reader_mgr_ == nullptr) {
+    OMAF_LOG(LOG_ERROR, "The omaf reader manager is empty!\n");
+    return ERROR_NULL_PTR;
+  }
+
+  SegmentElement* seg = mRepresentation->GetSegment();
+
+  if (nullptr == seg) {
+    OMAF_LOG(LOG_ERROR, "Create Initial SegmentElement for AdaptationSet: %d failed\n", trackID);
+    return ERROR_NULL_PTR;
+  }
+
+  auto repID = mRepresentation->GetId();
+
+  DashSegmentSourceParams params;
+
+  params.dash_url_ = seg->GenerateCompleteURL(mBaseURL, repID, realSegNum);
+  params.priority_ = TaskPriority::NORMAL;
+  params.timeline_point_ = static_cast<int64_t>(segID);
+
+  OmafSegment::Ptr pSegment = std::make_shared<OmafSegment>(params, segID, false);
+
+  // reset the re-enable flag, since it will be updated with different viewport
+  // if (mReEnable) mReEnable = false;
+
+  if (pSegment.get() != nullptr) {
+    if (this->mInitSegment.get() == nullptr) return ERROR_NULL_PTR;
+    pSegment->SetInitSegID(this->mInitSegment->GetInitSegID());
+    pSegment->SetMediaType(mType);
+    if ((mType == MediaType_Video) && (typeid(*this) != typeid(OmafExtractor))) {
+      auto qualityRanking = GetRepresentationQualityRanking();
+      pSegment->SetQualityRanking(qualityRanking);
+      SRDInfo srdInfo;
+      srdInfo.left = mSRD->get_X();
+      srdInfo.top = mSRD->get_Y();
+      srdInfo.width = mSRD->get_W();
+      srdInfo.height = mSRD->get_H();
+      pSegment->SetSRDInfo(srdInfo);
+    }
+    else if (mType == MediaType_Audio)
+    {
+      pSegment->SetAudioChlNum(mAudioInfo.channels);
+      pSegment->SetAudioSampleRate(mAudioInfo.sample_rate);
+    }
+
+    pSegment->SetSegID(segID);
+    pSegment->SetTrackId(trackID);
+    bool isCatchup = true;
+    ret = omaf_reader_mgr_->OpenSegment(std::move(pSegment), false, isCatchup);
+
+    if (ERROR_NONE != ret) {
+      OMAF_LOG(LOG_ERROR, "Fail to Download Catch up OmafSegment for AdaptationSet: %d\n", trackID);
+    }
+
+    return ret;
+  }
+  else {
+    OMAF_LOG(LOG_ERROR, "Create Catch up OmafSegment for AdaptationSet: %d Number: %d failed\n", trackID, segID);
+
+    return ERROR_NULL_PTR;
+  }
+}
+
 std::string OmafAdaptationSet::GetUrl(const SegmentSyncNode& node) const {
   SegmentElement* seg = mRepresentation->GetSegment();
 
@@ -526,6 +604,7 @@ int OmafAdaptationSet::UpdateStartNumberByTime(uint64_t nAvailableStartTime) {
     return -1;
   }
   mActiveSegNum = (current - nAvailableStartTime) / (mSegmentDuration * 1000) + mStartNumber;
+  mStartSegNum = mActiveSegNum;
 
   OMAF_LOG(LOG_INFO, "Current time= %lld and available time= %lld.\n", current, nAvailableStartTime);
   OMAF_LOG(LOG_INFO, "Set start segment index= %d\n", mActiveSegNum);
