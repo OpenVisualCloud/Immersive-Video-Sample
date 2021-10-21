@@ -458,8 +458,9 @@ int OmafDashSource::SetupHeadSetInfo(HeadSetInfo* clientInfo) {
 }
 
 int OmafDashSource::ChangeViewport(HeadPose* pose) {
-  if (omaf_reader_mgr_->GetStartOffsetPts() < 0) return ERROR_NONE;
-  pose->pts += omaf_reader_mgr_->GetStartOffsetPts();
+  if (omaf_reader_mgr_->GetStartOffsetPts() >= 0) {
+    pose->pts += omaf_reader_mgr_->GetStartOffsetPts();
+  }
   int ret = m_selector->UpdateViewport(pose);
 
   return ret;

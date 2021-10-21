@@ -25,6 +25,7 @@ import com.google.vr.sdk.controller.Orientation;
 import com.vcd.immersive.omafplayer.MediaPlayer.NativeMediaPlayer;
 import com.vcd.immersive.omafplayer.VideoUiView;
 
+import java.math.BigInteger;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
@@ -39,9 +40,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class SceneRenderer {
     private static final String TAG = "SceneRenderer";
-    private static final long Interval = 33;
     private static final int MULTI_DECODER_MAX_NUM = 5;
     private static final int MAX_CATCHUP_SURFACE_NUM = 1;
+    private static final int SYSTEMFREQ = 60;
     // This is the primary interface between the Media Player and the GL Scene.
     private Surface[] decodeSurface = new Surface[MULTI_DECODER_MAX_NUM + MAX_CATCHUP_SURFACE_NUM];
     private Surface displaySurface;
@@ -271,6 +272,23 @@ public final class SceneRenderer {
         return true;
     }
 
+    private boolean IsUpdate(int framerate) {
+        int sysFreq = SYSTEMFREQ;
+        BigInteger biSysFreq = BigInteger.valueOf(sysFreq);
+        BigInteger biInputFps = BigInteger.valueOf(framerate);
+        BigInteger bigcd = biSysFreq.gcd(biInputFps);
+        int gcd = bigcd.intValue();
+        int unitTotal = sysFreq / gcd;
+        int needRendered = framerate / gcd;
+        int interval = unitTotal / needRendered;
+        int index = drawTimes++ % unitTotal;
+//        Log.i(TAG, "tt gcd is " + gcd + " unit total " + unitTotal + " rendered " + needRendered + " index " + index);
+        return (index % interval == 0 && index < interval * needRendered);
+    }
+//    private boolean IsUpdate(int framerate) {
+//        return (drawTimes++ % 2 == 0);
+//    }
+
     /**
      * Draws the scene with a given eye pose and type.
      *
@@ -321,7 +339,7 @@ public final class SceneRenderer {
             }
             Log.i(TAG, "update tex image at pts " + cnt++);
         }
-        if (drawTimes++ % 2 == 0 && cnt > renderCount)
+        if (cnt > renderCount && IsUpdate(mediaPlayer.GetFrameRate()))
         {
             Log.i(TAG, "begin to update display tex!");
             int ret = 0;

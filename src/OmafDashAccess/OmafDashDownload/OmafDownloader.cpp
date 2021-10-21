@@ -348,11 +348,11 @@ OMAF_STATUS OmafDashSegmentHttpClientImpl::remove(const SourceParams &ds_params)
         segment_downloader_->removeTask(to_remove_task);
       }
     }
-
-    if (to_remove_task.get() == nullptr) {
-      OMAF_LOG(LOG_ERROR, "Failed to remove the task for the dash: %s\n", ds_params.dash_url_.c_str());
-      return ERROR_INVALID;
-    }
+    // Remove the task in processDoneTask func
+    // if (to_remove_task.get() == nullptr) {
+    //   OMAF_LOG(LOG_ERROR, "Failed to remove the task for the dash: %s\n", ds_params.dash_url_.c_str());
+    //   return ERROR_INVALID;
+    // }
 
     return ERROR_NONE;
   } catch (const std::exception &ex) {
@@ -453,7 +453,7 @@ void OmafDashSegmentHttpClientImpl::processDoneTask(OmafDownloadTask::Ptr task) 
 
     // remove from downloading list
     OMAF_LOG(LOG_INFO, "State is %d\n", state);
-    if (state == OmafDownloadTask::State::STOPPED)// check ? FINISH
+    if (state == OmafDownloadTask::State::STOPPED || state == OmafDownloadTask::State::FINISH)// check ? FINISH
     {
       std::lock_guard<std::mutex> lock(downloading_task_mutex_);
       auto it = downloading_tasks_.find(task->url());

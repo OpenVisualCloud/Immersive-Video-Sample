@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <sys/timeb.h>
 #include <time.h>
+#include <math.h>
 #include "../../../utils/tinyxml2.h"
 #include "../Common/RenderType.h"
 #include "OmafDashAccessApi.h"

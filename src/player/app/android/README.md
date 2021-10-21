@@ -46,6 +46,11 @@ arm processer: arm64-v8a
 > 4. Click 'green triangle' run button.
 
 or use gradlew command to build the apk.
+#1. generate release apk
 cd src/player/app/android
-./gradlew assembleDebug
-adb install ./app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleRelease
+#2. sign the apk
+keytool -genkey -alias key_app.keystore -keyalg RSA -validity 20000 -keystore key_app.keystore
+jarsigner -verbose -keystore key_app.keystore -signedjar app_signed.apk ./app/build/outputs/apk/release/app-unsigned.apk key_app.keystore
+#3. install the signed apk
+adb install ./app_signed.apk
