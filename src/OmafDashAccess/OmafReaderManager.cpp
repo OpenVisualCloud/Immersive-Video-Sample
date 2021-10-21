@@ -1020,7 +1020,7 @@ void OmafReaderManager::normalSegmentStateChange(std::shared_ptr<OmafSegment> se
     }
 
   // 2. push new opened node to opened list
-  AddOpenedNode(std::move(opened_dash_node));
+  AddOpenedNode(segment, std::move(opened_dash_node));
 
   } catch (const std::exception &ex) {
     OMAF_LOG(LOG_ERROR, "Exception when set up track map, ex: %s\n", ex.what());
@@ -1057,13 +1057,13 @@ void OmafReaderManager::normalChunkStateChange(std::shared_ptr<OmafSegment> segm
                                                                       std::move(opened_segment), depends_size, segment->IsExtractor(), segment->IsCatchup(), segment->GetProcessedChunkId());
 
     // 3. push new opened node to opened list
-    AddOpenedNode(std::move(opened_dash_node));
+    AddOpenedNode(segment, std::move(opened_dash_node));
   } catch (const std::exception &ex) {
     OMAF_LOG(LOG_ERROR, "Exception when set up track map, ex: %s\n", ex.what());
   }
 }
 
-void OmafReaderManager::AddOpenedNode(std::shared_ptr<OmafSegmentNode> opened_dash_node) noexcept {
+void OmafReaderManager::AddOpenedNode(std::shared_ptr<OmafSegment> segment, std::shared_ptr<OmafSegmentNode> opened_dash_node) noexcept {
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
   //trace
