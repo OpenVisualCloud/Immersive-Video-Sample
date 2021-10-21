@@ -165,7 +165,7 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
   void initSegmentStateChange(std::shared_ptr<OmafSegment>, OmafSegment::State) noexcept;
   void normalSegmentStateChange(std::shared_ptr<OmafSegment>, OmafSegment::State) noexcept;
   void normalChunkStateChange(std::shared_ptr<OmafSegment>, OmafSegment::State) noexcept;
-  void AddOpenedNode(std::shared_ptr<OmafSegmentNode> opened_dash_node) noexcept;
+  void AddOpenedNode(std::shared_ptr<OmafSegment>, std::shared_ptr<OmafSegmentNode> opened_dash_node) noexcept;
 
   std::shared_ptr<OmafPacketParams> getPacketParams(uint32_t qualityRanking) noexcept {
     return omaf_packet_params_[qualityRanking];
