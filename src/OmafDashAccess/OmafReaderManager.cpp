@@ -1058,25 +1058,6 @@ void OmafReaderManager::normalChunkStateChange(std::shared_ptr<OmafSegment> segm
 
     // 3. push new opened node to opened list
     AddOpenedNode(std::move(opened_dash_node));
-    // 4. erase input segment from opening list when all the chunks finished
-    // LOG(INFO) << "segment->HasProcessDone()" << segment->HasProcessDone() << "info " << segment->to_string().c_str() << endl;
-    if (segment->HasProcessDone()) {
-      std::lock_guard<std::mutex> lock(segment_opening_mutex_);
-      for (auto &nodeset : segment_opening_list_) {
-        if (nodeset.timeline_point_ == segment->GetTimelinePoint()) {
-          std::list<OmafSegmentNode::Ptr>::iterator it = nodeset.segment_nodes_.begin();
-          while (it != nodeset.segment_nodes_.end()) {
-            auto &node = (*(*it).get());
-            if (node == segment) {
-              it = nodeset.segment_nodes_.erase(it);
-              LOG(INFO) << "Erase opening node " << node.to_string() << endl;
-              break;
-            }
-            it++;
-          }
-        }
-      }
-    }
   } catch (const std::exception &ex) {
     OMAF_LOG(LOG_ERROR, "Exception when set up track map, ex: %s\n", ex.what());
   }
@@ -1387,8 +1368,11 @@ void OmafReaderManager::clearOlderSegmentSet(int64_t timeline_point) noexcept {
       std::list<OmafSegmentNodeTimedSet>::iterator it = segment_opening_list_.begin();
       while ((it != segment_opening_list_.end()) && (it->timeline_point_ < timeline_point)) {
         OMAF_LOG(LOG_INFO, "Removing older dash opening list, timeline=%lld\n", it->timeline_point_);
-        for (auto &node : it->segment_nodes_) {
-          node->stop();
+        std::list<OmafSegmentNode::Ptr>::iterator iter = it->segment_nodes_.begin();
+        while (iter != it->segment_nodes_.end()) {
+          (*iter)->stop();
+          // OMAF_LOG(LOG_INFO, "Erase opening node %s", (*iter)->to_string().c_str());
+          iter = it->segment_nodes_.erase(iter);
         }
         it = segment_opening_list_.erase(it);
       }

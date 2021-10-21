@@ -265,6 +265,13 @@ Java_com_vcd_immersive_omafplayer_MediaPlayer_NativeMediaPlayer_GetProjectionFor
     return (jint)pPlayer->GetProjectionFormat();
 }
 
+JNIEXPORT jint JNICALL
+Java_com_vcd_immersive_omafplayer_MediaPlayer_NativeMediaPlayer_GetFrameRate(JNIEnv *env, jobject thiz,
+                                                                          jlong hdl) {
+    VCD::VRVideo::MediaPlayer_Android* pPlayer = (VCD::VRVideo::MediaPlayer_Android* )hdl;
+    return (jint)pPlayer->GetFrameRate();
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_vcd_immersive_omafplayer_MediaPlayer_NativeMediaPlayer_SetDecodeSurface(JNIEnv *env,

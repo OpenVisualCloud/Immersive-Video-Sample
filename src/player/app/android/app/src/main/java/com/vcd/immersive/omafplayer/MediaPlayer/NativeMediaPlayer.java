@@ -197,6 +197,11 @@ public class NativeMediaPlayer {
      */
     public native int GetProjectionFormat(long hdl);
     /**
+     * Original signature : <code>uint32_t GetFrameRate(Handler)</code><br>
+     * <i>native declaration : line 108</i>
+     */
+    public native int GetFrameRate(long hdl);
+    /**
      * Original signature : <code>void SetDecodeSurface(Handler, Surface, int, int)</code><br>
      * <i>native declaration : line 110</i>
      */
@@ -439,6 +444,16 @@ public class NativeMediaPlayer {
             return -1;
         }
         return GetProjectionFormat(mHandler);
+    }
+
+    public int GetFrameRate()
+    {
+        if (mHandler == 0)
+        {
+            Log.e(TAG, "Native media player is invalid!");
+            return -1;
+        }
+        return GetFrameRate(mHandler);
     }
 
     public void SetDecodeSurface(Surface surface, int texId, int video_id)

@@ -30,7 +30,6 @@
 #include "VideoDecoder_hw.h"
 #include "../Common/RegionData.h"
 #include <android/native_window_jni.h>
-#include <chrono>
 #include <math.h>
 #include <condition_variable>
 #ifdef _USE_TRACE_
@@ -496,10 +495,9 @@ RenderStatus VideoDecoder_hw::FlushDecoder(uint32_t video_id)
         else
             ANDROID_LOGD("CHANGE: successfully decode one frame at pts %ld video id %d", frame->pts, mVideoId);
         if (frame->producedTime != 0) {
-            uint64_t update_time = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
             uint64_t current_ntp_time = transferNtpToMSecond(GetNtpTimeStamp());
             uint64_t produced_time = transferNtpToMSecond(frame->producedTime);
-            ANDROID_LOGD("Produced time %ld, update time %ld, current ntp time %ld", produced_time, update_time, current_ntp_time);
+            ANDROID_LOGD("Produced time %ld, current ntp time %ld", produced_time, current_ntp_time);
             ANDROID_LOGD("Encoder to display latency for pts %ld, is %ld", frame->pts, (current_ntp_time - produced_time));
         }
         ANDROID_LOGD("mNextInputPts %d, video id %d", mNextInputPts, mVideoId);

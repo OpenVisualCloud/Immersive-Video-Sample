@@ -128,7 +128,7 @@ OMAF_STATUS OmafCurlMultiDownloader::removeTask(OmafDownloadTask::Ptr task) noex
     if (task->state() == OmafDownloadTask::State::RUNNING) {
       removeRunningTask(task);
     }
-    task_size_.fetch_sub(1);
+
     return ERROR_NONE;
   } catch (const std::exception& ex) {
     OMAF_LOG(LOG_ERROR, "Exception when remove task, ex: %s\n", ex.what());

@@ -125,6 +125,8 @@ public:
 
     int32_t GetProjectionFormat() { return m_mediaSource->GetMediaInfo().mVideoInfo[0].mProjFormat; };
 
+    int32_t GetFrameRate() { return m_mediaSource->GetMediaInfo().mVideoInfo[0].framerate_den ? (m_mediaSource->GetMediaInfo().mVideoInfo[0].framerate_num / m_mediaSource->GetMediaInfo().mVideoInfo[0].framerate_den) : 0; };
+
     int UpdateDisplayTex(int render_count);
 
     void SetDecodeSurface(jobject surface, int tex_id, int video_id)

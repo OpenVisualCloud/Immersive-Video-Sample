@@ -175,9 +175,9 @@ public:
     void PrintE2ELatencyPerformanceInFile() {
         log_file_ << "-=-=-=-=-=-=-E2E latency performance-=-=-=-=-=-=-" << endl
                   << "--------------------------------------------" << endl
-                  << "average switch latency : " << avg_e2elatency_time_ << " ms" << endl
-                  << "max switch latency : " << max_e2elatency_time_ << " ms" << endl
-                  << "min switch latency : " << min_e2elatency_time_ << " ms" << endl
+                  << "average e2e latency : " << avg_e2elatency_time_ << " ms" << endl
+                  << "max e2e latency : " << max_e2elatency_time_ << " ms" << endl
+                  << "min e2e latency : " << min_e2elatency_time_ << " ms" << endl
                   << "--------------------------------------------" << endl;
     }
 
