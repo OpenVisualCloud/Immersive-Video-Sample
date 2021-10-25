@@ -665,7 +665,7 @@ OMAF_STATUS OmafCurlMultiDownloader::ProcessDataTasks() noexcept {
     // LOG(INFO) << "Task->chunk num " << task->chunk_num_ << endl;
     if (task->downloaded_chunk_id_ == (int32_t)task->chunk_num_ - 1) {
       OMAF_LOG(LOG_INFO, "Erase task %s from pending data tasks\n", task->to_string().c_str());
-      pending_data_tasks_.erase(it);
+      it = pending_data_tasks_.erase(it);
     }
     else ++it;
   }

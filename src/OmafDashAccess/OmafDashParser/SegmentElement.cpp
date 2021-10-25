@@ -40,6 +40,8 @@ SegmentElement::SegmentElement() {
   m_duration = 0;
   m_startNumber = 0;
   m_timescale = 0;
+  m_availabilityTimeOffset = 0;
+  m_availabilityTimeComplete = false;
 }
 
 SegmentElement::~SegmentElement() {
@@ -48,6 +50,8 @@ SegmentElement::~SegmentElement() {
   m_duration = 0;
   m_startNumber = 0;
   m_timescale = 0;
+  m_availabilityTimeOffset = 0;
+  m_availabilityTimeComplete = false;
 }
 
 std::string SegmentElement::GenerateCompleteURL(const vector<BaseUrlElement*>& baseURL, string& representationID,
