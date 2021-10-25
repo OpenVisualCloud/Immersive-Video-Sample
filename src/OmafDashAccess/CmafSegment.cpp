@@ -144,7 +144,7 @@ int32_t CmafSegment::GenerateChunkStream() {
     size_t readSize = dash_stream_.ReadStreamFromOffset(buf, bytesProcessed, cur_chunk_size);
     // LOG(INFO) << "readSize " << readSize <<" cur_chunk_size " << cur_chunk_size << endl;
     if (readSize != cur_chunk_size) {
-      SAFE_DELETE(buf);
+      DELETE_ARRAY(buf);
       OMAF_LOG(LOG_WARNING, "dash stream has not enough data\n");
       return ERROR_NO_VALUE;
     }

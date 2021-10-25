@@ -479,7 +479,6 @@ void OmafMediaStream::SetupExtratorDependency() {
 int OmafMediaStream::SetupSegmentSyncer(const OmafDashParams& params) {
   OmafDashRangeSync::Ptr syncer;
   OMAF_LOG(LOG_INFO, "Setup segment window syncer!\n");
-  std::lock_guard<std::mutex> lock(mMutex);
   auto as = mMediaAdaptationSet.begin();
   if (as != mMediaAdaptationSet.end()) {
     OMAF_LOG(LOG_INFO, "Create one dash window syncer!\n");
@@ -567,7 +566,7 @@ int OmafMediaStream::DownloadSegments(bool enableCMAF) {
 int OmafMediaStream::DownloadAssignedSegments(std::map<uint32_t, TracksMap> additional_tracks, uint64_t currentTimeLine, bool enableCMAF)
 {
   int ret = ERROR_NONE;
-  std::lock_guard<std::mutex> lock(mMutex);
+  // std::lock_guard<std::mutex> lock(mMutex);
   for (auto it = mMediaAdaptationSet.begin(); it != mMediaAdaptationSet.end(); it++)
   {
     for (auto track : additional_tracks) // key: segID - value: first=trackID second=AS
