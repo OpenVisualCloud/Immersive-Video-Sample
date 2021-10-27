@@ -78,6 +78,9 @@ Segmentation::Segmentation(const Segmentation& src)
     m_trackIdStarter = src.m_trackIdStarter;
     m_frameRate.num = src.m_frameRate.num;
     m_frameRate.den = src.m_frameRate.den;
+    m_isCMAFEnabled = src.m_isCMAFEnabled;
+    m_segWriterPluginPath = std::move(src.m_segWriterPluginPath);
+    m_segWriterPluginName = std::move(src.m_segWriterPluginName);
 }
 
 Segmentation& Segmentation::operator=(Segmentation&& other)
@@ -90,6 +93,9 @@ Segmentation& Segmentation::operator=(Segmentation&& other)
     m_trackIdStarter = other.m_trackIdStarter;
     m_frameRate.num = other.m_frameRate.num;
     m_frameRate.den = other.m_frameRate.den;
+    m_isCMAFEnabled = other.m_isCMAFEnabled;
+    m_segWriterPluginPath = std::move(other.m_segWriterPluginPath);
+    m_segWriterPluginName = std::move(other.m_segWriterPluginName);
 
     return *this;
 }
