@@ -545,7 +545,7 @@ int OmafMediaStream::DownloadInitSegment() {
 
 int OmafMediaStream::DownloadSegments(bool enableCMAF) {
   int ret = ERROR_NONE;
-  std::lock_guard<std::mutex> lock(mMutex);
+  // std::lock_guard<std::mutex> lock(mMutex);
   for (auto it = mMediaAdaptationSet.begin(); it != mMediaAdaptationSet.end(); it++) {
     OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
     pAS->DownloadSegment(enableCMAF);

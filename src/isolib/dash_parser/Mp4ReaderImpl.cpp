@@ -918,7 +918,7 @@ int32_t Mp4Reader::GetSegIndexSize(uint8_t version, int32_t ref_cnt, uint64_t& s
     uint32_t freeBoxSize = (MAX_CHUNK_NUM - ref_cnt) * 32 * 3;
     //total size calculation
     uint64_t totalSizeInBit = referenceIDSize + timescaleSize + earliestPresentationTimeSize + firstOffsetSize + reservedSize + referenceCountSize +
-                                ref_cnt * uint64_t(referenceTypeSize + referencedSizeSize + subsegmentDurationSize + startsWithSAPSize + sapTypeSize + sapDeltaTimeSize) +
+                                ref_cnt * (uint64_t(referenceTypeSize) + referencedSizeSize + subsegmentDurationSize + startsWithSAPSize + sapTypeSize + sapDeltaTimeSize) +
                                 freeBoxSize;
 
     size = totalSizeInBit / 8 + sidxBoxSize;

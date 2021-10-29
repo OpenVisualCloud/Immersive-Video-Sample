@@ -1891,9 +1891,9 @@ int32_t OmafTilesStitch::GenerateOutputMergedPackets() {
       mergedPacket->SetSourceResolution(0, resolution);
       mergedPacket->SetEOS(firstPacket->GetEOS());
       mergedPacket->SetCatchupFlag(firstPacket->IsCatchup());
-      std::shared_ptr<ProducerReferenceTime> newPrft = make_unique_vcd<ProducerReferenceTime>();
+      std::shared_ptr<ProducerReferenceTime> newPrft = make_shared<ProducerReferenceTime>();
       ProducerReferenceTime *pPrft = firstPacket->GetPRFT();
-      if (newPrft != nullptr && pPrft != nullptr) {
+      if (newPrft.get() != nullptr && pPrft != nullptr) {
         newPrft->refTrackId = pPrft->refTrackId;
         newPrft->ntpTimeStamp = pPrft->ntpTimeStamp;
         newPrft->mediaTime = pPrft->mediaTime;

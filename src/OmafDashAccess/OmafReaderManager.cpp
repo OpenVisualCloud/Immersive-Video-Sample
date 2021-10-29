@@ -1829,7 +1829,7 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
     if (segment_->GetMediaType() == MediaType_Video) {
       // for each segment node, get prft information
       std::shared_ptr<ProducerReferenceTime> pPrft = make_shared<ProducerReferenceTime>();
-      if (pPrft == nullptr) return ERROR_NULL_PTR;
+      if (pPrft.get() == nullptr) return ERROR_NULL_PTR;
       ProducerReferenceTimePropery prftProp;
       ret = reader->getProducerReferenceTime(segment_->GetInitSegID(), segment_->GetSegID(), prftProp);// is an option param
       if (ret != ERROR_NONE) {
