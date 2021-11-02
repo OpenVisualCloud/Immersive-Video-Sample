@@ -411,6 +411,9 @@ OMAF_STATUS OmafCurlMultiDownloader::TriggerNextDataTransfer(OmafDownloadTask::P
       break;
     avail_chunk_id = index.first;
   }
+  if (task->stream_type_ == DASH_STREAM_STATIC) {
+    task->chunk_num_ = avail_chunk_id + 1;
+  }
   // LOG(INFO) << "Trigger data task " << task->to_string().c_str() << endl;
   OMAF_LOG(LOG_INFO, "avail_chunk_id %d, downloaded_chunk_id_ %d\n", avail_chunk_id, task->downloaded_chunk_id_);
   // LOG(INFO) << "task->easy_d_downloader_->getState() " << (int)task->easy_d_downloader_->getState() << endl;

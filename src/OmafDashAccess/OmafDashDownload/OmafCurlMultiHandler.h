@@ -105,7 +105,7 @@ class OmafDownloadTask : public VCD::NonCopyable {
  public:
   OmafDownloadTask(const SourceParams &params, OmafDashSegmentClient::OnData dcb, OmafDashSegmentClient::OnChunkData cdcb, OmafDashSegmentClient::OnState scb)
       : url_(params.dash_url_), dcb_(dcb), cdcb_(cdcb), scb_(scb), header_size_(params.header_size_),
-        chunk_num_(params.chunk_num_), enable_byte_range_(params.enable_byte_range_), downloaded_chunk_id_(params.start_chunk_id_ - 1) {
+        chunk_num_(params.chunk_num_), enable_byte_range_(params.enable_byte_range_), downloaded_chunk_id_(params.start_chunk_id_ - 1), stream_type_(params.stream_type_) {
     id_ = TASK_ID.fetch_add(1);
   };
 
@@ -222,6 +222,7 @@ class OmafDownloadTask : public VCD::NonCopyable {
   bool enable_byte_range_ = false;
   int32_t downloaded_chunk_id_ = -1;
   map<uint32_t, uint32_t> index_range_;
+  DashStreamType stream_type_ = DASH_STREAM_STATIC;
 
  private:
   static std::atomic_size_t TASK_ID;

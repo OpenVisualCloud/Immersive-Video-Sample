@@ -37,6 +37,7 @@
 
 #include <sstream>
 #include <string>
+#include "data_type.h"
 #include "../utils/safe_mem.h"
 
 namespace VCD {
@@ -193,6 +194,7 @@ class DashSegmentSourceParams {
   uint32_t chunk_num_ = 0;
   uint64_t header_size_ = 0;
   bool enable_byte_range_ = false;
+  DashStreamType stream_type_ = DASH_STREAM_STATIC;
 
   std::string to_string() const noexcept {
     std::stringstream ss;
