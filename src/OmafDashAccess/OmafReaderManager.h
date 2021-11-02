@@ -130,6 +130,8 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
 
   void SetStartOffsetPts(int64_t pts) { offset_pts_ = pts; };
 
+  DashStreamType GetStreamType() { return work_params_.stream_type_; };
+
   uint64_t GetOldestPacketPTSForTrack(int trackId);
   void RemoveOutdatedPacketForTrack(int trackId, uint64_t currPTS);
   void RemoveOutdatedCatchupPacketForTrack(int trackId, uint64_t currPTS);
@@ -147,6 +149,18 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
       }
 
       return samples_num;
+  }
+
+  OmafReaderParams GetWorkParams() { return work_params_; };
+
+  DashStreamInfo* GetVideoStreamInfo() {
+    for (int i = 0; i < media_source_->GetStreamCount(); i++) {
+      OmafMediaStream *pStream = media_source_->GetStream(i);
+      if (pStream && pStream->GetStreamMediaType() == MediaType::MediaType_Video) {
+        return pStream->GetStreamInfo();
+      }
+    }
+    return nullptr;
   }
 
  private:

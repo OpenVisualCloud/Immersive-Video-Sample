@@ -554,7 +554,7 @@ int OmafMediaStream::DownloadSegments(bool enableCMAF) {
   // NOTE: this function should be in the same thread with UpdateEnabledExtractors
   //       , otherwise mCurrentExtractors need a mutex lock
   // pthread_mutex_lock(&mCurrentMutex);
-  std::lock_guard<std::mutex> lock_et(mExtractorsMutex);
+  // std::lock_guard<std::mutex> lock_et(mExtractorsMutex);
   for (auto extrator_it = mExtractors.begin(); extrator_it != mExtractors.end(); extrator_it++) {
     OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
     extractor->DownloadSegment(enableCMAF);

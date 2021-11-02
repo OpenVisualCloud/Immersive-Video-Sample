@@ -458,6 +458,7 @@ int OmafAdaptationSet::DownloadSegment(bool enableCMAF) {
   params.start_chunk_id_ = (mSegNum == 1) ? mStartChunkId : 0; // start chunk from 0
   params.chunk_num_ = (mChunkDuration == 0) ? 1 : mSegmentDuration * 1000 / mChunkDuration;
   params.header_size_ = 0;
+  params.stream_type_ = omaf_reader_mgr_->GetStreamType();
 
   OmafSegment::Ptr pSegment = nullptr;
   if (enableCMAF) {
@@ -566,6 +567,7 @@ int OmafAdaptationSet::DownloadAssignedSegment(uint32_t trackID, uint32_t segID,
   params.start_chunk_id_ = start_chunk_id;
   params.chunk_num_ = (mChunkDuration == 0) ? 1 : mSegmentDuration * 1000 / mChunkDuration;
   params.header_size_ = 0;
+  params.stream_type_ = omaf_reader_mgr_->GetStreamType();
 
   OmafSegment::Ptr pSegment = nullptr;
   if (enableCMAF) {

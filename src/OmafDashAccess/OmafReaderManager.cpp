@@ -1817,7 +1817,29 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
       OMAF_LOG(LOG_ERROR, "Failed to find the sample range for segment. %s\n", this->to_string().c_str());
       return ERROR_INVALID;
     }
-    samples_num_ = (sample_end - sample_begin) * segment_->GetChunkNum();
+
+    auto reader_mgr = omaf_reader_mgr_.lock();
+    if (reader_mgr.get() == nullptr) return ERROR_NULL_PTR;
+
+    DashStreamInfo * stream_info = reader_mgr->GetVideoStreamInfo();
+    if (stream_info == nullptr || stream_info->framerate_den == 0) return ERROR_NULL_PTR;
+
+    int32_t total_frame_num =
+        round(float(reader_mgr->GetWorkParams().duration_) / 1000 * round(float(stream_info->framerate_num) / stream_info->framerate_den));
+
+    int32_t last_segment_id = segment_->GetSegID() - 1;
+    size_t last_segment_sample_num = reader_mgr->GetSamplesNumPerSegmentForTimeLine(last_segment_id);
+
+    size_t remain_sample_num =
+        total_frame_num - last_segment_id * last_segment_sample_num;
+
+    if (reader_mgr->GetWorkParams().stream_type_ == DashStreamType::DASH_STREAM_STATIC && remain_sample_num < last_segment_sample_num) {// if last segment sample num < a normal segment sample num
+      samples_num_ = total_frame_num - last_segment_sample_num * last_segment_id;
+    }
+    else {
+      samples_num_ = (sample_end - sample_begin) * segment_->GetChunkNum();
+    }
+
     OMAF_LOG(LOG_INFO, "segment %s has samples num %ld\n", this->to_string().c_str(), samples_num_);
 #if 0
     if (sample_begin < 1) {
