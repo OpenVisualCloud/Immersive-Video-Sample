@@ -12,6 +12,8 @@ Dash Access library is a client library for accessing the tiled-based viewport-d
 - Support cube-map projected media content in both extractor track mode and later binding mode.
 - Support AAC audio DASH MPD file parsing, segments downloading and parsing
 - Support planar projected media content in later binding mode.
+- Support in-time catch up strategy when view switching occurs to reduce the motion-to-high-quality latency.
+- Support LL-DASH-based CMAF streaming and processing, including segment index parsing, chunk downloading and prft box parsing.
 
 <IMG src="img/OMAF_Compliant-Video-Delivery-DashAccess.png" height="380">
 

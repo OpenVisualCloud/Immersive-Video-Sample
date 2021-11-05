@@ -15,6 +15,8 @@ Except for 3D projection media contents, planar format is supported in late bind
 
 Extractor-track and later-binding strategy are both supported. Thus, there may be multiple videos of different quality rankings in one input stream. Decoder manager is created to support multi-decoder process. Decoders will be destroyed, restarted or reset if the number of videos, resolution or codec format changes.
 
+DASH-based CMAF streaming is supported in both Linux and android platform. Enabled "prft" structure parsing and traced End-to-end latency in live mode.
+
 The very important step in render is how to correctly remap the mixed-resolution decoded frame to the display texture in space. Region-wise Packing (RWPK) information would be obtained from Omaf Dash Access library together with an encoded packet, which represents the mapping space relationship between decoded frame and sphere texture. The RWPK schematic diagram is shown as follows:
 
 <IMG src="img/OMAF_Compliant-Video-Delivery-rwpk.png" height="250">
