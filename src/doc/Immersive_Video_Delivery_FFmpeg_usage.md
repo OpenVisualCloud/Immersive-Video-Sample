@@ -6,11 +6,11 @@
 - The FFmpeg patches based on specific code base are provided in the project to enable these plugins.
 - The sample command for "decoder + encoder + packing":
 ```bash
-  ffmpeg -i [file] -input_type 1 \
+  ffmpeg -i [file] -input_type 1 -rc 1 \
       -c:v:0 distributed_encoder -s:0 3840x1920 -tile_row:0 6 -tile_column:0 10 \
-      -config_file:0 config_high.xml -g:0 15 -b:0 30M -map 0:v \
+      -config_file:0 config_high.xml -la_depth:0 2 -g:0 15 -b:0 30M -map 0:v \
       -c:v:1 distributed_encoder -s:1 1024x640 -tile_row:1 2 -tile_column:1 4 \
-      -config_file:1 config_low.xml -g:1 15 -b:1 5M -map 0:v \
+      -config_file:1 config_low.xml -la_depth:1 2 -g:1 15 -b:1 5M -map 0:v \
       -f omaf_packing -is_live 0 -split_tile 1 -seg_duration 1 -window_size 20 -extra_window_size 30 \
       -base_url http://[server ip]/OMAFStatic_4k/ -out_name Test /usr/local/nginx/html/OMAFStatic_4k/
 ```
@@ -49,6 +49,13 @@ OMAF Packing Plugin is a multiplexer in the pipeline to use OMAF packing library
 | audio_plugin_path | Audio stream process plugin path | string | N/A | "null" | NO |
 | audio_plugin_name | Audio stream process plugin name | string | N/A | "null" | NO |
 | fixed_extractors_res | Whether extractor track needs the fixed resolution | bool | 0 | 0, 1 | NO |
+| cmaf_enabled | Whether to enable CMAF segments | bool | 0 | 0, 1 | NO |
+| chunk_dur | CMAF chunk duration in millisecond | int | 0 | N/A | NO |
+| seg_writer_path | Segment writer plugin path | string | N/A | "/usr/local/lib" | NO |
+| seg_writer_name | Segment writer plugin name | string | N/A | "SegmentWriter" | NO |
+| target_latency | Target end to end latency in live streaming in millisecond | int | 3500 | N/A | NO |
+| min_latency | Minimum end to end latency in live streaming in millisecond | int | 2000 | N/A | NO |
+| max_latency | Maximum end to end latency in live streaming in millisecond | int | 10000 | N/A | NO |
 | need_external_log | Whether external log callback is needed | bool | 0 | 0, 1 | NO |
 | min_log_level | Minimal log level of output [0: INFO, 1: WARNING, 2: ERROR, 3: FATAL] | int | 2 | [0, 3] | NO |
 

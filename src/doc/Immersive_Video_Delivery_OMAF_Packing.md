@@ -34,6 +34,11 @@ The main OMAF compliant features in this library are listed as follows:
 - Support AAC audio DASH track.
 - Support planar projection format in later binding mode.
   When the input sources come from planar projectin, the main Adaptation Set item in MPD will give the all video information, like resolution and tile slize.
+- Support plugin mechanism for OMAF segments writing.
+
+The features for low delay streaming in this library are listed as follows:
+- Support DASH chunk duration set.
+- Support customized plugin to writing CMAF compliant segments.
 
 ## API Call Sequence
 - Call VROmafPackingInit API to create and initialize VROmafPacking library instance
