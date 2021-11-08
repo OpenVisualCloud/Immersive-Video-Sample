@@ -7,6 +7,7 @@ Now there are totally four types plugins supported:
 - OMAFPacking_Plugin : plugin for region-wise packing information generation for extractor track used in VROmafPacking library.
 - StreamProcess_Plugin : plugin for media stream process, including both video stream and audio strem, also used in VROmafPacking library.
 - 360SCVP_Plugin/TileSelection_Plugins: plugins with multiple tile selection methods for 2D/3D videos under different using scenarios in 360SCVP library.
+- DashWriter_Plugin: plugin for DASH segment generation used in VROmafPacking library.
 
 ## ViewportPredict_Plugin
 The main function of ViewportPredict_Plugin is to predict viewport angles with linear regression model using trajectory feedback in real time.
@@ -52,3 +53,14 @@ This is one kind of 360SCVP Plugins which can support 2D Planar video but also c
 - Then the API 'SetViewportInfo' is called to pass down the headpose information, which includes the viewport center point coordinates, the tile selection mode, and the moving direction and speed.
 - Now the API 'GetTilesInViewport' can be called to get tile selection results based on the initial configurations and headpose information. The output struct array element stores the selected tile information including the upleft point coordinate, the streamId which indicates the resolution this tile is.
 - When the playback finished, the unInit API will be called to release internal dynamic memory and reset internal variables.
+
+## DashWriter_Plugin
+The main function of DashWriter_Plugin is to generate DASH segments.
+
+SegmentWriter
+This plugin is used to generate OMAF compliant DASH segments.
+The APIs of DashWriter_Plugin can be divided into four types : AddTracks, WriteInitSegment, Feed and WriteSegments.
+- AddTracks should be called firstly to set up all tracks for input source, like H.265 tile track, H.265 extractor track and AAC track according to configuration.
+- WriteInitSegment will generate DASH initial segment according to prepared information, like region-wise packing information, and it is called based on track.
+- Feed is responsible for sending video/audio frame data to be written into segment and it should be called based on frame for each track.
+- WriteSegments will write frames data sent by Feed into DASH segment based on track.
