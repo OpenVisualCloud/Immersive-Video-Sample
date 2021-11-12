@@ -166,6 +166,7 @@ private:
     FILE*                               m_singleFile;
     uint32_t                            m_maxVideoWidth;
     uint32_t                            m_maxVideoHeight;
+    uint32_t                            m_segmentDuration;
 };
 
 VCD_NS_END
