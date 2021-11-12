@@ -1116,6 +1116,22 @@ std::map<uint32_t, std::map<int, OmafAdaptationSet*>> OmafDashSource::GetNewTrac
       iter++;
     }
   }
+  // order limitation
+  for (auto cu = catchupTimesInSeg.begin(); cu != catchupTimesInSeg.end(); cu++)
+  {
+    for (auto ad = additional_tracks.begin(); ad != additional_tracks.end();)
+    {
+      if (ad->first < cu->first) // if additional tracks have pts greater than pts in catchup list, then erase it for order limitation.
+      {
+        // LOG(INFO) << "ad->first " << ad->first << " cu->first " << cu->first << endl;
+        ad = additional_tracks.erase(ad);
+      }
+      else
+      {
+        ad++;
+      }
+    }
+  }
   return additional_tracks;
 }
 VCD_OMAF_END
