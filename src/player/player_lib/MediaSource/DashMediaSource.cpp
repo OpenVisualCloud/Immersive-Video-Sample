@@ -64,6 +64,7 @@ DashMediaSource::DashMediaSource() {
   m_needStreamDumped = false;
   m_maxVideoWidth = 0;
   m_maxVideoHeight = 0;
+  m_segmentDuration = 0;
 #ifndef _ANDROID_OS_
   GetStreamDumpedOptionParams();
 #endif
@@ -209,6 +210,7 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   decode_info.frameRate_den = mediaInfo.stream_info[vi.streamID].framerate_den;
   decode_info.frameRate_num = mediaInfo.stream_info[vi.streamID].framerate_num;
   decode_info.segment_duration = mediaInfo.stream_info[vi.streamID].segmentDuration;
+  m_segmentDuration = mediaInfo.stream_info[vi.streamID].segmentDuration;
   m_DecoderManager->SetDecodeInfo(decode_info);
   RenderStatus ret = m_DecoderManager->Initialize(m_rsFactory);
   if (RENDER_STATUS_OK != ret) {
@@ -369,12 +371,13 @@ void DashMediaSource::ProcessVideoPacket() {
   static bool needHeaders = true;
   static uint64_t currentWaitTime = 0;
   uint64_t pts = 0;
+  uint32_t maxWaitTimeout = m_segmentDuration == 0 ? WAIT_PACKET_TIME_OUT : m_segmentDuration * 10 * 1000;
   int ret =
       OmafAccess_GetPacket(m_handler, vi.streamID, &(dashPkt[0]), &dashPktNum, (uint64_t *)&pts, needHeaders, false);
   if (ERROR_NONE != ret) {
     // LOG(INFO) << "Get packet failed: stream_id:" << vi.streamID << ", ret:" << ret << std::endl;
     currentWaitTime++;
-    if (currentWaitTime > WAIT_PACKET_TIME_OUT) // wait 5s but get packet failed
+    if (currentWaitTime > maxWaitTimeout) // wait but get packet failed
     {
       m_status = STATUS_TIMEOUT;
 #ifdef _ANDROID_OS_
