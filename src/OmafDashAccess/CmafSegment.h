@@ -108,7 +108,7 @@ private:
   int64_t index_length_ = 0; //<! index box size
 
   // omaf reader
-  std::shared_ptr<OmafReader> reader_;
+  OmafReader *reader_;
 
   map<uint32_t, uint32_t> index_range_; //<! first: chunk id, second: chunk size
 

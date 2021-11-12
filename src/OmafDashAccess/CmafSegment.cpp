@@ -40,7 +40,7 @@ VCD_OMAF_BEGIN
 
 CmafSegment::CmafSegment(DashSegmentSourceParams ds_params, int segCnt, bool bInitSegment)
     : OmafSegment(ds_params, segCnt, bInitSegment) {
-  reader_ = std::make_shared<OmafMP4VRReader>();
+  reader_ =  new OmafMP4VRReader();
   index_length_ = 0;
 }
 
@@ -48,6 +48,7 @@ CmafSegment::~CmafSegment() {
   chunk_stream_.clear();
   header_stream_.clear();
   index_range_.clear();
+  SAFE_DELETE(reader_);
 }
 
 int CmafSegment::Open(std::shared_ptr<OmafDashSegmentClient> dash_client) noexcept {
@@ -112,7 +113,7 @@ int CmafSegment::Open(std::shared_ptr<OmafDashSegmentClient> dash_client) noexce
 }
 
 int32_t CmafSegment::GetSegmentIndexLength(uint32_t chunk_num, uint64_t& size) {
-  if (reader_.get() == nullptr) return ERROR_NULL_PTR;
+  if (reader_ == nullptr) return ERROR_NULL_PTR;
   return reader_->getSegmentHeaderSize(chunk_num, size, 1);
 }
 
@@ -167,6 +168,7 @@ int32_t CmafSegment::GenerateChunkStream() {
 
 int32_t CmafSegment::UpdateHeaderStream(std::unique_ptr<StreamBlock> sb)
 {
+  if (reader_ == nullptr) return ERROR_NULL_PTR;
   int64_t sb_size = sb->size();
   header_stream_.clear();
   header_stream_.push_back(std::move(sb));
@@ -176,7 +178,6 @@ int32_t CmafSegment::UpdateHeaderStream(std::unique_ptr<StreamBlock> sb)
     char *indexBuf = new char[index_length_];
     header_stream_.ReadStream(indexBuf, index_length_);
     // 2. get index_range_
-    if (reader_.get() == nullptr) return ERROR_NULL_PTR;
     if (reader_->getSegmentIndexRange(indexBuf, index_length_, index_range_) != ERROR_NONE) {
       OMAF_LOG(LOG_ERROR, "Get segment index range failed!\n");
       return ERROR_INVALID;
