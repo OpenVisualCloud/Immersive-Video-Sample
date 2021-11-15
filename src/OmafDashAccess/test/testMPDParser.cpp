@@ -35,9 +35,9 @@ class MPDParserTest : public testing::Test {
 public:
     virtual void SetUp(){
 
-        url_live = "http://10.67.112.194:8080/testOMAFlive/Test.mpd";
-        url_static = "http://10.67.112.194:8080/testOMAFstatic/Test.mpd";
-        url_cmaf_live = "http://10.67.112.194:8080/testCMAFlive/Test.mpd";
+        url_live = "http://10.67.115.92:8080/testOMAFlive/Test.mpd";
+        url_static = "http://10.67.115.92:8080/testOMAFstatic/Test.mpd";
+        url_cmaf_live = "http://10.67.115.92:8080/testCMAFlive/Test.mpd";
     }
 
     virtual void TearDown(){

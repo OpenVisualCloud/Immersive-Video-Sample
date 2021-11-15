@@ -42,14 +42,14 @@ class DownloaderTest : public testing::Test {
     OMAF_LOG(LOG_INFO, "Calling setup\n");
 
     outsite_url = "https://www.baidu.com";
-    valid_url = "http://10.67.112.194:8080/testOMAFlive/Test.mpd";
+    valid_url = "http://10.67.115.92:8080/testOMAFlive/Test.mpd";
 
     invalid_url = invalid_url + "invalid";
 
-    valid_cmaf_url = "http://10.67.112.194:8080/testCMAFstatic/Test_track1.1.mp4";
+    valid_cmaf_url = "http://10.67.115.92:8080/testCMAFstatic/Test_track1.1.mp4";
     invalid_cmaf_url = valid_cmaf_url + "invalid";
 
-    no_proxy = "127.0.0.1,*.intel.com,10.67.112.194";
+    no_proxy = "127.0.0.1,*.intel.com,10.67.115.92";
     proxy_url = "http://child-prc.intel.com:913";
     invalid_proxy_url = "http://chil-prc.intel.com:913";
 

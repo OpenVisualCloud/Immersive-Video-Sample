@@ -37,10 +37,10 @@ namespace {
 class MediaSourceTest : public testing::Test {
  public:
   virtual void SetUp() {
-    url_live = "http://10.67.112.194:8080/testOMAFlive/Test.mpd";
+    url_live = "http://10.67.115.92:8080/testOMAFlive/Test.mpd";
     // url_static = "https://10.67.119.113:443/UT_testOMAFstatic/Test.mpd";
     // url_static = "http://10.67.119.113:8080/UT_testOMAFstatic/Test.mpd";
-    url_static = "http://10.67.112.194:8080/testOMAFstatic/Test.mpd";
+    url_static = "http://10.67.115.92:8080/testOMAFstatic/Test.mpd";
     cache = "./cache";  // getpwuid(getuid())->pw_dir + std::string("/cache");
     pluginName = "libViewportPredict_LR.so";
     libPath = "../../plugins/ViewportPredict_Plugin/predict_LR/";

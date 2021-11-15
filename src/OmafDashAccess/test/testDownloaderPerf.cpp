@@ -42,7 +42,7 @@ class DownloaderPerfTest : public testing::Test {
   virtual void SetUp() {
     OMAF_LOG(LOG_INFO, "Calling setup\n");
 
-    valid_url = "http://10.67.112.194:8080/testOMAFlive/Test.mpd";
+    valid_url = "http://10.67.115.92:8080/testOMAFlive/Test.mpd";
 
     invalid_url = invalid_url + "invalid";
 
