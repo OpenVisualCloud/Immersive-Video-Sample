@@ -12,7 +12,7 @@ ARG WORKDIR=/home/immersive
 # Install denpendency
 RUN yum install -y centos-release-scl-rh && \
     yum install -y wget git bzip2 xz sudo devtoolset-7-gcc* && \
-    wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-13.noarch.rpm && \
+    wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm && \
     rpm -Uvh epel-release*rpm && \
     yum install -y openssl centos-release-scl scl-utils gmp gmp-devel && \
     yum install -y mpfr mpfr-devel libmpc libmpc-devel patch autoconf && \
