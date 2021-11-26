@@ -1,9 +1,8 @@
 <?txt version="1.0" encoding="UTF-8"?>
 <sessionList>
     <session name="Session">
-        <option isNative="false" />
-        <option ipAddress="127.0.0.1" />
-        <option port="9090" />
+        <option encoder="svt" />
+        <option isNative="true" />
         <option targetSocket="1" />
     </session>
 </sessionList>
