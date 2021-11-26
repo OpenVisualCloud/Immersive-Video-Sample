@@ -41,6 +41,7 @@
 #define GUARD_BAND_TYPE 4
 #define IP_ADDRESS_LEN 16
 #define MAX_SESSION_COUNT 32
+#define MAX_REGION_COUNT 512
 
 //!
 //! \enum   DispatchType
@@ -119,7 +120,7 @@ typedef enum
 {
     EncoderType_None = 0,
     EncoderType_SVTHEVC,
-    EncoderType_Multiple_SVTHEVC,
+    EncoderType_SG1VAAPI,
 }EncoderType;
 
 //!
@@ -139,11 +140,12 @@ typedef struct HEADERS
 //!
 typedef struct SESSIONINFO
 {
-    bool    isNative;                  //!< Native or remote mode
-    char    ipAddress[IP_ADDRESS_LEN]; //!< IP address of worker
-    int32_t port;                      //!< Port of worker
-    int32_t targetSocket;              //!< Target CPU group
-    int32_t gpuNode;                   //!< Assigned GPU node
+    EncoderType encoder;                   //!< Type of encoder
+    bool        isNative;                  //!< Native or remote mode
+    char        ipAddress[IP_ADDRESS_LEN]; //!< IP address of worker
+    int32_t     port;                      //!< Port of worker
+    int32_t     targetSocket;              //!< Target CPU group
+    int32_t     gpuNode;                   //!< Assigned GPU node
 }SessionInfo;
 
 //!
@@ -202,9 +204,12 @@ typedef struct ENCODERPARAM{
     uint8_t  MCTS_enable;               //!< motion vector constrains flag
     uint8_t  tile_columnCnt;            //!< tile column count when tile is enabled
     uint8_t  tile_rowCnt;               //!< tile row count when tile is enabled
+    uint32_t frame_width;               //!< width of frame
+    uint32_t frame_height;              //!< height of frame
     int8_t   target_socket;             //!< Target socket to run on
+    int32_t  gpu_node;                  //!< GPU node to encode frames
     bool     in_parallel;               //!< multiple tiles encoding in parallel
-    bool     native_mode;                //!< flag of native mode for encoder
+    bool     native_mode;               //!< flag of native mode for encoder
 }EncoderParam;
 
 typedef struct INPUTFRAME{
@@ -277,6 +282,23 @@ typedef struct CODECAPPOPTION{
     uint32_t        minLogLevel;        //!< Minimal log level of output
 }CodecAppOption;
 
+typedef struct MANUALREGIONINFO {
+    int32_t x;
+    int32_t y;
+    int32_t w;
+    int32_t h;
+
+    int32_t encMode;
+    int32_t rcMode;
+    int32_t qp;
+    int32_t bitRate;
+}ManualRegionInfo;
+
+typedef struct REGIONSESSIONPAIR{
+    ManualRegionInfo *regionInfo;
+    int32_t          sessionNumber;
+}RegionSessionPair;
+
 //!
 //! \struct:  DistributedEncoderParam
 //! \brief:   parameters for distributed encoder library
@@ -290,6 +312,8 @@ typedef struct DISTRIBUTEDENCODERPARAM{
     bool                        glogInitialized;                 //!< Whether glog has been initialized
     SessionInfo                 *sessionList[MAX_SESSION_COUNT]; //!< Session info list
     uint8_t                     sessionCount;                    //!< Session info count
+    RegionSessionPair           regionInfoList[MAX_REGION_COUNT];//!< Region info List
+    uint8_t                     regionCount;                     //!< Region info count
 }DistributedEncoderParam;
 
 #ifdef __cplusplus
