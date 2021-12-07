@@ -1,4 +1,42 @@
 # **Changelog**
+
+---
+## [1.8.0] - 2021-12-7
+**Features & bug fix:**
+- OMAF Packing Library
+   + Support DASH segment writer plugin mechanism
+   + Support customized CMAF compliant segment writer plugin to generate CMAF segments
+   + Support CMAF compliance in DASH MPD file
+   + Support CMAF chunk duration correction to align with video GOP size
+
+- OMAF Dash Access Library
+   + Support ISOBMFF segment index box parsing and CMAF chunk downloading and parsing
+   + Support CMAF compliant DASH MPD file parsing
+   + Support E2E latency tracking
+
+- 360SCVP (Stream Concatenation and Viewport Processing) Library
+   + Support HEVC bitstream parsing for multiple short-term reference picture sets and reference picture lists modification
+
+- Reference OMAF Player
+   + Android Player: Add different framerate rendering and CMAF support
+   + Linux Player: Add CMAF support
+   + Linux Player: Support segment-duration adaptive time-out threshold setting
+   + bug fix: memory leak in android player
+
+- FFmpeg Plugins & Encoder Library
+   + Encoder Library: Support hardware accelerated encoding
+   + Encoder Library: Extend config file for hardware accelerated encoding
+   + Encoder Library: Fix incorrect frame list issue, bitrate overflow issue and asyn depth wrong value issue
+   + Encoder Library: Add fake coded frame checking log for hardware accelerated encoding
+   + FFmpeg Plugins: Add option for CMAF segment generation
+   + FFmpeg Plugins: Support 8K resolution SDI I/O input
+
+- Live360SDK Library
+   + Support video bitstream re-writing, FOV selection etc. functions for the edge
+   + Update WebRTC 360 sample with the library
+   + Upgrade WebRTC 360 sample to OWT5.0
+   + Support dynamic input config parameters in WebRTC 360 sample
+
 ---
 ## [1.6.0] - 2021-6-4
 **Features & bug fix:**
