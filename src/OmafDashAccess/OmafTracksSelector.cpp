@@ -283,6 +283,7 @@ int OmafTracksSelector::EnablePosePrediction(std::string predictPluginName, std:
   // 2. initial plugin
   ViewportPredictPlugin *plugin = mPredictPluginMap.at(mPredictPluginName);
   PredictOption option;
+  memset_s(&option, sizeof(PredictOption), 0);
   option.usingFeedbackAngleAdjust = true;
   if (enableExtractor){
     option.mode = PredictionMode::SingleViewpoint;
