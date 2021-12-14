@@ -26,13 +26,13 @@ cp -r ${SRCPATH}CMakeLists.txt ${DSTPATH}
 cp -r ${REPOPATH}Sample-Videos ${DSTPATH}
 
 if [ $# = 1 ] ; then
-    docker build -t immersive_server:v1.4 .
+    docker build -t immersive_server:v1.8 .
 elif [ $# = 2 ] ; then
     if [ "$1" = "-h" ] ; then
         parameters_usage
     else
         PROXY=$2
-        docker build -t immersive_server:v1.4 \
+        docker build -t immersive_server:v1.8 \
             --build-arg http_proxy=${PROXY} \
             --build-arg https_proxy=${PROXY} .
         echo "PROXY:${PROXY}"
