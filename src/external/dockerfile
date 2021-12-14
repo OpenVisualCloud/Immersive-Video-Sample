@@ -197,17 +197,6 @@ RUN git clone https://github.com/intel/safestringlib.git && \
 # Configure And Run Nginx
 COPY nginx_conf /usr/local/nginx/conf
 
-# Build Server
-RUN cd external && \
-    source /opt/rh/devtoolset-7/enable && \
-    ./install_FFmpeg.sh server && \
-    ./build.sh server n && \
-    mv ../build/server/ffmpeg/ffmpeg ../Sample-Videos && \
-    cd .. && rm -rf `ls | grep -v Sample-Videos`
-
-COPY run.sh ${WORKDIR}/Sample-Videos
-COPY src/ffmpeg/dependency/*.xml ${WORKDIR}/Sample-Videos/
-
 # Unset proxy if necessary
 RUN if [ -n "${http_proxy}" ]; then \
     sed -i '$d' /etc/yum.conf && \
