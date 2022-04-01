@@ -1613,6 +1613,7 @@ static int32_t gts_media_hevc_read_sps_bs(GTS_BitStream *bs, HEVCState *hevc, ui
         for (uint32_t idx = 0; idx < spsInforHevc->num_short_term_ref_pic_sets; idx++)
         {
             spsInforHevc->used_by_curr_pic_flags[idx] = 0;
+            memset((void *)&spsInforHevc->rps[idx], 0, sizeof(HEVC_ReferencePictureSets));
 
             if (idx > 0)
                 spsInforHevc->rps[idx].inter_ref_pic_set_prediction_flag = gts_bs_read_int(bs, 1);
