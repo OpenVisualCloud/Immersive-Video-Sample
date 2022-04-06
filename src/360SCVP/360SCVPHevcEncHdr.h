@@ -34,6 +34,7 @@ void hevc_write_bitstream_aud(GTS_BitStream *stream,    HEVCState * const state)
 void hevc_write_parameter_sets(GTS_BitStream *stream, HEVCState * const state);
 void hevc_write_slice_header(GTS_BitStream * stream, HEVCState * state);
 uint32_t hevc_write_RwpkSEI(GTS_BitStream * stream, const RegionWisePacking* pRegion, int32_t temporalIdPlus1);
+uint32_t hevc_write_novelViewSEI(GTS_BitStream * stream, NovelViewSEI* sei_in, int32_t temporalIdPlus1);
 uint32_t hevc_write_ProjectionSEI(GTS_BitStream * stream, int32_t projType, int32_t temporalIdPlus1);
 uint32_t hevc_write_SphereRotSEI(GTS_BitStream * stream, const SphereRotation* pSphereRot, int32_t temporalIdPlus1);
 uint32_t hevc_write_FramePackingSEI(GTS_BitStream * stream, const FramePacking* pFramePacking, int32_t temporalIdPlus1);

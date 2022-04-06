@@ -273,6 +273,24 @@ uint64_t gts_bs_read_long_int(GTS_BitStream *bs, uint32_t nBits)
 }
 
 
+float bs_read_float(GTS_BitStream* bs, unsigned int precision)
+{
+    seifloat var;
+    var.seg.sign = gts_bs_read_int(bs, 1);
+    unsigned int exponent_six_bits = gts_bs_read_int(bs, 6);
+    var.seg.exponent = exponent_six_bits - 31 + 127;
+    unsigned int size = exponent_six_bits + precision - 31;
+    if (exponent_six_bits == 0) {
+        var.seg.exponent = 0;
+        size = 4;
+    }
+    if (size>=23) size=23;
+    var.seg.mantissa = gts_bs_read_int(bs, size);
+    var.seg.mantissa <<= (23 - size);
+
+    return var.f;
+}
+
 uint32_t gts_bs_read_data(GTS_BitStream *bs, int8_t *data, uint32_t nbBytes)
 {
     uint64_t orig = 0;
@@ -468,6 +486,40 @@ uint32_t gts_bs_write_byte(GTS_BitStream *bs, uint8_t byte, uint32_t countLoop)
     default:
         return 0;
     }
+}
+
+float bs_write_float(GTS_BitStream* bs, float value, unsigned int precision)
+{
+    seifloat var;
+    var.f = value;
+    unsigned int sign = var.seg.sign;
+    unsigned int exponent = var.seg.exponent;
+    unsigned int mantissa = var.seg.mantissa;
+    unsigned int exponent_six_bits = var.seg.exponent - 127 + 31;
+    unsigned int size = exponent_six_bits + precision - 31;
+    if (exponent < 96 || exponent > 157) {
+        if (exponent == 0 && mantissa == 0) {
+            exponent_six_bits = 0;
+            size = 4;
+        }
+        else {
+            printf("error");
+        }
+    }
+    //If the calculated mantissa size is bigger than 23, the size is set to 23.
+    //Because according to IEEE 754 single precision,a float number contains no more than 23 digits of mantissa.
+    if (size>=23) size=23;
+    mantissa >>= (23 - size);
+
+    gts_bs_write_int(bs, sign, 1);
+    gts_bs_write_int(bs, exponent_six_bits, 6);
+    gts_bs_write_int(bs, mantissa, size);
+
+    var.seg.sign = sign;
+    var.seg.exponent = exponent_six_bits - 31 + 127;
+    var.seg.mantissa = mantissa <<= (23 - size);
+    return var.f;
+
 }
 
 uint32_t gts_bs_write_data(GTS_BitStream *bs, const int8_t *data, uint32_t nbBytes)

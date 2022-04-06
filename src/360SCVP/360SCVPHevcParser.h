@@ -191,6 +191,28 @@ struct RegionWisePackingSEI
     uint32_t timeStamp;
 };
 
+typedef struct __sei_structure_impl
+{
+    bool long_start_code;
+    uint8_t nal_unit_type;
+    uint8_t temporal_id;
+    uint8_t layer_id;
+    uint32_t payloadType;
+    uint32_t payloadSize;
+    uint8_t camera_position_flag;
+    uint8_t intrinsic_param_flag;
+    uint8_t extrinsic_param_flag;
+    uint8_t distortion_param_flag;
+    uint8_t num_views_minus1;
+    uint8_t prec_focal_length;
+    uint8_t prec_principal_point;
+    uint8_t prec_rotation_param;
+    uint8_t prec_translation_param;
+    uint8_t prec_distortion_param;
+    uint8_t prec_metric_radius;
+    NovelViewSEI seiAPI;
+}SEI_Structure_Impl;
+
 struct ViewportStruct
 {
     int32_t  AzimuthCentre;
@@ -587,6 +609,7 @@ int32_t gts_media_hevc_stitch_slice_segment(HEVCState *hevc, void* slice, uint32
 
 uint32_t gts_media_nalu_next_start_code_bs(GTS_BitStream *bs);
 int32_t hevc_read_RwpkSEI(int8_t *pRWPKBits, uint32_t RWPKBitsSize, RegionWisePacking* pRWPK);
+int32_t hevc_read_novelViewSEI(NovelViewSEI* sei_out, uint8_t* pSEIBits, uint32_t SEIBitsSize);
 #define MAX_TILE_ROWS 64
 #define MAX_TILE_COLS 64
 

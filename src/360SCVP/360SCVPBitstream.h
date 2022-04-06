@@ -57,6 +57,14 @@ extern "C" {
 
     } GTS_Err;
 
+    typedef union {
+        float f;
+        struct {
+            unsigned int mantissa : 23;
+            unsigned int exponent : 8;
+            unsigned int sign : 1;
+        }seg;
+    } seifloat;
 
 void* gts_malloc(size_t size);
 
@@ -223,6 +231,16 @@ uint32_t gts_bs_read_U32(GTS_BitStream *bs);
 uint32_t gts_bs_get_bit_offset(GTS_BitStream *bs);
 
 /*!
+ *    \brief read float value with given precision
+ *
+ *    \param GTS_BitStream *bs       input  the target bitstream
+ *    \param unsigned int precision  input  precision of mantissa
+ *
+ *    \return float the float value read.
+ */
+float bs_read_float(GTS_BitStream* bs, unsigned int precision);
+
+/*!
  *    \brief Returns bit position in the current byte of the bitstream - only works in memory mode.
  *
  *    \param GTS_BitStream *bs      input  the target bitstream
@@ -268,6 +286,18 @@ void gts_bs_write_U8(GTS_BitStream *bs, uint32_t value);
  */
 void gts_bs_write_U16(GTS_BitStream *bs, uint32_t value);
 
+/*!
+ *    \brief write a float with given precision
+ *           the float number written equals (-1)^sign * 2^(exponent_six_bits-31) * (1.mantissa)
+ *           the precision reflects the size of mantissa written to the bitstream when (exponent_six_bits-31) equals 0
+ *
+ *    \param GTS_BitStream *bs      input  the target bitstream
+ *    \param float  value           input  the float value to write
+ *    \param unsigned int precision       input  precision of mantissa
+ *
+ *    \return float                 the compressed float value written to the bitstream.
+ */
+float bs_write_float(GTS_BitStream* bs, float value, unsigned int precision);
 
 /*!
  *    \brief Writes a give byte multiple times.

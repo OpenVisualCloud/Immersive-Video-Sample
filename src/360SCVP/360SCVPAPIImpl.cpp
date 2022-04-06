@@ -228,6 +228,15 @@ int32_t I360SCVP_GenerateRWPK(void* p360SCVPHandle, RegionWisePacking* pRWPK, ui
     return ret;
 }
 
+int32_t I360SCVP_GenerateNovelViewSEI(void* p360SCVPHandle, NovelViewSEI* pNVSEI, uint8_t* pNVBits, uint32_t* NVBitsSize) {
+    int32_t ret = 0;
+    TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
+    if (!pStitch || !pNVSEI || !pNVBits || !NVBitsSize)
+        return 1;
+    ret = pStitch->GenerateNovelViewSEI(pNVSEI, pNVBits, NVBitsSize);
+    return ret;
+}
+
 int32_t I360SCVP_GenerateProj(void* p360SCVPHandle, int32_t projType, uint8_t *pProjBits, int32_t* pProjBitsSize)
 {
     int32_t ret = 0;
@@ -245,6 +254,66 @@ int32_t I360SCVP_ParseRWPK(void* p360SCVPHandle, RegionWisePacking* pRWPK, uint8
     if (!pStitch)
         return 1;
     ret = pStitch->DecRWPKSEI(pRWPK, pRWPKBits, RWPKBitsSize);
+    return ret;
+}
+
+int32_t I360SCVP_ParseNovelViewSEI(void* p360SCVPHandle, NovelViewSEI* pNVSEI, uint8_t* pNVBits, uint32_t NVBitsSize)
+{
+    int32_t ret = 0;
+    TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
+    if (!pStitch)
+        return 1;
+    ret = pStitch->DecNovelViewSEI(pNVSEI, pNVBits, NVBitsSize);
+    return ret;
+}
+
+int32_t I360SCVP_Matrix2Euler(void* p360SCVPHandle, float(*matrixR)[3], EulerAngle* angle)
+{
+    int32_t ret = 0;
+    TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
+    if (!pStitch)
+        return 1;
+    ret = pStitch->Matrix2Euler(matrixR, angle);
+    return ret;
+}
+
+int32_t I360SCVP_Euler2Matrix(void* p360SCVPHandle, EulerAngle* angle, float(*matrixR)[3])
+{
+    int32_t ret = 0;
+    TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
+    if (!pStitch)
+        return 1;
+    ret = pStitch->Euler2Matrix(angle, matrixR);
+    return ret;
+}
+
+int32_t I360SCVP_Matrix2Quaternion(void* p360SCVPHandle, float(*matrixR)[3], Quaternion* quaternion)
+{
+    int32_t ret = 0;
+    TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
+    if (!pStitch)
+        return 1;
+    ret = pStitch->Matrix2Quaternion(matrixR, quaternion);
+    return ret;
+}
+
+int32_t I360SCVP_Quaternion2Matrix(void* p360SCVPHandle, Quaternion* quaternion, float(*matrixR)[3])
+{
+    int32_t ret = 0;
+    TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
+    if (!pStitch)
+        return 1;
+    ret = pStitch->Quaternion2Matrix(quaternion, matrixR);
+    return ret;
+}
+
+int32_t I360SCVP_xmlParsing(void* p360SCVPHandle, const char* fileName, uint32_t cameraID_x, uint32_t cameraID_y, NovelViewSEI* novelViewSEI)
+{
+    int32_t ret = 0;
+    TstitchStream* pStitch = (TstitchStream*)(p360SCVPHandle);
+    if (!pStitch)
+        return 1;
+    ret = pStitch->xmlParsing(fileName, cameraID_x, cameraID_y, novelViewSEI);
     return ret;
 }
 
@@ -305,7 +374,9 @@ int32_t I360SCVP_SetParameter(void* p360SCVPHandle, int32_t paramID, void* pValu
     RegionWisePacking*  pRWPK = NULL;
     SphereRotation*     pSphereRot = NULL;
     FramePacking*       pFramePacking = NULL;
-    OMNIViewPort*       pSeiViewport;
+    OMNIViewPort*       pSeiViewport = NULL;
+    NovelViewSEI*       pNovelView = NULL;
+
     int32_t             projType = 0;
     switch (paramID)
     {
@@ -332,6 +403,10 @@ int32_t I360SCVP_SetParameter(void* p360SCVPHandle, int32_t paramID, void* pValu
     case ID_SCVP_PARAM_SEI_VIEWPORT:
         pSeiViewport = (OMNIViewPort*)pValue;
         ret = pStitch->setViewportSEI(pSeiViewport);
+        break;
+    case ID_SCVP_PARAM_SEI_NOVELVIEW:
+        pNovelView = (NovelViewSEI*)pValue;
+        ret = pStitch->setSEINovelView(pNovelView);
         break;
     default:
         break;
