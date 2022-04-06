@@ -34,19 +34,16 @@
 #ifndef _SAFE_MEM_H_
 #define _SAFE_MEM_H_
 
-#include <algorithm>
-using namespace std;
-
 //memcpy
 #ifndef _SAFE_MEM_
 #define memcpy_s(dest, dest_sz, src, src_sz) \
-        memcpy((void *)(dest), (const void *)(src), (size_t)min((size_t)dest_sz, (size_t)src_sz))
+        memcpy((void *)(dest), (const void *)(src), (size_t)dest_sz)
 #else
 extern "C" {
 #include "safestringlib/safe_mem_lib.h"
 }
 #define memcpy_s(dest, dest_sz, src, src_sz) \
-        memcpy_s((void *)(dest), dest_sz, (const void *)(src), (size_t)min((size_t)dest_sz, (size_t)src_sz))
+        memcpy_s((void *)(dest), dest_sz, (const void *)(src), (size_t)dest_sz)
 #endif
 
 //memset
@@ -64,26 +61,26 @@ extern "C" {
 //memmove
 #ifndef _SAFE_MEM_
 #define memmove_s(dest, dest_sz, src, src_sz) \
-        memmove((void *)(dest), (const void *)(src), (size_t)min((size_t)dest_sz, (size_t)src_sz))
+        memmove((void *)(dest), (const void *)(src), (size_t)dest_sz)
 #else
 extern "C" {
 #include "safestringlib/safe_mem_lib.h"
 }
 #define memmove_s(dest, dest_sz, src, src_sz) \
-        memmove_s((void *)(dest), dest_sz, (const void *)(src), (size_t)min((size_t)dest_sz, (size_t)src_sz))
+        memmove_s((void *)(dest), dest_sz, (const void *)(src), (size_t)dest_sz)
 #endif
 
 
 //memcmp
 #ifndef _SAFE_MEM_
 #define memcmp_s(dest, dmax, src, slen, diff) \
-        (*diff = {memcmp((const void *)(dest), (const void *)(src), (size_t)min((size_t)dmax, (size_t)slen))})
+        (*diff = {memcmp((const void *)(dest), (const void *)(src), (size_t)dmax)})
 #else
 extern "C" {
 #include "safestringlib/safe_mem_lib.h"
 }
 #define memcmp_s(dest, dmax, src, slen, diff) \
-        memcmp_s((void *)(dest), dmax, (const void *)(src), (size_t)min((size_t)dmax, (size_t)slen), (int *)diff)
+        memcmp_s((void *)(dest), dmax, (const void *)(src), (size_t)dmax, (int *)diff)
 #endif
 
 #endif /* _SAFE_MEM_H_ */

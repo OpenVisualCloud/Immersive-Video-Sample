@@ -44,11 +44,11 @@ public:
     //!
     //! \brief  construct
     //!
-    TileSelection() {};
+    TileSelection() {}
     //!
     //! \brief  de-construct
     //!
-    virtual ~TileSelection() {};
+    virtual ~TileSelection() {}
     //! \brief Initialze the pan zoom tile selection module
     //!
     //! \return int32_t Error code
