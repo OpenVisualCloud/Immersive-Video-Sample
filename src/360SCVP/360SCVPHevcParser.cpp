@@ -2178,3 +2178,160 @@ exit:
     if (data_without_emulation_bytes) gts_free(data_without_emulation_bytes);
     return ret;
 }
+
+int32_t SEI_read(GTS_BitStream* bs_rd, SEI_Structure_Impl* sei_impl)
+{
+    if (!bs_rd) return -1;
+
+    uint64_t posStart = gts_bs_get_position(bs_rd);
+
+    const uint8_t start_code_prefix_one_3bytes = 0x01;
+
+    //startCode
+    if (gts_bs_read_U32(bs_rd) == start_code_prefix_one_3bytes) {
+        sei_impl->long_start_code = 1;
+    }
+    else {
+        sei_impl->long_start_code = 0;
+        bs_rd->position--;
+    }
+
+    uint32_t tmp = 0;
+    tmp = gts_bs_read_int(bs_rd, 1);
+    if (tmp) return -1;
+
+    sei_impl->nal_unit_type = gts_bs_read_int(bs_rd, 6);
+    sei_impl->layer_id = gts_bs_read_int(bs_rd, 6);
+    tmp = gts_bs_read_int(bs_rd, 3);
+    if (!tmp) return -1;
+    sei_impl->temporal_id = tmp - 1;
+
+    sei_impl->payloadType = 0;
+    sei_impl->payloadSize = 0;
+    uint32_t payloadsize = 0;
+    //payloadType
+    do {
+        sei_impl->payloadType += gts_bs_read_int(bs_rd, 8);
+    } while (sei_impl->payloadType == 0xff);
+    //payloadSize
+    do {
+        payloadsize = gts_bs_read_int(bs_rd, 8);
+        sei_impl->payloadSize += payloadsize;
+    } while (payloadsize == 0xff);
+
+    sei_impl->camera_position_flag = gts_bs_read_int(bs_rd, 1);
+    sei_impl->intrinsic_param_flag = gts_bs_read_int(bs_rd, 1);
+    sei_impl->extrinsic_param_flag = gts_bs_read_int(bs_rd, 1);
+    sei_impl->distortion_param_flag = gts_bs_read_int(bs_rd, 1);
+    sei_impl->num_views_minus1 = gts_bs_read_int(bs_rd, 8);
+
+    if (sei_impl->camera_position_flag) {
+        sei_impl->seiAPI.cameraID_x = gts_bs_read_int(bs_rd, 32);
+        sei_impl->seiAPI.cameraID_y = gts_bs_read_int(bs_rd, 32);
+    }
+
+    if (sei_impl->intrinsic_param_flag) {
+        sei_impl->prec_focal_length = gts_bs_read_int(bs_rd, 5);
+        sei_impl->prec_principal_point = gts_bs_read_int(bs_rd, 5);
+
+        sei_impl->seiAPI.focal_x = bs_read_float(bs_rd, sei_impl->prec_focal_length);
+        sei_impl->seiAPI.focal_y = bs_read_float(bs_rd, sei_impl->prec_focal_length);
+        sei_impl->seiAPI.center_x = bs_read_float(bs_rd, sei_impl->prec_principal_point);
+        sei_impl->seiAPI.center_y = bs_read_float(bs_rd, sei_impl->prec_principal_point);;
+    }
+
+    if (sei_impl->extrinsic_param_flag) {
+        sei_impl->prec_rotation_param = gts_bs_read_int(bs_rd, 5);
+        sei_impl->prec_translation_param = gts_bs_read_int(bs_rd, 5);
+
+        sei_impl->seiAPI.roll = bs_read_float(bs_rd, sei_impl->prec_rotation_param);
+        sei_impl->seiAPI.pitch = bs_read_float(bs_rd, sei_impl->prec_rotation_param);
+        sei_impl->seiAPI.yaw = bs_read_float(bs_rd, sei_impl->prec_rotation_param);
+
+        sei_impl->seiAPI.trans_x = bs_read_float(bs_rd, sei_impl->prec_translation_param);
+        sei_impl->seiAPI.trans_y = bs_read_float(bs_rd, sei_impl->prec_translation_param);
+        sei_impl->seiAPI.trans_z = bs_read_float(bs_rd, sei_impl->prec_translation_param);
+    }
+
+    if (sei_impl->distortion_param_flag) {
+
+        sei_impl->prec_distortion_param = gts_bs_read_int(bs_rd, 5);
+        sei_impl->prec_metric_radius = gts_bs_read_int(bs_rd, 5);
+
+        sei_impl->seiAPI.codx = bs_read_float(bs_rd, sei_impl->prec_distortion_param);
+        sei_impl->seiAPI.cody = bs_read_float(bs_rd, sei_impl->prec_distortion_param);
+        sei_impl->seiAPI.k1 = bs_read_float(bs_rd, sei_impl->prec_distortion_param);
+        sei_impl->seiAPI.k2 = bs_read_float(bs_rd, sei_impl->prec_distortion_param);
+        sei_impl->seiAPI.k3 = bs_read_float(bs_rd, sei_impl->prec_distortion_param);
+        sei_impl->seiAPI.k4 = bs_read_float(bs_rd, sei_impl->prec_distortion_param);
+        sei_impl->seiAPI.k5 = bs_read_float(bs_rd, sei_impl->prec_distortion_param);
+        sei_impl->seiAPI.k6 = bs_read_float(bs_rd, sei_impl->prec_distortion_param);
+        sei_impl->seiAPI.p1 = bs_read_float(bs_rd, sei_impl->prec_distortion_param);
+        sei_impl->seiAPI.p2 = bs_read_float(bs_rd, sei_impl->prec_distortion_param);
+        //sei_impl->seiAPI.metric_radius = bs_read_float(bs_rd, sei_impl->prec_distortion_param);
+        sei_impl->seiAPI.metric_radius = bs_read_float(bs_rd, sei_impl->prec_metric_radius);
+    }
+
+    bs_rd->position = posStart;
+    return 0;
+}
+
+int32_t hevc_read_novelViewSEI(NovelViewSEI* sei_out, uint8_t* pSEIBits, uint32_t SEIBitsSize)
+{
+    int32_t ret = -1;
+    SEI_Structure_Impl seiImpl;
+
+    GTS_BitStream* bs = NULL;
+    int8_t* data_without_emulation_bytes = NULL;
+    uint32_t data_without_emulation_bytes_size = 0;
+
+    data_without_emulation_bytes_size = gts_media_nalu_emulation_bytes_remove_count((const int8_t*)pSEIBits, SEIBitsSize);
+    if (!data_without_emulation_bytes_size) {
+        bs = gts_bs_new((const int8_t*)pSEIBits, SEIBitsSize, GTS_BITSTREAM_READ);
+    }
+    else {
+        /*still contains emulation bytes*/
+        data_without_emulation_bytes = (int8_t*)gts_malloc(SEIBitsSize * sizeof(int8_t));
+        if (!data_without_emulation_bytes) goto exit;
+        data_without_emulation_bytes_size = gts_media_nalu_remove_emulation_bytes((const int8_t*)pSEIBits, data_without_emulation_bytes, SEIBitsSize);
+        bs = gts_bs_new(data_without_emulation_bytes, data_without_emulation_bytes_size, GTS_BITSTREAM_READ);
+    }
+    if (!bs) goto exit;
+
+    ret = SEI_read(bs, &seiImpl);
+
+    //ouput
+    sei_out->cameraID_x = seiImpl.seiAPI.cameraID_x;
+    sei_out->cameraID_y = seiImpl.seiAPI.cameraID_y;
+
+    sei_out->focal_x = seiImpl.seiAPI.focal_x;
+    sei_out->focal_y = seiImpl.seiAPI.focal_y;
+    sei_out->center_x = seiImpl.seiAPI.center_x;
+    sei_out->center_y = seiImpl.seiAPI.center_y;
+
+    sei_out->codx = seiImpl.seiAPI.codx;
+    sei_out->cody = seiImpl.seiAPI.cody;
+    sei_out->k1 = seiImpl.seiAPI.k1;
+    sei_out->k2 = seiImpl.seiAPI.k2;
+    sei_out->k3 = seiImpl.seiAPI.k3;
+    sei_out->k4 = seiImpl.seiAPI.k4;
+    sei_out->k5 = seiImpl.seiAPI.k5;
+    sei_out->k6 = seiImpl.seiAPI.k6;
+
+    sei_out->p1 = seiImpl.seiAPI.p1;
+    sei_out->p2 = seiImpl.seiAPI.p2;
+    sei_out->metric_radius = seiImpl.seiAPI.metric_radius;
+
+    sei_out->roll = seiImpl.seiAPI.roll;
+    sei_out->pitch = seiImpl.seiAPI.pitch;
+    sei_out->yaw = seiImpl.seiAPI.yaw;
+
+    sei_out->trans_x = seiImpl.seiAPI.trans_x;
+    sei_out->trans_y = seiImpl.seiAPI.trans_y;
+    sei_out->trans_z = seiImpl.seiAPI.trans_z;
+
+exit:
+    if (bs) gts_bs_del(bs);
+    if (data_without_emulation_bytes) gts_free(data_without_emulation_bytes);
+    return ret;
+}

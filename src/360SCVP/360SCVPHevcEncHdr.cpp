@@ -30,6 +30,8 @@
 
 #define MRG_MAX_NUM_CANDS 5
 
+//#define DEBUG
+
 //! Maximum CU depth when descending form LCU level.
 //! spec: log2_diff_max_min_luma_coding_block_size
 #define MAX_DEPTH 3
@@ -1189,6 +1191,135 @@ uint32_t writeCubeProjectionSEINal(GTS_BitStream *bs, CubemapProjectionSEI& proj
 
      return (uint32_t)(gts_bs_get_position(bs) - posStart);
  }
+uint32_t writeNovelViewSEINal(GTS_BitStream* bs_wr, SEI_Structure_Impl* sei_impl, int32_t temporalIdPlus1)
+ {
+     if (!sei_impl) return -1;
+
+     uint64_t posStart = gts_bs_get_position(bs_wr);
+#ifdef DEBUG
+     printf("writeNovelViewSEINal pos before %lu\n", bs_wr->position);
+#endif
+     // add NAL header
+     nal_write(bs_wr, GTS_HEVC_NALU_PREFIX_SEI, 0, 1);
+
+     unsigned int type = (unsigned int)E_NOVEL_VIEW_GENERATION;
+
+     for (; type >= 0xff; type -= 0xff)
+     {
+         gts_bs_write_U8(bs_wr, 0xff);
+     }
+     gts_bs_write_U8(bs_wr, type);
+
+     uint64_t nalHeaderSize = (uint64_t)(gts_bs_get_position(bs_wr) - posStart);
+#ifdef DEBUG
+     printf("writeNovelViewSEINal nalHeaderSize %lu\n", nalHeaderSize);
+#endif
+     gts_bs_write_int(bs_wr, sei_impl->camera_position_flag, 1);
+     gts_bs_write_int(bs_wr, sei_impl->intrinsic_param_flag, 1);
+     gts_bs_write_int(bs_wr, sei_impl->extrinsic_param_flag, 1);
+     gts_bs_write_int(bs_wr, sei_impl->distortion_param_flag, 1);
+     gts_bs_write_int(bs_wr, sei_impl->num_views_minus1, 8);
+
+     NovelViewSEI* SEIcheck;
+     SEIcheck = (NovelViewSEI*)malloc(sizeof(NovelViewSEI));
+     if (!SEIcheck) return -1;
+     memset(SEIcheck, 0, sizeof(NovelViewSEI));
+
+     if (sei_impl->camera_position_flag) {
+         gts_bs_write_int(bs_wr, sei_impl->seiAPI.cameraID_x, 32);
+         gts_bs_write_int(bs_wr, sei_impl->seiAPI.cameraID_y, 32);
+     }
+     if (sei_impl->intrinsic_param_flag) {
+         gts_bs_write_int(bs_wr, sei_impl->prec_focal_length, 5);
+         gts_bs_write_int(bs_wr, sei_impl->prec_principal_point, 5);
+
+         SEIcheck->focal_x = bs_write_float(bs_wr, sei_impl->seiAPI.focal_x, sei_impl->prec_focal_length);
+         SEIcheck->focal_y = bs_write_float(bs_wr, sei_impl->seiAPI.focal_y, sei_impl->prec_focal_length);
+         SEIcheck->center_x = bs_write_float(bs_wr, sei_impl->seiAPI.center_x, sei_impl->prec_principal_point);
+         SEIcheck->center_y = bs_write_float(bs_wr, sei_impl->seiAPI.center_y, sei_impl->prec_principal_point);
+     }
+
+     if (sei_impl->extrinsic_param_flag) {
+         gts_bs_write_int(bs_wr, sei_impl->prec_rotation_param, 5);
+         gts_bs_write_int(bs_wr, sei_impl->prec_translation_param, 5);
+
+         SEIcheck->roll = bs_write_float(bs_wr, sei_impl->seiAPI.roll, sei_impl->prec_rotation_param);
+         SEIcheck->pitch = bs_write_float(bs_wr, sei_impl->seiAPI.pitch, sei_impl->prec_rotation_param);
+         SEIcheck->yaw = bs_write_float(bs_wr, sei_impl->seiAPI.yaw, sei_impl->prec_rotation_param);
+         SEIcheck->trans_x = bs_write_float(bs_wr, sei_impl->seiAPI.trans_x, sei_impl->prec_translation_param);
+         SEIcheck->trans_y = bs_write_float(bs_wr, sei_impl->seiAPI.trans_y, sei_impl->prec_translation_param);
+         SEIcheck->trans_z = bs_write_float(bs_wr, sei_impl->seiAPI.trans_z, sei_impl->prec_translation_param);
+     }
+
+     if (sei_impl->distortion_param_flag) {
+         gts_bs_write_int(bs_wr, sei_impl->prec_distortion_param, 5);
+         gts_bs_write_int(bs_wr, sei_impl->prec_metric_radius, 5);
+
+         SEIcheck->codx = bs_write_float(bs_wr, sei_impl->seiAPI.codx, sei_impl->prec_distortion_param);
+         SEIcheck->cody = bs_write_float(bs_wr, sei_impl->seiAPI.cody, sei_impl->prec_distortion_param);
+         SEIcheck->k1 = bs_write_float(bs_wr, sei_impl->seiAPI.k1, sei_impl->prec_distortion_param);
+         SEIcheck->k2 = bs_write_float(bs_wr, sei_impl->seiAPI.k2, sei_impl->prec_distortion_param);
+         SEIcheck->k3 = bs_write_float(bs_wr, sei_impl->seiAPI.k3, sei_impl->prec_distortion_param);
+         SEIcheck->k4 = bs_write_float(bs_wr, sei_impl->seiAPI.k4, sei_impl->prec_distortion_param);
+         SEIcheck->k5 = bs_write_float(bs_wr, sei_impl->seiAPI.k5, sei_impl->prec_distortion_param);
+         SEIcheck->k6 = bs_write_float(bs_wr, sei_impl->seiAPI.k6, sei_impl->prec_distortion_param);
+         SEIcheck->p1 = bs_write_float(bs_wr, sei_impl->seiAPI.p1, sei_impl->prec_distortion_param);
+         SEIcheck->p2 = bs_write_float(bs_wr, sei_impl->seiAPI.p2, sei_impl->prec_distortion_param);
+         //bs_write_float(bs_wr, sei_impl->seiAPI.metric_radius, sei_impl->prec_distortion_param);
+         SEIcheck->metric_radius = bs_write_float(bs_wr, sei_impl->seiAPI.metric_radius, sei_impl->prec_metric_radius);
+     }
+
+#ifdef DEBUG
+     printf("DEBUG_MODE_ENTRY\nThe Value Written to Bitstream\n");
+     printf("focal_x = %f\n", SEIcheck->focal_x);
+     printf("focal_y = %f\n", SEIcheck->focal_y);
+     printf("center_x = %f\n", SEIcheck->center_x);
+     printf("center_y = %f\n", SEIcheck->center_y);
+     printf("roll = %f\n", SEIcheck->roll);
+     printf("pitch = %f\n", SEIcheck->pitch);
+     printf("yaw = %f\n", SEIcheck->yaw);
+     printf("trans_x = %f\n", SEIcheck->trans_x);
+     printf("trans_y = %f\n", SEIcheck->trans_y);
+     printf("trans_z = %f\n", SEIcheck->trans_z);
+     printf("codx = %f\n", SEIcheck->codx);
+     printf("cody = %f\n", SEIcheck->cody);
+     printf("k1 = %f\n", SEIcheck->k1);
+     printf("k2 = %f\n", SEIcheck->k2);
+     printf("k3 = %f\n", SEIcheck->k3);
+     printf("k4 = %f\n", SEIcheck->k4);
+     printf("k5 = %f\n", SEIcheck->k5);
+     printf("k6 = %f\n", SEIcheck->k6);
+     printf("p1 = %f\n", SEIcheck->p1);
+     printf("p2 = %f\n", SEIcheck->p2);
+     printf("metric_radius = %f\n", SEIcheck->metric_radius);
+     printf("DEBUG_MODE_EXIT\n");
+#endif
+
+     //rbsp_trailing_bits
+     hevc_bitstream_add_rbsp_trailing_bits(bs_wr);
+
+     uint32_t lenBytes = (uint32_t)(gts_bs_get_position(bs_wr) - posStart);
+#ifdef DEBUG
+     printf("writeNovelViewSEINal pos after %lu\n", bs_wr->position);
+#endif
+     uint32_t payloadsize = lenBytes - nalHeaderSize;
+     int8_t count = payloadsize / 255 + 1;
+     memcpy(bs_wr->original + posStart + nalHeaderSize + count,
+         bs_wr->original + posStart + nalHeaderSize, payloadsize);
+     for (int8_t i = 0; i < count - 1; i++) {
+         *(bs_wr->original + posStart + nalHeaderSize + i) = 0xff;
+     }
+     *(bs_wr->original + posStart + nalHeaderSize + count - 1) = payloadsize % 255;
+
+     lenBytes += count;
+     bs_wr->position += count;
+#ifdef DEBUG
+     printf("writeNovelViewSEINal pos final %lu\n", bs_wr->position);
+#endif
+     free(SEIcheck);
+
+     return lenBytes;
+ }
 
  uint32_t writeRotationSEINal(GTS_BitStream *bs, SphereRotationSEI& rotation, int temporalIdPlus1)
  {
@@ -1314,6 +1445,58 @@ uint32_t writeCubeProjectionSEINal(GTS_BitStream *bs, CubemapProjectionSEI& proj
      uint32_t ret = writeRwpkSEINal(stream, packing, temporalIdPlus1);
 
      SAFE_DELETE_ARRAY(packing.pRegions);
+     return ret;
+ }
+
+uint32_t hevc_write_novelViewSEI(GTS_BitStream * stream, NovelViewSEI* sei_in, int32_t temporalIdPlus1)
+ {
+     SEI_Structure_Impl seiImpl;
+
+     seiImpl.camera_position_flag = 1;
+     seiImpl.intrinsic_param_flag = 1;
+     seiImpl.extrinsic_param_flag = 1;
+     seiImpl.distortion_param_flag = 1;
+
+     seiImpl.num_views_minus1 = 1;
+
+     seiImpl.prec_focal_length = 15;
+     seiImpl.prec_principal_point = 14;
+     seiImpl.prec_distortion_param = 19;
+     seiImpl.prec_rotation_param = 19;
+     seiImpl.prec_translation_param = 21;
+     seiImpl.prec_metric_radius = 21;
+
+     seiImpl.payloadSize = 0;//need to define
+
+     seiImpl.seiAPI.cameraID_x = sei_in->cameraID_x;
+     seiImpl.seiAPI.cameraID_y = sei_in->cameraID_y;
+
+     seiImpl.seiAPI.focal_x = sei_in->focal_x;
+     seiImpl.seiAPI.focal_y = sei_in->focal_y;
+     seiImpl.seiAPI.center_x = sei_in->center_x;
+     seiImpl.seiAPI.center_y = sei_in->center_y;
+
+     seiImpl.seiAPI.roll = sei_in->roll;
+     seiImpl.seiAPI.pitch = sei_in->pitch;
+     seiImpl.seiAPI.yaw = sei_in->yaw;
+     seiImpl.seiAPI.trans_x = sei_in->trans_x;
+     seiImpl.seiAPI.trans_y = sei_in->trans_y;
+     seiImpl.seiAPI.trans_z = sei_in->trans_z;
+
+     seiImpl.seiAPI.codx = sei_in->codx;
+     seiImpl.seiAPI.cody = sei_in->cody;;
+     seiImpl.seiAPI.k1 = sei_in->k1;
+     seiImpl.seiAPI.k2 = sei_in->k2;
+     seiImpl.seiAPI.k3 = sei_in->k3;
+     seiImpl.seiAPI.k4 = sei_in->k4;
+     seiImpl.seiAPI.k5 = sei_in->k5;
+     seiImpl.seiAPI.k6 = sei_in->k6;
+     seiImpl.seiAPI.p1 = sei_in->p1;
+     seiImpl.seiAPI.p2 = sei_in->p2;
+     seiImpl.seiAPI.metric_radius = sei_in->metric_radius;
+
+     uint32_t ret = writeNovelViewSEINal(stream, &seiImpl, temporalIdPlus1);
+
      return ret;
  }
 

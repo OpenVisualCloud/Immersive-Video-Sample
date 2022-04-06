@@ -40,8 +40,9 @@ extern "C" {
 #define ID_SCVP_PARAM_SEI_ROTATION         1004
 #define ID_SCVP_PARAM_SEI_FRAMEPACKING     1005
 #define ID_SCVP_PARAM_SEI_VIEWPORT         1006
-#define ID_SCVP_BITSTREAMS_HEADER          1007
-#define ID_SCVP_RWPK_INFO                  1008
+#define ID_SCVP_PARAM_SEI_NOVELVIEW        1007
+#define ID_SCVP_BITSTREAMS_HEADER          1008
+#define ID_SCVP_RWPK_INFO                  1009
 #define DEFAULT_REGION_NUM                 1000
 
 /*!
@@ -119,7 +120,8 @@ typedef enum H265SEIType
     E_CUBEMAP_PROJECTION,
     E_SPHERE_ROTATION = 154,
     E_REGIONWISE_PACKING,
-    E_OMNI_VIEWPORT
+    E_OMNI_VIEWPORT,
+    E_NOVEL_VIEW_GENERATION = 182
 }H265SEIType;
 
 /*！
@@ -280,6 +282,75 @@ typedef struct OMNI_VIEW_PORT
     uint16_t viewportsSize;
     oneViewport* pViewports;
 }OMNIViewPort;
+
+/**
+//! \struct: novelViewSEI
+//! \brief:  Define the data structure which will be used in server and client components for
+//!          data synchronization.
+//!          For each video stream, there will be a SEI information attached.
+//!          Currently it contains four parts: 1.camera position; 2 camera intrinsic parameters
+//!          3. camera extrinsic parameters; 4. camera distortion parameters.
+//!          This structure can be scaled with new functions requirement later.
+**/
+typedef struct novel_View_SEI
+{
+    // The below parameters are for camera position
+    uint32_t cameraID_x;
+    uint32_t cameraID_y;
+
+    // The following parameters are camera intrinsic parameters
+    float focal_x;
+    float focal_y;
+    float center_x;
+    float center_y;
+
+    /**these variables are Radial distortion coefficients for the Correction formula
+     * most only use the k1, k2, k3;
+     * so reserved the k4, k5, k6;
+     **/
+    float codx;
+    float cody;
+    float k1;
+    float k2;
+    float k3;
+    float k4;
+    float k5;
+    float k6;
+    float p1;
+    float p2;
+    float metric_radius;
+
+    // rotation angle degree
+    float roll;
+    float pitch;
+    float yaw;
+
+    // to use in translation matrix
+    float trans_x;
+    float trans_y;
+    float trans_z;
+}NovelViewSEI;
+
+/**
+//! \struct: RotationAngle
+//! \brief:  Define the euler angle(radians) data structure which will be used in server and client components
+**/
+typedef struct EulerAngle {
+    float roll;
+    float pitch;
+    float yaw;
+}EulerAngle;
+
+/**
+//! \struct: Quaternion
+//! \brief:  Define the quaternion data structure which will be used in server and client components
+**/
+typedef struct Quaternion {
+    float w;
+    float x;
+    float y;
+    float z;
+}Quaternion;
 
 //!
 //! \struct: SphereRotation
@@ -558,6 +629,7 @@ typedef struct PARAM_360SCVP
     PluginDef              pluginDef;
     uint32_t               timeStamp;
     void                  *logFunction;       //external log callback function pointer, NULL if external log is not used
+    NovelViewSEI          novelViewSEI;
 }param_360SCVP;
 
 //!
@@ -719,6 +791,20 @@ int32_t I360SCVP_GenerateSliceHdr(param_360SCVP* pParam360SCVP, int32_t newSlice
 int32_t I360SCVP_GenerateRWPK(void* p360SCVPHandle, RegionWisePacking* pRWPK, uint8_t *pRWPKBits, int32_t* pRWPKBitsSize);
 
 //!
+//! \brief    geneate the NovelView SEI bitstream
+//!
+//! \param    void*                p360SCVPHandle,     input,      which is created by the I360SVCP_Init function
+//! \param    NovelViewSEI*        pNVSEI,             input,      refer to the structure novelViewSEI
+//! \param    uint8_t*             pNVBits,            output,     the novelViewSEI bitstream buffer pointer
+//! \param    int32_t*             NVBitsSize,         output,     the length for the novelViewSEI bitstream
+//!
+//! \return     int32_t, the status of the function.
+//!     0,      if succeed
+//!     not 0,  if fail
+//!
+int32_t I360SCVP_GenerateNovelViewSEI(void* p360SCVPHandle, NovelViewSEI* pNVSEI, uint8_t* pNVBits, uint32_t* NVBitsSize);
+
+//!
 //! \brief    geneate the projection SEI bitstream
 //!
 //! \param    void*                p360SCVPHandle,    input,      which is created by the I360SVCP_Init function
@@ -745,6 +831,87 @@ int32_t I360SCVP_GenerateProj(void* p360SCVPHandle, int32_t projType, uint8_t *p
 //!          not 0, if fail
 //!
 int32_t I360SCVP_ParseRWPK(void* p360SCVPHandle, RegionWisePacking* pRWPK, uint8_t *pRWPKBits, uint32_t RWPKBitsSize);
+
+//!
+//! \brief This function sets the parameter of the viewPort.
+//!
+//! \param    void*              p360SCVPHandle,     input,  which is created by the I360SVCP_Init function
+//! \param    NovelViewSEI*      pNVSEI,             output, the sturcture info got from the SEI bitstream
+//! \param    uint8_t *          pNVBits,            input,  the NovelViewSEI bitstream
+//! \param    uint32_t           NVBitsSize          input,  the bytesize of the NovelViewSEI bitstream
+//!
+//!\return   int32_t, the status of the function.
+//!          0,     if succeed
+//!          not 0, if fail
+//!
+int32_t I360SCVP_ParseNovelViewSEI(void* p360SCVPHandle, NovelViewSEI* pNVSEI, uint8_t* pNVBits, uint32_t NVBitsSize);
+
+//!
+//! \brief    This function transforms 3*3 rotation matrix to euler angle(radians) ZYX/XYZ.
+//!
+//! \param    void*              p360SCVPHandle,     input,  which is created by the I360SVCP_Init function
+//! \param    float (*)[3]       matrixR,            input,  3*3 rotation matrix
+//! \param    EulerAngle*        angle,              inout,  euler angle(radians)
+//!
+//!\return    int32_t, the status of the function.
+//!           0,     if succeed
+//!           not 0, if fail
+//!
+int32_t I360SCVP_Matrix2Euler(void* p360SCVPHandle, float(*matrixR)[3], EulerAngle* angle);
+
+//!
+//! \brief    This function transforms euler angle(radians) ZYX/XYZ to 3*3 rotation matrix.
+//!
+//! \param    void*              p360SCVPHandle,     input,  which is created by the I360SVCP_Init function
+//! \param    EulerAngle*        angle,              input,  euler angle(radians)
+//! \param    float (*)[3]       matrixR,            inout,  3*3 rotation matrix
+//!
+//!\return    int32_t, the status of the function.
+//!           0,     if succeed
+//!           not 0, if fail
+//!
+int32_t I360SCVP_Euler2Matrix(void* p360SCVPHandle, EulerAngle* angle, float(*matrixR)[3]);
+
+//!
+//! \brief    This function transforms 3*3 rotation matrix to quaternion.
+//!
+//! \param    void*              p360SCVPHandle,     input,  which is created by the I360SVCP_Init function
+//! \param    float (*)[3]       matrixR,            input,  3*3 rotation matrix
+//! \param    Quaternion*        quaternion,         inout,  quaternion
+//!
+//!\return    int32_t, the status of the function.
+//!           0,     if succeed
+//!           not 0, if fail
+//!
+int32_t I360SCVP_Matrix2Quaternion(void* p360SCVPHandle, float(*matrixR)[3], Quaternion* quaternion);
+
+//!
+//! \brief    This function transforms quaternion to 3*3 rotation matrix.
+//!
+//! \param    void*              p360SCVPHandle,     input,  which is created by the I360SVCP_Init function
+//! \param    Quaternion*        quaternion,         input,  quaternion
+//! \param    float (*)[3]       matrixR,            inout,  3*3 rotation matrix
+//!
+//!\return    int32_t, the status of the function.
+//!           0,     if succeed
+//!           not 0, if fail
+//!
+int32_t I360SCVP_Quaternion2Matrix(void* p360SCVPHandle, Quaternion* quaternion, float(*matrixR)[3]);
+
+//!
+//! \brief    This function parses novelViewSEI from XML file.
+//!
+//! \param    void*              p360SCVPHandle,     input,  which is created by the I360SVCP_Init function
+//! \param    const char*        fileName,           input,  XML file name
+//! \param    uint32_t           cameraID_x,         input,  cameraID_x
+//! \param    uint32_t           cameraID_y,         input,  cameraID_y
+//! \param    NovelViewSEI*      novelViewSEI,       inout,  NovelViewSEI struct
+//!
+//!\return    int32_t, the status of the function.
+//!           0,     if succeed
+//!           not 0, if fail
+//!
+int32_t I360SCVP_xmlParsing(void* p360SCVPHandle, const char* fileName, uint32_t cameraID_x, uint32_t cameraID_y, NovelViewSEI* novelViewSEI);
 
 //!
 //! \brief This function gets the content coverge for viewport.

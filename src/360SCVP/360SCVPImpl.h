@@ -66,11 +66,14 @@ protected:
     bool                m_seiSphereRot_enable;
     bool                m_seiFramePacking_enable;
     bool                m_seiViewport_enable;
+    bool                m_seiNovelView_enable;
+
     int32_t             m_projType;
     RegionWisePacking*  m_pRWPK;
     SphereRotation*     m_pSphereRot;
     FramePacking*       m_pFramePacking;
     OMNIViewPort*       m_pSeiViewport;
+    NovelViewSEI*       m_pNovelView;
 
     //the below variables are got from the parsing
     int32_t         m_tileWidthCountSel[2];
@@ -125,6 +128,7 @@ public:
     int32_t  getTilesInViewport(TileDef* pOutTile);
     int32_t  parseNals(param_360SCVP* pParamStitchStream, int32_t parseType, Nalu* pNALU, int32_t streamIdx);
     int32_t  GenerateRWPK(RegionWisePacking* pRWPK, uint8_t *pRWPKBits, int32_t* pRWPKBitsSize);
+    int32_t  GenerateNovelViewSEI(NovelViewSEI* pNVSEI, uint8_t* pNVBits, uint32_t* NVBitsSize);
     int32_t  GenerateProj(int32_t projType, uint8_t *pProjBits, int32_t* pProjBitsSize);
     int32_t  GeneratePPS(param_360SCVP* pParamStitchStream, TileArrangement* pTileArrange);
     int32_t  GenerateSPS(param_360SCVP* pParamStitchStream);
@@ -138,11 +142,18 @@ public:
     int32_t  setSphereRot(SphereRotation* pSphereRot);
     int32_t  setFramePacking(FramePacking* pFramePacking);
     int32_t  setViewportSEI(OMNIViewPort* pSeiViewport);
+    int32_t  setSEINovelView(NovelViewSEI* pNovelView);
     int32_t  doStreamStitch(param_360SCVP* pParamStitchStream);
     int32_t  merge_one_tile(uint8_t **pBitstream, oneStream_info* pSlice, GTS_BitStream *bs, bool bFirstTile);
     int32_t  GenerateRwpkInfo(RegionWisePacking *dstRwpk);
     int32_t  EncRWPKSEI(RegionWisePacking* pRWPK, uint8_t *pRWPKBits, uint32_t* pRWPKBitsSize);
     int32_t  DecRWPKSEI(RegionWisePacking* pRWPK, uint8_t *pRWPKBits, uint32_t RWPKBitsSize);
+    int32_t  DecNovelViewSEI(NovelViewSEI* pNVSEI, uint8_t* pNVBits, uint32_t NVBitsSize);
+    int32_t  Matrix2Euler(float(*matrixR)[3], EulerAngle* angle);
+    int32_t  Euler2Matrix(EulerAngle* angle, float(*matrixR)[3]);
+    int32_t  Matrix2Quaternion(float(*matrixR)[3], Quaternion* quaternion);
+    int32_t  Quaternion2Matrix(Quaternion* quaternion, float(*matrixR)[3]);
+    int32_t  xmlParsing(const char* fileName, uint32_t cameraID_x, uint32_t cameraID_y, NovelViewSEI* novelViewSEI);
     int32_t  getContentCoverage(CCDef* pOutCC);
     TileDef* getSelectedTile();
     int32_t  getTilesByLegacyWay(TileDef* pOutTile);

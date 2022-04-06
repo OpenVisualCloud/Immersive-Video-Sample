@@ -37,6 +37,10 @@
 #include "TileSelectionPlugins_API.h"
 #include "360SCVPImpl.h"
 #include "360SCVPHevcTileMerge.h"
+#include "../utils/tinyxml2.h"
+
+using namespace tinyxml2;
+//#define XYZ_ORDER
 
 TstitchStream::TstitchStream()
 {
@@ -63,6 +67,7 @@ TstitchStream::TstitchStream()
     m_seiSphereRot_enable = 0;
     m_seiRWPK_enable = 0;
     m_seiViewport_enable = 0;
+    m_seiNovelView_enable = 0;
     m_specialDataLen[0] = 0;
     m_specialDataLen[1] = 0;
     m_hrTilesInRow = 1;
@@ -81,10 +86,10 @@ TstitchStream::TstitchStream()
     m_dstHeightNet = 0;
     m_maxSelTiles = 0;
     m_pRWPK = nullptr;
-    m_pSeiViewport = nullptr;
     m_pFramePacking = nullptr;
     m_pSphereRot = nullptr;
     m_pSeiViewport = nullptr;
+    m_pNovelView = nullptr;
     m_viewportDestWidth = 0;
     m_viewportDestHeight = 0;
     m_dataSize = 0;
@@ -136,6 +141,7 @@ TstitchStream::TstitchStream(TstitchStream& other)
     m_seiSphereRot_enable = other.m_seiSphereRot_enable;
     m_seiRWPK_enable = other.m_seiRWPK_enable;
     m_seiViewport_enable = other.m_seiViewport_enable;
+    m_seiNovelView_enable = other.m_seiNovelView_enable;
     m_projType = other.m_projType;
     m_specialDataLen[0] = other.m_specialDataLen[0];
     m_specialDataLen[1] = other.m_specialDataLen[1];
@@ -163,10 +169,10 @@ TstitchStream::TstitchStream(TstitchStream& other)
     m_dstHeightNet = other.m_dstHeightNet;
     m_maxSelTiles = other.m_maxSelTiles;
     m_pRWPK = NULL;
-    m_pSeiViewport = other.m_pSeiViewport;
     m_pFramePacking = other.m_pFramePacking;
     m_pSphereRot = other.m_pSphereRot;
     m_pSeiViewport = other.m_pSeiViewport;
+    m_pNovelView = other.m_pNovelView;
     m_viewportDestWidth = other.m_viewportDestWidth;
     m_viewportDestHeight = other.m_viewportDestHeight;
     m_dataSize = 0;
@@ -228,6 +234,7 @@ TstitchStream& TstitchStream::operator=(const TstitchStream& other)
     m_seiSphereRot_enable = other.m_seiSphereRot_enable;
     m_seiRWPK_enable = other.m_seiRWPK_enable;
     m_seiViewport_enable = other.m_seiViewport_enable;
+    m_seiNovelView_enable = other.m_seiNovelView_enable;
     m_projType = other.m_projType;
     m_specialDataLen[0] = other.m_specialDataLen[0];
     m_specialDataLen[1] = other.m_specialDataLen[1];
@@ -257,10 +264,10 @@ TstitchStream& TstitchStream::operator=(const TstitchStream& other)
     m_dstHeightNet = other.m_dstHeightNet;
     m_maxSelTiles = other.m_maxSelTiles;
     m_pRWPK = NULL;
-    m_pSeiViewport = other.m_pSeiViewport;
     m_pFramePacking = other.m_pFramePacking;
     m_pSphereRot = other.m_pSphereRot;
     m_pSeiViewport = other.m_pSeiViewport;
+    m_pNovelView = other.m_pNovelView;
     m_viewportDestWidth = other.m_viewportDestWidth;
     m_viewportDestHeight = other.m_viewportDestHeight;
     m_dataSize = 0;
@@ -1379,6 +1386,224 @@ int32_t TstitchStream::DecRWPKSEI(RegionWisePacking* pRWPK, uint8_t *pRWPKBits, 
     return ret;
 }
 
+int32_t TstitchStream::DecNovelViewSEI(NovelViewSEI* pNVSEI, uint8_t* pNVBits, uint32_t NVBitsSize)
+{
+    if (!pNVSEI || !pNVBits)
+        return -1;
+    int ret = hevc_read_novelViewSEI(pNVSEI, pNVBits, NVBitsSize);
+    return ret;
+}
+
+int32_t TstitchStream::Matrix2Euler(float(*matrixR)[3], EulerAngle* angle)
+{
+    if (!matrixR || !angle)
+        return -1;
+
+    // The matrixR needs to be orthogonal, in addition the matrixR is pure rotation without reflection component.
+    //Check if product of MatrixR and its transpose is identity matrix
+    double product[3][3] = { 0 };
+    for (int i = 0; i < 3; i++){
+        for (int j = 0; j < 3; j++){
+            float sum = 0;
+            for (int k = 0; k < 3; k++){
+                sum += (matrixR[i][k] * matrixR[j][k]);
+            }
+            product[i][j] = sum;
+        }
+    }
+
+    for (int i = 0; i < 3; i++){
+        for (int j = 0; j < 3; j++){
+            if (i != j && abs(product[i][j] - 0 > 1e-3)){
+                printf("Input matrixR is not orthogonal!");
+                return -1;}
+            if (i == j && abs(product[i][j] - 1 > 1e-3)){
+                printf("Input matrixR is not orthogonal!");
+                return -1;}
+        }
+    }
+
+//ZYX order
+    angle->yaw = atan2(matrixR[1][0], matrixR[0][0]);
+    angle->pitch = -asin(matrixR[2][0]);
+    angle->roll = atan2(matrixR[2][1], matrixR[2][2]);
+//XYZ order
+#ifdef XYZ_ORDER
+    angle->yaw = -atan2(matrixR[0][1], matrixR[0][0]);
+    angle->pitch = asin(matrixR[0][2]);
+    angle->roll = -atan2(matrixR[1][2], matrixR[2][2]);
+#endif
+
+    return 0;
+}
+
+int32_t TstitchStream::Euler2Matrix(EulerAngle* angle, float(*matrixR)[3])
+{
+    if (!matrixR || !angle)
+        return -1;
+//ZYX order
+    matrixR[0][0] = cos(angle->pitch) * cos(angle->yaw);
+    matrixR[0][1] = sin(angle->roll) * sin(angle->pitch) * cos(angle->yaw) - cos(angle->roll) * sin(angle->yaw);
+    matrixR[0][2] = sin(angle->roll) * sin(angle->yaw) + cos(angle->roll) * sin(angle->pitch) * cos(angle->yaw);
+    matrixR[1][0] = cos(angle->pitch) * sin(angle->yaw);
+    matrixR[1][1] = cos(angle->roll) * cos(angle->yaw) + sin(angle->roll) * sin(angle->pitch) * sin(angle->yaw);
+    matrixR[1][2] = cos(angle->roll) * sin(angle->pitch) * sin(angle->yaw) - sin(angle->roll) * cos(angle->yaw);
+    matrixR[2][0] = -sin(angle->pitch);
+    matrixR[2][1] = sin(angle->roll) * cos(angle->pitch);
+    matrixR[2][2] = cos(angle->roll) * cos(angle->pitch);
+//XYZ order
+#ifdef XYZ_ORDER
+    matrixR[0][0] = cos(angle->pitch) * cos(angle->yaw);
+    matrixR[0][1] = -cos(angle->pitch) * sin(angle->yaw);
+    matrixR[0][2] = sin(angle->pitch);
+    matrixR[1][0] = cos(angle->roll) * sin(angle->yaw) + sin(angle->roll) * sin(angle->pitch) * cos(angle->yaw);
+    matrixR[1][1] = cos(angle->roll) * cos(angle->yaw) - sin(angle->roll) * sin(angle->pitch) * sin(angle->yaw);
+    matrixR[1][2] = -sin(angle->roll) * cos(angle->pitch);
+    matrixR[2][0] = sin(angle->roll) * sin(angle->yaw) - cos(angle->roll) * sin(angle->pitch) * cos(angle->yaw);
+    matrixR[2][1] = sin(angle->roll) * cos(angle->yaw) + cos(angle->roll) * sin(angle->pitch) * sin(angle->yaw);
+    matrixR[2][2] = cos(angle->roll) * cos(angle->pitch);
+#endif
+
+    return 0;
+}
+
+int32_t TstitchStream::Matrix2Quaternion(float(*matrixR)[3], Quaternion* quaternion)
+{
+    if (!matrixR || !quaternion) return -1;
+
+    // The matrixR needs to be orthogonal, in addition the matrixR is pure rotation without reflection component.
+    //Check if product of MatrixR and its transpose is identity matrix
+    double product[3][3] = { 0 };
+    for (int i = 0; i < 3; i++){
+        for (int j = 0; j < 3; j++){
+            float sum = 0;
+            for (int k = 0; k < 3; k++){
+                sum += (matrixR[i][k] * matrixR[j][k]);
+            }
+            product[i][j] = sum;
+        }
+    }
+
+    for (int i = 0; i < 3; i++){
+        for (int j = 0; j < 3; j++){
+            if (i != j && abs(product[i][j] - 0 > 1e-3)){
+                printf("Input matrixR is not orthogonal!");
+                return -1;}
+            if (i == j && abs(product[i][j] - 1 > 1e-3)){
+                printf("Input matrixR is not orthogonal!");
+                return -1;}
+        }
+    }
+
+    double trace = matrixR[0][0] + matrixR[1][1] + matrixR[2][2];
+    //If the trace of the rotation matrix is greater than zero, then the result is:
+    if (trace > 0) {
+        float s = sqrt(trace + 1.0) * 2;
+        quaternion->w = 0.25 * s;
+        quaternion->x = (matrixR[2][1] - matrixR[1][2]) / s;
+        quaternion->y = (matrixR[0][2] - matrixR[2][0]) / s;
+        quaternion->z = (matrixR[1][0] - matrixR[0][1]) / s;
+    }
+    //If the trace of the rotation matrix is less than or equal to zero then identify which major diagonal element has the greatest value.
+    else {
+        if ((matrixR[0][0] > matrixR[1][1]) && (matrixR[0][0] > matrixR[2][2])) {
+            float s = sqrt(1.0 + matrixR[0][0] - matrixR[1][1] - matrixR[2][2]) * 2;
+            quaternion->w = (matrixR[2][1] - matrixR[1][2]) / s;
+            quaternion->x = 0.25 * s;
+            quaternion->y = (matrixR[0][1] + matrixR[1][0]) / s;
+            quaternion->z = (matrixR[0][2] + matrixR[2][0]) / s;
+        }
+        else if (matrixR[1][1] > matrixR[2][2]){
+            float s = sqrt(1.0 + matrixR[1][1] - matrixR[0][0] - matrixR[2][2]) * 2;
+            quaternion->w = (matrixR[0][2] - matrixR[2][0]) / s;
+            quaternion->x = (matrixR[0][1] + matrixR[1][0]) / s;
+            quaternion->y = 0.25 * s;
+            quaternion->z = (matrixR[1][2] + matrixR[2][1]) / s;
+        }
+        else {
+            float s = sqrt(1.0 + matrixR[2][2] - matrixR[0][0] - matrixR[1][1]) * 2;
+            quaternion->w = (matrixR[1][0] - matrixR[0][1]) / s;
+            quaternion->x = (matrixR[0][2] + matrixR[2][0]) / s;
+            quaternion->y = (matrixR[1][2] + matrixR[2][1]) / s;
+            quaternion->z = 0.25 * s;
+        }
+    }
+
+    return 0;
+}
+
+int32_t TstitchStream::Quaternion2Matrix(Quaternion* quaternion, float(*matrixR)[3])
+{
+    if (!quaternion || !matrixR) return -1;
+
+    matrixR[0][0] = 2 * quaternion->w * quaternion->w + 2 * quaternion->x * quaternion->x - 1;
+    matrixR[0][1] = 2 * quaternion->x * quaternion->y - 2 * quaternion->z * quaternion->w;
+    matrixR[0][2] = 2 * quaternion->x * quaternion->z + 2 * quaternion->y * quaternion->w;
+    matrixR[1][0] = 2 * quaternion->x * quaternion->y + 2 * quaternion->z * quaternion->w;
+    matrixR[1][1] = 2 * quaternion->w * quaternion->w + 2 * quaternion->y * quaternion->y - 1;
+    matrixR[1][2] = 2 * quaternion->y * quaternion->z - 2 * quaternion->x * quaternion->w;
+    matrixR[2][0] = 2 * quaternion->x * quaternion->z - 2 * quaternion->y * quaternion->w;;
+    matrixR[2][1] = 2 * quaternion->y * quaternion->z + 2 * quaternion->x * quaternion->w;
+    matrixR[2][2] = 2 * quaternion->w * quaternion->w + 2 * quaternion->z * quaternion->z - 1;
+
+    return 0;
+}
+
+int32_t TstitchStream::xmlParsing(const char* fileName, uint32_t cameraID_x, uint32_t cameraID_y, NovelViewSEI* novelViewSEI)
+{
+    XMLDocument config;
+
+    config.LoadFile(fileName);
+    XMLElement* cameraPara = config.RootElement();
+    if (NULL == cameraPara)
+    {
+        printf(" XML parse failed! ");
+        return -1;
+    }
+    uint32_t maxNumberHorz = (uint32_t)atoi(cameraPara->FirstChildElement("maxNumberHorz")->GetText());
+    if (cameraID_x >= maxNumberHorz) {
+        printf("cameraID_x Error!");
+        return -1;
+    }
+    uint32_t maxNumberVert = (uint32_t)atoi(cameraPara->FirstChildElement("maxNumberVert")->GetText());
+    if (cameraID_y >= maxNumberVert) {
+        printf("cameraID_y Error!");
+        return -1;
+    }
+    char cam[20];
+    sprintf(cam, "Camera_%d_%d", cameraID_x, cameraID_y);
+    XMLElement* CameraID = cameraPara->FirstChildElement(cam);
+    novelViewSEI->cameraID_x = atoi(CameraID->FirstChildElement("cameraID_x")->GetText());
+    novelViewSEI->cameraID_y = atoi(CameraID->FirstChildElement("cameraID_y")->GetText());
+
+    novelViewSEI->focal_x = atof(CameraID->FirstChildElement("focal_x")->GetText());
+    novelViewSEI->focal_y = atof(CameraID->FirstChildElement("focal_y")->GetText());
+    novelViewSEI->center_x = atof(CameraID->FirstChildElement("center_x")->GetText());
+    novelViewSEI->center_y = atof(CameraID->FirstChildElement("center_y")->GetText());
+
+    novelViewSEI->codx = atof(CameraID->FirstChildElement("codx")->GetText());
+    novelViewSEI->cody = atof(CameraID->FirstChildElement("cody")->GetText());
+
+    novelViewSEI->roll = atof(CameraID->FirstChildElement("roll")->GetText());
+    novelViewSEI->pitch = atof(CameraID->FirstChildElement("pitch")->GetText());
+    novelViewSEI->yaw = atof(CameraID->FirstChildElement("yaw")->GetText());
+    novelViewSEI->trans_x = atof(CameraID->FirstChildElement("trans_x")->GetText());
+    novelViewSEI->trans_y = atof(CameraID->FirstChildElement("trans_y")->GetText());
+    novelViewSEI->trans_z = atof(CameraID->FirstChildElement("trans_z")->GetText());
+
+    novelViewSEI->k1 = atof(CameraID->FirstChildElement("k1")->GetText());
+    novelViewSEI->k2 = atof(CameraID->FirstChildElement("k2")->GetText());
+    novelViewSEI->k3 = atof(CameraID->FirstChildElement("k3")->GetText());
+    novelViewSEI->k4 = atof(CameraID->FirstChildElement("k4")->GetText());
+    novelViewSEI->k5 = atof(CameraID->FirstChildElement("k5")->GetText());
+    novelViewSEI->k6 = atof(CameraID->FirstChildElement("k6")->GetText());
+    novelViewSEI->p1 = atof(CameraID->FirstChildElement("p1")->GetText());
+    novelViewSEI->p2 = atof(CameraID->FirstChildElement("p2")->GetText());
+    novelViewSEI->metric_radius = atof(CameraID->FirstChildElement("metric_radius")->GetText());
+
+    return 0;
+}
+
 int TstitchStream::GenerateRwpkInfo(RegionWisePacking *dstRwpk)
 {
     if (!dstRwpk)
@@ -1637,8 +1862,13 @@ int32_t TstitchStream::merge_one_tile(uint8_t **pBitstream, oneStream_info* pSli
             if (m_seiViewport_enable)
             {
                 hevc_write_ViewportSEI(bs, m_pSeiViewport, 1);
-
             }
+
+            if (m_seiNovelView_enable)
+            {
+                hevc_write_novelViewSEI(bs, m_pNovelView, 1);
+            }
+
             pGenTilesStream->headerNalSize = (uint8_t)(bs->position - pGenTilesStream->headerNalSize);
         }
     }
@@ -1827,6 +2057,16 @@ int32_t  TstitchStream::setViewportSEI(OMNIViewPort* pSeiViewport)
         return -1;
     m_seiViewport_enable = 1;
     m_pSeiViewport = pSeiViewport;
+    return ret;
+}
+
+int32_t  TstitchStream::setSEINovelView(NovelViewSEI* pNovelView)
+{
+    int32_t ret = 0;
+    if (pNovelView == NULL)
+        return -1;
+    m_seiNovelView_enable = 1;
+    m_pNovelView = pNovelView;
     return ret;
 }
 
@@ -2104,6 +2344,22 @@ int32_t  TstitchStream::GenerateRWPK(RegionWisePacking* pRWPK, uint8_t *pRWPKBit
     if (bs)
     {
         *RWPKBitsSize = hevc_write_RwpkSEI(bs, pRWPK, 1);
+        gts_bs_del(bs);
+        ret = 0;
+    }
+    return ret;
+}
+
+int32_t  TstitchStream::GenerateNovelViewSEI(NovelViewSEI* pNVSEI, uint8_t* pNVBits, uint32_t* NVBitsSize) {
+    if (!pNVSEI || !pNVBits || !NVBitsSize)
+        return -1;
+    int32_t SEISize = 200;//need to define a macro
+    GTS_BitStream* bs = gts_bs_new((const int8_t*)pNVBits, SEISize, GTS_BITSTREAM_WRITE);
+
+    int32_t ret = -1;
+    if (bs)
+    {
+        * NVBitsSize = hevc_write_novelViewSEI(bs, pNVSEI, 1);
         gts_bs_del(bs);
         ret = 0;
     }
