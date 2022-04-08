@@ -39,7 +39,8 @@
 
 #include "MediaStream.h"
 #include "ExtractorTrackManager.h"
-#include "MpdGenerator.h"
+//#include "MpdGenerator.h"
+#include "DashMPDWriterPluginAPI.h"
 
 VCD_NS_BEGIN
 
@@ -68,7 +69,7 @@ public:
     //!         initial information input by library interface
     //!         which includs segmentation information
     //!
-    Segmentation(std::map<uint8_t, MediaStream*> *streams, ExtractorTrackManager *extractorTrackMan, InitialInfo *initInfo);
+    Segmentation(std::map<uint8_t, MediaStream*> *streams, ExtractorTrackManager *extractorTrackMan, InitialInfo *initInfo, PackingSourceMode sourceMode);
 
     Segmentation(const Segmentation& src);
 
@@ -78,6 +79,14 @@ public:
     //! \brief  Destructor
     //!
     virtual ~Segmentation();
+
+    //!
+    //! \brief  Initialize the basic process
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t Initialize();
 
     //!
     //! \brief  Execute the segmentation process for
@@ -116,20 +125,26 @@ public:
     virtual int32_t AudioEndSegmentation() = 0;
 
 private:
+
     //!
-    //! \brief  Write povd box for segments,
-    //!         including projection type,
-    //!         region wise packing information,
-    //!         and content coverage information
+    //! \brief  Create DASH segment writer plugin handle
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    //virtual int32_t VideoWritePovdBox() = 0;
+    int32_t CreateSegWriterPluginHdl();
+
+    //!
+    //! \brief  Create DASH MPD writer plugin handle
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t CreateMPDWriterPluginHdl();
+
 protected:
     std::map<uint8_t, MediaStream*> *m_streamMap;           //!< media streams map set up in OmafPackage
     ExtractorTrackManager           *m_extractorTrackMan;   //!< pointer to the extractor track manager created in OmafPackage
-    MpdGenerator                    *m_mpdGen;              //!< pointer to the MPD generator
     SegmentationInfo                *m_segInfo;             //!< pointer to the segmentation information
     uint64_t                        m_trackIdStarter;       //!< track index starter
     Rational                        m_frameRate;            //!< the frame rate of the video
@@ -137,6 +152,11 @@ protected:
     bool                            m_isCMAFEnabled;
     const char                      *m_segWriterPluginPath;
     const char                      *m_segWriterPluginName;
+    void                            *m_segWriterPluginHdl;
+    PackingSourceMode               m_sourceMode;
+    const char                      *m_mpdWriterPluginPath;
+    const char                      *m_mpdWriterPluginName;
+    void                            *m_mpdWriterPluginHdl;
 };
 
 VCD_NS_END;

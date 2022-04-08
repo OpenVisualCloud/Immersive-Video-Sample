@@ -83,6 +83,29 @@ DefaultSegmentation::~DefaultSegmentation()
     }
     m_streamSegCtx.clear();
 
+    std::map<MediaStream*, VCD::MP4::MPDAdaptationSetCtx*>::iterator itASCtx;
+    for (itASCtx = m_streamASCtx.begin();
+        itASCtx != m_streamASCtx.end(); itASCtx++)
+    {
+        VCD::MP4::MPDAdaptationSetCtx *asCtxs = itASCtx->second;
+        MediaStream *stream = itASCtx->first;
+        if (stream && (stream->GetMediaType() == VIDEOTYPE))
+        {
+            VideoStream *vs = (VideoStream*)stream;
+            uint32_t tilesNum = vs->GetTileInRow() * vs->GetTileInCol();
+            for (uint32_t i = 0; i < tilesNum; i++)
+            {
+                DELETE_MEMORY(asCtxs[i].videoInfo);
+            }
+            DELETE_ARRAY(asCtxs);
+        }
+        else if (stream && (stream->GetMediaType() == AUDIOTYPE))
+        {
+            DELETE_MEMORY(asCtxs);
+        }
+    }
+    m_streamASCtx.clear();
+
     if (m_extractorSegCtx.size())
     {
         std::map<ExtractorTrack*, TrackSegmentCtx*>::iterator itExtractorCtx;
@@ -91,20 +114,35 @@ DefaultSegmentation::~DefaultSegmentation()
             itExtractorCtx++)
         {
             TrackSegmentCtx *trackSegCtx = itExtractorCtx->second;
-            if (trackSegCtx->extractorTrackNalu.data)
+            if (trackSegCtx)
             {
-                free(trackSegCtx->extractorTrackNalu.data);
-                trackSegCtx->extractorTrackNalu.data = NULL;
+                if (trackSegCtx->extractorTrackNalu.data)
+                {
+                    free(trackSegCtx->extractorTrackNalu.data);
+                    trackSegCtx->extractorTrackNalu.data = NULL;
+                }
+
+                DELETE_MEMORY(trackSegCtx->initSegmenter);
+                DELETE_MEMORY(trackSegCtx->dashSegmenter);
             }
-
-            DELETE_MEMORY(trackSegCtx->initSegmenter);
-            DELETE_MEMORY(trackSegCtx->dashSegmenter);
-
             DELETE_MEMORY(trackSegCtx);
         }
 
         m_extractorSegCtx.clear();
     }
+
+    std::map<uint32_t, VCD::MP4::MPDAdaptationSetCtx*>::iterator itExtASCtx;
+    for (itExtASCtx = m_extractorASCtx.begin();
+        itExtASCtx != m_extractorASCtx.end(); itExtASCtx++)
+    {
+        VCD::MP4::MPDAdaptationSetCtx *asCtx = itExtASCtx->second;
+        if (asCtx)
+        {
+            DELETE_MEMORY(asCtx->videoInfo);
+        }
+        DELETE_MEMORY(asCtx);
+    }
+    m_extractorASCtx.clear();
 
     if (m_extractorThreadIds.size())
     {
@@ -123,10 +161,28 @@ DefaultSegmentation::~DefaultSegmentation()
 
     DELETE_ARRAY(m_videosBitrate);
 
-    if (m_segWriterPluginHdl)
+    if (m_mpdWriterPluginHdl)
     {
-        dlclose(m_segWriterPluginHdl);
-        m_segWriterPluginHdl = NULL;
+        if (m_mpdWriter)
+        {
+            DestroyMPDWriter* destroyMPDWriter = NULL;
+            destroyMPDWriter = (DestroyMPDWriter*)dlsym(m_mpdWriterPluginHdl, "Destroy");
+            const char *dlsymErr = dlerror();
+            if (dlsymErr)
+            {
+                OMAF_LOG(LOG_ERROR, "Failed to load symbol MPD writer Destroy !\n");
+                OMAF_LOG(LOG_ERROR, "And get error message %s \n", dlsymErr);
+                return;
+            }
+
+            if (!destroyMPDWriter)
+            {
+                OMAF_LOG(LOG_ERROR, "NULL MPD writer destructor !\n");
+                return;
+            }
+
+            destroyMPDWriter(m_mpdWriter);
+        }
     }
 }
 
@@ -213,6 +269,48 @@ int32_t FillQualityRank(VCD::MP4::CodedMeta *codedMeta, std::list<PicResolution>
     return ERROR_NONE;
 }
 
+int32_t DefaultSegmentation::CreateDashMPDWriter()
+{
+    if (!m_mpdWriterPluginHdl)
+    {
+        OMAF_LOG(LOG_ERROR, "NULL MPD writer plugin handle !\n");
+        return OMAF_ERROR_NULL_PTR;
+    }
+
+    CreateMPDWriter* createMPDWriter = NULL;
+    createMPDWriter = (CreateMPDWriter*)dlsym(m_mpdWriterPluginHdl, "Create");
+    const char *dlsymErr2 = NULL;
+    dlsymErr2 = dlerror();
+    if (dlsymErr2)
+    {
+        OMAF_LOG(LOG_ERROR, "Failed to load symbol Create: %s\n", dlsymErr2);
+        return OMAF_ERROR_DLSYM;
+    }
+
+    if (!createMPDWriter)
+    {
+        OMAF_LOG(LOG_ERROR, "NULL MPD writer creator !\n");
+        return OMAF_ERROR_NULL_PTR;
+    }
+
+    m_mpdWriter = createMPDWriter(
+                        &m_streamASCtx,
+                        &m_extractorASCtx,
+                        m_segInfo,
+                        m_projType,
+                        m_frameRate,
+                        m_videosNum,
+                        m_isCMAFEnabled);
+
+    if (!m_mpdWriter)
+    {
+        OMAF_LOG(LOG_ERROR, "Failed to create MPD writer !\n");
+        return OMAF_ERROR_NULL_PTR;
+    }
+
+    return ERROR_NONE;
+}
+
 int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
 {
     std::set<uint64_t> bitRateRanking;
@@ -255,6 +353,8 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
         if (stream->GetMediaType() == VIDEOTYPE)
         {
             VideoStream *vs = (VideoStream*)stream;
+            uint16_t vsWidth = vs->GetSrcWidth();
+            uint16_t vsHeight = vs->GetSrcHeight();
             TileInfo *tilesInfo = vs->GetAllTilesInfo();
             Rational frameRate = vs->GetFrameRate();
             uint64_t bitRate = vs->GetBitRate();
@@ -298,9 +398,35 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
 
             uint64_t tileBitRate = bitRate / tilesNum;
 
+            VCD::MP4::MPDAdaptationSetCtx *mpdASCtxs = new VCD::MP4::MPDAdaptationSetCtx[tilesNum];
+            if (!mpdASCtxs)
+                return OMAF_ERROR_NULL_PTR;
+            for (uint32_t i = 0; i < tilesNum; i++)
+            {
+                mpdASCtxs[i].videoInfo = new VCD::MP4::VideoAdaptationSetInfo;
+                if (!(mpdASCtxs[i].videoInfo))
+                {
+                    for (uint32_t j = 0; j < i; j++)
+                    {
+                        DELETE_MEMORY(mpdASCtxs[j].videoInfo);
+                    }
+                    DELETE_ARRAY(mpdASCtxs);
+                    return OMAF_ERROR_NULL_PTR;
+                }
+                memset_s(mpdASCtxs[i].videoInfo, sizeof(VCD::MP4::VideoAdaptationSetInfo), 0);
+            }
+
             TrackSegmentCtx *trackSegCtxs = new TrackSegmentCtx[tilesNum];
             if (!trackSegCtxs)
+            {
+                for (uint32_t i = 0; i < tilesNum; i++)
+                {
+                    DELETE_MEMORY(mpdASCtxs[i].videoInfo);
+                }
+                DELETE_ARRAY(mpdASCtxs);
                 return OMAF_ERROR_NULL_PTR;
+            }
+
             std::map<uint32_t, VCD::MP4::TrackId> tilesTrackIndex;
             for (uint32_t i = 0; i < tilesNum; i++)
             {
@@ -366,6 +492,12 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                     }
                     DELETE_ARRAY(trackSegCtxs);
 
+                    for (uint32_t id = 0; id < tilesNum; id++)
+                    {
+                        DELETE_MEMORY(mpdASCtxs[id].videoInfo);
+                    }
+                    DELETE_ARRAY(mpdASCtxs);
+
                     return ret;
                 }
 
@@ -380,6 +512,13 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                     }
 
                     DELETE_ARRAY(trackSegCtxs);
+
+                    for (uint32_t id = 0; id < tilesNum; id++)
+                    {
+                        DELETE_MEMORY(mpdASCtxs[id].videoInfo);
+                    }
+                    DELETE_ARRAY(mpdASCtxs);
+
                     return OMAF_ERROR_NULL_PTR;
                 }
                 (trackSegCtxs[i].initSegmenter)->SetSegmentWriter(trackSegCtxs[i].segWriter);
@@ -396,6 +535,13 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
 
                     DELETE_MEMORY(trackSegCtxs[i].initSegmenter);
                     DELETE_ARRAY(trackSegCtxs);
+
+                    for (uint32_t id = 0; id < tilesNum; id++)
+                    {
+                        DELETE_MEMORY(mpdASCtxs[id].videoInfo);
+                    }
+                    DELETE_ARRAY(mpdASCtxs);
+
                     return OMAF_ERROR_NULL_PTR;
                 }
                 (trackSegCtxs[i].dashSegmenter)->SetSegmentWriter(trackSegCtxs[i].segWriter);
@@ -439,6 +585,13 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                     }
 
                     DELETE_ARRAY(trackSegCtxs);
+
+                    for (uint32_t id = 0; id < tilesNum; id++)
+                    {
+                        DELETE_MEMORY(mpdASCtxs[id].videoInfo);
+                    }
+                    DELETE_ARRAY(mpdASCtxs);
+
                     return OMAF_ERROR_NULL_PTR;
                 }
 
@@ -469,6 +622,13 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                     }
 
                     DELETE_ARRAY(trackSegCtxs);
+
+                    for (uint32_t id = 0; id < tilesNum; id++)
+                    {
+                        DELETE_MEMORY(mpdASCtxs[id].videoInfo);
+                    }
+                    DELETE_ARRAY(mpdASCtxs);
+
                     return OMAF_ERROR_INVALID_PROJECTIONTYPE;
                 }
 
@@ -477,9 +637,22 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                 tilesTrackIndex.insert(std::make_pair(i, trackSegCtxs[i].trackIdx));
 
                 m_trackSegCtx.insert(std::make_pair(trackSegCtxs[i].trackIdx, &(trackSegCtxs[i])));
+
+                mpdASCtxs[i].videoInfo->fullWidth = vsWidth;
+                mpdASCtxs[i].videoInfo->fullHeight = vsHeight;
+                mpdASCtxs[i].videoInfo->tileWidth = tilesInfo[i].tileWidth;
+                mpdASCtxs[i].videoInfo->tileHeight = tilesInfo[i].tileHeight;
+                mpdASCtxs[i].videoInfo->tileHPos = tilesInfo[i].horizontalPos;
+                mpdASCtxs[i].videoInfo->tileVPos = tilesInfo[i].verticalPos;
+                mpdASCtxs[i].videoInfo->tileCubemapHPos = tilesInfo[i].defaultHorPos;
+                mpdASCtxs[i].videoInfo->tileCubemapVPos = tilesInfo[i].defaultVerPos;
+                mpdASCtxs[i].trackIdx = trackSegCtxs[i].trackIdx;
+                mpdASCtxs[i].codedMeta = trackSegCtxs[i].codedMeta;
+                mpdASCtxs[i].qualityRanking = trackSegCtxs[i].qualityRanking;
             }
             m_trackIdStarter += tilesNum;
             m_streamSegCtx.insert(std::make_pair(stream, trackSegCtxs));
+            m_streamASCtx.insert(std::make_pair(stream, mpdASCtxs));
             m_framesIsKey.insert(std::make_pair(stream, true));
             m_streamsIsEOS.insert(std::make_pair(stream, false));
             m_tilesTrackIdxs.insert(std::make_pair(it->first, tilesTrackIndex));
@@ -518,9 +691,18 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             Nalu *projSEI = extractorTrack->GetProjectionSEI();
             Nalu *rwpkSEI = extractorTrack->GetRwpkSEI();
 
+            VCD::MP4::MPDAdaptationSetCtx *mpdASCtx = new VCD::MP4::MPDAdaptationSetCtx;
+            if (!mpdASCtx)
+                return OMAF_ERROR_NULL_PTR;
+
+            mpdASCtx->videoInfo = NULL;
+
             TrackSegmentCtx *trackSegCtx = new TrackSegmentCtx;
             if (!trackSegCtx)
+            {
+                DELETE_MEMORY(mpdASCtx);
                 return OMAF_ERROR_NULL_PTR;
+            }
 
             trackSegCtx->isAudio = false;
             trackSegCtx->isExtractorTrack = true;
@@ -531,6 +713,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             trackSegCtx->extractorTrackNalu.data = new uint8_t[trackSegCtx->extractorTrackNalu.dataSize];
             if (!(trackSegCtx->extractorTrackNalu.data))
             {
+                DELETE_MEMORY(mpdASCtx);
                 DELETE_MEMORY(trackSegCtx);
                 return OMAF_ERROR_NULL_PTR;
             }
@@ -557,6 +740,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
                     {
                         DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
                         DELETE_MEMORY(trackSegCtx);
+                        DELETE_MEMORY(mpdASCtx);
                         return OMAF_ERROR_STREAM_NOT_FOUND;
                     }
                     std::map<uint32_t, VCD::MP4::TrackId> tilesIndex = itTilesIdxs->second;
@@ -627,6 +811,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             {
                 DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
                 DELETE_MEMORY(trackSegCtx);
+                DELETE_MEMORY(mpdASCtx);
 
                 return ret;
             }
@@ -637,6 +822,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             {
                 DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
                 DELETE_MEMORY(trackSegCtx);
+                DELETE_MEMORY(mpdASCtx);
                 return OMAF_ERROR_NULL_PTR;
             }
             (trackSegCtx->initSegmenter)->SetSegmentWriter(trackSegCtx->segWriter);
@@ -648,6 +834,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
                 DELETE_ARRAY(trackSegCtx->extractorTrackNalu.data);
                 DELETE_MEMORY(trackSegCtx->initSegmenter);
                 DELETE_MEMORY(trackSegCtx);
+                DELETE_MEMORY(mpdASCtx);
                 return OMAF_ERROR_NULL_PTR;
             }
             (trackSegCtx->dashSegmenter)->SetSegmentWriter(trackSegCtx->segWriter);
@@ -693,12 +880,19 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
                 DELETE_MEMORY(trackSegCtx->initSegmenter);
                 DELETE_MEMORY(trackSegCtx->dashSegmenter);
                 DELETE_MEMORY(trackSegCtx);
+                DELETE_MEMORY(mpdASCtx);
                 return OMAF_ERROR_INVALID_PROJECTIONTYPE;
             }
 
             trackSegCtx->codedMeta.isEOS = false;
 
+            mpdASCtx->refTrackIdxs = trackSegCtx->refTrackIdxs;
+            mpdASCtx->trackIdx = trackSegCtx->trackIdx;
+            mpdASCtx->codedMeta = trackSegCtx->codedMeta;
+            mpdASCtx->qualityRanking = trackSegCtx->qualityRanking;
+
             m_extractorSegCtx.insert(std::make_pair(extractorTrack, trackSegCtx));
+            m_extractorASCtx.insert(std::make_pair(mpdASCtx->trackIdx.GetIndex(), mpdASCtx));
         }
     }
 
@@ -726,9 +920,18 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
             OMAF_LOG(LOG_INFO, "Audio bit rate %d\n", bitRate);
             OMAF_LOG(LOG_INFO, "Audio specific configuration packed size %lld\n", packedAudioSpecCfg.size());
 
+            VCD::MP4::MPDAdaptationSetCtx *mpdASCtx = new VCD::MP4::MPDAdaptationSetCtx;
+            if (!mpdASCtx)
+                return OMAF_ERROR_NULL_PTR;
+
+            mpdASCtx->videoInfo = NULL;
+
             TrackSegmentCtx *trackSegCtx = new TrackSegmentCtx;
             if (!trackSegCtx)
+            {
+                DELETE_MEMORY(mpdASCtx);
                 return OMAF_ERROR_NULL_PTR;
+            }
 
             trackSegCtx->isAudio          = true;
             trackSegCtx->isExtractorTrack = false;
@@ -781,6 +984,7 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
             if (ret)
             {
                 DELETE_MEMORY(trackSegCtx);
+                DELETE_MEMORY(mpdASCtx);
                 return ret;
             }
 
@@ -789,6 +993,7 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
             if (!(trackSegCtx->initSegmenter))
             {
                 DELETE_MEMORY(trackSegCtx);
+                DELETE_MEMORY(mpdASCtx);
                 return OMAF_ERROR_NULL_PTR;
             }
             (trackSegCtx->initSegmenter)->SetSegmentWriter(trackSegCtx->segWriter);
@@ -799,6 +1004,7 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
             {
                 DELETE_MEMORY(trackSegCtx->initSegmenter);
                 DELETE_MEMORY(trackSegCtx);
+                DELETE_MEMORY(mpdASCtx);
                 return OMAF_ERROR_NULL_PTR;
             }
             (trackSegCtx->dashSegmenter)->SetSegmentWriter(trackSegCtx->segWriter);
@@ -824,7 +1030,11 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
 
             trackSegCtx->isEOS = false;
 
+            mpdASCtx->trackIdx = trackSegCtx->trackIdx;
+            mpdASCtx->codedMeta = trackSegCtx->codedMeta;
+
             m_streamSegCtx.insert(std::make_pair(stream, trackSegCtx));
+            m_streamASCtx.insert(std::make_pair(stream, mpdASCtx));
         }
     }
 
@@ -1350,6 +1560,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
         {
             std::lock_guard<std::mutex> lock(m_audioMutex);
+            /*
             m_mpdGen = new MpdGenerator(
                         &m_streamSegCtx,
                         &m_extractorSegCtx,
@@ -1360,8 +1571,12 @@ int32_t DefaultSegmentation::VideoSegmentation()
                         m_isCMAFEnabled);
             if (!m_mpdGen)
                 return OMAF_ERROR_NULL_PTR;
+            */
+            ret = CreateDashMPDWriter();
+            if (ret)
+                return ret;
 
-            ret = m_mpdGen->Initialize();
+            ret = m_mpdWriter->Initialize();
 
             if (ret)
                 return ret;
@@ -1371,6 +1586,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
     }
     else
     {
+        /*
         m_mpdGen = new MpdGenerator(
                         &m_streamSegCtx,
                         &m_extractorSegCtx,
@@ -1381,8 +1597,12 @@ int32_t DefaultSegmentation::VideoSegmentation()
                         m_isCMAFEnabled);
         if (!m_mpdGen)
             return OMAF_ERROR_NULL_PTR;
+        */
+        ret = CreateDashMPDWriter();
+        if (ret)
+            return ret;
 
-        ret = m_mpdGen->Initialize();
+        ret = m_mpdWriter->Initialize();
 
         if (ret)
             return ret;
@@ -1511,7 +1731,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
             if (m_segInfo->isLive)
             {
-                m_mpdGen->UpdateMpd(m_segNum, m_framesNum);
+                m_mpdWriter->UpdateMpd(m_segNum, m_framesNum);
             }
         }
 
@@ -1700,7 +1920,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
             currentT = before;
             if (m_isCMAFEnabled && m_segInfo->isLive)
             {
-                m_mpdGen->UpdateMpd(m_segNum, m_framesNum);
+                m_mpdWriter->UpdateMpd(m_segNum, m_framesNum);
             }
 
         }
@@ -1772,7 +1992,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
                         return OMAF_ERROR_TIMED_OUT;
                     }
                 }
-                int32_t ret = m_mpdGen->UpdateMpd(m_segNum, m_framesNum);
+                int32_t ret = m_mpdWriter->UpdateMpd(m_segNum, m_framesNum);
                 if (ret)
                     return ret;
             } else {
@@ -1810,7 +2030,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
                     }
                 }
 
-                int32_t ret = m_mpdGen->WriteMpd(m_framesNum);
+                int32_t ret = m_mpdWriter->WriteMpd(m_framesNum);
                 if (ret)
                     return ret;
             }
@@ -1841,6 +2061,7 @@ int32_t DefaultSegmentation::AudioSegmentation()
     bool onlyAudio = OnlyAudio();
     if (onlyAudio)
     {
+        /*
         m_mpdGen = new MpdGenerator(
                         &m_streamSegCtx,
                         &m_extractorSegCtx,
@@ -1851,8 +2072,13 @@ int32_t DefaultSegmentation::AudioSegmentation()
                         m_isCMAFEnabled);
         if (!m_mpdGen)
             return OMAF_ERROR_NULL_PTR;
+        */
 
-        ret = m_mpdGen->Initialize();
+        ret = CreateDashMPDWriter();
+        if (ret)
+            return ret;
+
+        ret = m_mpdWriter->Initialize();
 
         if (ret)
             return ret;
@@ -1911,7 +2137,7 @@ int32_t DefaultSegmentation::AudioSegmentation()
             {
                 if (m_segInfo->isLive)
                 {
-                    m_mpdGen->UpdateMpd(m_audioSegNum, m_framesNum);
+                    m_mpdWriter->UpdateMpd(m_audioSegNum, m_framesNum);
                 }
             }
         }
@@ -2005,11 +2231,11 @@ int32_t DefaultSegmentation::AudioSegmentation()
             {
                 if (m_segInfo->isLive)
                 {
-                    int32_t ret = m_mpdGen->UpdateMpd(m_audioSegNum, m_framesNum);
+                    int32_t ret = m_mpdWriter->UpdateMpd(m_audioSegNum, m_framesNum);
                     if (ret)
                         return ret;
                 } else {
-                    int32_t ret = m_mpdGen->WriteMpd(m_framesNum);
+                    int32_t ret = m_mpdWriter->WriteMpd(m_framesNum);
                     if (ret)
                         return ret;
                 }

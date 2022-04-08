@@ -104,6 +104,7 @@ VCD_OMAF_BEGIN
 #define MAXWIDTH                                "maxWidth"
 #define MAXHEIGHT                               "maxHeight"
 #define GOPSIZE                                 "gopSize"
+#define MODE                                    "mode"
 #define MAXFRAMERATE                            "maxFramerate"
 #define SEGMENTALIGNMENT                        "segmentAlignment"
 #define SUBSEGMENTALIGNMENT                     "subsegmentAlignment"
@@ -252,6 +253,37 @@ private:
     int32_t height;
     int32_t id;
 
+};
+
+//!
+//! \class:  Viewport
+//! \brief:  class for Viewport information.
+//! \detail:
+//!
+//!
+//!
+
+class ViewportProperty{
+public:
+    ViewportProperty(){
+        h_view_id = -1;
+        v_view_id = -1;
+    };
+
+    ~ViewportProperty(){};
+
+public:
+    void SetInfo(char* value)
+    {
+        sscanf( value, "(%d,%d)", &h_view_id, &v_view_id);
+    };
+
+    int32_t get_h() { return h_view_id; };
+    int32_t get_v() { return v_view_id; };
+
+private:
+    int32_t h_view_id;
+    int32_t v_view_id;
 };
 
 typedef struct SAMPLEDATA {

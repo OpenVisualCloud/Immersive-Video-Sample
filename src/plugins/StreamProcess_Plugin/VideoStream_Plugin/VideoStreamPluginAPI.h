@@ -317,6 +317,9 @@ public:
     //!         current buffered frames number
     //!
     virtual uint32_t GetBufferedFrameNum() = 0;
+
+    virtual NovelViewSEI* GetNovelViewSEIInfo() = 0;
+
 protected:
 };
 

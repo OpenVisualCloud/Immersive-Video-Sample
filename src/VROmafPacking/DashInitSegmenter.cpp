@@ -36,7 +36,7 @@
 #include <algorithm>
 
 #include "DashSegmenter.h"
-#include "DashWriterPluginAPI.h"
+#include "DashSegmentWriterPluginAPI.h"
 
 using namespace std;
 

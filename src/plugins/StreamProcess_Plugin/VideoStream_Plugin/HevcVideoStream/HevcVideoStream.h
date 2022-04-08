@@ -334,6 +334,8 @@ public:
         return bufferedFrmNum;
     }
 
+    NovelViewSEI* GetNovelViewSEIInfo() { return NULL; };
+
 private:
     //!
     //! \brief  Parse the header data of the video stream,

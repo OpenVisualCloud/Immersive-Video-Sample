@@ -32,7 +32,7 @@
 #ifndef _SEGMENTWRITER_H_
 #define _SEGMENTWRITER_H_
 
-#include "../DashWriterPluginAPI.h"
+#include "../DashSegmentWriterPluginAPI.h"
 
 using namespace std;
 
