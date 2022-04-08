@@ -107,7 +107,7 @@ RenderStatus ERPRenderTarget_hw::CreateRenderTarget()
     return RENDER_STATUS_OK;
 }
 
-RenderStatus ERPRenderTarget_hw::Update( float yaw, float pitch, float hFOV, float vFOV, uint64_t pts )
+RenderStatus ERPRenderTarget_hw::Update( HeadPose* pose, float hFOV, float vFOV, uint64_t pts )
 {
     return RENDER_STATUS_OK;
 }

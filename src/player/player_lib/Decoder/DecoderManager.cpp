@@ -218,12 +218,12 @@ RenderStatus DecoderManager::SendVideoPackets( DashPacket* packets, uint32_t cnt
     return RENDER_STATUS_OK;
 }
 
-RenderStatus DecoderManager::UpdateVideoFrame( uint32_t video_id, uint64_t pts, int64_t *corr_pts )
+RenderStatus DecoderManager::UpdateVideoFrame( uint32_t video_id, uint64_t pts, int64_t *corr_pts, HeadPose* pose )
 {
     RenderStatus ret = RENDER_STATUS_OK;
     if (video_id < OFFSET_VIDEO_ID_FOR_CATCHUP) {
         if(m_mapVideoDecoder.find(video_id)!=m_mapVideoDecoder.end()){
-            ret = m_mapVideoDecoder[video_id]->UpdateFrame(pts, corr_pts);
+            ret = m_mapVideoDecoder[video_id]->UpdateFrame(pts, corr_pts, pose);
 #ifndef _ANDROID_OS_
             if((STATUS_IDLE == m_mapVideoDecoder[video_id]->GetDecoderStatus())
             &&(ret==RENDER_NO_FRAME)){// to remove rs handler
@@ -244,7 +244,7 @@ RenderStatus DecoderManager::UpdateVideoFrame( uint32_t video_id, uint64_t pts, 
     else {
         ScopeLock lock(m_mapCatchupDecoderLock);
         if(m_mapCatchupVideoDecoder.find(video_id)!=m_mapCatchupVideoDecoder.end()){
-            ret = m_mapCatchupVideoDecoder[video_id]->UpdateFrame(pts, nullptr);
+            ret = m_mapCatchupVideoDecoder[video_id]->UpdateFrame(pts, nullptr, nullptr);
 #ifndef _ANDROID_OS_
             if((STATUS_IDLE == m_mapCatchupVideoDecoder[video_id]->GetDecoderStatus())
             &&(ret==RENDER_NO_FRAME)){// to remove rs handler
@@ -266,7 +266,7 @@ RenderStatus DecoderManager::UpdateVideoFrame( uint32_t video_id, uint64_t pts, 
     return ret;
 }
 
-RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts, int64_t *corr_pts )
+RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts, int64_t *corr_pts, HeadPose *pose )
 {
     RenderStatus ret = RENDER_STATUS_OK;
     uint32_t errorCnt = 0;
@@ -277,11 +277,19 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts, int64_t *corr_pts 
         LOG(INFO)<<"There is no valid decoder for now!"<<endl;
         return ret;
     }
+
+    //0. Check the availability of view id of input pose
+    ret = CheckViewIdAvailability(pose);
+    if (ret != RENDER_STATUS_OK) {
+        LOG(ERROR) << "Error in Check view id availability! " << endl;
+        return ret;
+    }
+
     //1. update normal video decoders
     int64_t max_corr_pts = 0;
     for(auto it=m_mapVideoDecoder.begin(); it!=m_mapVideoDecoder.end(); it++){
         int64_t single_corr_pts = 0;
-        ret = UpdateVideoFrame(it->first, pts, &single_corr_pts);
+        ret = UpdateVideoFrame(it->first, pts, &single_corr_pts, pose);
         if( ret == RENDER_NO_FRAME ){
             LOG(INFO)<<"Video "<< it->first <<" : haven't found a matched Video Frame relative to pts: " << pts <<std::endl;
             errorCnt++;
@@ -324,7 +332,7 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts, int64_t *corr_pts 
     //2. update catch-up video decoders
     RenderStatus st = RENDER_STATUS_OK;
     for(auto it=m_mapCatchupVideoDecoder.begin(); it!=m_mapCatchupVideoDecoder.end(); it++){
-        st = UpdateVideoFrame(it->first, pts, nullptr);
+        st = UpdateVideoFrame(it->first, pts, nullptr, nullptr);
         if( st == RENDER_NO_FRAME ){
             LOG(INFO)<<"Catch up Video "<< it->first <<" : haven't found a matched Video Frame relative to pts: " << pts <<std::endl;
         }
@@ -361,6 +369,57 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts, int64_t *corr_pts 
 #endif
 #endif
     return ret;
+}
+
+RenderStatus DecoderManager::CheckViewIdAvailability(HeadPose *pose) {
+    if (pose == nullptr) return RENDER_ERROR;
+
+    if (pose->hViewId < 0 && pose->vViewId < 0) {//Omni
+        return RENDER_STATUS_OK;
+    }
+
+    if (pose->hViewId > MAX_CAMERA_H_NUM || pose->vViewId > MAX_CAMERA_V_NUM) {
+        LOG(ERROR) << "Pose view id is not supported!" << endl;
+        return RENDER_ERROR;
+    }
+
+    uint32_t framerate = round(float(m_decodeInfo.frameRate_num) / m_decodeInfo.frameRate_den);
+    uint32_t cur_seg_id = pose->pts / (framerate * m_decodeInfo.segment_duration) + 1;
+    // 1. check input view id availability
+    if (m_availViewIdsInSeg.find(cur_seg_id) == m_availViewIdsInSeg.end()) {
+        LOG(ERROR) << "Current segment id " << cur_seg_id << " is not available!" << endl;
+        return RENDER_ERROR;
+    }
+    vector<pair<int32_t, int32_t>> availViewIds = m_availViewIdsInSeg[cur_seg_id];
+    if (availViewIds.empty()) return RENDER_ERROR;
+
+    auto it = availViewIds.begin();
+    for (; it != availViewIds.end(); it++) {
+        if (pose->hViewId == it->first && pose->vViewId == it->second) {
+            break;
+        }
+    }
+    // 2. correct the view id of input pose
+    if (it == availViewIds.end()) {// need to update the view id
+        sort(availViewIds.begin(), availViewIds.end(), \
+            [&](std::pair<int32_t, int32_t> view1, std::pair<int32_t, int32_t> view2) { return view1.first < view2.first;});
+        // left bound, then fetch left value
+        if (pose->hViewId < availViewIds.begin()->first) {
+            LOG(INFO) << "Correct input pose view id " << pose->hViewId << " to available view id " << availViewIds.begin()->first << endl;
+            pose->hViewId = availViewIds.begin()->first;
+        }
+        // right bound, then fetch right value
+        else if (pose->hViewId > availViewIds.rbegin()->first) {
+            LOG(INFO) << "Correct input pose view id " << pose->hViewId << " to available view id " << availViewIds.rbegin()->first << endl;
+            pose->hViewId = availViewIds.rbegin()->first;
+        }
+        // abnormal condition, will not happen
+        else {
+            LOG(ERROR) << "Abnormal input pose view id " << pose->hViewId << endl;
+            return RENDER_ERROR;
+        }
+    }
+    return RENDER_STATUS_OK;
 }
 
 RenderStatus DecoderManager::ResetDecoders()

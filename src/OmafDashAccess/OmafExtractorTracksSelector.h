@@ -91,30 +91,6 @@ public:
         return !mCurrentExtractor->GetCurrentTracksMap().empty();
     }
 
-    //!
-    //! \brief  update Viewport; each time pose update will be recorded, but only
-    //!         the latest will be used when SelectTracks is called.
-    //!
-    int UpdateViewport(HeadPose* pose);
-
-    //!
-    //! \brief  Set Init viewport
-    //!
-    int SetInitialViewport(
-        std::vector<Viewport*>& pView,
-        HeadSetInfo* headSetInfo,
-        OmafMediaStream* pStream);
-
-    //!
-    //! \brief  Load viewport prediction plugin
-    //!
-    int EnablePosePrediction(std::string predictPluginName, std::string libPath);
-
-    //!
-    //! \brief  Get the priority of the segment
-    //!
-    //virtual int GetSegmentPriority(OmafSegment *segment);
-
 private:
     //!
     //! \brief  Get Extractor Track based on latest Pose

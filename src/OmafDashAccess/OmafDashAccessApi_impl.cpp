@@ -150,7 +150,7 @@ int OmafAccess_OpenMedia(Handler hdl, DashStreamingClient *pCtx, bool enablePred
   string s_predictPluginName = predictPluginName;
   string s_libPath = libPath;
   return pSource->OpenMedia(media_url, cache_path, pCtx->log_callback, pCtx->plugin_def, pCtx->enable_extractor, enablePredictor,
-                            s_predictPluginName, s_libPath);
+                            s_predictPluginName, s_libPath, pCtx->enable_autoView);
 }
 
 int OmafAccess_StartStreaming(Handler hdl)
@@ -206,12 +206,15 @@ int OmafAccess_GetPacket(Handler hdl, int stream_id, DashPacket *packet, int *si
     if (!(pPkt->GetEOS()) || pPkt->IsCatchup()) {
       if (pPkt->GetMediaType() == MediaType_Video)
       {
-          RegionWisePacking *newRwpk = new RegionWisePacking;
-          const RegionWisePacking &pRwpk = pPkt->GetRwpk();
-          *newRwpk = pRwpk;
-          newRwpk->rectRegionPacking = new RectangularRegionWisePacking[newRwpk->numRegions];
-          memcpy_s(newRwpk->rectRegionPacking, pRwpk.numRegions * sizeof(RectangularRegionWisePacking),
-                   pRwpk.rectRegionPacking, pRwpk.numRegions * sizeof(RectangularRegionWisePacking));
+          RegionWisePacking *newRwpk = nullptr;
+          if (&pPkt->GetRwpk() != nullptr) {// not in multi-view mode
+            newRwpk = new RegionWisePacking;
+            const RegionWisePacking &pRwpk = pPkt->GetRwpk();
+            *newRwpk = pRwpk;
+            newRwpk->rectRegionPacking = new RectangularRegionWisePacking[newRwpk->numRegions];
+            memcpy_s(newRwpk->rectRegionPacking, pRwpk.numRegions * sizeof(RectangularRegionWisePacking),
+                    pRwpk.rectRegionPacking, pRwpk.numRegions * sizeof(RectangularRegionWisePacking));
+          }
           SourceResolution *srcRes = new SourceResolution[pPkt->GetQualityNum()];
           memcpy_s(srcRes, pPkt->GetQualityNum() * sizeof(SourceResolution), pPkt->GetSourceResolutions(),
                    pPkt->GetQualityNum() * sizeof(SourceResolution));
@@ -238,6 +241,8 @@ int OmafAccess_GetPacket(Handler hdl, int stream_id, DashPacket *packet, int *si
           packet[i].bEOS = pPkt->GetEOS();
           packet[i].bCatchup = pPkt->IsCatchup();
           packet[i].prft = newPrft;
+          packet[i].hViewID = pPkt->GetViewId().first;
+          packet[i].vViewID = pPkt->GetViewId().second;
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
           string tag = "sgmtIdx:" + to_string(pPkt->GetSegID());

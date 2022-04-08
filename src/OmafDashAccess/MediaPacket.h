@@ -370,6 +370,9 @@ class MediaPacket : public VCD::NonCopyable {
       // printf("m_audioADTSHdr size %ld\n", m_audioADTSHdr.size());
   };
 
+  void     SetViewId(pair<int32_t, int32_t> view_id) { m_viewID = view_id; };
+  pair<int32_t, int32_t> GetViewId() { return m_viewID; };
+
 private:
     MediaPacket& operator=(const MediaPacket& other) { return *this; };
     MediaPacket(const MediaPacket& other) { /* do not create copies */ };
@@ -408,6 +411,7 @@ private:
   std::vector<uint8_t> m_audioADTSHdr;
   bool m_isCatchup = false;
   bool m_isKeyFrame = false;
+  pair<int32_t, int32_t> m_viewID = make_pair(-1, -1);
 
   void deleteRwpk() {
     if (m_rwpk) {

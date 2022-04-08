@@ -34,6 +34,7 @@
 #define VIEWPORTELEMENT_H
 #include "OmafElementBase.h"
 #include "DescriptorElement.h"
+#include "OmafStructure.h"
 
 VCD_OMAF_BEGIN
 
@@ -44,7 +45,7 @@ public:
     //!
     //! \brief Constructor
     //!
-    ViewportElement(){};
+    ViewportElement();
 
     //!
     //! \brief Destructor
@@ -59,8 +60,10 @@ public:
     //!
     virtual ODStatus ParseSchemeIdUriAndValue();
 
-private:
+    ViewportProperty* GetViewport() { return m_viewport; }
 
+private:
+    ViewportProperty *m_viewport;
 };
 
 VCD_OMAF_END;

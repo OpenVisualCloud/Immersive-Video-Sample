@@ -90,7 +90,7 @@ public:
      //! \return RenderStatus
      //!         RENDER_STATUS_OK if success, else fail reason
      //!
-     RenderStatus UpdateVideoFrame( uint32_t video_id, uint64_t pts, int64_t *corr_pts );
+     RenderStatus UpdateVideoFrame( uint32_t video_id, uint64_t pts, int64_t *corr_pts, HeadPose *pose );
 
      //!
      //! \brief  reset the decoder when decoding information changes
@@ -101,7 +101,7 @@ public:
      //! \return RenderStatus
      //!         RENDER_STATUS_OK if success, else fail reason
      //!
-     RenderStatus UpdateVideoFrames( uint64_t pts, int64_t *corr_pts );
+     RenderStatus UpdateVideoFrames( uint64_t pts, int64_t *corr_pts, HeadPose *pose );
 
      void SetSurface(uint32_t video_id, uint32_t tex_id, void* surface)
      {
@@ -110,6 +110,9 @@ public:
      };
 
      void SetDecodeInfo(DecodeInfo info) { m_decodeInfo = info; };
+
+     DecodeInfo GetDecodeInfo() { return m_decodeInfo; };
+
      ///Audio-relative operations: TBD
      RenderStatus CreateAudioDecoder(uint32_t audio_id, uint32_t audio_codec){ return RENDER_STATUS_OK; };
      RenderStatus SendAudioPackets( DashPacket* packets ){ return RENDER_STATUS_OK; };
@@ -151,9 +154,15 @@ public:
           return isReadyStatus;
      }
 
+     void SetAvailViewIds(uint32_t seg_id, vector<pair<int32_t, int32_t>> availViewIds) {
+          m_availViewIdsInSeg.insert(std::make_pair(seg_id, availViewIds));
+     }
+
 private:
      ///Video-relative operations
      RenderStatus CheckVideoDecoders(vector<DashPacket*> packets, std::map<uint32_t, MediaDecoder*> decoderMap, uint32_t cnt, bool isCatchup);
+
+     RenderStatus CheckViewIdAvailability(HeadPose *pose);
 
 
 private:
@@ -166,6 +175,7 @@ private:
     std::vector<void*>                  m_surfaces;
     std::vector<uint32_t>               m_textures;
     DecodeInfo                          m_decodeInfo;
+    std::map<uint32_t, std::vector<pair<int32_t, int32_t>>> m_availViewIdsInSeg;
 };
 
 VCD_NS_END

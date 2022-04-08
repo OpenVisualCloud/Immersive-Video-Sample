@@ -134,6 +134,24 @@ bool parseRenderFromXml(std::string xml_file, struct RenderConfig &renderConfig)
       LOG(ERROR) << " invalid params for enableExtractor! " << std::endl;
       return RENDER_ERROR;
     }
+
+    XMLElement* autoElem = info->FirstChildElement("enableAutoView");
+    if (autoElem != NULL)
+    {
+      renderConfig.enableAutoView =
+        atoi(autoElem
+                 ->GetText());  // 1: for LaterBinding 0: for extractor track
+      if (renderConfig.enableAutoView != 0 && renderConfig.enableAutoView != 1) {
+        LOG(ERROR) << "---INVALID enableAutoView input (1: for auto view 0: for manual view)---" << std::endl;
+        return RENDER_ERROR;
+      }
+    }
+    else
+    {
+      LOG(ERROR) << " invalid params for enableAutoView! " << std::endl;
+      return RENDER_ERROR;
+    }
+
     XMLElement* hFOVElem = info->FirstChildElement("viewportHFOV");
     XMLElement* vFOVElem = info->FirstChildElement("viewportVFOV");
     if (hFOVElem != NULL && vFOVElem != NULL)

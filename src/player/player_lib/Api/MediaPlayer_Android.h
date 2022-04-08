@@ -115,7 +115,7 @@ public:
     void SetCurrentPosition(HeadPose pose)
     {
         m_renderManager->SetViewport(&pose);
-        m_renderManager->ChangeViewport(&pose, pose.pts);
+        m_renderManager->ChangeViewport(&pose);
         return;
     };
 

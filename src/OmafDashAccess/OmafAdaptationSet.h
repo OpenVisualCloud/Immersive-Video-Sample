@@ -148,6 +148,7 @@ class OmafAdaptationSet {
   int GetTrackNumber() { return mTrackNumber; };
   void SetBaseURL(std::vector<BaseUrlElement*> url) { mBaseURL = url; };
   OmafSrd* GetSRD() { return mSRD; };
+  pair<int32_t, int32_t> GetViewID() { return mViewID; };
   int GetID() { return mID; };
   std::vector<int> GetDependIDs() { return mDependIDs; };
   std::string GetMimeType() { return mMimeType; };
@@ -171,6 +172,7 @@ class OmafAdaptationSet {
   uint32_t GetStartNumber() { return mStartNumber; };
   std::string GetRepresentationId() { return mRepresentation->GetId(); };
   uint32_t GetGopSize() { return mGopSize; };
+  OmafDashMode GetMode() { return mMode; };
   QualityRank GetRepresentationQualityRanking() {
     try {
       int rank = stoi(mRepresentation->GetQualityRanking());
@@ -240,6 +242,7 @@ class OmafAdaptationSet {
   std::list<OmafSegment::Ptr> mSegments;
   OmafSegment::Ptr mInitSegment;
   OmafSrd* mSRD;                     //<! SRD information
+  pair<int32_t, int32_t> mViewID;    //<! Viewport information
   TileDef                              *mTileInfo;          //<! TileDef information
   PreselValue* mPreselID;            //<! dependency ID
   TwoDQualityRanking* mTwoDQuality;  //<! TwoDQUality ranking
@@ -275,6 +278,7 @@ class OmafAdaptationSet {
   bool mReEnable;                   //<! flag for Adaption Set is re-enabled
   std::list<bool> mEnableRecord;    //<! record the last 3 enable changes
   uint32_t mGopSize;                //<! gop size of stream
+  OmafDashMode mMode;               //<! dash mode of stream
 
   std::shared_ptr<OmafReaderManager> omaf_reader_mgr_;
   bool mIsExtractorTrack;

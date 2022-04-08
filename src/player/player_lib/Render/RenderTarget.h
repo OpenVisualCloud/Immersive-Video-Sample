@@ -97,7 +97,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus Update( float yaw, float pitch, float hFOV, float vFOV, uint64_t pts ) = 0;
+    virtual RenderStatus Update(HeadPose* pose, float hFOV, float vFOV, uint64_t pts ) = 0;
     //! \brief Get the texture Of R2S
     //!
     //! \return uint32_t

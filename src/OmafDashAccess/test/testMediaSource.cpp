@@ -41,6 +41,7 @@ class MediaSourceTest : public testing::Test {
     // url_static = "https://10.67.119.113:443/UT_testOMAFstatic/Test.mpd";
     // url_static = "http://10.67.119.113:8080/UT_testOMAFstatic/Test.mpd";
     url_static = "http://10.67.115.92:8080/testOMAFstatic/Test.mpd";
+    url_static_freeview = "http://10.67.115.92:8080/testIINVstatic/Test.mpd";
     cache = "./cache";  // getpwuid(getuid())->pw_dir + std::string("/cache");
     pluginName = "libViewportPredict_LR.so";
     libPath = "../../plugins/ViewportPredict_Plugin/predict_LR/";
@@ -55,6 +56,8 @@ class MediaSourceTest : public testing::Test {
     clientInfo->viewPort_vFOV = 80;
     clientInfo->viewPort_Width = 960;
     clientInfo->viewPort_Height = 960;
+    clientInfo->pose->hViewId = 5;
+    clientInfo->pose->vViewId = 0;
 
     pose = new HeadPose;
     pose->yaw = 90;
@@ -95,6 +98,7 @@ class MediaSourceTest : public testing::Test {
   HeadPose* pose;
   std::string url_live;
   std::string url_static;
+  std::string url_static_freeview;
   std::string cache;
   std::string pluginName;
   std::string libPath;
@@ -277,6 +281,32 @@ TEST_F(MediaSourceTest, OpenMedia_live_changeViewport) {
   // check the downloaded files number > 0
   int32_t cnt = GetFileCntUnderCache();
 
+  EXPECT_TRUE(cnt > 1);
+
+  delete dashSource;
+}
+
+TEST_F(MediaSourceTest, OpenMedia_static_freeView) {
+  const string command = "rm -rf " + cache + "/*";
+  system(command.c_str());
+
+  OmafMediaSource* dashSource = new OmafDashSource();
+  EXPECT_TRUE(dashSource != NULL);
+
+  int ret = dashSource->SetupHeadSetInfo(clientInfo);
+  EXPECT_TRUE(ret == ERROR_NONE);
+
+  PluginDef i360ScvpPlugin;
+  i360ScvpPlugin.pluginLibPath = NULL;
+  ret = dashSource->OpenMedia(url_static_freeview, cache, NULL, i360ScvpPlugin, true, false, "", "");
+  EXPECT_TRUE(ret == ERROR_NONE);
+  dashSource->StartStreaming();
+
+  sleep(5);
+  dashSource->CloseMedia();
+
+  // check the downloaded files number > 0
+  int32_t cnt = GetFileCntUnderCache();
   EXPECT_TRUE(cnt > 1);
 
   delete dashSource;

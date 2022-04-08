@@ -34,18 +34,28 @@
 
 VCD_OMAF_BEGIN
 
+ViewportElement::ViewportElement()
+{
+    m_viewport = new ViewportProperty();
+}
+
 ViewportElement::~ViewportElement()
 {
+    SAFE_DELETE(m_viewport);
 }
 
 ODStatus ViewportElement::ParseSchemeIdUriAndValue()
 {
     if(GetSchemeIdUri() == SCHEMEIDURI_VIEWPORT)
     {
-        if(0 == GetValue().length())
+        string value = GetValue();
+        if(0 == value.length()) {
             OMAF_LOG(LOG_WARNING, "SRD doesn't have value.\n");
-
-        //TBD
+            return OD_STATUS_INVALID;
+        }
+        if (m_viewport != nullptr) {
+            m_viewport->SetInfo((char*)GetValue().c_str());
+        }
     }
 
     return OD_STATUS_SUCCESS;

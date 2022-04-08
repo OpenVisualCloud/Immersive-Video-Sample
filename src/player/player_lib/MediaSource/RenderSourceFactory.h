@@ -99,6 +99,17 @@ public:
           return m_projFormat;
      };
 
+     void SetSourceMode(int32_t sourceMode)
+     {
+          m_sourceMode = sourceMode;
+     };
+
+     int32_t GetSourceMode()
+     {
+          return m_sourceMode;
+     };
+
+
      std::map<uint32_t, RenderSource*> GetRenderSources(){return mMapRenderSource;};
 
      uint32_t GetHighTileRow(){return m_highTileRow;};
@@ -114,6 +125,7 @@ private:
      uint32_t                          m_highTileRow;
      uint32_t                          m_highTileCol;
      int32_t                           m_projFormat;
+     int32_t                           m_sourceMode;
      void                              *share_window;
 
 };

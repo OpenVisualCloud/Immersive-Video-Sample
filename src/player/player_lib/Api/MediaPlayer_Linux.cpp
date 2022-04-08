@@ -159,9 +159,11 @@ RenderStatus MediaPlayer_Linux::Play()
     do
     {
         HeadPose *pose = new HeadPose;
+        memset_s(pose, sizeof(HeadPose), 0);
         m_renderManager->GetStatusAndPose(pose, &m_status);
+        pose->pts = renderCount;
         m_renderManager->SetViewport(pose);
-        m_renderManager->ChangeViewport(pose, renderCount);
+        m_renderManager->ChangeViewport(pose);
         if (0 == lastTime)
         {
             lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();

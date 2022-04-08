@@ -212,11 +212,10 @@ class OmafMediaStream {
     return enabledExtractor;
   };
 
-  //std::map<int, OmafAdaptationSet*> GetSelectedTileTracks() {
-  //  std::lock_guard<std::mutex> lock(mCurrentMutex);
-  //  std::map<int, OmafAdaptationSet*> selectedTileTracks = m_selectedTileTracks.front();
-  //  return selectedTileTracks;
-  //}
+  std::map<int, OmafAdaptationSet*> GetEnabledTracks() {
+   std::lock_guard<std::mutex> lock(mCurrentMutex);
+   return mCurrentTracks;
+  }
 
   int32_t GetExtractorSize() {
     std::lock_guard<std::mutex> lock(mCurrentMutex);
@@ -271,9 +270,9 @@ class OmafMediaStream {
 
   uint32_t GetSegmentNumber() { return m_activeSegmentNum;};
 
-  bool IsExtractorEnabled() { return m_enabledExtractor; };
+  OmafDashMode GetDashMode() { return mode_; };
 
-  void SetEnabledExtractor(bool enabledExtractor) { m_enabledExtractor = enabledExtractor; };
+  void SetDashMode(OmafDashMode mode) { mode_ = mode; };
 
   void SetSources(std::map<uint32_t, SourceInfo> sources) { m_sources = sources; };
 
@@ -365,6 +364,8 @@ private:
   std::map<int, OmafExtractor*> mExtractors;
   //<! the current extractors to be dealt with
   std::list<OmafExtractor*> mCurrentExtractors;
+  //<! the current extractors to be dealt with
+  std::map<int, OmafAdaptationSet*> mCurrentTracks;
   //<! the main AdaptationSet, it can be exist or not
   OmafAdaptationSet* mMainAdaptationSet;
   //<! the Extrator AdaptationSet
@@ -386,7 +387,7 @@ private:
   OmafDashSourceSyncHelper syncer_helper_;
   std::shared_ptr<OmafReaderManager> omaf_reader_mgr_;
   //<! flag for enabling/disabling extractor track
-  bool m_enabledExtractor;
+  OmafDashMode mode_ = OmafDashMode::EXTRACTOR;
   //<! map of selected tile tracks based on viewport when disabling extractor track
   //std::list<std::map<int, OmafAdaptationSet*>> m_selectedTileTracks;
   uint64_t m_tileSelTimeLine;

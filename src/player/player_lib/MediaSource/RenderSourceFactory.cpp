@@ -50,6 +50,7 @@ RenderSourceFactory::RenderSourceFactory(void *window)
     m_sourceNumber = 0;
     m_sourceResolution = nullptr;
     m_projFormat = VCD::OMAF::PF_UNKNOWN;
+    m_sourceMode = SourceMode_Omni;
     m_highTileCol= 0;
     m_highTileRow= 0;
 }

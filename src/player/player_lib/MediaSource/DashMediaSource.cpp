@@ -51,7 +51,7 @@
 #define MAX_PACKETS 16
 #define WAIT_PACKET_TIME_OUT 10000 // 10s
 #define TEST_GET_PACKET_ONLY 0
-#define MAX_DUMP_FILE_NUM 10
+#define MAX_DUMP_FILE_NUM 20
 using namespace tinyxml2;
 
 VCD_NS_BEGIN
@@ -116,6 +116,7 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   pCtxDashStreaming->cache_path = renderConfig.cachePath;
   pCtxDashStreaming->source_type = MultiResSource;
   pCtxDashStreaming->enable_extractor = renderConfig.enableExtractor;
+  pCtxDashStreaming->enable_autoView = renderConfig.enableAutoView;
   pCtxDashStreaming->log_callback = NULL;
 
   // init the omaf params
@@ -168,6 +169,8 @@ RenderStatus DashMediaSource::Initialize(struct RenderConfig renderConfig, Rende
   clientInfo.pose->zoomFactor = 1.0f;
   clientInfo.pose->viewOrient.mode = ORIENT_NONE;
   clientInfo.pose->viewOrient.orientation = 0.0f;
+  clientInfo.pose->hViewId = (MAX_CAMERA_H_NUM - 1) / 2; // indexed from 0
+  clientInfo.pose->vViewId = 0;
   clientInfo.pose->pts = 0;
   clientInfo.viewPort_hFOV = renderConfig.viewportHFOV;
   clientInfo.viewPort_vFOV = renderConfig.viewportVFOV;
@@ -284,12 +287,14 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo) {
         vi.mFpt = dashMediaInfo->stream_info[i].mFpt;
         vi.mime_type = dashMediaInfo->stream_info[i].mime_type;
         vi.mProjFormat = dashMediaInfo->stream_info[i].mProjFormat;
+        vi.mSourceMode = dashMediaInfo->stream_info[i].mSourceMode;
         vi.width = dashMediaInfo->stream_info[i].width;
         vi.sourceHighTileRow = dashMediaInfo->stream_info[i].tileRowNum;
         vi.sourceHighTileCol = dashMediaInfo->stream_info[i].tileColNum;
         vi.mPixFmt = PixelFormat::PIX_FMT_YUV420P;
         vi.source_number = dashMediaInfo->stream_info[i].source_number;
         vi.source_resolution = dashMediaInfo->stream_info[i].source_resolution;
+        vi.segment_duration = dashMediaInfo->stream_info[i].segmentDuration;
         mMediaInfo.AddVideoInfo(vidx, vi);
         vidx++;
         break;
@@ -315,6 +320,7 @@ RenderStatus DashMediaSource::SetMediaInfo(void *mediaInfo) {
   if (NULL != this->m_rsFactory) {
     m_rsFactory->SetSourceResolution(vi.source_number, vi.source_resolution);
     m_rsFactory->SetProjectionFormat(vi.mProjFormat);
+    m_rsFactory->SetSourceMode(vi.mSourceMode);
     m_rsFactory->SetHighTileRow(vi.sourceHighTileRow);
     m_rsFactory->SetHighTileCol(vi.sourceHighTileCol);
   }
@@ -418,6 +424,16 @@ void DashMediaSource::ProcessVideoPacket() {
 #endif
 #if !TEST_GET_PACKET_ONLY
   if (NULL != m_DecoderManager) {
+    // insert available view id in segment
+    uint32_t framerate = round(float(m_DecoderManager->GetDecodeInfo().frameRate_num) / m_DecoderManager->GetDecodeInfo().frameRate_den);
+    uint32_t seg_id = dashPkt[0].pts / ( framerate * m_DecoderManager->GetDecodeInfo().segment_duration) + 1;
+    vector<pair<int32_t, int32_t>> viewId;
+    for (int n = 0; n < dashPktNum; n++) {
+      viewId.push_back(std::make_pair(dashPkt[n].hViewID, dashPkt[n].vViewID));
+      // LOG(INFO) << "Get view id " << dashPkt[n].hViewID << " video id " << dashPkt[n].videoID << " pts " << dashPkt[n].pts << endl;
+    }
+    m_DecoderManager->SetAvailViewIds(seg_id, viewId);
+    // send video packets
     RenderStatus ret = m_DecoderManager->SendVideoPackets(&(dashPkt[0]), dashPktNum);
     // needHeaders = false;
     if (RENDER_STATUS_OK != ret) {
@@ -476,10 +492,10 @@ void DashMediaSource::Run() {
   }
 }
 
-RenderStatus DashMediaSource::UpdateFrames(uint64_t pts, int64_t *corr_pts) {
+RenderStatus DashMediaSource::UpdateFrames(uint64_t pts, int64_t *corr_pts, HeadPose* pose) {
   if (NULL == m_DecoderManager) return RENDER_NO_MATCHED_DECODER;
 
-  RenderStatus ret = m_DecoderManager->UpdateVideoFrames(pts, corr_pts);
+  RenderStatus ret = m_DecoderManager->UpdateVideoFrames(pts, corr_pts, pose);
 
   if (RENDER_STATUS_OK != ret) {
     LOG(INFO) << "DashMediaSource::UpdateFrames failed with code:" << ret << std::endl;

@@ -67,6 +67,7 @@ public:
          m_row               = 0;
          m_col               = 0;
          m_renderInterval    = 0;
+         m_sourceMode        = Source_Mode::SourceMode_Omni;
     };
 
     virtual ~RenderContext()=default;
@@ -113,6 +114,13 @@ public:
     //          projection format
     //!
     void SetProjectionFormat(int32_t projFormat) { m_projFormat = projFormat; };
+
+    //! \brief Set source mode for setting up event for 3D/2D
+    //!
+    //! \param  [in] int32_t
+    //          source mode
+    //!
+    void SetSourceMode(int32_t sourceMode) { m_sourceMode = sourceMode; };
 
     //! \brief check whether the render is running
     //!
@@ -178,6 +186,8 @@ protected:
     float                   m_mouseSpeed;
 
     int32_t                 m_projFormat;    //<! projection format for setting up view/projection model for 3D/2D
+
+    int32_t                 m_sourceMode;    //<! source mode for setting up event for 3D/2D
 
     uint32_t                m_row; //<! highest quality ranking stream row. utilized to determine the max speed of motion.
     uint32_t                m_col; //<! highest quality ranking stream col. utilized to determine the max speed of motion.

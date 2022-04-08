@@ -38,6 +38,7 @@ public:
         url_live = "http://10.67.115.92:8080/testOMAFlive/Test.mpd";
         url_static = "http://10.67.115.92:8080/testOMAFstatic/Test.mpd";
         url_cmaf_live = "http://10.67.115.92:8080/testCMAFlive/Test.mpd";
+        url_static_free_view = "http://10.67.115.92:8080/testIINVstatic/Test.mpd";
     }
 
     virtual void TearDown(){
@@ -45,6 +46,7 @@ public:
 
     std::string url_live;
     std::string url_static;
+    std::string url_static_free_view;
     std::string url_cmaf_live;
 };
 
@@ -74,6 +76,36 @@ TEST_F(MPDParserTest, ParseMPD_static)
     mpdInfo = MPDParser->GetMPDInfo();
     EXPECT_TRUE(mpdInfo != nullptr);
     EXPECT_TRUE(mpdInfo->type == "static");
+
+    delete MPDParser;
+}
+
+TEST_F(MPDParserTest, ParseMPD_static_freeview)
+{
+    OmafMPDParser* MPDParser = new OmafMPDParser();
+    EXPECT_TRUE(MPDParser != NULL);
+
+    OMAFSTREAMS listStream;
+    int ret = MPDParser->ParseMPD(url_static_free_view, listStream);
+    EXPECT_TRUE(ret == ERROR_NONE);
+
+    EXPECT_TRUE(listStream.size() > 0);
+    auto stream = listStream.front();
+    DashStreamInfo* sInfo = stream->GetStreamInfo();
+    EXPECT_TRUE(sInfo->height > 0 && sInfo->width > 0);
+    EXPECT_TRUE(sInfo->stream_type == MediaType_Video);
+
+    MPDInfo *mpdInfo = nullptr;
+    mpdInfo = MPDParser->GetMPDInfo();
+    EXPECT_TRUE(mpdInfo != nullptr);
+    EXPECT_TRUE(mpdInfo->type == "static");
+    for (auto stream : listStream)
+    {
+        if (stream->GetStreamMediaType() == MediaType::MediaType_Video)
+        {
+            EXPECT_TRUE(stream->GetDashMode() == OmafDashMode::MULTI_VIEW);
+        }
+    }
 
     delete MPDParser;
 }

@@ -132,7 +132,7 @@ class WebRTCMediaSource : public MediaSource, public WebRTCVideoPacketListener {
   //! \return RenderStatus
   //!         RENDER_STATUS_OK if success, RENDER_EOS if reach EOS
   //!
-  virtual RenderStatus UpdateFrames(uint64_t pts, int64_t *corr_pts) override;
+  virtual RenderStatus UpdateFrames(uint64_t pts, int64_t *corr_pts, HeadPose* pose) override;
 
   //! \brief SeekTo
   //!

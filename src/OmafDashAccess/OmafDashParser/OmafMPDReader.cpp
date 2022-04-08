@@ -344,6 +344,7 @@ AdaptationSetElement* OmafMPDReader::BuildAdaptationSet(OmafXMLElement* xml)
     adaptionSet->SetSegmentAlignment(xml->GetAttributeVal(SEGMENTALIGNMENT));
     adaptionSet->SetSubsegmentAlignment(xml->GetAttributeVal(SUBSEGMENTALIGNMENT));
     adaptionSet->SetGopSize(xml->GetAttributeVal(GOPSIZE));
+    adaptionSet->SetMode(xml->GetAttributeVal(MODE));
 
     map<string, string> attributes = xml->GetAttributes();
     adaptionSet->AddOriginalAttributes(attributes);

@@ -33,6 +33,7 @@
 #include "OmafExtractorTracksSelector.h"
 #include "OmafReaderManager.h"
 #include "OmafTileTracksSelector.h"
+#include "OmafViewTracksSelector.h"
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
 #include <sys/time.h>
@@ -106,7 +107,7 @@ int OmafDashSource::SyncTime(std::string url) {
 }
 
 int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* externalLog, PluginDef i360scvp_plugin, bool enableExtractor,
-                              bool enablePredictor, std::string predictPluginName, std::string libPath) {
+                              bool enablePredictor, std::string predictPluginName, std::string libPath, bool enableAutoView) {
   if (externalLog)
     logCallBack = (LogFunction)externalLog;
   else
@@ -226,9 +227,19 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
     }
   }
 
-  // create the reader manager
+  // get dash mode
+  OmafDashMode mode = OmafDashMode::EXTRACTOR;
+  for (auto& stream : listStream) {
+    MediaType type = stream->GetStreamMediaType();
+    if (type == MediaType_Video) {
+      mode = stream->GetDashMode();
+      break;
+    }
+  }
+
+  // create the reader manage
+  OmafReaderManager::OmafReaderParams params;
   {
-    OmafReaderManager::OmafReaderParams params;
     if (mMPDinfo->type == TYPE_STATIC) {
       params.stream_type_ = DASH_STREAM_STATIC;
       params.duration_ = mMPDinfo->media_presentation_duration;
@@ -236,17 +247,14 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
       params.stream_type_ = DASH_STREAM_DYNMIC;
     }
 
-    if (enableExtractor) {
-      params.mode_ = OmafDashMode::EXTRACTOR;
-    } else {
-      params.mode_ = OmafDashMode::LATER_BINDING;
-    }
+    params.mode_ = mode;
     params.proj_fmt_ = projFmt;
     params.segment_timeout_ms_ = mMPDinfo->max_segment_duration;
 
     OMAF_LOG(LOG_INFO, "media stream type=%s\n", mMPDinfo->type.c_str());
     OMAF_LOG(LOG_INFO, "media stream duration=%lld\n", mMPDinfo->media_presentation_duration);
     OMAF_LOG(LOG_INFO, "media stream extractor=%d\n", enableExtractor);
+    OMAF_LOG(LOG_INFO, "media mode=%d\n", params.mode_);
 
     OmafReaderManager::Ptr omaf_reader_mgr = std::make_shared<OmafReaderManager>(dash_client_, params);
     ret = omaf_reader_mgr->Initialize(this);
@@ -270,17 +278,27 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
     id++;
   }
 
-  if (enableExtractor) {
+  if (params.mode_ == OmafDashMode::EXTRACTOR) {
     m_selector = new OmafExtractorTracksSelector();
     if (!m_selector) {
       OMAF_LOG(LOG_ERROR, "Failed to create extractor tracks selector !\n");
       return ERROR_NULL_PTR;
     }
-  } else {
+  } else if (params.mode_ == OmafDashMode::LATER_BINDING){
     m_selector = new OmafTileTracksSelector();
     if (!m_selector) {
       OMAF_LOG(LOG_ERROR, "Failed to create tile tracks selector !\n");
       return ERROR_NULL_PTR;
+    }
+  } else if (params.mode_ == OmafDashMode::MULTI_VIEW) {
+    m_selector = new OmafViewTracksSelector();
+    if (!m_selector) {
+      OMAF_LOG(LOG_ERROR, "Failed to create view tracks selector !\n");
+      return ERROR_NULL_PTR;
+    }
+    if (enableAutoView) {
+      OMAF_LOG(LOG_INFO, "Enable auto mode for free view!\n");
+      m_selector->EnableAutoModeForFreeView();
     }
   }
 
@@ -362,7 +380,7 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
 
   int currentExtractorID = 0;
 
-  if (pStream->HasExtractor()) {
+  if (pStream->GetDashMode() == OmafDashMode::EXTRACTOR) {
     std::list<OmafExtractor*> extractors = pStream->GetEnabledExtractor();
     int enabledSize = pStream->GetExtractorSize();
     int totalSize = pStream->GetTotalExtractorSize();
@@ -403,7 +421,45 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
       }
       mergedPackets.clear();
     }
-  } else {
+  }
+  else if (pStream->GetDashMode() == OmafDashMode::MULTI_VIEW) {
+    TracksMap currentTracks = pStream->GetEnabledTracks();
+    //1.1 compare the track ids
+    int id = 0;
+    bool isTracksChanged = false;
+    vector<uint32_t> fetchTracks;
+    for (auto tk : currentTracks) {
+      fetchTracks.push_back(tk.first);
+      if (mPreTracksID.size() < size_t(id + 1) || mPreTracksID[id++] != uint32_t(tk.first)) {
+        isTracksChanged = true;
+      }
+    }
+    // 1.2 if previous tracks remains data
+    if (isTracksChanged) {
+      uint32_t remainingTracksNum = 0;
+      auto preTk = mPreTracksID.begin();
+      for (; preTk != mPreTracksID.end(); preTk++) {
+        size_t remainSize = 0;
+        omaf_reader_mgr_->GetPacketQueueSize(*preTk, remainSize);
+        if (remainSize > 0) {
+          remainingTracksNum++;
+        }
+      }
+      if (remainingTracksNum != 0 && remainingTracksNum == mPreTracksID.size()) {// if all(in case some inacitve tracks) the previous tracks remain data
+        OMAF_LOG(LOG_INFO, "Remain the previous tracks id!\n");
+        fetchTracks = mPreTracksID;
+      }
+      else mPreTracksID = fetchTracks;
+    }
+    // 2. Get packet
+    int ret = omaf_reader_mgr_->GetNextPacketArray(fetchTracks, pkts, needParams);
+    if (ret == ERROR_NONE) {
+      for (auto packet : *pkts) {
+        packet->SetPTS(packet->GetPTS() - omaf_reader_mgr_->GetStartOffsetPts());
+      }
+    }
+  }
+  else if (pStream->GetDashMode() == OmafDashMode::LATER_BINDING) {
     std::map<int, OmafAdaptationSet*> mapAS = pStream->GetMediaAdaptationSet();
     // std::map<int, OmafAdaptationSet*> mapSelectedAS = pStream->GetSelectedTileTracks();
     if (mapAS.size() == 1) {
@@ -492,6 +548,7 @@ int OmafDashSource::GetMediaInfo(DashMediaInfo* media_info) {
     media_info->stream_info[i].channels = pStreamInfo->channels;
     media_info->stream_info[i].sample_rate = pStreamInfo->sample_rate;
     media_info->stream_info[i].mProjFormat = pStreamInfo->mProjFormat;
+    media_info->stream_info[i].mSourceMode = pStreamInfo->mSourceMode;
     media_info->stream_info[i].codec = new char[1024];
     media_info->stream_info[i].mime_type = new char[1024];
     media_info->stream_info[i].source_number = pStreamInfo->source_number;
@@ -582,7 +639,7 @@ int OmafDashSource::StartReadThread() {
   while (cnt < mMapStream.size()) {
     cnt = 0;
     for (auto it : mMapStream) {
-      if ((it.second)->IsExtractorEnabled()) {
+      if ((it.second)->GetDashMode() == OmafDashMode::EXTRACTOR) {
         int enableSize = it.second->GetExtractorSize();
         int totalSize = it.second->GetTotalExtractorSize();
         if (enableSize < totalSize) cnt++;
@@ -679,8 +736,7 @@ int OmafDashSource::DownloadInitSeg() {
   /// download initial mp4 for each stream
   for (int i = 0; i < nStream; i++) {
     OmafMediaStream* pStream = GetStream(i);
-    bool isExtractorEnabled = pStream->IsExtractorEnabled();
-    if (isExtractorEnabled) {
+    if (pStream->GetDashMode() == OmafDashMode::EXTRACTOR) {
       std::list<OmafExtractor*> listExtarctors;
       std::map<int, OmafExtractor*> mapExtractors = pStream->GetExtractors();
       for (auto& it : mapExtractors) {

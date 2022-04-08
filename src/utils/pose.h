@@ -74,6 +74,9 @@ typedef struct VIEWORIENT {
 //! \param    zoomFactor,    input,     the viewport zoom factor calculated by the viewport area divided by the maximum frame area
 //! \param    ViewOrient,    input,     the viewport orientation mode and moving direction as defined
 //! \param    speed,         input,     the viewport moving speed expressed by the portion of the maximum frame width
+//! \param    pts,           input,     the viewport pts
+//! \param    hViewId,       input,     the horizontal view id for free view cases. The horizontal view id is indexed from 0, which starts from left to right
+//! \param    vViewId,       input,     the vertical view id for free view cases. The vertical view id is indexed from 0, which starts from top to bottom.
 //!
 typedef struct HEADPOSE {
   float    yaw;
@@ -84,6 +87,8 @@ typedef struct HEADPOSE {
   ViewOrient viewOrient;
   float    speed;
   uint64_t pts;
+  int32_t  hViewId;
+  int32_t  vViewId;
 } HeadPose;
 
 typedef struct HEADSETINFO {

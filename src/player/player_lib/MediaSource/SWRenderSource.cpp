@@ -331,6 +331,11 @@ RenderStatus SWRenderSource::process(BufferInfo* bufInfo)
     RenderStatus ret = RENDER_STATUS_OK;
     std::chrono::high_resolution_clock clock;
     uint64_t start3 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+    if (bufInfo == nullptr) return RENDER_NULL_HANDLE;
+    m_viewID = bufInfo->view_id;
+
+    if (bufInfo->width == 0 || bufInfo->height == 0) return RENDER_ERROR;
+
     if(bufInfo->bFormatChange || !bInited ){
         ret = Initialize(bufInfo->pixelFormat, bufInfo->width, bufInfo->height);
         LOG(INFO)<< "PTS " << bufInfo->pts << "texture need to resize to "<<bufInfo->width<<" x "<<bufInfo->height<<endl;
@@ -341,6 +346,7 @@ RenderStatus SWRenderSource::process(BufferInfo* bufInfo)
     }
     uint64_t end3 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     LOG(INFO)<<"init process is:"<<(end3 - start3)<<endl;
+
     // mCurRegionInfo = bufInfo->regionInfo;
     uint64_t start1 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
     RegionData* curData = new RegionData(bufInfo->regionInfo->GetRegionWisePacking(), bufInfo->regionInfo->GetSourceInRegion(), bufInfo->regionInfo->GetSourceInfo());

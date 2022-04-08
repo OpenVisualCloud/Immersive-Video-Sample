@@ -71,7 +71,7 @@ public:
      //!
      //! \brief  udpate frame to destination with the callback class FrameHandler
      //!
-     virtual RenderStatus UpdateFrame(uint64_t pts, int64_t *corr_pts) = 0;
+     virtual RenderStatus UpdateFrame(uint64_t pts, int64_t *corr_pts, HeadPose* pose) = 0;
 
      //!
      //! \brief  send a coded packet to decoder

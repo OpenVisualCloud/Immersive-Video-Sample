@@ -46,6 +46,8 @@ namespace OMAF {
 const long DEFAULT_MAX_PARALLEL_TRANSFERS = 50;
 const int32_t DEFAULT_SEGMENT_OPEN_TIMEOUT = 3000;
 
+enum class OmafDashMode { EXTRACTOR = 0, LATER_BINDING = 1, MULTI_VIEW = 2 };
+
 class OmafDashHttpProxy {
  public:
   std::string http_proxy_;

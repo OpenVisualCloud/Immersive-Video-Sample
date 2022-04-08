@@ -61,12 +61,14 @@ public:
         framerate_num    = 1;
         framerate_den    = 1;
         mProjFormat      = 0;
+        mSourceMode      = 0;
         mFpt             = 0;
         mime_type        = "";
         codec            = "";
         mPixFmt          = PixelFormat::PIX_FMT_YUV420P;
         source_number    = 0;
         source_resolution= nullptr;
+        segment_duration = 0;
     };
     ~VideoInfo()=default;
 
@@ -81,12 +83,14 @@ public:
     int32_t               framerate_num;
     int32_t               framerate_den;
     int32_t               mProjFormat;
+    int32_t               mSourceMode;
     int32_t               mFpt;
     int32_t               mPixFmt;
     std::string           mime_type;
     std::string           codec;
     int32_t               source_number;
     SourceResolution     *source_resolution;
+    uint32_t              segment_duration;
 };
 
 //! \brief audio information
@@ -267,7 +271,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, RENDER_EOS if reach EOS
     //!
-    virtual RenderStatus UpdateFrames(uint64_t pts, int64_t *corr_pts) = 0;
+    virtual RenderStatus UpdateFrames(uint64_t pts, int64_t *corr_pts, HeadPose* pose = nullptr) = 0;
 
     //! \brief get isAllValid
     //!

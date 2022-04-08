@@ -101,7 +101,7 @@ RenderStatus CubeMapRenderTarget_android::CreateRenderTarget()
     return RENDER_STATUS_OK;
 }
 
-RenderStatus CubeMapRenderTarget_android::Update( float yaw, float pitch, float hFOV, float vFOV, uint64_t pts )
+RenderStatus CubeMapRenderTarget_android::Update( HeadPose* pose, float hFOV, float vFOV, uint64_t pts )
 {
     return RENDER_STATUS_OK;
 }

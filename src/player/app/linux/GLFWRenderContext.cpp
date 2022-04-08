@@ -42,6 +42,8 @@
 VCD_NS_BEGIN
 using namespace tinyxml2;
 
+pair<int32_t, int32_t> GLFWRenderContext::m_preView = make_pair((MAX_CAMERA_H_NUM - 1) / 2, 0);
+
 GLFWRenderContext::GLFWRenderContext()
 {
     m_renderContextType = GLFW_CONTEXT;
@@ -296,6 +298,8 @@ RenderStatus GLFWRenderContext::GetStatusAndPoseFor3D(HeadPose *pose, uint32_t* 
     float v = 0.5f - latitude / RENDER_PI;
     pose->yaw = (0.5f - u) * 360;
     pose->pitch = (v - 0.5f) * 180;
+    pose->hViewId = -1;
+    pose->vViewId = -1;
     return RENDER_STATUS_OK;
 }
 
@@ -398,6 +402,8 @@ RenderStatus GLFWRenderContext::GetStatusAndPoseFor2D(HeadPose *pose, uint32_t* 
     pose->speed = 0;
     pose->viewOrient.orientation = 0;
     pose->viewOrient.mode = ORIENT_NONE;
+    pose->hViewId = -1;
+    pose->vViewId = -1;
     if (glfwGetMouseButton((GLFWwindow *)m_window, GLFW_MOUSE_BUTTON_LEFT))
     {
         m_horizontalAngle -= m_mouseSpeed * float(m_windowWidth / 2 - xpos);
@@ -484,6 +490,37 @@ RenderStatus GLFWRenderContext::GetStatusAndPoseFor2D(HeadPose *pose, uint32_t* 
     return RENDER_STATUS_OK;
 }
 
+void GLFWRenderContext::KeyCallBackForFreeView(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
+    {
+        if (m_preView.first < MAX_CAMERA_H_NUM - 1) {
+            m_preView.first++;
+            std::cout << "Press right! switch view to " << m_preView.first << " " << m_preView.second << endl;
+        }
+    }
+    if (key == GLFW_KEY_LEFT && action == GLFW_PRESS)
+    {
+        if (m_preView.first > 0) {
+            m_preView.first--;
+            std::cout << "Press left! switch view to " << m_preView.first << " " << m_preView.second << endl;
+        }
+    }
+}
+
+RenderStatus GLFWRenderContext::GetStatusAndPoseFor2DFix(HeadPose *pose, uint32_t* status)
+{
+    m_projectionMatrix = glm::perspective(glm::radians(90.0f), 1.0f, 0.01f, 1000.0f);
+    m_viewModelMatrix = glm::lookAt(
+        glm::vec3(0, 0, 1),
+        glm::vec3(0, 0, 0),
+        glm::vec3(0, 1, 0)
+    );
+    pose->hViewId = m_preView.first;
+    pose->vViewId = 0;
+
+    return RENDER_STATUS_OK;
+}
+
 void GLFWRenderContext::SetMaxSpeed()
 {
     // set max speed that is 1 tiles unit pixels / second.
@@ -508,9 +545,18 @@ RenderStatus GLFWRenderContext::GetStatusAndPose(HeadPose *pose, uint32_t* statu
     {
         return GetStatusAndPoseFor3D(pose, status);
     }
-    else if (m_projFormat == VCD::OMAF::PF_PLANAR)
+    else if (m_projFormat == VCD::OMAF::PF_PLANAR && m_sourceMode == SourceMode_Omni)
     {
         return GetStatusAndPoseFor2D(pose, status);
+    }
+    else if (m_projFormat == VCD::OMAF::PF_PLANAR && m_sourceMode == SourceMode_MultiView)
+    {
+        glfwSetKeyCallback((GLFWwindow*)m_window, KeyCallBackForFreeView);
+        return GetStatusAndPoseFor2DFix(pose, status);
+    }
+    else {
+        LOG(ERROR) << "projection format and source mode are not compliant!" << endl;
+        return RENDER_ERROR;
     }
     return RENDER_ERROR;
 }

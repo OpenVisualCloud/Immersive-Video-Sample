@@ -69,7 +69,7 @@ class OmafDashSource : public OmafMediaSource, Threadable {
   //! \brief Interface implementation from base class: OmafMediaSource
   //!
   virtual int OpenMedia(std::string url, std::string cacheDir, void* externalLog, PluginDef i360scvp_plugin, bool enableExtractor = true,
-                        bool enablePredictor = false, std::string predictPluginName = "", std::string libPath = "");
+                        bool enablePredictor = false, std::string predictPluginName = "", std::string libPath = "", bool enableAutoView = false);
   virtual int StartStreaming();
   virtual int CloseMedia();
   virtual int GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool needParams, bool clearBuf);
@@ -203,6 +203,7 @@ private:
   MPDInfo* mMPDinfo;               //<! MPD information
   int dcount;
   int mPreExtractorID;
+  vector<uint32_t> mPreTracksID;
   OmafTilesStitch* m_stitch = nullptr;
   std::shared_ptr<OmafDashSegmentClient> dash_client_;
   std::shared_ptr<OmafReaderManager> omaf_reader_mgr_;

@@ -123,6 +123,7 @@ typedef struct DASHSTREAMINGCLIENT {
   const char* media_url;
   const char* cache_path;
   bool        enable_extractor;
+  bool        enable_autoView;
   void*       log_callback;
   PluginDef   plugin_def;
 } DashStreamingClient;

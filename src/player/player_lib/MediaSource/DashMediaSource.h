@@ -94,7 +94,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, RENDER_EOS if reach EOS
     //!
-    virtual RenderStatus UpdateFrames(uint64_t pts, int64_t *corr_pts);
+    virtual RenderStatus UpdateFrames(uint64_t pts, int64_t *corr_pts, HeadPose* pose);
 
     //!
     //! \brief  Thread functionality Pure virtual function  , it will be re implemented in derived classes

@@ -162,6 +162,8 @@ struct RenderConfig {
   uint32_t maxResponseTimesInOneSeg;
   uint32_t maxCatchupWidth;
   uint32_t maxCatchupHeight;
+  // for multi view mode
+  bool enableAutoView;
   // ...
 };
 
@@ -305,6 +307,7 @@ struct BufferInfo {
   bool bFormatChange;
   VCD::VRVideo::RegionData *regionInfo;
   uint64_t pts;
+  std::pair<int32_t, int32_t> view_id;
 };
 
 struct MultiBufferInfo {
