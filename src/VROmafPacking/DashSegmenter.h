@@ -41,7 +41,7 @@
 #include <set>
 #include <dlfcn.h>
 
-#include "DashWriterPluginAPI.h"
+#include "DashSegmentWriterPluginAPI.h"
 #include "AcquireTrackData.h"
 #include "DataItem.h"
 
@@ -491,6 +491,7 @@ struct TrackSegmentCtx
     Nalu              extractorTrackNalu;
     std::list<VCD::MP4::TrackId> refTrackIdxs;
 
+    Nalu              videoNalu; //!< nalu for non-tiled video
     Nalu              audioNalu;
 
     VCD::MP4::TrackId trackIdx;
@@ -521,6 +522,7 @@ struct TrackSegmentCtx
         extractors = NULL;
         memset_s(&extractorTrackNalu, sizeof(Nalu), 0);
 
+        memset_s(&videoNalu, sizeof(Nalu), 0);
         memset_s(&audioNalu, sizeof(Nalu), 0);
 
         segWriter = NULL;

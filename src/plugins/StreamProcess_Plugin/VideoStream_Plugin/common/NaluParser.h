@@ -62,8 +62,11 @@ public:
         m_vpsNalu       = NULL;
         m_spsNalu       = NULL;
         m_ppsNalu       = NULL;
+        m_seiNalu       = NULL;
         m_projNalu      = NULL;
+        m_viewNalu      = NULL;
         m_picInfo       = NULL;
+        m_novelViewInfo = NULL;
     };
 
     //!
@@ -79,8 +82,11 @@ public:
         m_vpsNalu       = NULL;
         m_spsNalu       = NULL;
         m_ppsNalu       = NULL;
+        m_seiNalu       = NULL;
         m_projNalu      = NULL;
+        m_viewNalu      = NULL;
         m_picInfo       = NULL;
+        m_novelViewInfo = NULL;
 
         m_360scvpHandle = scvpHandle;
         m_360scvpParam  = scvpParam;
@@ -207,6 +213,18 @@ public:
     //!
     Nalu* GetPPSNalu() { return m_ppsNalu; };
 
+
+    int32_t GetSEIPayloadType()
+    {
+        if (!m_seiNalu)
+            return -1;
+
+        return m_seiNalu->seiPayloadType;
+    }
+
+
+    NovelViewSEI* GetNovelViewInfo() { return m_novelViewInfo; };
+
 private:
 
     //!
@@ -223,8 +241,11 @@ protected:
     Nalu          *m_vpsNalu;         //!< pointer to the VPS nalu
     Nalu          *m_spsNalu;         //!< pointer to the SPS nalu
     Nalu          *m_ppsNalu;         //!< pointer to the PPS nalu
+    Nalu          *m_seiNalu;         //!< pointer to SEI nalu, may be ProjectionTypeSEI or NovelViewSEI
     Nalu          *m_projNalu;        //!< pointer to the projection type SEI
+    Nalu          *m_viewNalu;        //!< pointer to the novel view SEI
     Param_PicInfo *m_picInfo;         //!< pointer to the basic picture information of video stream
+    NovelViewSEI  *m_novelViewInfo;   //!< pointer to the novel view info parsed from novel view SEI
 };
 
 #endif /* _NALUPARSER_H_ */

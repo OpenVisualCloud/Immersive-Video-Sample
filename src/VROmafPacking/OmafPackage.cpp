@@ -38,6 +38,7 @@
 #include "VideoStreamPluginAPI.h"
 #include "AudioStreamPluginAPI.h"
 #include "DefaultSegmentation.h"
+#include "MultiViewSegmentation.h"
 
 VCD_NS_BEGIN
 
@@ -51,6 +52,8 @@ OmafPackage::OmafPackage()
     m_hasAudio = false;
     m_audioThreadId = 0;
     m_hasChunkDurCorrected = false;
+    m_hasViewSEI = false;
+    m_sourceMode = OMNIDIRECTIONAL_VIDEO_PACKING;
 }
 
 OmafPackage::OmafPackage(const OmafPackage& src)
@@ -63,6 +66,8 @@ OmafPackage::OmafPackage(const OmafPackage& src)
     m_hasAudio      = src.m_hasAudio;
     m_audioThreadId = src.m_audioThreadId;
     m_hasChunkDurCorrected = src.m_hasChunkDurCorrected;
+    m_hasViewSEI = src.m_hasViewSEI;
+    m_sourceMode = src.m_sourceMode;
 }
 
 OmafPackage& OmafPackage::operator=(OmafPackage&& other)
@@ -75,6 +80,8 @@ OmafPackage& OmafPackage::operator=(OmafPackage&& other)
     m_hasAudio      = other.m_hasAudio;
     m_audioThreadId = other.m_audioThreadId;
     m_hasChunkDurCorrected = other.m_hasChunkDurCorrected;
+    m_hasViewSEI = other.m_hasViewSEI;
+    m_sourceMode = other.m_sourceMode;
 
     return *this;
 }
@@ -253,6 +260,20 @@ int32_t OmafPackage::AddMediaStream(uint8_t streamIdx, BSBuffer *bs)
                 return ret;
             }
 
+            if (vs->GetNovelViewSEIInfo())
+            {
+                m_hasViewSEI = true;
+            }
+
+            if (!(vs->GetTileInRow()) || !(vs->GetTileInCol()))
+            {
+                if (m_initInfo->segmentationInfo->splitTile)
+                {
+                    OMAF_LOG(LOG_INFO, "There is no tile in input video stream !\n");
+                    OMAF_LOG(LOG_INFO, "But splitting tile is set to true, now change it to false !\n");
+                    m_initInfo->segmentationInfo->splitTile = 0;
+                }
+            }
             vs = NULL;
         }
         else
@@ -364,9 +385,21 @@ int32_t OmafPackage::CreateExtractorTrackManager()
 
 int32_t OmafPackage::CreateSegmentation()
 {
-    m_segmentation = new DefaultSegmentation(&m_streams, m_extractorTrackMan, m_initInfo);
+    if (m_sourceMode == OMNIDIRECTIONAL_VIDEO_PACKING)
+    {
+        m_segmentation = new DefaultSegmentation(&m_streams, m_extractorTrackMan, m_initInfo, m_sourceMode);
+    }
+    else if (m_sourceMode == MULTIVIEW_VIDEO_PACKING)
+    {
+        m_segmentation = new MultiViewSegmentation(&m_streams, NULL, m_initInfo, m_sourceMode);
+    }
+
     if (!m_segmentation)
         return OMAF_ERROR_NULL_PTR;
+
+    int32_t ret = m_segmentation->Initialize();
+    if (ret)
+        return ret;
 
     return ERROR_NONE;
 }
@@ -393,18 +426,27 @@ int32_t OmafPackage::InitOmafPackage(InitialInfo *initInfo)
 
     uint8_t streamsNumTotal = initInfo->bsNumVideo + initInfo->bsNumAudio;
     uint8_t streamIdx = 0;
+    int32_t ret = ERROR_NONE;
     for( ; streamIdx < streamsNumTotal; streamIdx++)
     {
         BSBuffer bsBuffer = initInfo->bsBuffers[streamIdx];
-        int32_t ret = AddMediaStream(streamIdx, &bsBuffer);
+        ret = AddMediaStream(streamIdx, &bsBuffer);
         if (ret)
             return OMAF_ERROR_ADD_MEDIASTREAMS;
-
     }
 
-    int32_t ret = CreateExtractorTrackManager();
-    if (ret)
-        return OMAF_ERROR_CREATE_EXTRACTORTRACK_MANAGER;
+    if ((m_initInfo->projType == E_SVIDEO_PLANAR) && m_hasViewSEI)
+    {
+        OMAF_LOG(LOG_INFO, "This is multi-view video packing now !\n");
+        m_sourceMode = MULTIVIEW_VIDEO_PACKING;
+    }
+
+    if (m_sourceMode == OMNIDIRECTIONAL_VIDEO_PACKING)
+    {
+        ret = CreateExtractorTrackManager();
+        if (ret)
+            return OMAF_ERROR_CREATE_EXTRACTORTRACK_MANAGER;
+    }
 
     ret = CreateSegmentation();
     if (ret)
@@ -521,6 +563,12 @@ void OmafPackage::SegmentAllAudioStreams()
 
 int32_t OmafPackage::OmafPacketStream(uint8_t streamIdx, FrameBSInfo *frameInfo)
 {
+    //for (uint32_t index = 0; index < 200; index++)
+    //{
+    //    printf("%0x ", *(frameInfo->data + index));
+    //}
+    //printf("\n");
+
     int32_t ret = SetFrameInfo(streamIdx, frameInfo);
     if (ret)
         return ret;

@@ -33,7 +33,7 @@
 
 #include "gtest/gtest.h"
 #include "../OmafPackage.h"
-#include "DashWriterPluginAPI.h"
+#include "DashSegmentWriterPluginAPI.h"
 
 VCD_USE_VRVIDEO;
 
@@ -139,6 +139,8 @@ public:
         m_initInfo->cmafEnabled = false;
         m_initInfo->segWriterPluginPath = "/usr/local/lib";
         m_initInfo->segWriterPluginName = "SegmentWriter";
+        m_initInfo->mpdWriterPluginPath = "/usr/local/lib";
+        m_initInfo->mpdWriterPluginName = "MPDWriter";
         m_initInfo->bsBuffers = new BSBuffer[2];
         if (!m_initInfo->bsBuffers)
         {

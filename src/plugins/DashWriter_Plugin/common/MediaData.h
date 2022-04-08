@@ -635,5 +635,43 @@ enum class Action
     ExtractSegment
 };
 
+struct VideoAdaptationSetInfo
+{
+    uint32_t fullWidth;
+    uint32_t fullHeight;
+    uint16_t tileWidth;
+    uint16_t tileHeight;
+    uint16_t tileHPos;
+    uint16_t tileVPos;
+    uint16_t tileCubemapHPos;
+    uint16_t tileCubemapVPos;
+    uint32_t viewHIdx;
+    uint32_t viewVIdx;
+};
+
+struct MPDAdaptationSetCtx
+{
+    VideoAdaptationSetInfo       *videoInfo;
+
+    std::list<VCD::MP4::TrackId> refTrackIdxs;
+
+    VCD::MP4::TrackId            trackIdx;
+
+    VCD::MP4::CodedMeta          codedMeta;
+
+    uint8_t                      qualityRanking;
+
+    MPDAdaptationSetCtx()
+    {
+        videoInfo = NULL;
+        qualityRanking = 0;
+    }
+
+    ~MPDAdaptationSetCtx()
+    {
+        videoInfo = NULL;
+    }
+};
+
 VCD_MP4_END;
 #endif /* _MEDIADATA_H_ */

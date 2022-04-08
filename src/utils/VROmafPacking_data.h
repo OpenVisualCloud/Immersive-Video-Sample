@@ -209,6 +209,9 @@ typedef struct InitialInfo
     const char              *segWriterPluginPath;    //needed for segments generation, mandatory if cmafEnabled is true, and default path is "/usr/local/lib" if cmafEnabled is false
     const char              *segWriterPluginName;    //needed for segments generation, mandatory if cmafEnabled is true, and default plugin is "SegmentWriter" if cmafEnabled is false
 
+    const char              *mpdWriterPluginPath;    //needed for DASH MPD file generation, mandatory if multi-view packing is enabled, and default path is "/usr/local/lib"
+    const char              *mpdWriterPluginName;    //needed for DASH MPD file generation, mandatory if multi-view packing is enabled, and default plugin is "MPDWriter"
+
     void                    *logFunction;            //external log callback function pointer, NULL if external log is not used
 }InitialInfo;
 

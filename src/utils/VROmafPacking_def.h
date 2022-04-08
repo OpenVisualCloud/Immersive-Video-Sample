@@ -171,6 +171,12 @@ struct ContentCoverage
     SphereRegion *sphereRegions;
 };
 
+typedef enum
+{
+    OMNIDIRECTIONAL_VIDEO_PACKING = 0,
+    MULTIVIEW_VIDEO_PACKING,
+}PackingSourceMode;
+
 #define DELETE_MEMORY(x) \
     if (x)               \
     {                    \

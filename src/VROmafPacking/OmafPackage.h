@@ -201,6 +201,8 @@ private:
     bool                            m_hasAudio;
     pthread_t                       m_audioThreadId;           //!< thread index of audio segmentation thread
     bool                            m_hasChunkDurCorrected;    //!< whether CMAF chunk duration has been corrected
+    bool                            m_hasViewSEI;              //!< whether input video stream has NovelViewSEI
+    PackingSourceMode               m_sourceMode;              //!< the source mode for packing
 };
 
 VCD_NS_END;

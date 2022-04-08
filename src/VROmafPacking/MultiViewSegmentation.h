@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Intel Corporation
+ * Copyright (c) 2021, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,15 +25,15 @@
  */
 
 //!
-//! \file:   DefaultSegmentation.h
-//! \brief:  Default segmentation class definition
-//! \detail: Define the operation and needed data for default segmentation.
+//! \file:   MultiViewSegmentation.h
+//! \brief:  Multi view segmentation class definition
+//! \detail: Define the operation and needed data for multi view segmentation.
 //!
-//! Created on April 30, 2019, 6:04 AM
+//! Created on Nov. 24, 2021, 6:04 AM
 //!
 
-#ifndef _DEFAULTSEGMENTATION_H_
-#define _DEFAULTSEGMENTATION_H_
+#ifndef _MULTIVIEWSEGMENTATION_H_
+#define _MULTIVIEWSEGMENTATION_H_
 
 #include <mutex>
 #include "Segmentation.h"
@@ -42,17 +42,17 @@
 VCD_NS_BEGIN
 
 //!
-//! \class DefaultSegmentation
-//! \brief Define the operation and needed data for default segmentation
+//! \class MultiViewSegmentation
+//! \brief Define the operation and needed data for multi view segmentation
 //!
 
-class DefaultSegmentation : public Segmentation
+class MultiViewSegmentation : public Segmentation
 {
 public:
     //!
     //! \brief  Constructor
     //!
-    DefaultSegmentation()
+    MultiViewSegmentation()
     {
         m_segNum = 0;
         m_audioSegNum = 0;
@@ -60,25 +60,26 @@ public:
         m_audioSegCtxsConsted = false;
         m_framesNum = 0;
         m_videoSegInfo = NULL;
-        m_projType  = VCD::OMAF::ProjectionFormat::PF_ERP;
+        m_projType  = VCD::OMAF::ProjectionFormat::PF_PLANAR;
         m_isEOS = false;
         m_nowKeyFrame = false;
         m_prevSegNum = 0;
-        m_isFramesReady = false;
-        m_aveETPerSegThread = 0;
-        m_lastETPerSegThread = 0;
-        m_threadNumForET = 0;
+        //m_isFramesReady = false;
+        //m_aveETPerSegThread = 0;
+        //m_lastETPerSegThread = 0;
+        //m_threadNumForET = 0;
         m_videosNum = 0;
-        m_videosBitrate = NULL;
-        m_prevSegedFrmNum = 0;
-        m_currSegedFrmNum = 0;
-        m_currProcessedFrmNum = 0;
+        //m_videosBitrate = NULL;
+        //m_prevSegedFrmNum = 0;
+        //m_currSegedFrmNum = 0;
+        //m_currProcessedFrmNum = 0;
         m_mpdWriter = NULL;
         m_isMpdGenInit = false;
+        //m_segWriterPluginHdl = NULL;
     };
 
     //!
-    //! \brief  Copy Constructor
+    //! \brief  Assignment Constructor
     //!
     //! \param  [in] streams
     //!         media streams map set up in OmafPackage
@@ -89,7 +90,7 @@ public:
     //!         initial information input by library interface
     //!         which includes segmentation information
     //!
-    DefaultSegmentation(std::map<uint8_t, MediaStream*> *streams, ExtractorTrackManager *extractorTrackMan, InitialInfo *initInfo, PackingSourceMode sourceMode) : Segmentation(streams, extractorTrackMan, initInfo, sourceMode)
+    MultiViewSegmentation(std::map<uint8_t, MediaStream*> *streams, ExtractorTrackManager *extractorTrackMan, InitialInfo *initInfo, PackingSourceMode sourceMode) : Segmentation(streams, extractorTrackMan, initInfo, sourceMode)
     {
         m_segNum = 0;
         m_audioSegNum = 0;
@@ -97,24 +98,26 @@ public:
         m_audioSegCtxsConsted = false;
         m_framesNum = 0;
         m_videoSegInfo = NULL;
-        m_projType  = VCD::OMAF::ProjectionFormat::PF_ERP;
+        m_projType  = VCD::OMAF::ProjectionFormat::PF_PLANAR;
         m_isEOS = false;
         m_nowKeyFrame = false;
         m_prevSegNum = 0;
-        m_isFramesReady = false;
-        m_aveETPerSegThread = 0;
-        m_lastETPerSegThread = 0;
-        m_threadNumForET = 0;
+        //m_isFramesReady = false;
+        //m_aveETPerSegThread = 0;
+        //m_lastETPerSegThread = 0;
+        //m_threadNumForET = 0;
         m_videosNum = 0;
-        m_videosBitrate = NULL;
-        m_prevSegedFrmNum = 0;
-        m_currSegedFrmNum = 0;
-        m_currProcessedFrmNum = 0;
+        //m_videosBitrate = NULL;
+        //m_prevSegedFrmNum = 0;
+        //m_currSegedFrmNum = 0;
+        //m_currProcessedFrmNum = 0;
         m_mpdWriter = NULL;
         m_isMpdGenInit = false;
+
+        //CreateSegWriterPluginHdl();
     };
 
-    DefaultSegmentation(const DefaultSegmentation& src)
+    MultiViewSegmentation(const MultiViewSegmentation& src)
     {
         m_segNum = src.m_segNum;
         m_audioSegNum = src.m_audioSegNum;
@@ -126,20 +129,21 @@ public:
         m_isEOS = src.m_isEOS;
         m_nowKeyFrame = src.m_nowKeyFrame;
         m_prevSegNum = src.m_prevSegNum;
-        m_isFramesReady = src.m_isFramesReady;
-        m_aveETPerSegThread = src.m_aveETPerSegThread;
-        m_lastETPerSegThread = src.m_lastETPerSegThread;
-        m_threadNumForET = src.m_threadNumForET;
+        //m_isFramesReady = src.m_isFramesReady;
+        //m_aveETPerSegThread = src.m_aveETPerSegThread;
+        //m_lastETPerSegThread = src.m_lastETPerSegThread;
+        //m_threadNumForET = src.m_threadNumForET;
         m_videosNum = src.m_videosNum;
-        m_videosBitrate = std::move(src.m_videosBitrate);
-        m_prevSegedFrmNum = src.m_prevSegedFrmNum;
-        m_currSegedFrmNum = src.m_currSegedFrmNum;
-        m_currProcessedFrmNum = src.m_currProcessedFrmNum;
+        //m_videosBitrate = std::move(src.m_videosBitrate);
+        //m_prevSegedFrmNum = src.m_prevSegedFrmNum;
+        //m_currSegedFrmNum = src.m_currSegedFrmNum;
+        //m_currProcessedFrmNum = src.m_currProcessedFrmNum;
         m_mpdWriter = std::move(src.m_mpdWriter);
         m_isMpdGenInit = src.m_isMpdGenInit;
+        //m_segWriterPluginHdl = src.m_segWriterPluginHdl;
     };
 
-    DefaultSegmentation& operator=(DefaultSegmentation&& other)
+    MultiViewSegmentation& operator=(MultiViewSegmentation&& other)
     {
         m_segNum = other.m_segNum;
         m_audioSegNum = other.m_audioSegNum;
@@ -151,25 +155,25 @@ public:
         m_isEOS = other.m_isEOS;
         m_nowKeyFrame = other.m_nowKeyFrame;
         m_prevSegNum = other.m_prevSegNum;
-        m_isFramesReady = other.m_isFramesReady;
-        m_aveETPerSegThread = other.m_aveETPerSegThread;
-        m_lastETPerSegThread = other.m_lastETPerSegThread;
-        m_threadNumForET = other.m_threadNumForET;
+        //m_isFramesReady = other.m_isFramesReady;
+        //m_aveETPerSegThread = other.m_aveETPerSegThread;
+        //m_lastETPerSegThread = other.m_lastETPerSegThread;
+        //m_threadNumForET = other.m_threadNumForET;
         m_videosNum = other.m_videosNum;
-        m_videosBitrate = NULL;
-        m_prevSegedFrmNum = other.m_prevSegedFrmNum;
-        m_currSegedFrmNum = other.m_currSegedFrmNum;
-        m_currProcessedFrmNum = other.m_currProcessedFrmNum;
+        //m_videosBitrate = NULL;
+        //m_prevSegedFrmNum = other.m_prevSegedFrmNum;
+        //m_currSegedFrmNum = other.m_currSegedFrmNum;
+        //m_currProcessedFrmNum = other.m_currProcessedFrmNum;
         m_mpdWriter = NULL;
         m_isMpdGenInit = other.m_isMpdGenInit;
-
+        //m_segWriterPluginHdl = other.m_segWriterPluginHdl;
         return *this;
     };
 
     //!
     //! \brief  Destructor
     //!
-    virtual ~DefaultSegmentation();
+    virtual ~MultiViewSegmentation();
 
     //!
     //! \brief  Initialize the basic process
@@ -221,23 +225,16 @@ public:
 
 private:
 
-    //!
-    //! \brief  Construct track segmentation context
-    //!         for all video tile tracks
-    //!
-    //! \return int32_t
-    //!         ERROR_NONE if success, else failed reason
-    //!
-    int32_t ConstructTileTrackSegCtx();
+    //int32_t CreateDashSegmentWriter(TrackSegmentCtx *trackSegCtx);
 
     //!
     //! \brief  Construct track segmentation context
-    //!         for all extractor tracks
+    //!         for all video tracks
     //!
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t ConstructExtractorTrackSegCtx();
+    int32_t ConstructVideoTrackSegCtx();
 
     //!
     //! \brief  Construct track segmentation context
@@ -257,21 +254,7 @@ private:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t WriteSegmentForEachVideo(MediaStream *stream, bool isKeyFrame, bool isEOS);
-
-    //!
-    //! \brief  Write segment for specified extractor track
-    //!
-    //! \param  [in] extractorTrack
-    //!         pointer to specified extractor track
-    //!
-    //! \return int32_t
-    //!         ERROR_NONE if success, else failed reason
-    //!
-    int32_t WriteSegmentForEachExtractorTrack(
-        ExtractorTrack *extractorTrack,
-        bool isKeyFrame,
-        bool isEOS);
+    int32_t WriteSegmentForEachVideo(MediaStream *stream, FrameBSInfo *frameData, bool isKeyFrame, bool isEOS);
 
     //!
     //! \brief  Write segments for specified audio stream
@@ -307,83 +290,6 @@ private:
     int32_t EndEachAudio(MediaStream *stream);
 
     //!
-    //! \brief  Start segmentation thread for specified extractor track
-    //!
-    //! \param  [in] extractorTrack
-    //!         pointer to the specified extractor track
-    //!
-    //! \return int32_t
-    //!         ERROR_NONE if success, else failed reason
-    //!
-    int32_t StartExtractorTrackSegmentation(ExtractorTrack *extractorTrack);
-
-    //!
-    //! \brief  Start last segmentation thread for rest extractor tracks
-    //!
-    //! \param  [in] extractorTrack
-    //!         pointer to the first extractor track in rest extractor
-    //!         tracks which are not created segmentation thread
-    //!
-    //! \return int32_t
-    //!         ERROR_NONE if success, else failed reason
-    //!
-    int32_t StartLastExtractorTrackSegmentation(ExtractorTrack *extractorTrack);
-
-    //!
-    //! \brief  extractor track segmentation thread function
-    //!
-    //! \param  [in] pThis
-    //!         this DefaultSegmentation
-    //!
-    //! \return void*
-    //!         return NULL
-    //!
-    static void* ExtractorTrackSegThread(void *pThis);
-
-    //!
-    //! \brief  extractor track segmentation thread function for last extractor
-    //!         tracks
-    //!
-    //! \param  [in] pThis
-    //!         this DefaultSegmentation
-    //!
-    //! \return void*
-    //!         return NULL
-    //!
-    static void* LastExtractorTrackSegThread(void *pThis);
-
-    //!
-    //! \brief  Generate extractor track segments
-    //!
-    //! \return int32_t
-    //!         ERROR_NONE if success, else failed reason
-    //!
-    int32_t ExtractorTrackSegmentation();
-
-    //!
-    //! \brief  Generate extractor track segments for last
-    //!         extractor tracks
-    //!
-    //! \return int32_t
-    //!         ERROR_NONE if success, else failed reason
-    //!
-    int32_t LastExtractorTrackSegmentation();
-
-    //!
-    //! \brief  Set frames ready status for extractor track
-    //!
-    //! \param  [in] isFramesReady
-    //!         whether frames ready for extractor track
-    //!
-    //! \return void
-    //!
-    void SetFramesReadyStatus(bool isFramesReady)
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_isFramesReady = isFramesReady;
-    };
-
-    //!
     //! \brief  Check whether there are only audio streams
     //!         in input streams
     //!
@@ -401,43 +307,86 @@ private:
     //!
     bool HasAudio();
 
+    //!
+    //! \brief  Create segment writer plugin handle
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    //int32_t CreateSegWriterPluginHdl()
+    //{
+    //    if (!m_segWriterPluginPath || !m_segWriterPluginName)
+    //    {
+    //        OMAF_LOG(LOG_ERROR, "Segment generation plugin is not assigned ! \n");
+    //        return OMAF_ERROR_NULL_PTR;
+    //    }
+    //
+    //    if (m_isCMAFEnabled)
+    //    {
+    //        if (0 == strcmp(m_segWriterPluginName, "SegmentWriter"))
+    //        {
+    //            OMAF_LOG(LOG_ERROR, "Plugin SegmentWriter can't generate CMAF segments !\n");
+    //            return OMAF_ERROR_BAD_PARAM;
+    //        }
+    //    }
+    //
+    //    uint32_t pathLen = strlen(m_segWriterPluginPath);
+    //
+    //    char pluginLibName[1024];
+    //    memset_s(pluginLibName, 1024, 0);
+    //    if (m_segWriterPluginPath[pathLen - 1] == '/')
+    //    {
+    //        snprintf(pluginLibName, 1024, "%slib%s.so", m_segWriterPluginPath, m_segWriterPluginName);
+    //    }
+    //    else
+    //    {
+    //        snprintf(pluginLibName, 1024, "%s/lib%s.so", m_segWriterPluginPath, m_segWriterPluginName);
+    //    }
+    //
+    //    OMAF_LOG(LOG_INFO, "Segment generation plugin is %s\n", pluginLibName);
+    //
+    //    m_segWriterPluginHdl = dlopen(pluginLibName, RTLD_LAZY);
+    //    const char *dlsymErr1 = dlerror();
+    //    if (!(m_segWriterPluginHdl))
+    //    {
+    //        OMAF_LOG(LOG_ERROR, "Failed to open segment writer plugin %s !\n", pluginLibName);
+    //        if (dlsymErr1)
+    //        {
+    //            OMAF_LOG(LOG_ERROR, "Get error msg %s \n", dlsymErr1);
+    //        }
+    //        return OMAF_ERROR_DLOPEN;
+    //    }
+
+    //    return ERROR_NONE;
+    //};
     int32_t CreateDashMPDWriter();
 
 private:
     std::map<MediaStream*, TrackSegmentCtx*>       m_streamSegCtx;       //!< map of media stream and its track segmentation context
     std::map<MediaStream*, VCD::MP4::MPDAdaptationSetCtx*> m_streamASCtx; //!< map of media stream and its MPD adaptation set context
-    std::map<ExtractorTrack*, TrackSegmentCtx*>    m_extractorSegCtx;    //!< map of extractor track and its track segmentation context
-    std::map<uint32_t, VCD::MP4::MPDAdaptationSetCtx*>     m_extractorASCtx; //!< map of extractor track index and its MPD adaptation set context
-    std::map<VCD::MP4::TrackId, TrackConfig>       m_allTileTracks;      //!< map of track and its track configuration
     std::map<MediaStream*, bool>                   m_framesIsKey;        //!< map of media stream and its current frame status (IDR or not)
     std::map<MediaStream*, bool>                   m_streamsIsEOS;       //!< map of media stream and its current EOS status
     VCD::OMAF::ProjectionFormat                    m_projType;           //!< picture projection type
     VideoSegmentInfo                               *m_videoSegInfo;      //!< pointer to the video segment information
-    std::map<uint8_t, std::map<uint32_t, VCD::MP4::TrackId>> m_tilesTrackIdxs;     //!< map of tile and its track index
-    std::map<VCD::MP4::TrackId, TrackSegmentCtx*>            m_trackSegCtx;        //!< map of tile track and its track segmentation context
     uint64_t                                       m_segNum;             //!< current written segments number
     std::mutex                                     m_audioMutex;
     uint64_t                                       m_audioSegNum;
     uint64_t                                       m_audioPrevSegNum;
     bool                                           m_audioSegCtxsConsted;
     uint64_t                                       m_framesNum;          //!< current written frames number
-    std::map<pthread_t, ExtractorTrack*>           m_extractorThreadIds; //!< map of thread ID for extractor track segmentation and corresponding extractor track
     bool                                           m_isEOS;              //!< whether EOS has been gotten for all media streams
     bool                                           m_nowKeyFrame;        //!< whether current frames are key frames for each corresponding media stream
     uint64_t                                       m_prevSegNum;         //!< previously written segments number
-    std::mutex                                     m_mutex;              //!< thread mutex for main segmentation thread
-    bool                                           m_isFramesReady;      //!< whether frames are ready for extractor track
-    uint16_t                                       m_aveETPerSegThread;  //!< average extractor tracks number in segmentation thread
-    uint16_t                                       m_lastETPerSegThread; //!< extractor tracks number in last segmentation thread
-    uint16_t                                       m_threadNumForET;     //!< threads number for extractor track segmentation
+    //std::mutex                                     m_mutex;              //!< thread mutex for main segmentation thread
     uint32_t                                       m_videosNum;          //!< video streams number
-    uint64_t                                       *m_videosBitrate;     //!< video stream bitrate array
-    uint64_t                                       m_prevSegedFrmNum;    //!< previous number of frames which have been segmented for their tile tracks
-    uint64_t                                       m_currSegedFrmNum;    //!< newest number of frames which have been segmented for their tile tracks
-    uint64_t                                       m_currProcessedFrmNum;//!< newest number of frames which have been segmented for both tiles tracks and extractor tracks
-    MPDWriterBase*                                 m_mpdWriter;          //!< MPD file writer created based on plugin
-    bool                                           m_isMpdGenInit;       //!< flag for whether MPD writer has been initialized
+    //uint64_t                                       *m_videosBitrate;     //!< video stream bitrate array
+    //uint64_t                                       m_prevSegedFrmNum;    //!< previous number of frames which have been segmented for their tile tracks
+    //uint64_t                                       m_currSegedFrmNum;    //!< newest number of frames which have been segmented for their tile tracks
+    MPDWriterBase*                                 m_mpdWriter;            //!< MPD file writer created based on plugin
+    bool                                           m_isMpdGenInit;       //!< flag for whether MPD generator has been initialized
+    //void                                           *m_segWriterPluginHdl;
+    std::map<VCD::MP4::TrackId, TrackSegmentCtx*>  m_trackSegCtx;        //!< map of track index and track segmentation context
 };
 
 VCD_NS_END;
-#endif /* _DEFAULTSEGMENTATION_H_ */
+#endif /* _MULTIVIEWSEGMENTATION_H_ */

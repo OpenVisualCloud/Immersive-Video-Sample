@@ -76,6 +76,10 @@ int32_t DashSegmenter::SegmentData(TrackSegmentCtx *trackSegCtx)
         {
             return SegmentOneTrack(&(trackSegCtx->audioNalu), trackSegCtx->codedMeta, trackSegCtx->dashCfg.trackSegBaseName);
         }
+        else if (trackSegCtx->videoNalu.data && trackSegCtx->videoNalu.dataSize)
+        {
+            return SegmentOneTrack(&(trackSegCtx->videoNalu), trackSegCtx->codedMeta, trackSegCtx->dashCfg.trackSegBaseName);
+        }
         else
         {
             if (trackSegCtx->isExtractorTrack)

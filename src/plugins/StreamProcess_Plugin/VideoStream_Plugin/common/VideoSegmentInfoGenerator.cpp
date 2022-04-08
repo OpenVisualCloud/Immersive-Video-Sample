@@ -147,7 +147,7 @@ void VideoSegmentInfoGenerator::InitTileTrackSegInfo(
 
 int32_t VideoSegmentInfoGenerator::Initialize(TileInfo *tilesInfo)
 {
-    if (!tilesInfo)
+    if (m_segmentationInfo->splitTile && !tilesInfo)
         return OMAF_ERROR_NULL_PTR;
 
     m_videoSegInfo->totalFrames = 0;
@@ -172,12 +172,14 @@ int32_t VideoSegmentInfoGenerator::Initialize(TileInfo *tilesInfo)
 
     InitFirstTrackInfo(m_videoSegInfo->tracksSegInfo[0]);
 
-    for (uint8_t tileIdx = 1; tileIdx <= m_videoSegInfo->tilesNum; tileIdx++)
+    if (m_segmentationInfo->splitTile)
     {
-        (m_videoSegInfo->tracksSegInfo[tileIdx])->tileIdx = tileIdx - 1;
-        InitTileTrackSegInfo(m_videoSegInfo->tracksSegInfo[tileIdx], &(tilesInfo[tileIdx-1]));
+        for (uint8_t tileIdx = 1; tileIdx <= m_videoSegInfo->tilesNum; tileIdx++)
+        {
+            (m_videoSegInfo->tracksSegInfo[tileIdx])->tileIdx = tileIdx - 1;
+            InitTileTrackSegInfo(m_videoSegInfo->tracksSegInfo[tileIdx], &(tilesInfo[tileIdx-1]));
+        }
     }
-
     return ERROR_NONE;
 }
 
