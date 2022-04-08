@@ -76,6 +76,7 @@ OmafSegment::OmafSegment(std::shared_ptr<OmafSegment> seg, std::unique_ptr<Strea
   bCatchup_ = seg->bCatchup_;
   bExtractor_ = seg->bExtractor_;
   chunk_num_ = seg->chunk_num_;
+  view_id_ = seg->view_id_;
 }
 
 OmafSegment::~OmafSegment() {

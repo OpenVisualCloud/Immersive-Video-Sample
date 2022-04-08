@@ -6,6 +6,8 @@ curl -ukang1:AP2hWmPtk4RkLXUn2SMWfocyUq2 -O "https://ubit-artifactory-sh.intel.c
 #tar zxvf segs_for_readertest_0909.tar.gz
 # Run test cases
 ################################
+./testTracksSelector
+if [ $? -ne 0 ]; then exit 1; fi
 
 ./testOmafReaderManager
 if [ $? -ne 0 ]; then exit 1; fi
@@ -27,6 +29,8 @@ if [ $? -ne 0 ]; then exit 1; fi
 ./testMediaSource --gtest_filter=*_static_changeViewport
 if [ $? -ne 0 ]; then exit 1; fi
 ./testMediaSource --gtest_filter=*_live_changeViewport
+if [ $? -ne 0 ]; then exit 1; fi
+./testMediaSource --gtest_filter=*_static_freeView
 if [ $? -ne 0 ]; then exit 1; fi
 ./testMPDParser
 if [ $? -ne 0 ]; then exit 1; fi

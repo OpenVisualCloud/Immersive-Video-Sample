@@ -200,7 +200,12 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
         }
         memcpy_s(mPkt->data, size, packet->buf, size);
         mPkt->size = size;
-        *mRwpk = *(packet->rwpk);
+        if (packet->rwpk != nullptr) {
+            *mRwpk = *(packet->rwpk);
+        }
+        else { // for multi view mode
+            SAFE_DELETE(mRwpk);
+        }
 
         SAFE_FREE(packet->buf);
         SAFE_DELETE(packet->rwpk);
@@ -210,6 +215,7 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
         mPktInfo->bEOS = packet->bEOS;
         mPktInfo->pts = packet->pts;
         mPktInfo->video_id = packet->videoID;
+        mPktInfo->view_id = std::make_pair(packet->hViewID, packet->vViewID);
         mPktInfo->bCatchup = packet->bCatchup;
         mDecCtx->push_packet(mPktInfo);
         data->rwpk = mRwpk;
@@ -223,6 +229,7 @@ RenderStatus VideoDecoder::SendPacket(DashPacket* packet)
         data->width = packet->width;
         data->height = packet->height;
         data->bCatchup = packet->bCatchup;
+        data->view_id = mPktInfo->view_id;
         for(int i =0; i<data->numQuality; i++){
             data->qtyResolution[i].height = packet->qtyResolution[i].height;
             data->qtyResolution[i].width = packet->qtyResolution[i].width;
@@ -292,6 +299,7 @@ RenderStatus VideoDecoder::DecodeFrame(AVPacket *pkt, uint32_t video_id, uint64_
     frame->numQuality = data->numQuality;
     frame->qtyResolution = data->qtyResolution;
     frame->video_id = video_id;
+    frame->view_id = data->view_id;
     frame->bEOS = false;
     frame->bCatchup = data->bCatchup;
     if (frame->av_frame->width != data->width || frame->av_frame->height != data->height)
@@ -367,6 +375,7 @@ RenderStatus VideoDecoder::FlushDecoder(uint32_t video_id)
         frame->bFmtChange = data->bCodecChange;
         frame->numQuality = data->numQuality;
         frame->video_id = video_id;
+        frame->view_id = data->view_id;
         frame->qtyResolution = data->qtyResolution;
         if (NULL == mDecCtx->get_front_of_framedata()) // set last frame eos to true
         {
@@ -542,7 +551,7 @@ RenderStatus VideoDecoder::GetFrame(uint64_t pts, DecodedFrame *&frame, int64_t 
     // correct pts due to fifo over size
     uint32_t max_frame_size = INT_MAX;
     if (mDecodeInfo.frameRate_den != 0)
-        max_frame_size = round(float(mDecodeInfo.frameRate_num) / mDecodeInfo.frameRate_den) * mDecodeInfo.segment_duration + 10;
+        max_frame_size = round(float(mDecodeInfo.frameRate_num) / mDecodeInfo.frameRate_den) * mDecodeInfo.segment_duration * 2;
     if (mDecCtx->get_size_of_frame() > max_frame_size && corr_pts != nullptr && !mDecCtx->bPacketEOS) {
         while (mDecCtx->get_size_of_frame() > max_frame_size / 2) {
             DecodedFrame *frame_d = mDecCtx->pop_frame();
@@ -572,7 +581,7 @@ void VideoDecoder::Pending()
     m_status = STATUS_PENDING;
 }
 
-RenderStatus VideoDecoder::UpdateFrame(uint64_t pts, int64_t *corr_pts)
+RenderStatus VideoDecoder::UpdateFrame(uint64_t pts, int64_t *corr_pts, HeadPose *pose)
 {
     std::chrono::high_resolution_clock clock;
     uint64_t start1 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
@@ -585,11 +594,34 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts, int64_t *corr_pts)
         LOG(INFO)<<"Frame is empty!"<<endl;
         return ret;
     }
-    if (mVideoId >= OFFSET_VIDEO_ID_FOR_CATCHUP) LOG(INFO) << "Get frame video id " << mVideoId << ", pts " << pts << endl;
     if (frame->bEOS)
     {
         this->SetEOS(true);
     }
+
+    BufferInfo* buf_info = new BufferInfo;
+    memset_s(buf_info, sizeof(BufferInfo), 0);
+    // free view: only update frame in the given pose
+    if (pose != nullptr && pose->hViewId >=0 && pose->vViewId >= 0) {
+        if (frame->view_id.first != pose->hViewId || frame->view_id.second != pose->vViewId) {
+            if(NULL != this->mHandler){
+                buf_info->view_id = frame->view_id;//update frame view id to each RS
+                mHandler->process(buf_info);
+                SAFE_DELETE(buf_info);
+            }
+
+            av_frame_free(&frame->av_frame);
+            // av_frame_unref(frame->av_frame);
+            if (frame->rwpk)
+                SAFE_DELETE_ARRAY(frame->rwpk->rectRegionPacking);
+            SAFE_DELETE(frame->rwpk);
+            SAFE_DELETE_ARRAY(frame->qtyResolution);
+            SAFE_DELETE(frame);
+            return RENDER_NO_FRAME;
+        }
+    }
+
+    if (mVideoId >= OFFSET_VIDEO_ID_FOR_CATCHUP) LOG(INFO) << "Get frame video id " << mVideoId << ", pts " << pts << endl;
     if( 0 >= frame->av_frame->linesize[0]){
         av_free(frame->av_frame);
         SAFE_DELETE(frame);
@@ -597,7 +629,7 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts, int64_t *corr_pts)
     }
 
     uint64_t start2 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-    BufferInfo* buf_info = new BufferInfo;
+
     uint32_t bufferNumber = 0;
 
     switch ( mDecCtx->codec_ctx->pix_fmt ){
@@ -625,6 +657,7 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts, int64_t *corr_pts)
     }
     buf_info->width = frame->av_frame->width;
     buf_info->height = frame->av_frame->height;
+    buf_info->view_id = frame->view_id;
     mDecCtx->preWidth = buf_info->width;
     mDecCtx->preHeight = buf_info->height;
 
@@ -668,7 +701,8 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts, int64_t *corr_pts)
 
     av_frame_free(&frame->av_frame);
     // av_frame_unref(frame->av_frame);
-    SAFE_DELETE_ARRAY(frame->rwpk->rectRegionPacking);
+    if (frame->rwpk)
+        SAFE_DELETE_ARRAY(frame->rwpk->rectRegionPacking);
     SAFE_DELETE(frame->rwpk);
     SAFE_DELETE_ARRAY(frame->qtyResolution);
     SAFE_DELETE(frame);

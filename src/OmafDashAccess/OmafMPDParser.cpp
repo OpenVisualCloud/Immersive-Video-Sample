@@ -29,6 +29,7 @@
 #include "OmafMPDParser.h"
 #include <typeinfo>
 #include "OmafExtractor.h"
+#include "OmafTypes.h"
 
 VCD_OMAF_BEGIN
 
@@ -207,9 +208,10 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
   uint32_t videoStrNum = 0;
   std::set<QualityRank> allVideoQualities;
   std::map<std::string, OmafMediaStream*> streamsMap;
+  std::vector<OmafAdaptationSet*>::iterator mainASit;
+  OmafDashMode mode = OmafDashMode::EXTRACTOR;
   for (auto it = mapAdaptationSets.begin(); it != mapAdaptationSets.end(); it++) {
     OMAFADAPTATIONSETS ASs = it->second;
-    std::vector<OmafAdaptationSet*>::iterator mainASit;
     std::string type = it->first;
     mTmpStream = new OmafMediaStream();
     if (mTmpStream == NULL) return ERROR_INVALID;
@@ -236,6 +238,7 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
               pOmafAs->SetProjectionFormat(mPF);
               mTmpStream->SetMainAdaptationSet(pOmafAs);
               mainASit = as_it;
+              mode = (*mainASit)->GetMode();
               pOmafAs->SetTwoDQualityInfos();
               mTwoDQualityInfos = pOmafAs->GetTwoDQualityInfos();
             } else {
@@ -286,11 +289,13 @@ int OmafMPDParser::BuildStreams(TYPE_OMAFADAPTATIONSETS mapAdaptationSets, OMAFS
     OmafMediaStream* stream = itStream->second;
     if (strncmp(type.c_str(), "video", 5) == 0)
     {
-        stream->SetEnabledExtractor(mExtractorEnabled);
+        if (mExtractorEnabled) stream->SetDashMode(OmafDashMode::EXTRACTOR);
+        else stream->SetDashMode(OmafDashMode::LATER_BINDING);
+        if (mode == OmafDashMode::MULTI_VIEW) stream->SetDashMode(mode);
     }
     else
     {
-        stream->SetEnabledExtractor(false);
+        stream->SetDashMode(OmafDashMode::LATER_BINDING);
     }
     stream->SetEnableCatchUp(omaf_dash_params_.enable_in_time_viewport_update);
     stream->SetCatchupThreadNum(omaf_dash_params_.max_response_times_in_seg);

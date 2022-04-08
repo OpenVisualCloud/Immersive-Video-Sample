@@ -118,6 +118,7 @@ public:
         m_fullHeight = height;
         SetMaxSpeed();
     };
+    static pair<int32_t, int32_t> m_preView;   //<! previous view id
 
 private:
 
@@ -142,10 +143,25 @@ private:
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
     RenderStatus GetStatusAndPoseFor2D(HeadPose *pose, uint32_t* status);
+
+    //! \brief get pose and status according to inputs for Fix 2D
+    //!
+    //! \param  [out] HeadPose
+    //          current pose
+    //!         [out] status
+    //!         player status
+    //! \return RenderStatus
+    //!         RENDER_STATUS_OK if success, else fail reason
+    //!
+    RenderStatus GetStatusAndPoseFor2DFix(HeadPose *pose, uint32_t* status);
     //!
     //! \brief Set max speed for key motion.
     //!
     void SetMaxSpeed();
+    //!
+    //! \brief Callback function for key press event in free view mode
+    //!
+    static void KeyCallBackForFreeView(GLFWwindow* window, int key, int scancode, int action, int mods);
 
     bool m_needMotionTest;              //<! need motion test or not
     struct MotionConfig m_motionConfig; //<! test params for motion to high quality test

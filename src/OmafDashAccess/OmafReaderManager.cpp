@@ -42,6 +42,7 @@
 
 #include <math.h>
 #include <functional>
+#include <algorithm>
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
 #include "../trace/MtHQ_tp.h"
@@ -689,6 +690,94 @@ OMAF_STATUS OmafReaderManager::GetNextPacketWithPTS(uint32_t trackID, uint64_t p
   }
 }
 
+OMAF_STATUS OmafReaderManager::GetNextPacketArray(vector<uint32_t> trackIDs, list<MediaPacket *>* pPackets, bool requireParams) noexcept {
+  //1. input check
+  uint32_t sample_size = GetSamplesNumPerSegmentForTimeLine(1);
+  if (sample_size == 0) return ERROR_BAD_PARAM;
+  uint32_t process_seg_id = fetch_pts_ / sample_size + 1;
+  if (trackIDs.empty()) {
+    OMAF_LOG(LOG_WARNING, "Need tracks in get packet is empty!\n");
+    return ERROR_NO_VALUE;
+  }
+  for (auto iter = inactive_tracks_.begin(); iter != inactive_tracks_.end();) {
+    if (iter->first < process_seg_id) {//remove previous inactive tracks
+      iter = inactive_tracks_.erase(iter);
+      continue;
+    }
+    else if (iter->first == process_seg_id) {//erase inactive tracks
+      for (auto it = trackIDs.begin(); it != trackIDs.end();) {
+        if (*it == iter->second) {
+          OMAF_LOG(LOG_WARNING, "Erase the inactive track %d\n", iter->second);
+          it = trackIDs.erase(it);
+        }
+        else {
+          it++;
+        }
+      }
+    }
+    iter++;
+  }
+  //2. get packet array
+  vector<uint32_t> no_data_tracks;
+  for (uint32_t i = 0; i < trackIDs.size(); i++) {
+    MediaPacket *packet = nullptr;
+    int ret = GetNextPacketWithPTS(trackIDs[i], fetch_pts_, packet, requireParams);
+    //2.1 null packet happens, push into no_data_tracks for waiting process
+    if (ret == ERROR_NULL_PACKET) {
+      no_data_tracks.push_back(i);
+      // LOG(INFO) << "Push null packet into no_data_tracks id " << trackIDs[i] << endl;
+    }
+    //2.2 full packet happens, push into output packets queue
+    else if (ret == ERROR_NONE) {
+      packet->SetVideoID(i);
+      pPackets->push_back(packet);
+      if (packet->GetEOS()) return ERROR_NONE;
+      // LOG(INFO) << "Push packet pts " << fetch_pts_ << " track id " << trackIDs[i] << " video id " << i << endl;
+    }
+    else {
+      OMAF_LOG(LOG_WARNING, "Get packet abnormal, ret value is %d\n", ret);
+    }
+  }
+  //3. process complete packet array
+  if (no_data_tracks.empty() && pPackets->size() == trackIDs.size()) {
+    OMAF_LOG(LOG_INFO, "Get packet at %uld successfully\n", fetch_pts_);
+    fetch_pts_++;
+    return ERROR_NONE;
+  }
+  // 3.1 process all null packet array
+  if (pPackets->size() == 0) {
+    // LOG(INFO) << "Process all null packet array " << endl;
+    return ERROR_NULL_PACKET;
+  }
+  //4. process waiting packet array
+  else if (!no_data_tracks.empty()) {
+    uint32_t waitdata_timeout = max(GetSegmentDuration() * 1000, uint64_t(3000));
+    uint32_t curr_waittime = 0;
+    for (auto id : no_data_tracks) {
+      MediaPacket *pkt = nullptr;
+      int res = GetNextPacketWithPTS(trackIDs[id], fetch_pts_, pkt, requireParams);
+      while (res == ERROR_NULL_PACKET && curr_waittime < waitdata_timeout) {
+        usleep(1000);
+        curr_waittime++;
+        res = GetNextPacketWithPTS(trackIDs[id], fetch_pts_, pkt, requireParams);
+      }
+      //4.1 wait and obtain the packet, push into output packets queue(first frame in segment always enters)
+      if (res == ERROR_NONE) {
+        pkt->SetVideoID(id);
+        pPackets->push_back(pkt);
+        // LOG(INFO) << "Push packet pts " << fetch_pts_ << " track id " << trackIDs[id] << " video id " << id << endl;
+      }
+      //4.2 wait timeout, mark as inactive track for current segment
+      else if (res == ERROR_NULL_PACKET) {
+        LOG(INFO) << "Push inactive track " << trackIDs[id] << " segment id " << fetch_pts_ / sample_size + 1 << endl;
+        inactive_tracks_.push_back(make_pair(fetch_pts_ / sample_size + 1, trackIDs[id]));
+      }
+    }
+    fetch_pts_++;
+  }
+  return ERROR_NONE;
+}
+
 inline bool OmafReaderManager::isEmpty(std::mutex &mutex, const std::list<OmafSegmentNodeTimedSet> &nodes) noexcept {
   try {
     std::lock_guard<std::mutex> lock(mutex);
@@ -736,7 +825,7 @@ bool OmafReaderManager::checkEOS(int64_t segment_num) noexcept {
           eos = false;
           break;
         }
-        else if (curr_time_cnt < timeout_for_checkEOS_ && work_params_.mode_ == OmafDashMode::EXTRACTOR) {
+        else if (curr_time_cnt < timeout_for_checkEOS_ && work_params_.mode_ != OmafDashMode::LATER_BINDING) {
           eos = false;
           OMAF_LOG(LOG_INFO, "Wait for eos time out!\n");
           curr_time_cnt++;
@@ -1908,15 +1997,16 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
           SAFE_DELETE(packet);
           return ret;
         }
-
-        std::unique_ptr<RegionWisePacking> pRwpk = make_unique_vcd<RegionWisePacking>();
-        ret = reader->getPropertyRegionWisePacking(reader_track_id, sample, pRwpk.get());
-        if (ret != ERROR_NONE) {
-          OMAF_LOG(LOG_ERROR, "Failed to read region wise packing data from reader, code= %d\n", ret);
-          SAFE_DELETE(packet);
-          return ret;
+        if (mode_ != OmafDashMode::MULTI_VIEW) {
+          std::unique_ptr<RegionWisePacking> pRwpk = make_unique_vcd<RegionWisePacking>();
+          ret = reader->getPropertyRegionWisePacking(reader_track_id, sample, pRwpk.get());
+          if (ret != ERROR_NONE) {
+            OMAF_LOG(LOG_ERROR, "Failed to read region wise packing data from reader, code= %d\n", ret);
+            SAFE_DELETE(packet);
+            return ret;
+          }
+          packet->SetRwpk(std::move(pRwpk));
         }
-        packet->SetRwpk(std::move(pRwpk));
 
         packet->SetPRFT(pPrft);
 
@@ -2005,6 +2095,22 @@ int OmafSegmentNode::cachePackets(std::shared_ptr<OmafReader> reader) noexcept {
           }
         } else {
           packet->SetSRDInfo(segment_->GetSRDInfo());
+          if (mode_ == OmafDashMode::MULTI_VIEW) {
+            packet->SetQualityNum(1);
+            SourceResolution srcRes_s;
+            memset_s(&srcRes_s, sizeof(SourceResolution), 0);
+            srcRes_s.top = 0;
+            srcRes_s.left = 0;
+            srcRes_s.width = packet_params->width_;
+            srcRes_s.height = packet_params->height_;
+            srcRes_s.qualityRanking = HIGHEST_QUALITY_RANKING;
+            packet->SetSourceResolution(0, srcRes_s);
+
+            packet->SetViewId(segment_->GetViewId());
+
+            packet->SetVideoWidth(packet_params->width_);
+            packet->SetVideoHeight(packet_params->height_);
+          }
         }
 
         packet->SetRealSize(packet_size);

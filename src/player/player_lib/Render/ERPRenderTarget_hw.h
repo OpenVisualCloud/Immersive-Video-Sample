@@ -78,7 +78,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    virtual RenderStatus Update( float yaw, float pitch, float hFOV, float vFOV, uint64_t pts );
+    virtual RenderStatus Update(HeadPose* pose, float hFOV, float vFOV, uint64_t pts );
 
     virtual RenderStatus UpdateDisplayTex();
 

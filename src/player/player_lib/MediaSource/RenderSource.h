@@ -160,6 +160,9 @@ public:
     void SetVideoID(int32_t video_id) {m_VideoID =video_id; };
     int32_t GetVideoID() {return m_VideoID;};
 
+    void SetViewID(pair<int32_t, int32_t> view_id) {m_viewID = view_id; };
+    pair<int32_t, int32_t> GetViewID() {return m_viewID;};
+
     RegionData* GetCurrentRegionInfo()
     {
         RegionData *ret = nullptr;
@@ -198,6 +201,7 @@ protected:
     Mesh            *m_meshOfR2T;           //! the mesh used to blend source to output
     list<RegionData*> mCurRegionInfo;
     int32_t          m_VideoID;
+    pair<int32_t, int32_t> m_viewID;
 };
 
 VCD_NS_END

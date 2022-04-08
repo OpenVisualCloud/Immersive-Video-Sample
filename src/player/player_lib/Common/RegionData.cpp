@@ -42,13 +42,14 @@ VCD_NS_BEGIN
 
 RegionData::RegionData(RegionWisePacking* rwpk, uint32_t sourceNumber, SourceResolution* qtyRes) {
   m_sourceInRegion = sourceNumber;
-
-  m_regionWisePacking = new RegionWisePacking;
-  *m_regionWisePacking = *rwpk;
-  m_regionWisePacking->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
-  memcpy_s(m_regionWisePacking->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking),
-           rwpk->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking));
-
+  m_regionWisePacking = nullptr;
+  if (rwpk != nullptr) {
+    m_regionWisePacking = new RegionWisePacking;
+    *m_regionWisePacking = *rwpk;
+    m_regionWisePacking->rectRegionPacking = new RectangularRegionWisePacking[rwpk->numRegions];
+    memcpy_s(m_regionWisePacking->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking),
+            rwpk->rectRegionPacking, rwpk->numRegions * sizeof(RectangularRegionWisePacking));
+  }
   m_sourceInfo = new SourceResolution[sourceNumber];
   for (uint32_t i = 0; i < sourceNumber; i++) {
     m_sourceInfo[i].qualityRanking = qtyRes[i].qualityRanking;

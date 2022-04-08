@@ -89,18 +89,23 @@ class OmafTracksSelector {
   //!
   //! \brief  Set Init viewport
   //!
-  int SetInitialViewport(std::vector<Viewport *> &pView, HeadSetInfo *headSetInfo, OmafMediaStream *pStream);
+  virtual int SetInitialViewport(std::vector<Viewport *> &pView, HeadSetInfo *headSetInfo, OmafMediaStream *pStream);
 
   //!
   //! \brief  Update Viewport; each time pose update will be recorded, but only
   //!         the latest will be used when SelectTracks is called.
   //!
-  int UpdateViewport(HeadPose *pose);
+  virtual int UpdateViewport(HeadPose *pose);
 
   //!
   //! \brief  Load viewport prediction plugin
   //!
   int EnablePosePrediction(std::string predictPluginName, std::string libPath, bool enableExtractor);
+
+  //!
+  //! \brief  Set auto mode for free view is true
+  //!
+  void EnableAutoModeForFreeView() { mUseAutoModeForFreeView = true; };
 
   //!
   //! \brief  Get the priority of the segment
@@ -165,6 +170,7 @@ private:
   void *m360ViewPortHandle;
   param_360SCVP *mParamViewport;
   bool mUsePrediction;
+  bool mUseAutoModeForFreeView;
   std::string mPredictPluginName;
   std::string mLibPath;
   std::map<std::string, ViewportPredictPlugin *> mPredictPluginMap;

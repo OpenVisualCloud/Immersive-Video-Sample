@@ -9,6 +9,9 @@
     <sourceType>0</sourceType>
     <!-- enableExtractor 0 is false and 1 is true -->
     <enableExtractor>0</enableExtractor>
+    <!-- enableAutoView 0 is false and 1 is true in MultiView mode -->
+    <enableAutoView>0</enableAutoView>
+    <!-- debug option to dump input packets -->
     <StreamDumpedOption>0</StreamDumpedOption>
     <!-- viewport settings -->
     <viewportHFOV>80</viewportHFOV>

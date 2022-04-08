@@ -37,21 +37,21 @@ VCD_NS_BEGIN
 
 ViewPortManager::ViewPortManager()
 {
-    m_pose.yaw   = 0;
-    m_pose.pitch = 0;
+    m_pose = new HeadPose();
+    memset_s(m_pose, sizeof(HEADPOSE), 0);
 }
 
 ViewPortManager::~ViewPortManager()
 {
+    SAFE_DELETE(m_pose);
 }
-HeadPose ViewPortManager::GetViewPort()
+HeadPose* ViewPortManager::GetViewPort()
 {
     return m_pose;
 }
 RenderStatus ViewPortManager::SetViewPort(HeadPose *pose)
 {
-    m_pose.yaw   = pose->yaw;
-    m_pose.pitch = pose->pitch;
+    memcpy_s(m_pose, sizeof(HEADPOSE), pose, sizeof(HEADPOSE));
     return RENDER_STATUS_OK;
 }
 

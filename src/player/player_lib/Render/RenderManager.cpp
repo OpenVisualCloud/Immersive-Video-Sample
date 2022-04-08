@@ -33,11 +33,13 @@
 
 #include "RenderManager.h"
 #include <chrono>
+#include <math.h>
 #include "CubeMapRender.h"
 #include "CubeMapRenderTarget.h"
 #include "EGLRenderContext.h"
 #include "ERPRender.h"
 #include "ERPRenderTarget.h"
+#include "MultiViewRenderTarget.h"
 #ifdef _ANDROID_OS_
 #include "ERPRenderTarget_hw.h"
 #include "CubeMapRenderTarget_android.h"
@@ -60,6 +62,9 @@ RenderManager::RenderManager(struct RenderConfig config) {
   m_surfaceRender = nullptr;
 #endif
   this->m_outputTexture = 0;
+  this->m_framerateNum = 0;
+  this->m_framerateDen = 0;
+  this->m_autoSelector = nullptr;
 }
 
 RenderManager::~RenderManager() {
@@ -69,6 +74,7 @@ RenderManager::~RenderManager() {
 #endif
   SAFE_DELETE(m_viewPortManager);
   SAFE_DELETE(m_renderContext);
+  SAFE_DELETE(m_autoSelector);
 }
 
 void RenderManager::UpdateFrames(int64_t pts)
@@ -78,30 +84,36 @@ void RenderManager::UpdateFrames(int64_t pts)
 }
 
 RenderStatus RenderManager::Render(int64_t pts, int64_t *corr_pts) {
+
   uint32_t width = m_renderConfig.windowWidth;
   uint32_t height = m_renderConfig.windowHeight;
   std::chrono::high_resolution_clock clock;
   uint64_t start1 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-  RenderStatus ret = m_mediaSource->UpdateFrames(pts, corr_pts);
+
+  //1. get current pose information
+  bool isAutoMode = m_renderConfig.enableAutoView;
+  HeadPose *curr_pose = GetViewport(pts, isAutoMode);
+
+  //2. update frame according to current pose
+  RenderStatus ret = m_mediaSource->UpdateFrames(pts, corr_pts, curr_pose);
   if (RENDER_STATUS_OK != ret) {
     LOG(INFO) << "UpdateFrames error!" << endl;
     return ret;
   }
   uint64_t end1 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
   LOG(INFO) << "UpdateFrames cost time:" << (end1 - start1) << endl;
+  LOG(INFO) << "Update frame at pose " << curr_pose->hViewId << " pts " << pts << endl;
   // 3.tile copy and render to FBO from m_renderTarget
-  float yaw = 0;
-  float pitch = 0;
-  GetViewport(&yaw, &pitch);
   uint64_t start2 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
   RenderStatus renderTargetStatus =
-      m_renderTarget->Update(yaw, pitch, m_renderConfig.viewportHFOV, m_renderConfig.viewportVFOV, pts);
+      m_renderTarget->Update(curr_pose, m_renderConfig.viewportHFOV, m_renderConfig.viewportVFOV, pts);
   if (RENDER_ERROR == renderTargetStatus) {
     LOG(INFO) << "Update error!" << endl;
     return RENDER_ERROR;
   }
   uint64_t end2 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
   LOG(INFO) << "Update cost time:" << (end2 - start2) << endl;
+
 #ifdef _LINUX_OS_
   m_surfaceRender->SetTransformTypeToMesh(m_renderTarget->GetTransformType());
   uint64_t start3 = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
@@ -138,12 +150,23 @@ RenderStatus RenderManager::Initialize(MediaSource *source, RenderSourceFactory 
   m_renderConfig.projFormat = vi.mProjFormat;
   m_renderConfig.renderInterval = 1000 * vi.framerate_den / vi.framerate_num;
 
+  m_framerateNum = vi.framerate_num;
+  m_framerateDen = vi.framerate_den;
+  m_segmentDuration = vi.segment_duration;
+
   if (m_renderContext != nullptr)
   {
     m_renderContext->SetProjectionFormat(m_renderConfig.projFormat);
     m_renderContext->SetRenderInterval(m_renderConfig.renderInterval);
     m_renderContext->SetRowAndColInfo(vi.sourceHighTileRow, vi.sourceHighTileCol);
+    m_renderContext->SetSourceMode(vi.mSourceMode);
   }
+
+  m_autoSelector = new AutoViewSelector(SelectorMode::HALFMOVEHALFSTOP, 6, 2);
+
+  uint32_t framerate = round(float(m_framerateNum) / m_framerateDen);
+  uint32_t samplesInSeg = framerate * m_segmentDuration;
+  m_autoSelector->SetSamplesInSeg(samplesInSeg);
 
 #ifdef _LINUX_OS_
   // initial SurfaceRender and shaders
@@ -154,7 +177,7 @@ RenderStatus RenderManager::Initialize(MediaSource *source, RenderSourceFactory 
   m_surfaceRender->SetUniformFrameTex();
 #endif
   // initial renderTarget
-  if (CreateRenderTarget(m_renderConfig.projFormat) != RENDER_STATUS_OK) {
+  if (CreateRenderTarget(vi.mProjFormat, vi.mSourceMode) != RENDER_STATUS_OK) {
     return RENDER_ERROR;
   }
   m_rsFactory = rsFactory;
@@ -171,7 +194,7 @@ RenderStatus RenderManager::Initialize(MediaSource *source, RenderSourceFactory 
   return RENDER_STATUS_OK;
 }
 
-RenderStatus RenderManager::CreateRenderTarget(int32_t projFormat) {
+RenderStatus RenderManager::CreateRenderTarget(int32_t projFormat, int32_t sourceMode) {
   switch (projFormat) {
     case VCD::OMAF::PF_ERP:
     case VCD::OMAF::PF_PLANAR:
@@ -180,7 +203,13 @@ RenderStatus RenderManager::CreateRenderTarget(int32_t projFormat) {
       m_renderTarget = new ERPRenderTarget_hw();
 #endif
 #ifdef _LINUX_OS_
-      m_renderTarget = new ERPRenderTarget();
+      if (sourceMode == SourceMode_Omni)
+        m_renderTarget = new ERPRenderTarget();
+      else if (sourceMode == SourceMode_MultiView)
+        m_renderTarget = new MultiViewRenderTarget();
+      else
+        m_renderTarget = nullptr;
+
 #endif
       if (nullptr == m_renderTarget) {
         LOG(ERROR) << "ERP render target creation failed" << std::endl;
@@ -251,8 +280,7 @@ RenderStatus RenderManager::CreateRender(int32_t projFormat) {
 
 bool RenderManager::IsEOS() { return m_mediaSource->IsEOS() || !(m_renderContext->isRunning()); }
 
-RenderStatus RenderManager::ChangeViewport(HeadPose *pose, uint64_t pts) {
-  pose->pts = pts;
+RenderStatus RenderManager::ChangeViewport(HeadPose *pose) {
   m_mediaSource->ChangeViewport(pose);
   return RENDER_STATUS_OK;
 }
@@ -264,12 +292,14 @@ RenderStatus RenderManager::SetViewport(HeadPose *pose) {
   return RENDER_STATUS_OK;
 }
 
-RenderStatus RenderManager::GetViewport(float *yaw, float *pitch) {
-  ScopeLock lock(m_poseLock);
-  HeadPose pose = m_viewPortManager->GetViewPort();
-  *yaw = pose.yaw;
-  *pitch = pose.pitch;
-  return RENDER_STATUS_OK;
+HeadPose* RenderManager::GetViewport(uint64_t pts, bool isAutoMode) {
+  if (isAutoMode) {//auto mode
+    return m_autoSelector->GetPose(pts);
+  }
+  else {//manual mode: get current viewport
+    ScopeLock lock(m_poseLock);
+    return m_viewPortManager->GetViewPort();
+  }
 }
 
 struct RenderConfig RenderManager::GetRenderConfig() {

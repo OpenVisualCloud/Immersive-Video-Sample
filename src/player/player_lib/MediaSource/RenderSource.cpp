@@ -47,6 +47,7 @@ RenderSource::RenderSource() : m_videoShaderOfR2T(shader_r2t_vs, shader_r2t_fs)
     m_meshOfR2T           = NULL;
     m_VideoID             = -1;
     mCurRegionInfo.clear();
+    m_viewID              = make_pair(-1, -1);
 }
 
 RenderSource::~RenderSource()

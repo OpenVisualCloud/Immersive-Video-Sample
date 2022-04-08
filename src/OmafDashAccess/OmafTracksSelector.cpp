@@ -46,6 +46,7 @@ OmafTracksSelector::OmafTracksSelector(int size) {
   mParamViewport = nullptr;
   mPose = nullptr;
   mUsePrediction = false;
+  mUseAutoModeForFreeView = false;
   mPredictPluginName = "";
   mLibPath = "";
   mProjFmt = ProjectionFormat::PF_ERP;

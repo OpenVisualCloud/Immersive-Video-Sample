@@ -49,7 +49,7 @@ public:
     //! \return Pose*
     //!         return Pose
     //!
-    HeadPose GetViewPort();
+    HeadPose* GetViewPort();
 
     //! \brief The render function
     //!
@@ -61,7 +61,7 @@ public:
     RenderStatus SetViewPort(HeadPose *pose);
 
 private:
-    HeadPose m_pose;
+    HeadPose *m_pose;
 
 };
 

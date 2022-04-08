@@ -466,11 +466,11 @@ RenderStatus WebRTCMediaSource::Start() {
 }
 
 
-RenderStatus WebRTCMediaSource::UpdateFrames(uint64_t pts, int64_t *corr_pts) {
+RenderStatus WebRTCMediaSource::UpdateFrames(uint64_t pts, int64_t *corr_pts, HeadPose* pose) {
   if (NULL == m_DecoderManager)
     return RENDER_NO_MATCHED_DECODER;
 
-  RenderStatus ret = m_DecoderManager->UpdateVideoFrames(pts, corr_pts);
+  RenderStatus ret = m_DecoderManager->UpdateVideoFrames(pts, corr_pts, pose);
   if (RENDER_STATUS_OK != ret) {
     LOG(INFO) << "UpdateFrames failed with code:" << ret << std::endl;
   }

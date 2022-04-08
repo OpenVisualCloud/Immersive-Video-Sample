@@ -78,6 +78,8 @@ OmafAdaptationSet::OmafAdaptationSet() {
   mTileInfo = NULL;
   mIsExtractorTrack = false;
   mGopSize = 0;
+  mViewID.first = -1;
+  mViewID.second = -1;
   memset(&mVideoInfo, 0, sizeof(VideoInfo));
   memset(&mAudioInfo, 0, sizeof(AudioInfo));
 }
@@ -114,6 +116,13 @@ int OmafAdaptationSet::Initialize(AdaptationSetElement* pAdaptationSet) {
       mPreselID = mAdaptationSet->GetPreselection();
       mRwpkType = mAdaptationSet->GetRwpkType();
       mCC = mAdaptationSet->GetContentCoverage();
+      // get mViewID in free view mode
+      vector<ViewportElement*> viewports = mAdaptationSet->GetViewports();
+      if (viewports.size() == 0) return OMAF_ERROR_INVALID_DATA;
+      ViewportProperty* viewport = viewports.back()->GetViewport();
+      if (viewport == nullptr) return OMAF_ERROR_NULL_PTR;
+      mViewID.first = viewport->get_h();
+      mViewID.second = viewport->get_v();
       //mID = stoi(mAdaptationSet->GetId());
 
       if ((mPF == ProjectionFormat::PF_CUBEMAP) && !IsExtractor())
@@ -142,6 +151,17 @@ int OmafAdaptationSet::Initialize(AdaptationSetElement* pAdaptationSet) {
       mGopSize = stoi(mAdaptationSet->GetGopSize());
       OMAF_LOG(LOG_INFO, "get gop size %d\n", mGopSize);
   }
+
+  // determine mode from extractor flag and mode from mpd
+  if (mIsExtractorTrack) mMode = OmafDashMode::EXTRACTOR;
+  else mMode = OmafDashMode::LATER_BINDING;
+
+  if (mID == 0 && !mAdaptationSet->GetMode().empty()) {// for free view
+    if (mAdaptationSet->GetMode() == "MultiView") {
+      mMode = OmafDashMode::MULTI_VIEW;
+    }
+  }
+
   SegmentElement* segment = mRepresentation->GetSegment();
 
   if (nullptr != segment) {
@@ -500,6 +520,7 @@ int OmafAdaptationSet::DownloadSegment(bool enableCMAF) {
     pSegment->SetTrackId(this->mInitSegment->GetTrackId());
     pSegment->SetExtractor(IsExtractor());
     pSegment->SetCatchup(false);
+    pSegment->SetViewId(mViewID);
     ret = omaf_reader_mgr_->OpenSegment(std::move(pSegment), IsExtractor());
 
     if (ERROR_NONE != ret) {

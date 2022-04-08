@@ -54,8 +54,6 @@ VCD_OMAF_BEGIN
 
 using PacketQueue = std::list<MediaPacket *>;
 
-enum class OmafDashMode { EXTRACTOR = 0, LATER_BINDING = 1 };
-
 class OmafSegmentNode;
 class OmafPacketParams;
 class OmafAudioPacketParams;
@@ -116,6 +114,9 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
   //! \brief Get Next packet with assigned track index and PTS from packet queue.
   OMAF_STATUS GetNextPacketWithPTS(uint32_t trackID, uint64_t pts, MediaPacket *&pPacket, bool requireParams) noexcept;
 
+  //! \brief Get multi view packets with the same pts [synchronization]
+  OMAF_STATUS GetNextPacketArray(vector<uint32_t> trackIDs, list<MediaPacket *>* pPackets, bool requireParams) noexcept;
+
   //!  \brief Get mPacketQueue[trackID] size
   //!
   OMAF_STATUS GetPacketQueueSize(uint32_t trackID, size_t &size) noexcept;
@@ -161,6 +162,19 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
       }
     }
     return nullptr;
+  }
+
+  uint64_t GetSegmentDuration() {
+    for (int i = 0; i < media_source_->GetStreamCount(); i++) {
+      OmafMediaStream *pStream = media_source_->GetStream(i);
+      if (pStream) {
+        uint64_t segmentDur = pStream->GetSegmentDuration();
+        if (segmentDur != 0) {
+          return segmentDur;
+        }
+      }
+    }
+    return 0;
   }
 
  private:
@@ -248,6 +262,8 @@ class OmafReaderManager : public VCD::NonCopyable, public enable_shared_from_thi
 
   int64_t offset_pts_ = -1;
   uint32_t timeout_for_checkEOS_ = 500;
+  uint64_t fetch_pts_ = 0;
+  vector<pair<uint32_t, uint32_t>> inactive_tracks_; // first: segment id, second: track id
 };
 // using READERMANAGER = Singleton<OmafReaderManager>;
 VCD_OMAF_END

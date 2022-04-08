@@ -119,7 +119,7 @@ RenderStatus CubeMapRenderTarget::CreateRenderTarget()
     return RENDER_STATUS_OK;
 }
 
-RenderStatus CubeMapRenderTarget::Update( float yaw, float pitch, float hFOV, float vFOV, uint64_t pts )
+RenderStatus CubeMapRenderTarget::Update( HeadPose* pose, float hFOV, float vFOV, uint64_t pts )
 {
     if(NULL==this->m_rsFactory){
         return  RENDER_NULL_HANDLE;
@@ -146,7 +146,7 @@ RenderStatus CubeMapRenderTarget::Update( float yaw, float pitch, float hFOV, fl
     // RegionInfo *regionInfo = mapRenderSources[0]->GetCurrentRegionInfo();
     uint32_t highRow = m_rsFactory->GetHighTileRow();
     uint32_t highCol = m_rsFactory->GetHighTileCol();
-    GetTilesInViewport(yaw, pitch, hFOV, vFOV, highRow, highCol, TilesInViewport);
+    GetTilesInViewport(pose->yaw, pose->pitch, hFOV, vFOV, highRow, highCol, TilesInViewport);
 
     /// judge whether all best quality tiles has coverd the current viewport.
     bool isAllHighFlag = true;

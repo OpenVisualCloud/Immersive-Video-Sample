@@ -128,6 +128,20 @@ public:
     MEMBER_SET_AND_GET_FUNC(string, m_gopSize, GopSize);
 
     //!
+    //! \brief    Set function for m_mode member
+    //!
+    //! \param    [in] string
+    //!           value to set
+    //! \param    [in] m_mode
+    //!           m_mode member in class
+    //! \param    [in] Mode
+    //!           m_mode name in class
+    //!
+    //! \return   void
+    //!
+    MEMBER_SET_AND_GET_FUNC(string, m_mode, Mode);
+
+    //!
     //! \brief    Set function for m_maxFrameRate member
     //!
     //! \param    [in] string
@@ -331,6 +345,7 @@ private:
     string                               m_maxFrameRate;           //!< the maxFramerate attribute
     string                               m_audioSamplingRate;
     string                               m_gopSize;                //!< the gop size attribute
+    string                               m_mode;                   //!< the video mode
 
     string                               m_segmentAlignment;       //!< the segmentAlignment attribute
     string                               m_subsegmentAlignment;    //!< the subsegmentAlignment attribute

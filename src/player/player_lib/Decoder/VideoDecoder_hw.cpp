@@ -686,7 +686,7 @@ void VideoDecoder_hw::Pending()
     m_status = STATUS_PENDING;
 }
 
-RenderStatus VideoDecoder_hw::UpdateFrame(uint64_t pts, int64_t *corr_pts)
+RenderStatus VideoDecoder_hw::UpdateFrame(uint64_t pts, int64_t *corr_pts, HeadPose* pose)
 {
     DecodedFrame* frame = nullptr;
     RenderStatus ret = GetFrame(pts, frame);

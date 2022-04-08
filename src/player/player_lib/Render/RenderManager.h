@@ -43,6 +43,7 @@
 #include "../MediaSource/RenderSourceFactory.h"
 #include "RenderContext.h"
 #include "../../../utils/Threadable.h"
+#include "AutoViewSelector.h"
 
 VCD_NS_BEGIN
 
@@ -87,7 +88,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus ChangeViewport(HeadPose *pose, uint64_t pts);
+    RenderStatus ChangeViewport(HeadPose *pose);
     //! \brief set yaw and pitch
     //!
     //! \param  [in] float
@@ -109,7 +110,7 @@ public:
     //! \return RenderStatus
     //!         RENDER_STATUS_OK if success, else fail reason
     //!
-    RenderStatus GetViewport(float *yaw, float *pitch);
+    HeadPose* GetViewport(uint64_t pts, bool isAutoMode);
 
     //!
     //! \brief  Get Render Configuration
@@ -169,13 +170,17 @@ private:
     //!
     //! \brief  Create the render target
     //!
-    //! \param  [in] type
+    //! \param  [in] project format
     //!         ERP or CubeMap
+    //! \param  [int] source mode
+    //!         Omni or Multi-view
     //!
     //! \return RenderStatus
     //!         RENDER_STATUS_SUCCESS if success, else fail reason
     //!
-    RenderStatus CreateRenderTarget(int32_t projFormat);
+    RenderStatus CreateRenderTarget(int32_t projFormat, int32_t sourceMode);
+
+
 
 private:
     RenderManager& operator=(const RenderManager& other) { return *this; };
@@ -193,6 +198,10 @@ private:
     struct RenderConfig     m_renderConfig;
     ThreadLock              m_poseLock;
     uint32_t                m_outputTexture;
+    int32_t                 m_framerateNum;
+    int32_t                 m_framerateDen;
+    uint32_t                m_segmentDuration;
+    AutoViewSelector       *m_autoSelector;
 };
 
 VCD_NS_END

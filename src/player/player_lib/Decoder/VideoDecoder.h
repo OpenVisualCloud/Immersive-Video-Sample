@@ -49,6 +49,7 @@ typedef struct PacketInfo{
      uint32_t  video_id;
      bool      bCatchup;
      uint64_t  producedTime;
+     pair<int32_t, int32_t> view_id;
 }PacketInfo;
 
 typedef struct DecodedFrame{
@@ -62,6 +63,7 @@ typedef struct DecodedFrame{
      bool               bEOS;
      bool               bCatchup;
      uint64_t           producedTime;
+     pair<int32_t, int32_t> view_id;
 }DecodedFrame;
 
 typedef struct FrameData{
@@ -74,6 +76,7 @@ typedef struct FrameData{
      uint32_t           height;
      bool               bCatchup;
      uint64_t           producedTime = 0;
+     pair<int32_t, int32_t> view_id;
 }FrameData;
 
 class DecoderContext
@@ -100,11 +103,15 @@ public:
           while(get_size_of_frame()>0){
                DecodedFrame* frame = listFrame.front();
                listFrame.pop_front();
-               SAFE_DELETE_ARRAY(frame->rwpk->rectRegionPacking);
-               SAFE_DELETE(frame->rwpk);
-               SAFE_DELETE_ARRAY(frame->qtyResolution);
-               av_frame_free(&frame->av_frame);
-               SAFE_DELETE(frame);
+               if (frame) {
+                    if (frame->rwpk) {
+                         SAFE_DELETE_ARRAY(frame->rwpk->rectRegionPacking);
+                         SAFE_DELETE(frame->rwpk);
+                    }
+                    SAFE_DELETE_ARRAY(frame->qtyResolution);
+                    av_frame_free(&frame->av_frame);
+                    SAFE_DELETE(frame);
+               }
           }
 
           while(get_size_of_packet()>0){
@@ -117,10 +124,14 @@ public:
           while(get_size_of_framedata()>0){
                FrameData* data = listFrameData.front();
                listFrameData.pop_front();
-               SAFE_DELETE_ARRAY(data->rwpk->rectRegionPacking);
-               SAFE_DELETE_ARRAY(data->qtyResolution);
-               SAFE_DELETE(data->rwpk);
-               SAFE_DELETE(data);
+               if (data) {
+                    if (data->rwpk) {
+                         SAFE_DELETE_ARRAY(data->rwpk->rectRegionPacking);
+                         SAFE_DELETE(data->rwpk);
+                    }
+                    SAFE_DELETE_ARRAY(data->qtyResolution);
+                    SAFE_DELETE(data);
+               }
           }
      };
 
@@ -274,7 +285,7 @@ public:
      //!
      //! \brief  udpate frame to destination with the callback class FrameHandler
      //!
-     virtual RenderStatus UpdateFrame(uint64_t pts, int64_t *corr_pts);
+     virtual RenderStatus UpdateFrame(uint64_t pts, int64_t *corr_pts, HeadPose* pose);
 
      //!
      //! \brief

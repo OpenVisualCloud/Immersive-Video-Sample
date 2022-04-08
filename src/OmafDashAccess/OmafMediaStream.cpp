@@ -49,7 +49,7 @@ OmafMediaStream::OmafMediaStream() {
   m_hasTileTracksSelected = false;
   m_stitchThread = 0;
   m_catchupStitchThread = 0;
-  m_enabledExtractor = true;
+  mode_ = OmafDashMode::EXTRACTOR;
   m_stitch = NULL;
   m_needParams = false;
   m_currFrameIdx = 0;
@@ -142,7 +142,7 @@ void OmafMediaStream::SetOmafReaderMgr(std::shared_ptr<OmafReaderManager> mgr) n
     pAS->SetOmafReaderMgr(omaf_reader_mgr_);
   }
 
-  if (m_enabledExtractor) {
+  if (mode_ == OmafDashMode::EXTRACTOR) {
     std::lock_guard<std::mutex> lock(mExtractorsMutex);
     for (auto extrator_it = mExtractors.begin(); extrator_it != mExtractors.end(); extrator_it++) {
       OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
@@ -200,7 +200,7 @@ int OmafMediaStream::InitStream(std::string type) {
 
   if (type == "video")
   {
-      if (!m_enabledExtractor && !m_stitch) {
+      if (mode_ == OmafDashMode::LATER_BINDING && !m_stitch) {
         m_stitch = new OmafTilesStitch();
         if (!m_stitch) return OMAF_ERROR_NULL_PTR;
       }
@@ -213,7 +213,7 @@ int OmafMediaStream::InitStream(std::string type) {
   {
       SetupExtratorDependency();
 
-      if (!m_enabledExtractor) {
+      if (mode_ == OmafDashMode::LATER_BINDING) {
         int32_t ret = StartTilesStitching();
         if (ret) {
           OMAF_LOG(LOG_ERROR, "Failed to start tiles stitching !\n");
@@ -228,7 +228,7 @@ int OmafMediaStream::InitStream(std::string type) {
 OMAF_STATUS OmafMediaStream::UpdateStreamInfo() {
   if (!mMediaAdaptationSet.size()) return OMAF_ERROR_INVALID_DATA;
 
-  if (m_enabledExtractor) {
+  if (mode_ == OmafDashMode::EXTRACTOR) {
     if (NULL != mMainAdaptationSet && NULL != mExtratorAdaptationSet) {
       VideoInfo vi = mMainAdaptationSet->GetVideoInfo();
       AudioInfo ai = mMainAdaptationSet->GetAudioInfo();
@@ -245,6 +245,7 @@ OMAF_STATUS OmafMediaStream::UpdateStreamInfo() {
       memcpy_s(const_cast<char*>(m_pStreamInfo->codec), 1024, mMainAdaptationSet->GetCodec()[0].c_str(), 1024);
       m_pStreamInfo->mFpt = (int32_t)mMainAdaptationSet->GetFramePackingType();
       m_pStreamInfo->mProjFormat = (int32_t)mMainAdaptationSet->GetProjectionFormat();
+      m_pStreamInfo->mSourceMode = SourceMode_Omni;
       m_pStreamInfo->segmentDuration = mMainAdaptationSet->GetSegmentDuration();
 
       m_pStreamInfo->channel_bytes = ai.channel_bytes;
@@ -298,6 +299,8 @@ OMAF_STATUS OmafMediaStream::UpdateStreamInfo() {
       memcpy_s(const_cast<char*>(m_pStreamInfo->codec), 1024, mMainAdaptationSet->GetCodec()[0].c_str(), 1024);
       m_pStreamInfo->mFpt = (int32_t)mMainAdaptationSet->GetFramePackingType();
       m_pStreamInfo->mProjFormat = (int32_t)mMainAdaptationSet->GetProjectionFormat();
+      if (mode_ == OmafDashMode::MULTI_VIEW) m_pStreamInfo->mSourceMode = SourceMode_MultiView;
+      else m_pStreamInfo->mSourceMode = SourceMode_Omni;
       m_pStreamInfo->segmentDuration = mMainAdaptationSet->GetSegmentDuration();
       m_gopSize = mMainAdaptationSet->GetGopSize();
       for (auto itAS = mMediaAdaptationSet.begin(); itAS != mMediaAdaptationSet.end(); itAS++) {
@@ -322,49 +325,68 @@ OMAF_STATUS OmafMediaStream::UpdateStreamInfo() {
         auto qualityRanking = adaptationSet->GetRepresentationQualityRanking();
         allQualities.insert(qualityRanking);
       }
-      std::set<QualityRank>::reverse_iterator itQuality;
-      for (itQuality = allQualities.rbegin(); itQuality != allQualities.rend(); itQuality++) {
-        auto quality = *itQuality;
-        int32_t width = 0;
-        int32_t height = 0;
-        for (itAS = mMediaAdaptationSet.begin(); itAS != mMediaAdaptationSet.end(); itAS++) {
-          OmafAdaptationSet* adaptationSet = itAS->second;
-          OmafSrd* srd = adaptationSet->GetSRD();
-          int32_t tileWidth = srd->get_W();
-          int32_t tileHeight = srd->get_H();
-          int32_t tileLeft = srd->get_X();
-          int32_t tileTop = srd->get_Y();
-          uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
-          if (qualityRanking == quality) {
-            if (tileTop == 0) {
-              width += tileWidth;
-            }
 
-            if (tileLeft == 0) {
-              height += tileHeight;
+      if (mode_ == OmafDashMode::LATER_BINDING) {
+        std::set<QualityRank>::reverse_iterator itQuality;
+        for (itQuality = allQualities.rbegin(); itQuality != allQualities.rend(); itQuality++) {
+          auto quality = *itQuality;
+          int32_t width = 0;
+          int32_t height = 0;
+          for (itAS = mMediaAdaptationSet.begin(); itAS != mMediaAdaptationSet.end(); itAS++) {
+            OmafAdaptationSet* adaptationSet = itAS->second;
+            OmafSrd* srd = adaptationSet->GetSRD();
+            int32_t tileWidth = srd->get_W();
+            int32_t tileHeight = srd->get_H();
+            int32_t tileLeft = srd->get_X();
+            int32_t tileTop = srd->get_Y();
+            uint32_t qualityRanking = adaptationSet->GetRepresentationQualityRanking();
+            if (qualityRanking == quality) {
+              if (tileTop == 0) {
+                width += tileWidth;
+              }
+
+              if (tileLeft == 0) {
+                height += tileHeight;
+              }
             }
           }
+
+          SourceInfo oneSrc;
+          oneSrc.qualityRanking = quality;
+          oneSrc.width = width;
+          oneSrc.height = height;
+          m_sources.insert(make_pair(quality, oneSrc));
         }
 
-        SourceInfo oneSrc;
-        oneSrc.qualityRanking = quality;
-        oneSrc.width = width;
-        oneSrc.height = height;
-        m_sources.insert(make_pair(quality, oneSrc));
+        int sourceNumber = m_sources.size();
+        m_pStreamInfo->source_number = sourceNumber;
+        m_pStreamInfo->source_resolution = new SourceResolution[sourceNumber];
+        std::map<uint32_t, SourceInfo>::iterator itSrc;
+        itSrc = m_sources.begin();
+        for (int i = 0; ((i < sourceNumber) && (itSrc != m_sources.end())); i++) {
+          SourceInfo oneSrc = itSrc->second;
+
+          m_pStreamInfo->source_resolution[i].qualityRanking = oneSrc.qualityRanking;
+          m_pStreamInfo->source_resolution[i].width = oneSrc.width;
+          m_pStreamInfo->source_resolution[i].height = oneSrc.height;
+          itSrc++;
+        }
       }
-
-      int sourceNumber = m_sources.size();
-      m_pStreamInfo->source_number = sourceNumber;
-      m_pStreamInfo->source_resolution = new SourceResolution[sourceNumber];
-      std::map<uint32_t, SourceInfo>::iterator itSrc;
-      itSrc = m_sources.begin();
-      for (int i = 0; ((i < sourceNumber) && (itSrc != m_sources.end())); i++) {
-        SourceInfo oneSrc = itSrc->second;
-
-        m_pStreamInfo->source_resolution[i].qualityRanking = oneSrc.qualityRanking;
-        m_pStreamInfo->source_resolution[i].width = oneSrc.width;
-        m_pStreamInfo->source_resolution[i].height = oneSrc.height;
-        itSrc++;
+      else if (mode_ == OmafDashMode::MULTI_VIEW) {
+        int sourceNumber = allQualities.size();
+        m_pStreamInfo->source_number = sourceNumber;
+        m_pStreamInfo->source_resolution = new SourceResolution[sourceNumber];
+        auto iter = mMediaAdaptationSet.begin();
+        if (iter == mMediaAdaptationSet.end()) return OMAF_ERROR_NULL_PTR;
+        OmafSrd* srd = iter->second->GetSRD();
+        if (srd == nullptr) return OMAF_ERROR_NULL_PTR;
+        int32_t width = srd->get_W();
+        int32_t height = srd->get_H();
+        for (int i = 0; i < sourceNumber; i++) {
+          m_pStreamInfo->source_resolution[i].qualityRanking = iter->second->GetRepresentationQualityRanking();
+          m_pStreamInfo->source_resolution[i].width = width;
+          m_pStreamInfo->source_resolution[i].height = height;
+        }
       }
     }
     else if (m_pStreamInfo->stream_type == MediaType_Audio)
@@ -532,7 +554,7 @@ int OmafMediaStream::DownloadInitSegment() {
     pAS->DownloadInitializeSegment();
   }
 
-  if (m_enabledExtractor) {
+  if (mode_ == OmafDashMode::EXTRACTOR) {
     std::lock_guard<std::mutex> lock(mExtractorsMutex);
     for (auto extrator_it = mExtractors.begin(); extrator_it != mExtractors.end(); extrator_it++) {
       OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
@@ -681,6 +703,9 @@ int OmafMediaStream::UpdateEnabledTileTracks(std::map<int, OmafAdaptationSet*> s
       m_selectedTileTracks.insert(make_pair(m_tileSelTimeLine, oneSelection));
       m_tileSelTimeLine++;
       m_hasTileTracksSelected = true;
+      // for the usage of free view
+      mCurrentTracks.clear();
+      mCurrentTracks = oneSelection;
     }
   }
 
@@ -689,7 +714,7 @@ int OmafMediaStream::UpdateEnabledTileTracks(std::map<int, OmafAdaptationSet*> s
 
 int OmafMediaStream::GetTrackCount() {
   int tracksCnt = 0;
-  if (m_enabledExtractor) {
+  if (mode_ == OmafDashMode::EXTRACTOR) {
     std::lock_guard<std::mutex> lock(mMutex);
     std::lock_guard<std::mutex> lock_et(mExtractorsMutex);
     tracksCnt = this->mMediaAdaptationSet.size() + this->mExtractors.size();

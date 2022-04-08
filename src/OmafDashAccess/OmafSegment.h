@@ -227,6 +227,8 @@ class OmafSegment : public VCD::MP4::StreamIO, public enable_shared_from_this<Om
   uint32_t GetInitSegID() const noexcept { return initSeg_id_; };
   void SetTrackId(uint32_t id) noexcept { track_id_ = id; };
   uint32_t GetTrackId() const noexcept { return track_id_; };
+  void SetViewId(pair<int32_t, int32_t> id) noexcept { view_id_ = id; };
+  pair<int32_t, int32_t> GetViewId() const noexcept { return view_id_; };
   void SetSegStored() noexcept { buse_stored_file_ = true; };
   int GetSegCount() const noexcept { return seg_count_; };
   void SetSegSize(uint64_t segSize) noexcept { seg_size_ = segSize; };
@@ -306,6 +308,7 @@ class OmafSegment : public VCD::MP4::StreamIO, public enable_shared_from_this<Om
   //<! the init Segement ID relative to this segment
   uint32_t initSeg_id_ = 0;
   uint32_t track_id_ = 0;
+  pair<int32_t, int32_t> view_id_ = make_pair(-1, -1);
 
   //<! the count for this segment
   int seg_count_ = 0;

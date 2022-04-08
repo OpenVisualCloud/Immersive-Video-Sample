@@ -30,11 +30,10 @@
 //! \file     ERPRenderTarget.h
 //! \brief    another implementation of RenderTarget to support multi render sources.
 //!
-#ifndef _ERPRENDERTARGET_H_
-#define _ERPRENDERTARGET_H_
+#ifndef _MULTIVIEWRENDERTARGET_H_
+#define _MULTIVIEWRENDERTARGET_H_
 
 #include "../Common/Common.h"
-#include "../Common/RegionData.h"
 #include "RenderBackend.h"
 #include "../MediaSource/RenderSourceFactory.h"
 #include <map>
@@ -42,11 +41,11 @@
 
 VCD_NS_BEGIN
 
-class ERPRenderTarget : public RenderTarget
+class MultiViewRenderTarget : public RenderTarget
 {
 public:
-    ERPRenderTarget();
-    ~ERPRenderTarget();
+    MultiViewRenderTarget();
+    ~MultiViewRenderTarget();
 
     //! \brief Initialize RenderTarget data according to mediaSource Info
     //!
@@ -85,59 +84,8 @@ public:
 
 
 private:
-    //! \brief transfer RegionInfo to a pair vectors describing the relationship between index and packedRegion information.
-    //!
-    //! \param  [in] std::vector<std::vector<std::pair<uint32_t, std::vector<uint32_t>>>> the high and low region relationship between index and offset/W/H in the packedSource
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus TransferRegionInfo(std::map<int32_t, std::vector<TileInformation>>& org_region);
-
-    //! \brief get the RenderSource from a frame
-    //!
-    //! \param  [in] [out] std::vector<std::vector<std::pair<uint32_t, std::vector<uint32_t>>>>&
-    //!         regionInfo including packed w/h/l/r and proj w/h/l/r and tile information.
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus GetRenderMultiSource( std::map<int32_t, std::vector<TileInformation>> &regionInfoTransfer);
-
-    //! \brief get the needed tile Ids within the region
-    //!
-    //! \param  [in] SphereRegion*
-    //!         SphereRegion* of the region
-    //!         [in] SourceInfo*
-    //!         Source Information including width heigth tile number
-    //!
-    //! \return std::vector<uint32_t>
-    //!         return needed tile Ids within the region
-    //!
-    std::vector<uint32_t> GetRegionTileId(struct SphereRegion *sphereRegion, struct SourceInfo *sourceInfo);
-
-    //! \brief transfer the tile Id to SphereRegion.
-    //!
-    //! \param  [in] uint32_t tileId
-    //!         input tileId
-    //!         [in] SourceInfo*
-    //!         Source Information including width heigth tile number
-    //!         [out] SphereRegion*
-    //!         transfered sphereRegion according to the tile Id
-    //!
-    //! \return RenderStatus
-    //!         RENDER_STATUS_OK if success, else fail reason
-    //!
-    RenderStatus TransferTileIdToRegion(uint32_t tileId, struct SourceInfo *sourceInfo, SphereRegion *sphereRegion);
-
-    RenderStatus GetTilesInViewport(float yaw, float pitch, float hFOV, float vFOV, uint32_t row, uint32_t col, std::vector<uint32_t>& TilesInViewport);
-
-    int32_t findQuality(RegionData *regionInfo, RectangularRegionWisePacking rectRWP, int32_t& source_idx);
-
-    RenderStatus CalcQualityRanking();
-
-    bool findTileID(std::vector<TileInformation> vecTile, uint32_t tile_id);
 
 };
 
 VCD_NS_END
-#endif /* _ERPRENDERTARGET_H_ */
+#endif /* _MULTIVIEWRENDERTARGET_H_ */

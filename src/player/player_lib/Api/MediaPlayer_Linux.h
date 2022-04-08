@@ -111,9 +111,10 @@ public:
     HeadPose GetCurrentPosition()
     {
         HeadPose pose;
-        pose.yaw = 0;
-        pose.pitch = 0;
-        m_renderManager->GetViewport(&pose.yaw, &pose.pitch);
+        memset_s(&pose, sizeof(HeadPose), 0);
+        HeadPose* headPose = m_renderManager->GetViewport(0, false);
+        pose.yaw = headPose->yaw;
+        pose.pitch = headPose->pitch;
         return pose;
     };
 

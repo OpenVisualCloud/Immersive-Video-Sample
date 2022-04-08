@@ -42,7 +42,14 @@
 extern "C" {
 #endif
 
-#define OFFSET_VIDEO_ID_FOR_CATCHUP 5
+#define OFFSET_VIDEO_ID_FOR_CATCHUP 10
+#define MAX_CAMERA_H_NUM 12
+#define MAX_CAMERA_V_NUM 1
+
+typedef enum {
+  SourceMode_Omni = 0,
+  SourceMode_MultiView = 1,
+} Source_Mode;
 
 typedef enum {
   VideoCodec_NONE = 0,
@@ -132,6 +139,7 @@ typedef struct DASHSTREAMINFO {
   int32_t sample_rate;
   int32_t channel_bytes;
   int32_t mProjFormat;
+  Source_Mode mSourceMode;
   int32_t mFpt;
   const char* mime_type;
   const char* codec;
@@ -175,6 +183,8 @@ typedef struct DASHPACKET {
   uint32_t tileColNum;              //! til row after aggregation
   bool bEOS;
   bool bCatchup;
+  int32_t hViewID;                  //!< horizontal view id
+  int32_t vViewID;                  //!< vertical view id
 } DashPacket;
 
 typedef enum {
