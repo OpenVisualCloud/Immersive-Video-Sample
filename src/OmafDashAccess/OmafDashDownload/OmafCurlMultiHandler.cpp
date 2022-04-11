@@ -31,6 +31,7 @@
 //!
 
 #include "OmafCurlMultiHandler.h"
+#include <chrono>
 
 namespace VCD {
 namespace OMAF {
@@ -231,6 +232,9 @@ OMAF_STATUS OmafCurlMultiDownloader::startTransfer(OmafDownloadTask::Ptr task, O
     // multi hanlder will manager the life cycle of curl easy hanlder,
     // so, we won't send the state callback to downloader.
     if (downloader->getType() == OmafCurlEasyDownloader::Type::DATA) {
+      std::chrono::high_resolution_clock clock;
+      uint64_t start = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+      task->setStartTime(start);
       ret = downloader->start(
           offset, size,
           [task](std::unique_ptr<StreamBlock> sb) {
@@ -611,8 +615,11 @@ size_t OmafCurlMultiDownloader::retriveDoneTask(int msgNum) noexcept {
           auto header = downloader->header();
           OMAF_LOG(LOG_INFO, "Header content length=%lld\n", header.content_length_);
           // 3.1 disable byte range mode, to mark task finish or timeout
+          std::chrono::high_resolution_clock clock;
           if (!task->enable_byte_range_) {
             if (OmafCurlEasyHelper::success(header.http_status_code_) && (header.content_length_ == task->streamSize())) {
+              uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+              task->setEndTime(end);
               markTaskFinish(std::move(task));
             } else {
               markTaskTimeout(std::move(task));
@@ -625,6 +632,8 @@ size_t OmafCurlMultiDownloader::retriveDoneTask(int msgNum) noexcept {
               OMAF_LOG(LOG_INFO, "Task last stream size %ld\n", task->lastStreamSize());
               if (OmafCurlEasyHelper::success(header.http_status_code_) && header.content_length_ == task->lastStreamSize()) {
                 OMAF_LOG(LOG_INFO, "Downloaded chunk id %d, chunk_num %d\n", task->downloaded_chunk_id_, task->chunk_num_);
+                uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
+                task->setEndTime(end);
                 if (task->downloaded_chunk_id_ == (int32_t)task->chunk_num_ - 1) markTaskFinish(std::move(task));
                 else {
                   task->last_stream_size_ = 0;
