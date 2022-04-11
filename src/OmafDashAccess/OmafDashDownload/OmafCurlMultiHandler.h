@@ -107,6 +107,7 @@ class OmafDownloadTask : public VCD::NonCopyable {
       : url_(params.dash_url_), dcb_(dcb), cdcb_(cdcb), scb_(scb), header_size_(params.header_size_),
         chunk_num_(params.chunk_num_), enable_byte_range_(params.enable_byte_range_), downloaded_chunk_id_(params.start_chunk_id_ - 1), stream_type_(params.stream_type_) {
     id_ = TASK_ID.fetch_add(1);
+    parseTask();
   };
 
  public:
@@ -137,6 +138,18 @@ class OmafDownloadTask : public VCD::NonCopyable {
     ss << ", header_size=" << header_size_;
     ss << ", stream_size=" << stream_size_;
     ss << ", state=" << static_cast<int>(state_);
+    return ss.str();
+  }
+
+  std::string get_info() const noexcept {
+    std::stringstream ss;
+    ss << "Task, segid=" << seg_id_;
+    ss << ", track_id=" << track_id_;
+    ss << ", chunk_id=" << downloaded_chunk_id_ + 1;
+    ss << ", download_start_time=" << download_start_time_;
+    ss << ", download_end_time=" << download_end_time_;
+    ss << ", download_latency_ms=" << download_latency_;
+    ss << ", segment/chunk size=" << (enable_byte_range_ ? last_stream_size_ : stream_size_);
     return ss.str();
   }
 
@@ -204,8 +217,30 @@ class OmafDownloadTask : public VCD::NonCopyable {
   void perfCounter(OmafDownloadTaskPerfCounter::Ptr s) { perf_counter_ = s; }
   OmafDownloadTaskPerfCounter::Ptr perfCounter() { return perf_counter_; };
 
+ public:
+  void setStartTime(int64_t time) { download_start_time_ = time; }
+  void setEndTime(int64_t time) {
+    download_end_time_ = time;
+    download_latency_ = download_end_time_ - download_start_time_;
+    LOG(WARNING) << "Task download data: " << get_info().c_str() << endl;
+  }
+ private:
+ inline void parseTask() {
+    string url = url_;
+    string track_file;
+    size_t pos = url.find_last_of('_');
+    if (pos != string::npos) track_file = url.substr(pos);
+    sscanf(track_file.c_str(), "_track%d.%d.mp4", &track_id_, &seg_id_);
+ }
+
  private:
   std::string url_;
+  uint32_t seg_id_ = 0;
+  uint32_t track_id_ = 0;
+  int64_t download_latency_ = 0;
+  int64_t download_start_time_ = 0;
+  int64_t download_end_time_ = 0;
+
   OmafDashSegmentClient::OnData dcb_;
   OmafDashSegmentClient::OnChunkData cdcb_;
   OmafDashSegmentClient::OnState scb_;
