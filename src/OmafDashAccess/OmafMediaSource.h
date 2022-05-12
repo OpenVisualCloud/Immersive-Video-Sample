@@ -83,7 +83,7 @@ class OmafMediaSource {
   //!         ERROR_NONE if success, else fail reason
   //!
   virtual int OpenMedia(std::string url, std::string cacheDir, void* externalLog, PluginDef i360scvp_plugin, bool enableExtractor, bool enablePredictor = false,
-                        std::string predictPluginName = "", std::string dllPath = "", bool enableAutoView = false) = 0;
+                        std::string predictPluginName = "", std::string dllPath = "", bool enableAutoView = false, bool bSync_time = false) = 0;
 
   virtual int StartStreaming() = 0;
   //!

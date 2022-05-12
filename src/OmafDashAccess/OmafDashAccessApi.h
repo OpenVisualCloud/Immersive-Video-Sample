@@ -116,6 +116,7 @@ typedef enum {
  *               if it is NULL
  * plugin_def:   360SCVP library plugin set, now used for tiles selection for
  *               planar video
+ * bSync_time:   sync time or not in live mode
  */
 typedef struct DASHSTREAMINGCLIENT {
   SourceType  source_type;
@@ -126,6 +127,7 @@ typedef struct DASHSTREAMINGCLIENT {
   bool        enable_autoView;
   void*       log_callback;
   PluginDef   plugin_def;
+  bool        bSync_time;
 } DashStreamingClient;
 
 /*

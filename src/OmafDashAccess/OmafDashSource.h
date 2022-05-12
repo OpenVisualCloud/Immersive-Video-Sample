@@ -69,7 +69,7 @@ class OmafDashSource : public OmafMediaSource, Threadable {
   //! \brief Interface implementation from base class: OmafMediaSource
   //!
   virtual int OpenMedia(std::string url, std::string cacheDir, void* externalLog, PluginDef i360scvp_plugin, bool enableExtractor = true,
-                        bool enablePredictor = false, std::string predictPluginName = "", std::string libPath = "", bool enableAutoView = false);
+                        bool enablePredictor = false, std::string predictPluginName = "", std::string libPath = "", bool enableAutoView = false, bool bSync_time = false);
   virtual int StartStreaming();
   virtual int CloseMedia();
   virtual int GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool needParams, bool clearBuf);
