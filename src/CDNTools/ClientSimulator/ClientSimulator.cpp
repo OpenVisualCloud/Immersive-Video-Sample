@@ -48,6 +48,7 @@
 #include "../../utils/GlogWrapper.h"
 #include "../../OmafDashAccess/OmafDashAccessApi.h"
 #include "../../OmafDashAccess/general.h"
+#include "KeyEvent.h"
 
 #define WAIT_PACKET_TIME_OUT 10000 // 10s
 
@@ -101,6 +102,8 @@ private:
     uint32_t m_framerate;
 
     fstream m_log;
+
+    KeyEvent *m_keyEvent;
 };
 
 DashAccessWrapper::DashAccessWrapper(InputParams *params) {
@@ -108,6 +111,7 @@ DashAccessWrapper::DashAccessWrapper(InputParams *params) {
     m_handler = nullptr;
     m_bQuit = false;
     m_framerate = 0;
+    m_keyEvent = nullptr;
 }
 
 DashAccessWrapper::~DashAccessWrapper() {
@@ -115,6 +119,7 @@ DashAccessWrapper::~DashAccessWrapper() {
     m_handler = nullptr;
     m_bQuit = true;
     m_framerate = 0;
+    SAFE_DELETE(m_keyEvent);
 }
 
 int32_t DashAccessWrapper::Init(DashStreamingClient *pCtxDashStreaming) {
@@ -126,6 +131,7 @@ int32_t DashAccessWrapper::Init(DashStreamingClient *pCtxDashStreaming) {
     pCtxDashStreaming->source_type = MultiResSource;
     pCtxDashStreaming->enable_extractor = false;
     pCtxDashStreaming->log_callback = nullptr;
+    pCtxDashStreaming->bSync_time = false;
 
     // init the omaf params
     memset(&pCtxDashStreaming->omaf_params, 0, sizeof(pCtxDashStreaming->omaf_params));
@@ -154,6 +160,9 @@ int32_t DashAccessWrapper::Init(DashStreamingClient *pCtxDashStreaming) {
         LOG(ERROR) << "handler init failed!" << endl;
         return ERROR_NULL_PTR;
     }
+
+    m_keyEvent = new KeyEvent();
+    if (nullptr == m_keyEvent) return ERROR_NULL_PTR;
 
     // initial viewport
     HeadSetInfo clientInfo;
@@ -304,7 +313,10 @@ int32_t DashAccessWrapper::Destroy() {
 }
 
 bool DashAccessWrapper::IsQuit() {
-    return m_bQuit;
+    // quit key check
+    bool quit_key = m_keyEvent->Is_quit();
+    // packet quit or key quit
+    return (m_bQuit || quit_key);
 }
 
 uint32_t DashAccessWrapper::GetFramerate() {
@@ -367,6 +379,7 @@ void Help() {
     cout << " --mode                     assigned motion mode: horizontal, vertical, slope." << endl;
     cout << " --initpose                 an initial pose coordinate." << endl;
     cout << " -o, --out                  data output path." << endl;
+    cout << " press [q] to quit." << endl;
 }
 
 int main(int argc, char* argv[]) {

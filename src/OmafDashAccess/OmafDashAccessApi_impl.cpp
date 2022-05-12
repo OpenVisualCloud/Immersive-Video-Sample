@@ -150,7 +150,7 @@ int OmafAccess_OpenMedia(Handler hdl, DashStreamingClient *pCtx, bool enablePred
   string s_predictPluginName = predictPluginName;
   string s_libPath = libPath;
   return pSource->OpenMedia(media_url, cache_path, pCtx->log_callback, pCtx->plugin_def, pCtx->enable_extractor, enablePredictor,
-                            s_predictPluginName, s_libPath, pCtx->enable_autoView);
+                            s_predictPluginName, s_libPath, pCtx->enable_autoView, pCtx->bSync_time);
 }
 
 int OmafAccess_StartStreaming(Handler hdl)

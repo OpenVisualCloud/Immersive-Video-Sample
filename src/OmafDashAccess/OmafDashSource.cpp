@@ -107,7 +107,7 @@ int OmafDashSource::SyncTime(std::string url) {
 }
 
 int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* externalLog, PluginDef i360scvp_plugin, bool enableExtractor,
-                              bool enablePredictor, std::string predictPluginName, std::string libPath, bool enableAutoView) {
+                              bool enablePredictor, std::string predictPluginName, std::string libPath, bool enableAutoView, bool bSync_time) {
   if (externalLog)
     logCallBack = (LogFunction)externalLog;
   else
@@ -222,7 +222,7 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
     pDM->SetUseCache((cacheDir == "") ? false : true);
 
     // sync local time according to the remote mechine for live mode
-    if (mMPDinfo->type == TYPE_LIVE) {
+    if (mMPDinfo->type == TYPE_LIVE && bSync_time) {
       SyncTime(mMPDinfo->baseURL[0]);
     }
   }
