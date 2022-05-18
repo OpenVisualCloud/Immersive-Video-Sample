@@ -219,6 +219,11 @@ int32_t DashAccessWrapper::ChangeViewport() {
     static int32_t count = 0;
     static int32_t flag = 1;
 
+    if (0 == strcmp(mode, "fixed")) {
+        pose.yaw = 0.0f;
+        pose.pitch = 0.0f;
+    }
+
     if (0 == strcmp(mode, "horizontal")) {
         pose.yaw = ((int32_t)m_params->init_pose.first + 180 + count++) % 360 - 180;
     }
@@ -376,7 +381,7 @@ void Help() {
     cout << " -h, --help                 Print this message and exit." << endl;
     cout << " --url                      Input mpd url for CDN client test." << endl;
     cout << " --viewport                 Required viewport info, prefer 80,80,960,960." << endl;
-    cout << " --mode                     assigned motion mode: horizontal, vertical, slope." << endl;
+    cout << " --mode                     assigned motion mode: fixed, horizontal, vertical, slope." << endl;
     cout << " --initpose                 an initial pose coordinate." << endl;
     cout << " -o, --out                  data output path." << endl;
     cout << " press [q] to quit." << endl;

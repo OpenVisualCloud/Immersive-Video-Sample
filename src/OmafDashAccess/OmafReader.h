@@ -718,6 +718,8 @@ public:
     //! \brief  get segment header size
     //!
     //!
+    //! \param  [in]  hasSidx
+    //!         has sidx box or not
     //! \param  [in]  ref_cnt
     //!         reference count
     //! \param  [out]  size
@@ -726,9 +728,22 @@ public:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    virtual int32_t getSegmentHeaderSize(uint32_t ref_cnt, uint64_t& size, uint8_t version = 0) = 0;
+    virtual int32_t getSegmentHeaderSize(bool hasSidx, uint32_t ref_cnt, uint64_t& size, uint8_t version = 0) = 0;
     //!
-    //! \brief  get segment header size
+    //! \brief  get segment cloc size
+    //!
+    //!
+    //! \param  [in]  ref_cnt
+    //!         reference count
+    //! \param  [out]  size
+    //!         header size of segment
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t getSegmentClocSize(uint32_t ref_cnt, uint64_t& size, uint8_t version = 0) = 0;
+    //!
+    //! \brief  get segment index range from sidx box
     //!
     //!
     //! \param  [in]  indexBuf
@@ -741,7 +756,22 @@ public:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    virtual int32_t getSegmentIndexRange(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange) = 0;
+    virtual int32_t getSegmentIndexRangeFromSidx(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange) = 0;
+    //!
+    //! \brief  get segment index range from cloc box
+    //!
+    //!
+    //! \param  [in]  indexBuf
+    //!         input index buffer
+    //! \param  [in]  size
+    //!         index buffer size
+    //! \param  [out] indexRange
+    //!         index range of chunks in segment
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t getSegmentIndexRangeFromCloc(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange) = 0;
     //!
     //! \brief  Invalidate specified segment for specified track
     //!         Disable the data buffer pointer to the specified

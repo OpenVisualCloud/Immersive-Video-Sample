@@ -193,6 +193,8 @@ class OmafAdaptationSet {
     }
   };
 
+  ChunkInfoType GetChunkInfoType();
+
   void SetTwoDQualityInfos() {
     if ((mType == MediaType_Video) &&
         (mPF == ProjectionFormat::PF_PLANAR) && m_bMain)

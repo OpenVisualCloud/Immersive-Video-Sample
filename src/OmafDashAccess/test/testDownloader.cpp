@@ -47,6 +47,7 @@ class DownloaderTest : public testing::Test {
     invalid_url = invalid_url + "invalid";
 
     valid_cmaf_url = "http://10.67.115.92:8080/testCMAFstatic/Test_track1.1.mp4";
+    valid_cmaf_url_cloc = "http://10.67.115.92:8080/testCMAFstatic_cloc/Test_track17.1.mp4";
     invalid_cmaf_url = valid_cmaf_url + "invalid";
 
     no_proxy = "127.0.0.1,*.intel.com,10.67.115.92";
@@ -77,6 +78,7 @@ class DownloaderTest : public testing::Test {
   std::string valid_url;
   std::string invalid_url;
   std::string valid_cmaf_url;
+  std::string valid_cmaf_url_cloc;
   std::string invalid_cmaf_url;
   std::string outsite_url;
   std::string proxy_url;
@@ -127,12 +129,62 @@ TEST_F(DownloaderTest, downloadCMAFSuccess) {
   ds.header_size_ = 1264;
   ds.enable_byte_range_ = true;
   ds.chunk_num_ = 5;
+  ds.chunk_info_type_ = ChunkInfoType::CHUNKINFO_SIDX_ONLY;
+  ds.cloc_size_ = 0;
   map<uint32_t, uint32_t> indexRange;
   indexRange.insert(std::make_pair(0, 5899));
   indexRange.insert(std::make_pair(1, 14012));
   indexRange.insert(std::make_pair(2, 19248));
   indexRange.insert(std::make_pair(3, 18124));
   indexRange.insert(std::make_pair(4, 18183));
+
+  OmafDashSegmentClient::State isState = OmafDashSegmentClient::State::STOPPED;
+  size_t accum_size = 0;
+  dash_client_->open(
+      ds,
+      [&accum_size](std::unique_ptr<VCD::OMAF::StreamBlock> sb) {
+        EXPECT_TRUE(sb != nullptr);
+        EXPECT_TRUE(sb->size() > 0);
+        accum_size += sb->size();
+      },
+      [indexRange](std::unique_ptr<VCD::OMAF::StreamBlock> sb, map<uint32_t, uint32_t>& index_range) {
+        EXPECT_TRUE(sb != nullptr);
+        EXPECT_TRUE(sb->size() > 0);
+        index_range = indexRange;
+      },
+      [&isState](OmafDashSegmentClient::State state) {
+        OMAF_LOG(LOG_INFO, "Receive the state: %d\n", static_cast<int>(state));
+        isState = state;
+      }
+      );
+  while (isState != OmafDashSegmentClient::State::SUCCESS) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+}
+
+TEST_F(DownloaderTest, downloadCMAFSuccess_withCloc) {
+  OMAF_STATUS ret = dash_client_->start();
+  EXPECT_TRUE(ret == ERROR_NONE);
+
+  DashSegmentSourceParams ds;
+  ds.dash_url_ = valid_cmaf_url_cloc;
+  ds.timeline_point_ = 1;
+  ds.header_size_ = 24;
+  ds.enable_byte_range_ = true;
+  ds.chunk_num_ = 10;
+  ds.chunk_info_type_ = ChunkInfoType::CHUNKINFO_CLOC_ONLY;
+  ds.cloc_size_ = 114;
+  map<uint32_t, uint32_t> indexRange;
+  indexRange.insert(std::make_pair(0, 4546));
+  indexRange.insert(std::make_pair(1, 5632));
+  indexRange.insert(std::make_pair(2, 6061));
+  indexRange.insert(std::make_pair(3, 6612));
+  indexRange.insert(std::make_pair(4, 7600));
+  indexRange.insert(std::make_pair(5, 7667));
+  indexRange.insert(std::make_pair(6, 7618));
+  indexRange.insert(std::make_pair(7, 7620));
+  indexRange.insert(std::make_pair(8, 7615));
+  indexRange.insert(std::make_pair(9, 7936));
 
   OmafDashSegmentClient::State isState = OmafDashSegmentClient::State::STOPPED;
   size_t accum_size = 0;
@@ -189,6 +241,7 @@ TEST_F(DownloaderTest, downloadCMAFFailure) {
   ds.dash_url_ = invalid_cmaf_url;
   ds.timeline_point_ = 1;
   ds.enable_byte_range_ = true;
+  ds.chunk_info_type_ = ChunkInfoType::CHUNKINFO_SIDX_ONLY;
   ds.header_size_ = 1;
   map<uint32_t, uint32_t> indexRange;
   indexRange.insert(std::make_pair(0,1));
