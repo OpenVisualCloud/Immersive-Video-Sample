@@ -186,6 +186,13 @@ inline std::string priority(TaskPriority p) {
   }
 }
 
+enum class ChunkInfoType {
+    NO_CHUNKINFO = 0,
+    CHUNKINFO_SIDX_ONLY,
+    CHUNKINFO_CLOC_ONLY,
+    CHUNKINFO_SIDX_AND_CLOC,
+};
+
 class DashSegmentSourceParams {
  public:
   int64_t timeline_point_ = -1;
@@ -195,8 +202,10 @@ class DashSegmentSourceParams {
   uint32_t start_chunk_id_ = 0;
   uint32_t chunk_num_ = 0;
   uint64_t header_size_ = 0;
+  uint64_t cloc_size_ = 0;
   bool enable_byte_range_ = false;
   DashStreamType stream_type_ = DASH_STREAM_STATIC;
+  ChunkInfoType chunk_info_type_ = ChunkInfoType::NO_CHUNKINFO;
 
   std::string to_string() const noexcept {
     std::stringstream ss;
@@ -206,6 +215,7 @@ class DashSegmentSourceParams {
     ss << ", start_chunk_id=" << start_chunk_id_;
     ss << ", chunk num=" << chunk_num_;
     ss << ", header_size=" << header_size_;
+    ss << ", cloc_size=" << cloc_size_;
     ss << ", enable_byte_range=" << enable_byte_range_;
     return ss.str();
   }

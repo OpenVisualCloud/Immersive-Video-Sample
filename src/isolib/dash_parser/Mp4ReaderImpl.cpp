@@ -46,6 +46,7 @@
 #include "../atoms/Mp4AudSampEntryAtom.h"
 #include "Mp4ReaderUtil.h"
 #include "../atoms/SegIndexAtom.h"
+#include "../atoms/ChunkLocationAtom.h"
 #include "../atoms/TypeAtom.h"
 #include "../atoms/UriMetaSampEntryAtom.h"
 #include "../atoms/ProducerReferenceTimeAtom.h"
@@ -699,6 +700,10 @@ int32_t Mp4Reader::ParseSeg(StreamIO* strIO,
                 {
                     error = SkipAtom(io);
                 }
+                else if (boxType == "cloc")
+                {
+                    error = SkipAtom(io);// not parse here
+                }
                 else
                 {
                     ISO_LOG(LOG_WARNING, "Skipping root level box of unknown type '%s'\n", boxType.c_str());
@@ -926,7 +931,24 @@ int32_t Mp4Reader::GetSegIndexSize(uint8_t version, int32_t ref_cnt, uint64_t& s
     return ERROR_NONE;
 }
 
-int32_t Mp4Reader::GetSegIndexRange(char* buf, size_t size, IndexMap& segIndexMap)
+int32_t Mp4Reader::GetClocSize(uint8_t version, int32_t ref_cnt, uint64_t& size)
+{
+    uint32_t clocBoxSize = 8 + 4;//already in bytes
+
+    uint32_t chunksNumSize = 16;
+
+    uint32_t chunkIndexSize = 16;
+    uint32_t chunkOffsetSize = 32;
+    uint32_t chunkSizeSize = 32;
+
+    uint64_t totalSizeInBit = chunksNumSize + ref_cnt * (uint64_t(chunkIndexSize) + chunkOffsetSize + chunkSizeSize);
+
+    size = totalSizeInBit / 8 + clocBoxSize;
+
+    return ERROR_NONE;
+}
+
+int32_t Mp4Reader::GetSegIndexRangeFromSidx(char* buf, size_t size, IndexMap& segIndexMap)
 {
     Stream bitstream;
     SegmentIndexAtom sidx;
@@ -951,6 +973,33 @@ int32_t Mp4Reader::GetSegIndexRange(char* buf, size_t size, IndexMap& segIndexMa
         // LOG(INFO) << "Push back " << i << " size " << ref[i].referencedSize << endl;
         uint32_t chunk_id = i; // index from 0
         uint32_t referencedSize = ref[i].referencedSize;
+        segIndexMap.insert(std::make_pair(chunk_id, referencedSize));
+    }
+    return ERROR_NONE;
+}
+
+int32_t Mp4Reader::GetSegIndexRangeFromCloc(char* buf, size_t size, IndexMap& segIndexMap)
+{
+    Stream bitstream;
+    ChunkLocationAtom cloc;
+
+    std::vector<uint8_t> data;
+
+    char *clocBuf = buf;
+
+    data.insert(data.end(), clocBuf, clocBuf + size);
+
+    bitstream.Clear();
+    bitstream.Reset();
+    bitstream.WriteArray(data, size);
+    cloc.FromStream(bitstream);
+
+    std::vector<ChunkLocationAtom::ChunkLocation> chunkLocation = cloc.GetChunksLocation();
+
+    segIndexMap.clear();
+    for (uint32_t i = 0; i < chunkLocation.size(); i++) {
+        uint32_t chunk_id = i;
+        uint32_t referencedSize = chunkLocation[i].chunkSize;
         segIndexMap.insert(std::make_pair(chunk_id, referencedSize));
     }
     return ERROR_NONE;

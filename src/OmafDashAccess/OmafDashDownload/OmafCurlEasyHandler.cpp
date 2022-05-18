@@ -242,8 +242,11 @@ OMAF_STATUS OmafCurlEasyDownloader::start(int64_t offset, int64_t size, onData d
       ss << "-";
 
       // Need to check if request data don't have enough length.
-      if (size > 0) {
+      if (size > 0 && offset >= 0) {
         ss << offset + size - 1;
+      }
+      else if (size > 0) { // from the end : offset = -1
+        ss << size;
       }
       OMAF_LOG(LOG_INFO, "To download the range: %s\n", ss.str().c_str());
       curl_easy_setopt(easy_curl_, CURLOPT_RANGE, ss.str().c_str());

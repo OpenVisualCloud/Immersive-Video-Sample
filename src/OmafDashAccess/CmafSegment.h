@@ -96,13 +96,23 @@ private:
   int32_t GetSegmentIndexLength(uint32_t chunk_num, uint64_t& size);
 
   //!
-  //! \brief  update  header stream according to input stream block
+  //! \brief  get segment index range according to index stream buffer
   //!
-  int32_t UpdateHeaderStream(std::unique_ptr<StreamBlock> sb);
+  int32_t GetSegmentIndexRange(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange);
+
+  //!
+  //! \brief  update index stream according to input stream block
+  //!
+  int32_t UpdateIndexStream(std::unique_ptr<StreamBlock> sb);
+
+  //!
+  //! \brief  check the index stream is valid or not
+  //!
+  bool CheckIndexBuf(char *index_buf, size_t index_size);
 
  private:
 
-  StreamBlocks header_stream_; //<! segment index stream
+  StreamBlocks index_stream_; //<! segment index stream
   StreamBlocks chunk_stream_; //<! output chunk stream
 
   int64_t index_length_ = 0; //<! index box size

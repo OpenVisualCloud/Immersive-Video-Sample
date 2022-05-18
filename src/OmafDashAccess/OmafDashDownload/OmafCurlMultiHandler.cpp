@@ -167,7 +167,17 @@ OMAF_STATUS OmafCurlMultiDownloader::startTransferForTask(OmafDownloadTask::Ptr 
   // 1. start header transfer
   if (task->easy_h_downloader_.get() != nullptr) {
     OMAF_LOG(LOG_INFO, "Start transfer for header downloader %s\n", task->to_string().c_str());
-    ret = startTransfer(task, task->easy_h_downloader_, 0, task->header_size_);
+    if (task->chunk_info_type_ == ChunkInfoType::CHUNKINFO_SIDX_ONLY) {
+        ret = startTransfer(task, task->easy_h_downloader_, 0, task->header_size_);
+    }
+    else if (task->chunk_info_type_ == ChunkInfoType::CHUNKINFO_CLOC_ONLY || task->chunk_info_type_ == ChunkInfoType::CHUNKINFO_SIDX_AND_CLOC) {
+        ret = startTransfer(task, task->easy_h_downloader_, -1, task->cloc_size_);
+    }
+    else {
+        OMAF_LOG(LOG_ERROR, "Not supported chunk info type!\n");
+        removeRunningTask(task);
+        ret = ERROR_BAD_PARAM;
+    }
 
     if (ret != ERROR_NONE) {
       OMAF_LOG(LOG_ERROR, "Failed to start the transfer!\n");
@@ -419,9 +429,9 @@ OMAF_STATUS OmafCurlMultiDownloader::TriggerNextDataTransfer(OmafDownloadTask::P
     task->chunk_num_ = avail_chunk_id + 1;
   }
   // LOG(INFO) << "Trigger data task " << task->to_string().c_str() << endl;
-  OMAF_LOG(LOG_INFO, "avail_chunk_id %d, downloaded_chunk_id_ %d\n", avail_chunk_id, task->downloaded_chunk_id_);
+  // OMAF_LOG(LOG_INFO, "avail_chunk_id %d, downloaded_chunk_id_ %d\n", avail_chunk_id, task->downloaded_chunk_id_);
   // LOG(INFO) << "task->easy_d_downloader_->getState() " << (int)task->easy_d_downloader_->getState() << endl;
-  OMAF_LOG(LOG_INFO, "task->easy_d_downloader_->handler()%ld\n", reinterpret_cast<int64_t>(task->easy_d_downloader_->handler()));
+  // OMAF_LOG(LOG_INFO, "task->easy_d_downloader_->handler()%ld\n", reinterpret_cast<int64_t>(task->easy_d_downloader_->handler()));
   if (task->downloaded_chunk_id_ < avail_chunk_id && task->easy_d_downloader_->getState() == OmafCurlEasyDownloader::State::IDLE) {
     OMAF_LOG(LOG_INFO, "Start transfer for data downloader for chunk id %d, task %s\n", task->downloaded_chunk_id_+1, task->to_string().c_str());
     range_size = index_range[++task->downloaded_chunk_id_];
@@ -479,7 +489,15 @@ void OmafCurlMultiDownloader::processTaskContinue(OmafDownloadTask::Ptr task) no
     if (task.get() == nullptr) {
       OMAF_LOG(LOG_ERROR, "Try to process empty task!\n");
     } else {
-      startTransfer(task, task->easy_h_downloader_, 0, task->header_size_);
+      if (task->chunk_info_type_ == ChunkInfoType::CHUNKINFO_SIDX_ONLY) {
+        startTransfer(task, task->easy_h_downloader_, 0, task->header_size_);
+      }
+      else if (task->chunk_info_type_ == ChunkInfoType::CHUNKINFO_CLOC_ONLY || task->chunk_info_type_ == ChunkInfoType::CHUNKINFO_SIDX_AND_CLOC) {
+        startTransfer(task, task->easy_h_downloader_, -1, task->cloc_size_);
+      }
+      else {
+        OMAF_LOG(LOG_ERROR, "Not supported chunk info type!\n");
+      }
     }
   } catch (const std::exception& ex) {
     OMAF_LOG(LOG_ERROR, "Exception when process task done, ex: %s\n", ex.what());

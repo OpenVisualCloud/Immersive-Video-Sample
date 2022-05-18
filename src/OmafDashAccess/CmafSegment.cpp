@@ -46,7 +46,7 @@ CmafSegment::CmafSegment(DashSegmentSourceParams ds_params, int segCnt, bool bIn
 
 CmafSegment::~CmafSegment() {
   chunk_stream_.clear();
-  header_stream_.clear();
+  index_stream_.clear();
   index_range_.clear();
   SAFE_DELETE(reader_);
 }
@@ -61,18 +61,18 @@ int CmafSegment::Open(std::shared_ptr<OmafDashSegmentClient> dash_client) noexce
 
     state_ = State::CREATE;
 
-    // get segment index size according to chunk num
+    // get segment index size according to chunk num (including cloc and header(styp+sidx))
     chunk_num_ = ds_params_.chunk_num_;
     start_chunk_id_ = ds_params_.start_chunk_id_;
     processed_chunk_id_ = ds_params_.start_chunk_id_ - 1;
-    GetSegmentIndexLength(ds_params_.chunk_num_, ds_params_.header_size_);
 
-    index_length_ = ds_params_.header_size_;
+    GetSegmentIndexLength(ds_params_.chunk_num_, (uint64_t &)index_length_);
 
     if (index_length_ == 0) {
       OMAF_LOG(LOG_ERROR, "Index length is zero!\n");
       return ERROR_INVALID;
     }
+
     // open segment
     dash_client_->open(
         //dcb
@@ -83,7 +83,7 @@ int CmafSegment::Open(std::shared_ptr<OmafDashSegmentClient> dash_client) noexce
         },
         //cdcb
         [this](std::unique_ptr<VCD::OMAF::StreamBlock> sb, map<uint32_t, uint32_t> &indexRange) {
-          this->UpdateHeaderStream(std::move(sb));
+          this->UpdateIndexStream(std::move(sb));
           indexRange = this->GetIndexRange();
         },
         //scb
@@ -114,7 +114,41 @@ int CmafSegment::Open(std::shared_ptr<OmafDashSegmentClient> dash_client) noexce
 
 int32_t CmafSegment::GetSegmentIndexLength(uint32_t chunk_num, uint64_t& size) {
   if (reader_ == nullptr) return ERROR_NULL_PTR;
-  return reader_->getSegmentHeaderSize(chunk_num, size, 1);
+  int32_t res = ERROR_NONE;
+  if (ds_params_.chunk_info_type_ == ChunkInfoType::CHUNKINFO_SIDX_ONLY) {
+    res = reader_->getSegmentHeaderSize(true, chunk_num, size, 1);
+    ds_params_.header_size_ = size;
+  }
+  else if (ds_params_.chunk_info_type_ == ChunkInfoType::CHUNKINFO_CLOC_ONLY || ds_params_.chunk_info_type_ == ChunkInfoType::CHUNKINFO_SIDX_AND_CLOC) {
+    // 1. get the cloc size
+    res = reader_->getSegmentClocSize(chunk_num, size, 1);
+    ds_params_.cloc_size_ = size;
+    // 2. get the header size
+    uint64_t header_size = 0;
+    bool hasSidx = (ds_params_.chunk_info_type_ == ChunkInfoType::CHUNKINFO_CLOC_ONLY ? false : true);
+    res = reader_->getSegmentHeaderSize(hasSidx, chunk_num, header_size, 1);
+    ds_params_.header_size_ = header_size;
+  }
+  else {
+    OMAF_LOG(LOG_ERROR, "Not supported chunk type!\n");
+    return ERROR_BAD_PARAM;
+  }
+  return res;
+}
+
+int32_t CmafSegment::GetSegmentIndexRange(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange)
+{
+    if (reader_ == nullptr) return ERROR_NULL_PTR;
+    if (ds_params_.chunk_info_type_ == ChunkInfoType::CHUNKINFO_SIDX_ONLY) {
+        return reader_->getSegmentIndexRangeFromSidx(indexBuf, size, indexRange);
+    }
+    else if (ds_params_.chunk_info_type_ == ChunkInfoType::CHUNKINFO_CLOC_ONLY || ds_params_.chunk_info_type_ == ChunkInfoType::CHUNKINFO_SIDX_AND_CLOC) {
+        return reader_->getSegmentIndexRangeFromCloc(indexBuf, size, indexRange);
+    }
+    else {
+        OMAF_LOG(LOG_ERROR, "Not supported chunk type!\n");
+        return ERROR_BAD_PARAM;
+    }
 }
 
 int32_t CmafSegment::GenerateChunkStream() {
@@ -166,19 +200,24 @@ int32_t CmafSegment::GenerateChunkStream() {
   return ERROR_NONE;
 }
 
-int32_t CmafSegment::UpdateHeaderStream(std::unique_ptr<StreamBlock> sb)
+int32_t CmafSegment::UpdateIndexStream(std::unique_ptr<StreamBlock> sb)
 {
   if (reader_ == nullptr) return ERROR_NULL_PTR;
   int64_t sb_size = sb->size();
-  header_stream_.clear();
-  header_stream_.push_back(std::move(sb));
+  index_stream_.clear();
+  index_stream_.push_back(std::move(sb));
   // if stream block size is enough, then do GetSegmentIdxRange
   if (sb_size == index_length_) {
     // 1. read stream to index buf
     char *indexBuf = new char[index_length_];
-    header_stream_.ReadStream(indexBuf, index_length_);
+    index_stream_.ReadStream(indexBuf, index_length_);
+    // check dirty data
+    if (!CheckIndexBuf(indexBuf, index_length_)) {
+        OMAF_LOG(LOG_WARNING, "Dirty data happen in index stream!\n");
+        return ERROR_INVALID;
+    }
     // 2. get index_range_
-    if (reader_->getSegmentIndexRange(indexBuf, index_length_, index_range_) != ERROR_NONE) {
+    if (GetSegmentIndexRange(indexBuf, index_length_, index_range_) != ERROR_NONE) {
       OMAF_LOG(LOG_ERROR, "Get segment index range failed!\n");
       return ERROR_INVALID;
     }
@@ -187,9 +226,23 @@ int32_t CmafSegment::UpdateHeaderStream(std::unique_ptr<StreamBlock> sb)
     // }
     // 3. clear header stream
     SAFE_DELARRAY(indexBuf);
-    header_stream_.clear();
+    index_stream_.clear();
   }
   return ERROR_NONE;
+}
+
+bool CmafSegment::CheckIndexBuf(char *index_buf, size_t index_size)
+{
+    if (index_buf == nullptr || index_size < (size_t)index_length_) return false;
+
+    if (ds_params_.chunk_info_type_ == ChunkInfoType::CHUNKINFO_CLOC_ONLY
+        || ds_params_.chunk_info_type_ == ChunkInfoType::CHUNKINFO_SIDX_AND_CLOC) {
+        if ((index_buf[4] == 'c' && index_buf[5] == 'l' && index_buf[6] == 'o' && index_buf[7] == 'c')) {
+            return true;
+        }
+        else return false;
+    }
+    else return true;
 }
 
 VCD_OMAF_END

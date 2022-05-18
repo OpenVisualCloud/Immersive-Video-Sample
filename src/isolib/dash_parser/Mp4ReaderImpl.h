@@ -840,7 +840,22 @@ public:
     int32_t GetSegIndexSize(uint8_t version, int32_t ref_cnt, uint64_t& size);
 
     //!
-    //! \brief  Get segment index range
+    //! \brief  Get segment cloc size
+    //!
+    //! \param  [in]  version
+    //!         version
+    //! \param  [in]  ref_cnt
+    //!         reference count for sidx
+    //! \param  [out]  size
+    //!         segment cloc size
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t GetClocSize(uint8_t version, int32_t ref_cnt, uint64_t& size);
+
+    //!
+    //! \brief  Get segment index range from sidx
     //!
     //! \param  [out]  segIndexArray
     //!         segment index range
@@ -848,7 +863,18 @@ public:
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    int32_t GetSegIndexRange(char *buf, size_t size, IndexMap& segIndexMap);
+    int32_t GetSegIndexRangeFromSidx(char *buf, size_t size, IndexMap& segIndexMap);
+
+    //!
+    //! \brief  Get segment index range from cloc
+    //!
+    //! \param  [out]  segIndexArray
+    //!         segment index range
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    int32_t GetSegIndexRangeFromCloc(char *buf, size_t size, IndexMap& segIndexMap);
 
     //!
     //! \brief  Get prft prop

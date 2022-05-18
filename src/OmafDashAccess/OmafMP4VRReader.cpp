@@ -730,7 +730,7 @@ int32_t OmafMP4VRReader::parseSegment(OmafSegment* streamInterface, uint32_t ini
   return pReader->ParseSeg(segment, initSegmentId, segmentId, earliestPTSinTS);
 }
 
-int32_t OmafMP4VRReader::getSegmentHeaderSize(uint32_t ref_cnt, uint64_t& size, uint8_t version) {
+int32_t OmafMP4VRReader::getSegmentHeaderSize(bool hasSidx, uint32_t ref_cnt, uint64_t& size, uint8_t version) {
   if (nullptr == mMP4ReaderImpl) return ERROR_NULL_PTR;
   VCD::MP4::Mp4Reader* pReader = (VCD::MP4::Mp4Reader*)mMP4ReaderImpl;
 
@@ -741,6 +741,11 @@ int32_t OmafMP4VRReader::getSegmentHeaderSize(uint32_t ref_cnt, uint64_t& size, 
   if (ret != ERROR_NONE) {
     OMAF_LOG(LOG_ERROR, "Get styp size is invalid\n");
     return ret;
+  }
+
+  if (!hasSidx) {
+      size = stypSize;
+      return ret;
   }
 
   ret = pReader->GetSegIndexSize(version, ref_cnt, sidxSize);
@@ -754,11 +759,36 @@ int32_t OmafMP4VRReader::getSegmentHeaderSize(uint32_t ref_cnt, uint64_t& size, 
   return ret;
 }
 
-int32_t OmafMP4VRReader::getSegmentIndexRange(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange) {
+int32_t OmafMP4VRReader::getSegmentClocSize(uint32_t ref_cnt, uint64_t& size, uint8_t version) {
   if (nullptr == mMP4ReaderImpl) return ERROR_NULL_PTR;
   VCD::MP4::Mp4Reader* pReader = (VCD::MP4::Mp4Reader*)mMP4ReaderImpl;
 
-  return pReader->GetSegIndexRange(indexBuf, size, indexRange);
+  uint64_t clocSize = 0;
+  int32_t ret = ERROR_NONE;
+
+  ret = pReader->GetClocSize(version, ref_cnt, clocSize);
+  if (ret != ERROR_NONE) {
+    OMAF_LOG(LOG_ERROR, "Get cloc size is invalid\n");
+    return ret;
+  }
+
+  size = clocSize;
+
+  return ret;
+}
+
+int32_t OmafMP4VRReader::getSegmentIndexRangeFromSidx(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange) {
+  if (nullptr == mMP4ReaderImpl) return ERROR_NULL_PTR;
+  VCD::MP4::Mp4Reader* pReader = (VCD::MP4::Mp4Reader*)mMP4ReaderImpl;
+
+  return pReader->GetSegIndexRangeFromSidx(indexBuf, size, indexRange);
+}
+
+int32_t OmafMP4VRReader::getSegmentIndexRangeFromCloc(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange) {
+  if (nullptr == mMP4ReaderImpl) return ERROR_NULL_PTR;
+  VCD::MP4::Mp4Reader* pReader = (VCD::MP4::Mp4Reader*)mMP4ReaderImpl;
+
+  return pReader->GetSegIndexRangeFromCloc(indexBuf, size, indexRange);
 }
 
 int32_t OmafMP4VRReader::invalidateSegment(uint32_t initSegmentId, uint32_t segmentId) {

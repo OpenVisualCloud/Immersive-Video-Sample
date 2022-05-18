@@ -437,6 +437,17 @@ int OmafAdaptationSet::DownloadInitializeSegment() {
   return ret;
 }
 
+ChunkInfoType OmafAdaptationSet::GetChunkInfoType() {
+  // use default value WILL ADD MORE REQUESTS IN FUTURE
+  if (omaf_reader_mgr_->GetStreamType() == DASH_STREAM_STATIC) {
+    return ChunkInfoType::CHUNKINFO_SIDX_ONLY;
+  }
+  else if (omaf_reader_mgr_->GetStreamType() == DASH_STREAM_DYNMIC) {
+  return ChunkInfoType::CHUNKINFO_CLOC_ONLY;
+  }
+  return ChunkInfoType::NO_CHUNKINFO;
+}
+
 int OmafAdaptationSet::DownloadSegment(bool enableCMAF) {
   int ret = ERROR_NONE;
 
@@ -478,16 +489,19 @@ int OmafAdaptationSet::DownloadSegment(bool enableCMAF) {
   params.start_chunk_id_ = (mSegNum == 1) ? mStartChunkId : 0; // start chunk from 0
   params.chunk_num_ = (mChunkDuration == 0) ? 1 : mSegmentDuration * 1000 / mChunkDuration;
   params.header_size_ = 0;
+  params.cloc_size_ = 0;
   params.stream_type_ = omaf_reader_mgr_->GetStreamType();
 
   OmafSegment::Ptr pSegment = nullptr;
   if (enableCMAF) {
     params.enable_byte_range_ = true;
+    params.chunk_info_type_ = GetChunkInfoType();
     pSegment = std::make_shared<CmafSegment>(params, mSegNum, false);
     pSegment->SetSegmentType(SegmentType_Cmaf);
   }
   else {
     params.enable_byte_range_ = false;
+    params.chunk_info_type_ = ChunkInfoType::NO_CHUNKINFO;
     pSegment = std::make_shared<OmafSegment>(params, mSegNum, false);
     pSegment->SetSegmentType(SegmentType_Omaf);
   }
@@ -588,16 +602,19 @@ int OmafAdaptationSet::DownloadAssignedSegment(uint32_t trackID, uint32_t segID,
   params.start_chunk_id_ = start_chunk_id;
   params.chunk_num_ = (mChunkDuration == 0) ? 1 : mSegmentDuration * 1000 / mChunkDuration;
   params.header_size_ = 0;
+  params.cloc_size_ = 0;
   params.stream_type_ = omaf_reader_mgr_->GetStreamType();
 
   OmafSegment::Ptr pSegment = nullptr;
   if (enableCMAF) {
     params.enable_byte_range_ = true;
+    params.chunk_info_type_ = GetChunkInfoType();
     pSegment = std::make_shared<CmafSegment>(params, segID, false);
     pSegment->SetSegmentType(SegmentType_Cmaf);
   }
   else {
     params.enable_byte_range_ = false;
+    params.chunk_info_type_ = ChunkInfoType::NO_CHUNKINFO;
     pSegment = std::make_shared<OmafSegment>(params, segID, false);
     pSegment->SetSegmentType(SegmentType_Omaf);
   }

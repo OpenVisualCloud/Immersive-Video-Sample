@@ -156,6 +156,8 @@ public:  // MP4VR segment parsing methods (DASH/Streaming)
     //! \brief  get segment header size
     //!
     //!
+    //! \param  [in]  hasSidx
+    //!         has sidx box or not
     //! \param  [in]  ref_cnt
     //!         reference count
     //! \param  [out]  size
@@ -164,9 +166,22 @@ public:  // MP4VR segment parsing methods (DASH/Streaming)
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    virtual int32_t getSegmentHeaderSize(uint32_t ref_cnt, uint64_t& size, uint8_t version = 0);
+    virtual int32_t getSegmentHeaderSize(bool hasSidx, uint32_t ref_cnt, uint64_t& size, uint8_t version = 0);
     //!
-    //! \brief  get segment header size
+    //! \brief  get segment cloc size
+    //!
+    //!
+    //! \param  [in]  ref_cnt
+    //!         reference count
+    //! \param  [out]  size
+    //!         header size of segment
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t getSegmentClocSize(uint32_t ref_cnt, uint64_t& size, uint8_t version = 0);
+    //!
+    //! \brief  get segment index range from sidx box
     //!
     //!
     //! \param  [in]  indexBuf
@@ -179,7 +194,22 @@ public:  // MP4VR segment parsing methods (DASH/Streaming)
     //! \return int32_t
     //!         ERROR_NONE if success, else failed reason
     //!
-    virtual int32_t getSegmentIndexRange(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange);
+    virtual int32_t getSegmentIndexRangeFromSidx(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange);
+    //!
+    //! \brief  get segment index range from cloc box
+    //!
+    //!
+    //! \param  [in]  indexBuf
+    //!         input index buffer
+    //! \param  [in]  size
+    //!         index buffer size
+    //! \param  [out] indexRange
+    //!         index range of chunks in segment
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t getSegmentIndexRangeFromCloc(char* indexBuf, size_t size, std::map<uint32_t, uint32_t> &indexRange);
 
 private:
     void*  mMP4ReaderImpl;
