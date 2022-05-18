@@ -69,6 +69,18 @@ typedef enum
 }CodecId;
 
 //!
+//! \enum:  E_ChunkInfoType
+//! \brief: CMAF chunk info type
+//!
+typedef enum
+{
+    E_NO_CHUNKINFO = 0,
+    E_CHUNKINFO_SIDX_ONLY,
+    E_CHUNKINFO_CLOC_ONLY,
+    E_CHUNKINFO_SIDX_AND_CLOC,
+}E_ChunkInfoType;
+
+//!
 //! \struct: Rational
 //! \brief:  rational definition
 //!
@@ -148,6 +160,7 @@ typedef struct SegmentationInfo
     int64_t       maxLatency;       //needed for low latency live streaming in millisecond to disable content presentation if latency exceeds this value
     int32_t       splitTile;
     bool          hasMainAS;
+    E_ChunkInfoType chunkInfoType;    //whether to enable 'sidx' and 'cloc' in segment, effective depending on 'cmafEnabled' in structure 'InitialInfo'
 }SegmentationInfo;
 
 //!

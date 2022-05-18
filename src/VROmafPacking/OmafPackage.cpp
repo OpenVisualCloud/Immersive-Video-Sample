@@ -448,6 +448,20 @@ int32_t OmafPackage::InitOmafPackage(InitialInfo *initInfo)
             return OMAF_ERROR_CREATE_EXTRACTORTRACK_MANAGER;
     }
 
+    if (m_initInfo->cmafEnabled && (m_initInfo->segmentationInfo->chunkInfoType == E_ChunkInfoType::E_NO_CHUNKINFO))
+    {
+        if (m_initInfo->segmentationInfo->isLive)
+        {
+            m_initInfo->segmentationInfo->chunkInfoType = E_ChunkInfoType::E_CHUNKINFO_CLOC_ONLY;
+            OMAF_LOG(LOG_INFO, "No chunk info type set, and now set it to CLOC_ONLY for live mode !\n");
+        }
+        else
+        {
+            m_initInfo->segmentationInfo->chunkInfoType = E_ChunkInfoType::E_CHUNKINFO_SIDX_ONLY;
+            OMAF_LOG(LOG_INFO, "No chunk info type set, and now set it to SIDX_ONLY for static mode !\n");
+        }
+    }
+
     ret = CreateSegmentation();
     if (ret)
         return OMAF_ERROR_CREATE_SEGMENTATION;
@@ -499,8 +513,12 @@ int32_t OmafPackage::SetFrameInfo(uint8_t streamIdx, FrameBSInfo *frameInfo)
         uint32_t frameRate = (uint32_t)(ceil((float)(vsFrameRate.num) / (float)(vsFrameRate.den)));
         uint32_t vsGopSize = 0;
         vsGopSize = ((VideoStream*)stream)->GetGopSize();
-        OMAF_LOG(LOG_INFO, "vsGopSize %d \n", vsGopSize);
-        OMAF_LOG(LOG_INFO, "frameRate %d \n", frameRate);
+        if (vsGopSize)
+        {
+            OMAF_LOG(LOG_INFO, "vsGopSize %d \n", vsGopSize);
+            OMAF_LOG(LOG_INFO, "frameRate %d \n", frameRate);
+        }
+
         if (vsGopSize)
         {
             int64_t gopIntervalTime = (int64_t)((1000 * vsGopSize) / frameRate);

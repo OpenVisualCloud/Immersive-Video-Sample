@@ -314,7 +314,7 @@ int32_t MPDWriter::WriteTileTrackAS(XMLElement *periodEle, VCD::MP4::MPDAdaptati
     else
     {
         int32_t currSegNum = (int32_t)m_currSegNum;//(int32_t)(trackASCtx->dashSegmenter->GetSegmentsNum());
-        OMAF_LOG(LOG_INFO, "Write start number %d to MPD \n", currSegNum);
+        //OMAF_LOG(LOG_INFO, "Write start number %d to MPD \n", currSegNum);
         sgtTpeEle->SetAttribute(STARTNUMBER, currSegNum);
     }
 

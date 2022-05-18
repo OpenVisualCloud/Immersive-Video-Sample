@@ -245,6 +245,7 @@ int32_t MultiViewSegmentation::ConstructVideoTrackSegCtx()
             trackSegCtx->dashCfg.streamsIdx.push_back(it->first);
             snprintf(trackSegCtx->dashCfg.trackSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, m_trackIdStarter + i);
             trackSegCtx->dashCfg.cmafEnabled = m_isCMAFEnabled;
+            trackSegCtx->dashCfg.chunkInfoType = m_segInfo->chunkInfoType;
 
             //setup VCD::MP4::SegmentWriterBase
             int32_t ret = ERROR_NONE;
@@ -404,6 +405,7 @@ int32_t MultiViewSegmentation::ConstructAudioTrackSegCtx()
             trackSegCtx->dashCfg.streamsIdx.push_back(strId);
             snprintf(trackSegCtx->dashCfg.trackSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, (DEFAULT_AUDIOTRACK_TRACKIDBASE + (uint64_t)audioId));
             trackSegCtx->dashCfg.cmafEnabled = m_isCMAFEnabled;
+            trackSegCtx->dashCfg.chunkInfoType = m_segInfo->chunkInfoType;
 
             //setup VCD::MP4::SegmentWriterBase
             int32_t ret = ERROR_NONE;
