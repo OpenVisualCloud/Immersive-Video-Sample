@@ -41,6 +41,7 @@
 #include <set>
 #include <dlfcn.h>
 
+#include "MediaData.h"
 #include "DashSegmentWriterPluginAPI.h"
 #include "AcquireTrackData.h"
 #include "DataItem.h"
@@ -155,6 +156,8 @@ struct GeneralSegConfig
     char trackSegBaseName[1024];
 
     bool cmafEnabled = false;
+
+    E_ChunkInfoType chunkInfoType = E_ChunkInfoType::E_NO_CHUNKINFO;
 };
 
 //!
@@ -569,6 +572,7 @@ struct TrackSegmentCtx
         config.subsegmentDuration = dashConfig->subsgtDuration;
         config.checkIDR = dashConfig->needCheckIDR;
         config.useSeparatedSidx = dashConfig->useSeparatedSidx;
+        config.chunkInfoType = (VCD::MP4::ChunkInfoType)(dashConfig->chunkInfoType);
         return config;
     }
 

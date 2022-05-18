@@ -478,6 +478,7 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                 trackSegCtxs[i].dashCfg.streamsIdx.push_back(it->first);
                 snprintf(trackSegCtxs[i].dashCfg.trackSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, m_trackIdStarter + i);
                 trackSegCtxs[i].dashCfg.cmafEnabled = m_isCMAFEnabled;
+                trackSegCtxs[i].dashCfg.chunkInfoType = m_segInfo->chunkInfoType;
 
                 //setup VCD::MP4::SegmentWriterBase
                 int32_t ret = ERROR_NONE;
@@ -802,6 +803,7 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             trackSegCtx->dashCfg.streamsIdx.push_back(trackSegCtx->trackIdx.GetIndex());
             snprintf(trackSegCtx->dashCfg.trackSegBaseName, 1024, "%s%s_track%d", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
             trackSegCtx->dashCfg.cmafEnabled = m_isCMAFEnabled;
+            trackSegCtx->dashCfg.chunkInfoType = m_segInfo->chunkInfoType;
 
             //setup VCD::MP4::SegmentWriterBase
             int32_t ret = ERROR_NONE;
@@ -976,6 +978,7 @@ int32_t DefaultSegmentation::ConstructAudioTrackSegCtx()
             trackSegCtx->dashCfg.streamsIdx.push_back(strId);
             snprintf(trackSegCtx->dashCfg.trackSegBaseName, 1024, "%s%s_track%ld", m_segInfo->dirName, m_segInfo->outName, (DEFAULT_AUDIOTRACK_TRACKIDBASE + (uint64_t)audioId));
             trackSegCtx->dashCfg.cmafEnabled = m_isCMAFEnabled;
+            trackSegCtx->dashCfg.chunkInfoType = m_segInfo->chunkInfoType;
 
             //setup VCD::MP4::SegmentWriterBase
             int32_t ret = ERROR_NONE;
@@ -1916,7 +1919,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
             std::chrono::high_resolution_clock clock;
             uint64_t before = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-            OMAF_LOG(LOG_INFO, "Complete one seg for video in %lld ms\n", (before - currentT));
+            OMAF_LOG(LOG_INFO, "Complete %ldth seg for video in %lld ms\n", m_segNum, (before - currentT));
             currentT = before;
             if (m_isCMAFEnabled && m_segInfo->isLive)
             {

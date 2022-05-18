@@ -614,6 +614,18 @@ struct MovieDescription
     DataItem<BrandSpec> fileType;
 };
 
+//!
+//! \enum:  ChunkInfoType
+//! \brief: CMAF chunk info type
+//!
+enum ChunkInfoType
+{
+    NO_CHUNKINFO = 0,
+    CHUNKINFO_SIDX_ONLY,
+    CHUNKINFO_CLOC_ONLY,
+    CHUNKINFO_SIDX_AND_CLOC
+};
+
 struct SegmentWriterCfg
 {
     bool checkIDR = false;
@@ -621,6 +633,7 @@ struct SegmentWriterCfg
     DataItem<FractU64> subsegmentDuration;
     size_t skipSubsegments = 0;
     bool   useSeparatedSidx = false;
+    ChunkInfoType chunkInfoType = ChunkInfoType::NO_CHUNKINFO;
 };
 
 struct SidxInfo
