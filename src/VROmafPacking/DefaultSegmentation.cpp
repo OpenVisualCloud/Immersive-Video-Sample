@@ -41,6 +41,7 @@
 #include <cstdint>
 #include <sys/time.h>
 #include <dlfcn.h>
+#include <math.h>
 
 #ifdef _USE_TRACE_
 #include "../trace/Bandwidth_tp.h"
@@ -452,7 +453,8 @@ int32_t DefaultSegmentation::ConstructTileTrackSegCtx()
                 snprintf(trackSegCtxs[i].dashInitCfg.initSegName, 1024, "%s%s_track%ld.init.mp4", m_segInfo->dirName, m_segInfo->outName, m_trackIdStarter + i);
 
                 //set GeneralSegConfig
-                trackSegCtxs[i].dashCfg.sgtDuration = VCD::MP4::FractU64(m_videoSegInfo->segDur, 1); //?
+                uint32_t frameRateInt = (uint32_t)(ceil((float)(frameRate.num) / (float)(frameRate.den)));
+                trackSegCtxs[i].dashCfg.sgtDuration = VCD::MP4::FractU64(frameRate.den * m_videoSegInfo->segDur * 1000 * frameRateInt, frameRate.num * 1000);
                 if (!m_isCMAFEnabled)
                 {
                     trackSegCtxs[i].dashCfg.subsgtDuration = trackSegCtxs[i].dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
@@ -782,7 +784,9 @@ int32_t DefaultSegmentation::ConstructExtractorTrackSegCtx()
             snprintf(trackSegCtx->dashInitCfg.initSegName, 1024, "%s%s_track%d.init.mp4", m_segInfo->dirName, m_segInfo->outName, trackSegCtx->trackIdx.GetIndex());
 
             //set up GeneralSegConfig
-            trackSegCtx->dashCfg.sgtDuration = VCD::MP4::FractU64(m_videoSegInfo->segDur, 1); //?
+            uint32_t frameRateInt = (uint32_t)(ceil((float)(m_frameRate.num) / (float)(m_frameRate.den)));
+            trackSegCtx->dashCfg.sgtDuration = VCD::MP4::FractU64(m_frameRate.den * m_videoSegInfo->segDur * 1000 * frameRateInt, m_frameRate.num * 1000);
+
             if (!m_isCMAFEnabled)
             {
                 trackSegCtx->dashCfg.subsgtDuration = trackSegCtx->dashCfg.sgtDuration / VCD::MP4::FrameDuration{ 1, 1}; //?
