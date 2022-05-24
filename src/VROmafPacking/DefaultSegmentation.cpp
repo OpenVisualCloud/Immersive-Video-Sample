@@ -1923,7 +1923,7 @@ int32_t DefaultSegmentation::VideoSegmentation()
 
             std::chrono::high_resolution_clock clock;
             uint64_t before = std::chrono::duration_cast<std::chrono::milliseconds>(clock.now().time_since_epoch()).count();
-            OMAF_LOG(LOG_INFO, "Complete %ldth seg for video in %lld ms\n", m_segNum, (before - currentT));
+            OMAF_LOG(LOG_INFO, "It takes %lld ms to complete seg %ld\n", (before - currentT), m_segNum);
             currentT = before;
             if (m_isCMAFEnabled && m_segInfo->isLive)
             {
