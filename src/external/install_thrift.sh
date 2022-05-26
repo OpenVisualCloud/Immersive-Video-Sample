@@ -25,7 +25,7 @@ fi
 # Thrift
 if [ ! "${THRIFT_VERSION}" == "0.12.0" ];then
     if [ ! -f "./thrift-0.12.0.tar.gz" ] ; then
-        wget -q http://apache.osuosl.org/thrift/0.12.0/thrift-0.12.0.tar.gz
+        wget -q http://archive.apache.org/dist/thrift/0.12.0/thrift-0.12.0.tar.gz
     fi
     tar zxf thrift-0.12.0.tar.gz
     cd thrift-0.12.0
