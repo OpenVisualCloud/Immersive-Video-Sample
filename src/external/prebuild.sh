@@ -69,11 +69,11 @@ install_tools() {
     fi
 
     mkdir -p ../build/external && cd ../build/external
-    if [ ! -f "./zlib-1.2.11.tar.gz" ];then
-        wget http://zlib.net/zlib-1.2.11.tar.gz
+    if [ ! -f "./zlib-1.2.12.tar.gz" ];then
+        wget http://zlib.net/zlib-1.2.12.tar.gz
     fi
-    tar xf zlib-1.2.11.tar.gz
-    cd zlib-1.2.11 && ./configure && make -j $(nproc) && sudo make install && cd ..
+    tar xf zlib-1.2.12.tar.gz
+    cd zlib-1.2.12 && ./configure && make -j $(nproc) && sudo make install && cd ..
 
     program_exists yasm
     if [ $? != 0 ];then

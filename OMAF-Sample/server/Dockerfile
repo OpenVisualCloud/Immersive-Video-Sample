@@ -11,6 +11,7 @@ ARG WORKDIR=/home/immersive
 
 # Install denpendency
 RUN yum install -y centos-release-scl-rh && \
+    yum install -y deltarpm && \
     yum install -y wget git bzip2 xz sudo devtoolset-7-gcc* && \
     wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm && \
     rpm -Uvh epel-release*rpm && \
@@ -26,7 +27,7 @@ RUN yum install -y centos-release-scl-rh && \
     yum install -y libXv-devel glfw glfw-devel xz-devel lzma -y && \
     yum install -y uuid.x86_64 uuid-devel.x86_64 popt-devel.x86_64 -y && \
     yum install -y numactl.x86_64 numactl-devel.x86_64 numactl-libs.x86_64 -y && \
-    rm -rf /var/cache/yum/* && rm -rf * && \
+    yum clean all && rm -rf /var/cache/yum/ && rm -rf * && \
     if [ -n "${http_proxy}" ]; then \
     git config --global http.proxy ${http_proxy} && \
     git config --global https.proxy ${https_proxy} ; \
@@ -40,17 +41,6 @@ RUN yum -y install rh-ruby23 rh-ruby23-ruby-devel rh-ruby23-rubygem* && \
     else \
     gem install fpm ; \
     fi
-
-# Build zlib
-ARG ZLIB_VER=1.2.11
-ARG ZILB_REPO=http://zlib.net/zlib-${ZLIB_VER}.tar.gz
-RUN wget -O - ${ZILB_REPO} | tar xz && \
-    cd zlib-${ZLIB_VER} && \
-    source /opt/rh/devtoolset-7/enable && \
-    ./configure && \
-    make -j$(nproc) && \
-    make install && \
-    cd ${WORKDIR} && rm -rf ./*
 
 # Install cmake
 ARG CMAKE_VER=3.12.4
@@ -135,7 +125,7 @@ RUN source /opt/rh/devtoolset-7/enable && \
     ./configure --disable-man-pages && \
     make -j $(nproc) && \
     make install && ldconfig && \
-    cd ../ && rm -rf lttng-ust-2.11.*
+    cd ../ && rm -rf lttng-* userspace*
 
 # Copy source
 COPY ./src ${WORKDIR}
@@ -146,8 +136,8 @@ COPY src/ffmpeg/dependency/WorkerServer /root
 
 # Install Thrift
 ARG THRIFT_VER=0.12.0
-ARG THRIFT_REPO=http://apache.osuosl.org/thrift/${THRIFT_VER}/thrift-${THRIFT_VER}.tar.gz
-RUN wget --no-check-certificate -O - ${THRIFT_REPO} | tar xz && \
+ARG THRIFT_REPO=http://archive.apache.org/dist/thrift/0.12.0/thrift-${THRIFT_VER}.tar.gz
+RUN wget -O - ${THRIFT_REPO} | tar xz && \
     cd thrift-${THRIFT_VER} && \
     source /opt/rh/devtoolset-7/enable && \
     patch configure ../external/Disable_cxx11_abi_for_thrift.patch && \
