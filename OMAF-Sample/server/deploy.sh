@@ -8,6 +8,10 @@ parameters_usage(){
 REPOPATH=`echo $1 | awk -F "OMAF-Sample" '{print $1}'`
 SRCPATH="${REPOPATH}src/"
 DSTPATH="${REPOPATH}OMAF-Sample/server/src/"
+VERSION="v1.8"
+IMAGEPREFIX="immersive-server"
+BASETAG="${IMAGEPREFIX}-base:${VERSION}"
+RUNTIMETAG="${IMAGEPREFIX}:${VERSION}"
 
 mkdir -p ${DSTPATH}
 cd ${DSTPATH}..
@@ -25,21 +29,29 @@ cp -r ${SRCPATH}OmafDashAccess ${DSTPATH}
 cp -r ${SRCPATH}CMakeLists.txt ${DSTPATH}
 cp -r ${REPOPATH}Sample-Videos ${DSTPATH}
 
-if [ $# = 1 ] ; then
-    docker build -t immersive_server:v1.8 .
-elif [ $# = 2 ] ; then
+if [ $# = 2 ] ; then
     if [ "$1" = "-h" ] ; then
         parameters_usage
     else
         PROXY=$2
-        docker build -t immersive_server:v1.8 \
-            --build-arg http_proxy=${PROXY} \
-            --build-arg https_proxy=${PROXY} .
+        PROXYARGS="--build-arg http_proxy=${PROXY} "`
+                 `"--build-arg https_proxy=${PROXY}"
         echo "PROXY:${PROXY}"
     fi
+elif [ $# = 1 ] ; then
+    PROXYARGS=""
 else
     parameters_usage
     exit 0
 fi
+
+DOCKER_BUILDKIT=1 docker build ${PROXYARGS} \
+    --tag ${BASETAG} \
+    --file Dockerfile.base .
+
+DOCKER_BUILDKIT=1 docker build ${PROXYARGS} \
+    --tag ${RUNTIMETAG} \
+    --build-arg "base_image=${BASETAG}" \
+    --file Dockerfile.runtime .
 
 rm -rf ${DSTPATH}
