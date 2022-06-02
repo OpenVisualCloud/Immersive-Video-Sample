@@ -564,6 +564,8 @@ typedef struct
 
     uint32_t size_ext;
     std::vector<uint8_t> ext_bytes;
+
+    uint32_t num_pic_total_curr;
 } HEVCSliceInfo;
 
 typedef struct _hevc_state
