@@ -312,6 +312,12 @@ class OmafMediaStream {
 
   uint32_t GetTotalSegNum() { return m_totalSegNum; };
 
+  ChunkInfoType ParseChunkInfoType(string url);
+
+  void SetOmafDashParams(OmafDashParams params) { omaf_dash_params_ = params; };
+
+  void GetChunkInfoType();
+
  private:
   //!
   //! \brief  UpdateStreamInfo
@@ -413,6 +419,8 @@ private:
   //<! tiles stitch handle
   OmafTilesStitch* m_stitch;
 
+  ChunkInfoType m_chunkInfoType;
+
   int m_status;
   int m_catchup_status;
   ThreadInputs *m_threadInput;
@@ -434,6 +442,8 @@ private:
   std::condition_variable m_catchupCond; //<! cv for catch up thread
   std::mutex m_catchupThreadMutex; // mutex for catch up thread
   std::mutex m_catchupPTSMutex; // mutex for catch up PTS
+
+  OmafDashParams omaf_dash_params_;
   // function
   //!
   //! \brief  create catch up thread pool

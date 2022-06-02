@@ -30,6 +30,8 @@
 #include "OmafReaderManager.h"
 #include "OmafTileTracksSelector.h"
 #include "OmafMediaStream.h"
+#include "OmafReader.h"
+#include "OmafMP4VRReader.h"
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
 #include "../trace/MtHQ_tp.h"
@@ -63,6 +65,7 @@ OmafMediaStream::OmafMediaStream() {
   m_gopSize = 0;
   m_totalSegNum = 0;
   m_catchupThreadNum = 0;
+  m_chunkInfoType = ChunkInfoType::NO_CHUNKINFO;
 }
 
 OmafMediaStream::~OmafMediaStream() {
@@ -565,11 +568,105 @@ int OmafMediaStream::DownloadInitSegment() {
   return ERROR_NONE;
 }
 
+void OmafMediaStream::GetChunkInfoType() {
+  // parse chunk info type from the first segment
+  string try_segment_url;
+  auto iter = mMediaAdaptationSet.begin();
+  OmafAdaptationSet* oneAS = (OmafAdaptationSet*)(iter->second);
+  try_segment_url = oneAS->GetFirstUrl();
+
+  OMAF_LOG(LOG_INFO, "Try segment first url %s\n", try_segment_url.c_str());
+
+  m_chunkInfoType = ParseChunkInfoType(try_segment_url);
+
+  OMAF_LOG(LOG_INFO, "Parse chunk info type: %d\n", (uint32_t)m_chunkInfoType);
+
+}
+
+ChunkInfoType OmafMediaStream::ParseChunkInfoType(string url) {
+  OmafCurlEasyDownloader downloader(OmafCurlEasyDownloader::CurlWorkMode::EASY_MODE);
+  CurlParams curl_params;
+  curl_params.http_params_ = omaf_dash_params_.http_params_;
+  curl_params.http_proxy_ = omaf_dash_params_.http_proxy_;
+  int ret = downloader.init(curl_params);
+  ChunkInfoType chunkInfoType = ChunkInfoType::NO_CHUNKINFO;
+  bool hasSidx = false;
+  bool hasCloc = false;
+  uint32_t chunk_cnt = GetSegmentDuration() * 1000 / m_pStreamInfo->chunkDuration;
+  if (ret == ERROR_NONE) {
+    OMAF_LOG(LOG_INFO, "To download the first segment with url: %s\n", url.c_str());
+    ret = downloader.open(url);
+
+    if (ret == ERROR_NONE) {
+      OmafReader *reader_ =  new OmafMP4VRReader();
+      if (reader_ == nullptr) return chunkInfoType;
+      uint64_t header_size = 0;
+      uint64_t segment_type_size = 0;
+      uint64_t cloc_size = 0;
+      reader_->getSegmentHeaderSize(true, chunk_cnt, header_size, 1);
+      reader_->getSegmentTypeSize(segment_type_size, 1);
+      reader_->getSegmentClocSize(chunk_cnt, cloc_size, 1);
+      // to download header
+      ret = downloader.start(
+        0, header_size,
+        [&hasSidx, header_size, segment_type_size](std::unique_ptr<StreamBlock> sb) {
+          OMAF_LOG(LOG_INFO, "Receive the stream block, size=%lld\n", sb->size());
+          if (header_size != (uint64_t)sb->size()) hasSidx = false;
+          else {
+            const char *header = sb->cbuf();
+            uint64_t offset = segment_type_size;
+            if (header[offset + 4] == 's' && header[offset + 5] == 'i' && header[offset + 6] == 'd' && header[offset + 7] == 'x') {
+                hasSidx = true;
+            }
+            else hasSidx = false;
+          }
+        }, nullptr,
+        [url](OmafCurlEasyDownloader::State s) {
+        OMAF_LOG(LOG_INFO, "Download state: %d for the first url: %s\n", static_cast<int>(s), url.c_str());
+        });
+      if (ret == ERROR_NONE) {
+        OMAF_LOG(LOG_INFO, "Success to check sidx!\n");
+      } else {
+        OMAF_LOG(LOG_ERROR, "Failed to check sidx, err=%d\n", ret);
+      }
+      // to download tailder
+      ret = downloader.start(
+        -1, cloc_size,
+        [&hasCloc, cloc_size](std::unique_ptr<StreamBlock> sb) {
+          OMAF_LOG(LOG_INFO, "Receive the stream block, size=%lld\n", sb->size());
+          if (cloc_size != (uint64_t)sb->size()) hasCloc = false;
+          else {
+            const char *tailer = sb->cbuf();
+            uint64_t offset = 0;
+            if (tailer[offset + 4] == 'c' && tailer[offset + 5] == 'l' && tailer[offset + 6] == 'o' && tailer[offset + 7] == 'c') {
+                hasCloc = true;
+            }
+            else hasCloc = false;
+          }
+        }, nullptr,
+        [url](OmafCurlEasyDownloader::State s) {
+        OMAF_LOG(LOG_INFO, "Download state: %d for the first url: %s\n", static_cast<int>(s), url.c_str());
+        });
+      if (ret == ERROR_NONE) {
+        OMAF_LOG(LOG_INFO, "Success to check cloc!\n");
+      } else {
+        OMAF_LOG(LOG_ERROR, "Failed to check cloc, err=%d\n", ret);
+      }
+    }
+  }
+  if (hasSidx && hasCloc) chunkInfoType = ChunkInfoType::CHUNKINFO_SIDX_AND_CLOC;
+  else if (hasSidx && !hasCloc) chunkInfoType = ChunkInfoType::CHUNKINFO_SIDX_ONLY;
+  else if (!hasSidx && hasCloc) chunkInfoType = ChunkInfoType::CHUNKINFO_CLOC_ONLY;
+  else chunkInfoType = ChunkInfoType::NO_CHUNKINFO;
+  return chunkInfoType;
+}
+
 int OmafMediaStream::DownloadSegments(bool enableCMAF) {
   int ret = ERROR_NONE;
   // std::lock_guard<std::mutex> lock(mMutex);
   for (auto it = mMediaAdaptationSet.begin(); it != mMediaAdaptationSet.end(); it++) {
     OmafAdaptationSet* pAS = (OmafAdaptationSet*)(it->second);
+    pAS->SetChunkInfoType(m_chunkInfoType);
     pAS->DownloadSegment(enableCMAF);
   }
 
@@ -579,6 +676,7 @@ int OmafMediaStream::DownloadSegments(bool enableCMAF) {
   // std::lock_guard<std::mutex> lock_et(mExtractorsMutex);
   for (auto extrator_it = mExtractors.begin(); extrator_it != mExtractors.end(); extrator_it++) {
     OmafExtractor* extractor = (OmafExtractor*)(extrator_it->second);
+    extractor->SetChunkInfoType(m_chunkInfoType);
     extractor->DownloadSegment(enableCMAF);
   }
   // pthread_mutex_unlock(&mCurrentMutex);
@@ -597,6 +695,7 @@ int OmafMediaStream::DownloadAssignedSegments(std::map<uint32_t, TracksMap> addi
       if (tsMap.find(it->first) != tsMap.end())
       {
         OmafAdaptationSet* pAS = (OmafAdaptationSet*)(tsMap[it->first]);
+        pAS->SetChunkInfoType(m_chunkInfoType);
         pAS->DownloadAssignedSegment(it->first, track.first, currentTimeLine, enableCMAF);
       }
     }

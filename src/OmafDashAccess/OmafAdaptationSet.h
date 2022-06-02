@@ -119,6 +119,7 @@ class OmafAdaptationSet {
   void UpdateSegmentNumber(int64_t segnum) { mActiveSegNum = segnum; };
   int64_t GetSegmentNumber(void) const { return mActiveSegNum; };
   std::string GetUrl(const SegmentSyncNode& node) const;
+  std::string GetFirstUrl() const;
   //!
   //! \brief  Initialize the AdaptationSet
   //!
@@ -193,7 +194,8 @@ class OmafAdaptationSet {
     }
   };
 
-  ChunkInfoType GetChunkInfoType();
+  ChunkInfoType GetChunkInfoType() { return mChunkInfoType; };
+  void SetChunkInfoType(ChunkInfoType type) { mChunkInfoType = type; };
 
   void SetTwoDQualityInfos() {
     if ((mType == MediaType_Video) &&
@@ -262,6 +264,7 @@ class OmafAdaptationSet {
   int mActiveSegNum;                 //<! the segment are being processed
   int mStartSegNum;                  //<! the real start segment num
   int mStartChunkId;                 //<! the available start chunk id in the real start segment
+  ChunkInfoType mChunkInfoType;      //<! chunk info type
   int mSegNum;                       //<! the segment count
   bool m_bMain;                      //<! whether this AdaptationSet is Main or not. each stream
                                      //<! has one main AdaptationSet

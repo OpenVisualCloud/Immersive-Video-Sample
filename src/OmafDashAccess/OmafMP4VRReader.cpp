@@ -759,6 +759,24 @@ int32_t OmafMP4VRReader::getSegmentHeaderSize(bool hasSidx, uint32_t ref_cnt, ui
   return ret;
 }
 
+int32_t OmafMP4VRReader::getSegmentTypeSize(uint64_t& size, uint8_t version) {
+  if (nullptr == mMP4ReaderImpl) return ERROR_NULL_PTR;
+  VCD::MP4::Mp4Reader* pReader = (VCD::MP4::Mp4Reader*)mMP4ReaderImpl;
+
+  uint64_t stypSize = 0;
+  int32_t ret = ERROR_NONE;
+
+  ret = pReader->GetStypSize(stypSize);
+  if (ret != ERROR_NONE) {
+    OMAF_LOG(LOG_ERROR, "Get styp size is invalid\n");
+    return ret;
+  }
+
+  size = stypSize;
+
+  return ret;
+}
+
 int32_t OmafMP4VRReader::getSegmentClocSize(uint32_t ref_cnt, uint64_t& size, uint8_t version) {
   if (nullptr == mMP4ReaderImpl) return ERROR_NULL_PTR;
   VCD::MP4::Mp4Reader* pReader = (VCD::MP4::Mp4Reader*)mMP4ReaderImpl;
