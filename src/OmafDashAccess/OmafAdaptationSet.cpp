@@ -65,6 +65,7 @@ OmafAdaptationSet::OmafAdaptationSet() {
   mSegNum = 1;
   mStartSegNum = 1;
   mStartChunkId = 0;
+  mChunkInfoType = ChunkInfoType::NO_CHUNKINFO;
   mReEnable = false;
   mPF = PF_UNKNOWN;
   mSegmentDuration = 0;
@@ -437,17 +438,6 @@ int OmafAdaptationSet::DownloadInitializeSegment() {
   return ret;
 }
 
-ChunkInfoType OmafAdaptationSet::GetChunkInfoType() {
-  // use default value WILL ADD MORE REQUESTS IN FUTURE
-  if (omaf_reader_mgr_->GetStreamType() == DASH_STREAM_STATIC) {
-    return ChunkInfoType::CHUNKINFO_SIDX_ONLY;
-  }
-  else if (omaf_reader_mgr_->GetStreamType() == DASH_STREAM_DYNMIC) {
-  return ChunkInfoType::CHUNKINFO_CLOC_ONLY;
-  }
-  return ChunkInfoType::NO_CHUNKINFO;
-}
-
 int OmafAdaptationSet::DownloadSegment(bool enableCMAF) {
   int ret = ERROR_NONE;
 
@@ -672,6 +662,18 @@ std::string OmafAdaptationSet::GetUrl(const SegmentSyncNode& node) const {
 
   auto repID = mRepresentation->GetId();
   return seg->GenerateCompleteURL(mBaseURL, repID, static_cast<int32_t>(node.segment_value.number_));
+}
+
+std::string OmafAdaptationSet::GetFirstUrl() const {
+  SegmentElement* seg = mRepresentation->GetSegment();
+
+  if (nullptr == seg) {
+    OMAF_LOG(LOG_ERROR, "Create Initial SegmentElement for AdaptationSet: %d failed\n", this->mID);
+    return std::string();
+  }
+
+  auto repID = mRepresentation->GetId();
+  return seg->GenerateCompleteURL(mBaseURL, repID, mStartSegNum);
 }
 
 /////read relative methods

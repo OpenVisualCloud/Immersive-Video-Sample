@@ -730,6 +730,17 @@ public:
     //!
     virtual int32_t getSegmentHeaderSize(bool hasSidx, uint32_t ref_cnt, uint64_t& size, uint8_t version = 0) = 0;
     //!
+    //! \brief  get segment header size
+    //!
+    //!
+    //! \param  [out]  size
+    //!         header size of segment
+    //!
+    //! \return int32_t
+    //!         ERROR_NONE if success, else failed reason
+    //!
+    virtual int32_t getSegmentTypeSize(uint64_t& size, uint8_t version = 0) = 0;
+    //!
     //! \brief  get segment cloc size
     //!
     //!

@@ -269,6 +269,7 @@ int OmafDashSource::OpenMedia(std::string url, std::string cacheDir, void* exter
   for (auto& stream : listStream) {
     this->mMapStream[id] = stream;
     stream->SetStreamID(id);
+    stream->SetOmafDashParams(omaf_dash_params_);
     // stream->SetEnabledExtractor(enableExtractor);
     stream->SetOmafReaderMgr(omaf_reader_mgr_);
     if (!enableExtractor && (stream->GetStreamMediaType() == MediaType_Video))
@@ -597,6 +598,8 @@ int OmafDashSource::DownloadSegments(bool bFirst) {
         }
         m_startChunkId = pStream->GetStartChunkId();
       }
+      if (m_enableCMAF)
+        pStream->GetChunkInfoType();
     }
     pStream->DownloadSegments(m_enableCMAF);
   }
