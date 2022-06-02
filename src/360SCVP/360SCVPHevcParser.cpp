@@ -203,7 +203,7 @@ static uint32_t parse_short_term_ref_pic_set(GTS_BitStream *bs, HEVC_SPS *sps, H
         //uint32_t delta_rps_sign;
         uint32_t reference_set_nb;
         int32_t reference_pic_del;
-        uint32_t i = 0, i0 = 0, i1 = 0;
+        uint32_t k = 0, i0 = 0, i1 = 0;
         if (idx_rps == sps->num_short_term_ref_pic_sets)
             si->rps[idx_rps].index_num = bs_get_ue(bs);
 
@@ -239,7 +239,7 @@ static uint32_t parse_short_term_ref_pic_set(GTS_BitStream *bs, HEVC_SPS *sps, H
                 if (deltaPOC < 0)  i0++;
                 else i1++;
 
-                i++;
+                k++;
             }
         }
         ref_pic_set->num_negative_pics = i0;
@@ -460,6 +460,8 @@ static int32_t hevc_parse_slice_segment(GTS_BitStream *gts_bitstream, HEVCState 
             if (!slice_info->short_term_ref_pic_set_sps_flag) {
                 used_by_curr_pic_flags = parse_short_term_ref_pic_set(gts_bitstream, hevc_sps, slice_info, hevc_sps->num_short_term_ref_pic_sets);
                 num_pic_total_curr = count_bits(used_by_curr_pic_flags);
+
+                slice_info->num_pic_total_curr = num_pic_total_curr;
                 //if (!ret)
                     //return -1;
             } else if( hevc_sps->num_short_term_ref_pic_sets > 1 ) {
@@ -476,6 +478,8 @@ static int32_t hevc_parse_slice_segment(GTS_BitStream *gts_bitstream, HEVCState 
                     slice_info->short_term_ref_pic_set_idx = 0;
 
                 num_pic_total_curr = count_bits(hevc_sps->used_by_curr_pic_flags[slice_info->short_term_ref_pic_set_idx]);
+
+                slice_info->num_pic_total_curr = num_pic_total_curr;
             }
 
             if (hevc_sps->long_term_ref_pics_present_flag ) {

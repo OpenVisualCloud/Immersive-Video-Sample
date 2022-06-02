@@ -767,7 +767,12 @@ static void hevc_write_bitstream_slice_header_independent(GTS_BitStream * stream
                 bitstream_put_ue(stream, si->rps[idx_rps].index_num_absolute);
                 uint32_t index_reference, reference_set_nb;
                 index_reference = idx_rps - 1 - si->rps[idx_rps].index_num;
-                HEVC_ReferencePictureSets *hevc_pic_set = &si->rps[index_reference];
+                HEVC_ReferencePictureSets *hevc_pic_set = NULL;//&si->rps[index_reference];
+                if (index_reference < sps->num_short_term_ref_pic_sets)
+                    hevc_pic_set = &sps->rps[index_reference];
+                else
+                    hevc_pic_set = &si->rps[index_reference];
+
                 reference_set_nb = hevc_pic_set->num_negative_pics + hevc_pic_set->num_positive_pics;
                 for (uint32_t i=0; i<=reference_set_nb; i++)
                 {
@@ -872,7 +877,7 @@ static void hevc_write_bitstream_slice_header_independent(GTS_BitStream * stream
             }
         }
 
-        uint32_t num_pic_total_curr = count_bits(sps->used_by_curr_pic_flags[si->short_term_ref_pic_set_idx]);
+        uint32_t num_pic_total_curr = si->num_pic_total_curr; //count_bits(sps->used_by_curr_pic_flags[si->short_term_ref_pic_set_idx]);
         if ((pps->lists_modification_present_flag) && (num_pic_total_curr > 1))
         {
             uint32_t sz = ceil_log2(num_pic_total_curr);
