@@ -32,6 +32,7 @@
 //!
 
 #include <stdio.h>
+#include <math.h>
 #include "DecoderManager.h"
 #include "VideoDecoder.h"
 #include "VideoDecoder_hw.h"
