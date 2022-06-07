@@ -32,12 +32,13 @@
 #include "360SCVPTiledstreamAPI.h"
 #include "360SCVPLog.h"
 
-int32_t hevc_import_ffextradata(hevc_specialInfo* pSpecialInfo, HEVCState* hevc, uint32_t *pSize, int32_t *spsCnt, int32_t bParse)
+int32_t hevc_import_ffextradata(hevc_specialInfo* pSpecialInfo, HEVCState* hevc, uint32_t *pSize, int32_t *spsCnt, int32_t *audCnt, int32_t bParse)
 {
     int32_t spsNum = 0;
+    int32_t audNum = 0;
     const uint8_t *extradata = pSpecialInfo->ptr;
     const uint64_t extradata_size = pSpecialInfo->ptr_size;
-    if(!extradata || !hevc || !pSize)
+    if(!extradata || !hevc || !pSize || !audCnt)
         return GTS_BAD_PARAM;
     int32_t bfinished = 0;
     GTS_BitStream *bs;
@@ -112,6 +113,7 @@ int32_t hevc_import_ffextradata(hevc_specialInfo* pSpecialInfo, HEVCState* hevc,
             break;
         case GTS_HEVC_NALU_ACCESS_UNIT:
             pSize[ACCESS_UNIT_DELIMITER] = nal_size + startcodeSize;
+            audNum++;
             break;
             /*slice_segment_layer_rbsp*/
         case GTS_HEVC_NALU_SLICE_TRAIL_N:
@@ -175,6 +177,7 @@ int32_t hevc_import_ffextradata(hevc_specialInfo* pSpecialInfo, HEVCState* hevc,
     gts_bs_del(bs);
     if (buffer) gts_free(buffer);
 
+    *audCnt = audNum;
     return idx;
 }
 
@@ -186,6 +189,7 @@ int32_t  parse_hevc_specialinfo(hevc_specialInfo* pSpecialInfo, HEVCState* hevc,
     int32_t headers_cnt = SLICE_HEADER;
     int32_t i = 0;
     int32_t calnalbits = 0;
+    int32_t audCnt = 0;
 
     //remove the useless byte in the input bitstream
     uint8_t *ptr = pSpecialInfo->ptr;
@@ -206,11 +210,17 @@ int32_t  parse_hevc_specialinfo(hevc_specialInfo* pSpecialInfo, HEVCState* hevc,
         memmove_s(pSpecialInfo->ptr, ptr_size, pSpecialInfo->ptr + byteCnt, ptr_size);
         pSpecialInfo->ptr_size = ptr_size;
     }
-    int32_t nalCnt = hevc_import_ffextradata(pSpecialInfo, hevc, nalsize, spsCnt, bParse);
+    int32_t nalCnt = hevc_import_ffextradata(pSpecialInfo, hevc, nalsize, spsCnt, &audCnt, bParse);
     for (i = 0; i < headers_cnt; i++)
     {
         calnalbits += nalsize[i];
     }
+    if ((audCnt > 1) && (0 != nalsize[ACCESS_UNIT_DELIMITER]))
+    {
+        for (int32_t audIdx = 1; audIdx < audCnt; audIdx++)
+            calnalbits += nalsize[ACCESS_UNIT_DELIMITER];
+    }
+
     *specialLen = calnalbits;
     return nalCnt;
 }

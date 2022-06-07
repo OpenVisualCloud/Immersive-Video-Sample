@@ -96,6 +96,6 @@ typedef struct HEVC_GEN_TILEDSTREAM
 
 int32_t set_genHandle_params(oneStream_info* cur, param_oneStream_info* in);
 int32_t parse_tiles_info(hevc_gen_tiledstream* pGenTilesStream);
-int32_t hevc_import_ffextradata(hevc_specialInfo* pSpecialInfo, HEVCState* hevc, uint32_t *pSize, int32_t *spsCnt, int32_t bParse);
+int32_t hevc_import_ffextradata(hevc_specialInfo* pSpecialInfo, HEVCState* hevc, uint32_t *pSize, int32_t *spsCnt, int32_t *audCnt, int32_t bParse);
 int32_t parse_hevc_specialinfo(hevc_specialInfo* pSpecialInfo, HEVCState* hevc, uint32_t* nalsize, uint32_t* specialLen, int32_t* spsCnt, int32_t bParse);
 #endif

@@ -2103,7 +2103,8 @@ int32_t  TstitchStream::GeneratePPS(param_360SCVP* pParamStitchStream, TileArran
         uint32_t nalsize[20];
         memset_s(nalsize, sizeof(nalsize), 0);
         int32_t spsCnt;
-        ret = hevc_import_ffextradata(&specialInfo, m_hevcState, nalsize, &spsCnt, 0);
+        int32_t audCnt;
+        ret = hevc_import_ffextradata(&specialInfo, m_hevcState, nalsize, &spsCnt, &audCnt, 0);
         if (ret < 0)
         {
             gts_bs_del(bs);
@@ -2197,7 +2198,8 @@ int32_t  TstitchStream::GenerateSPS(param_360SCVP* pParamStitchStream)
         uint32_t nalsize[20];
         memset_s(nalsize, sizeof(nalsize), 0);
         int32_t spsCnt;
-        ret = hevc_import_ffextradata(&specialInfo, m_hevcState, nalsize, &spsCnt, 0);
+        int32_t audCnt;
+        ret = hevc_import_ffextradata(&specialInfo, m_hevcState, nalsize, &spsCnt, &audCnt, 0);
         if (ret < 0)
         {
             if(bs)
@@ -2286,11 +2288,12 @@ int32_t  TstitchStream::GenerateSliceHdr(param_360SCVP* pParam360SCVP, int32_t n
         uint32_t nalsize[20];
         hevc_specialInfo specialInfo;
         int32_t spsCnt;
+        int32_t audCnt;
         memset_s(&specialInfo, sizeof(hevc_specialInfo), 0);
         specialInfo.ptr = pParam360SCVP->pInputBitstream;
         specialInfo.ptr_size = pParam360SCVP->inputBitstreamLen;
         memset_s(nalsize, sizeof(nalsize), 0);
-        ret = hevc_import_ffextradata(&specialInfo, m_hevcState, nalsize, &spsCnt, 0);
+        ret = hevc_import_ffextradata(&specialInfo, m_hevcState, nalsize, &spsCnt, &audCnt, 0);
         if (ret < 0)
         {
             if(bsWrite)
