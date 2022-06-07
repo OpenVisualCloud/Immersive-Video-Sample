@@ -1401,7 +1401,7 @@ int32_t TstitchStream::Matrix2Euler(float(*matrixR)[3], EulerAngle* angle)
 
     // The matrixR needs to be orthogonal, in addition the matrixR is pure rotation without reflection component.
     //Check if product of MatrixR and its transpose is identity matrix
-    double product[3][3] = { 0 };
+    double product[3][3] = { {0,0,0},{0,0,0},{0,0,0} };
     for (int i = 0; i < 3; i++){
         for (int j = 0; j < 3; j++){
             float sum = 0;
@@ -1414,10 +1414,10 @@ int32_t TstitchStream::Matrix2Euler(float(*matrixR)[3], EulerAngle* angle)
 
     for (int i = 0; i < 3; i++){
         for (int j = 0; j < 3; j++){
-            if (i != j && abs(product[i][j] - 0 > 1e-3)){
+            if (i != j && abs(product[i][j] - 0) > 1e-3){
                 printf("Input matrixR is not orthogonal!");
                 return -1;}
-            if (i == j && abs(product[i][j] - 1 > 1e-3)){
+            if (i == j && abs(product[i][j] - 1) > 1e-3){
                 printf("Input matrixR is not orthogonal!");
                 return -1;}
         }
@@ -1473,7 +1473,7 @@ int32_t TstitchStream::Matrix2Quaternion(float(*matrixR)[3], Quaternion* quatern
 
     // The matrixR needs to be orthogonal, in addition the matrixR is pure rotation without reflection component.
     //Check if product of MatrixR and its transpose is identity matrix
-    double product[3][3] = { 0 };
+    double product[3][3] = { {0,0,0},{0,0,0},{0,0,0} };
     for (int i = 0; i < 3; i++){
         for (int j = 0; j < 3; j++){
             float sum = 0;
@@ -1486,10 +1486,10 @@ int32_t TstitchStream::Matrix2Quaternion(float(*matrixR)[3], Quaternion* quatern
 
     for (int i = 0; i < 3; i++){
         for (int j = 0; j < 3; j++){
-            if (i != j && abs(product[i][j] - 0 > 1e-3)){
+            if (i != j && abs(product[i][j] - 0) > 1e-3){
                 printf("Input matrixR is not orthogonal!");
                 return -1;}
-            if (i == j && abs(product[i][j] - 1 > 1e-3)){
+            if (i == j && abs(product[i][j] - 1) > 1e-3){
                 printf("Input matrixR is not orthogonal!");
                 return -1;}
         }

@@ -35,7 +35,7 @@
 #define _AUTOVIEWSELECTOR_H_
 
 #include "../Common/Common.h"
-#include "../Common/pose.h"
+#include "../../../utils/pose.h"
 #include <math.h>
 
 VCD_NS_BEGIN
