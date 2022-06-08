@@ -141,20 +141,22 @@ bool OmafExtractorTracksSelector::IsDifferentPose(HeadPose* pose1, HeadPose* pos
 }
 
 OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* pStream) {
-  HeadPose* previousPose = NULL;
+  HeadPose* previousPose = new HeadPose;
   int64_t historySize = 0;
   {
     std::lock_guard<std::mutex> lock(mMutex);
     if (mPoseHistory.size() == 0) {
+      SAFE_DELETE(previousPose);
       return NULL;
     }
 
-    previousPose = mPose;
+    memcpy_s(previousPose, sizeof(HeadPose), mPose, sizeof(HeadPose));
 
-    mPose = mPoseHistory.front();
-    // mPoseHistory.pop_front();
+    HeadPose* new_pose = mPoseHistory.front();
+    memcpy_s(mPose, sizeof(HeadPose), new_pose, sizeof(HeadPose));
 
     if (!mPose) {
+      SAFE_DELETE(previousPose);
       return nullptr;
     }
 
@@ -170,6 +172,7 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
     tracepoint(mthq_tp_provider, T2_detect_pose_change, 0);
 #endif
 #endif
+    SAFE_DELETE(previousPose);
     return NULL;
   }
 
@@ -195,7 +198,7 @@ OmafExtractor* OmafExtractorTracksSelector::GetExtractorByPose(OmafMediaStream* 
   }
 
   // if (previousPose != mPose) SAFE_DELETE(previousPose);
-
+  SAFE_DELETE(previousPose);
   return selectedExtractor;
 }
 
