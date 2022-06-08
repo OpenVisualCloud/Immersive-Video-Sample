@@ -195,36 +195,48 @@ int OmafTileTracksSelector::UpdateEnabledTracks(OmafMediaStream* pStream)
     return ret;
 }
 
-bool IsPoseChanged(HeadPose* pose1, HeadPose* pose2)
+bool OmafTileTracksSelector::IsPoseChanged(HeadPose* pose1, HeadPose* pose2)
 {
     // return false if two pose is same
-    if(abs(pose1->yaw - pose2->yaw)<1e-3 && abs(pose1->pitch - pose2->pitch)<1e-3)
-    {
-        OMAF_LOG(LOG_INFO,"pose has not changed!\n");
-        return false;
+    if (mProjFmt == ProjectionFormat::PF_PLANAR) {
+        if(abs(pose1->centerX - pose2->centerX)<1e-3 && abs(pose1->centerY - pose2->centerY)<1e-3 && abs(pose1->zoomFactor - pose2->zoomFactor)<1e-3)
+        {
+            OMAF_LOG(LOG_INFO,"pose has not changed!\n");
+            return false;
+        }
+        return true;
     }
-    return true;
+    else {
+        if(abs(pose1->yaw - pose2->yaw)<1e-3 && abs(pose1->pitch - pose2->pitch)<1e-3)
+        {
+            OMAF_LOG(LOG_INFO,"pose has not changed!\n");
+            return false;
+        }
+        return true;
+    }
 }
 
 TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
 {
     TracksMap selectedTracks;
     int64_t historySize = 0;
-    HeadPose* previousPose = NULL;
+    HeadPose* previousPose = new HeadPose;
     {
         std::lock_guard<std::mutex> lock(mMutex);
         if(mPoseHistory.size() == 0)
         {
+	        SAFE_DELETE(previousPose);
             return selectedTracks;
         }
 
-        previousPose = mPose;
+        memcpy_s(previousPose, sizeof(HeadPose), mPose, sizeof(HeadPose));
 
-        mPose = mPoseHistory.front();
-        // mPoseHistory.pop_front();
+        HeadPose *new_pose = mPoseHistory.front();
+	    memcpy_s(mPose, sizeof(HeadPose), new_pose, sizeof(HeadPose));
 
-        if(!mPose)
+	    if(!mPose)
         {
+            SAFE_DELETE(previousPose);
             return selectedTracks;
         }
 
@@ -241,6 +253,7 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
         tracepoint(mthq_tp_provider, T2_detect_pose_change, 0);
 #endif
 #endif
+	    SAFE_DELETE(previousPose);
         return selectedTracks;
     }
 
@@ -258,6 +271,10 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
     {
         OMAF_LOG(LOG_INFO,"pose has changed from yaw %f, pitch %f\n", previousPose->yaw, previousPose->pitch);
         OMAF_LOG(LOG_INFO,"to yaw %f, pitch %f\n", mPose->yaw, mPose->pitch);
+	    OMAF_LOG(LOG_INFO,"pose has changed from centerX %d, centerY %d\n", previousPose->centerX, previousPose->centerY);
+        OMAF_LOG(LOG_INFO,"to centerX %d, centerY %d\n", mPose->centerX, mPose->centerY);
+	    OMAF_LOG(LOG_INFO,"pose has changed from zoomFactor %f\n", previousPose->zoomFactor);
+        OMAF_LOG(LOG_INFO,"to zoomFactor %f\n", mPose->zoomFactor);
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
         // trace
@@ -268,7 +285,7 @@ TracksMap OmafTileTracksSelector::GetTileTracksByPose(OmafMediaStream* pStream)
 
     // if (previousPose != mPose)
     //     SAFE_DELETE(previousPose);
-
+    SAFE_DELETE(previousPose);
     return selectedTracks;
 }
 

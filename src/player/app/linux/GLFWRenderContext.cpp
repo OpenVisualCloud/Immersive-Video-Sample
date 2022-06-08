@@ -480,6 +480,8 @@ RenderStatus GLFWRenderContext::GetStatusAndPoseFor2D(HeadPose *pose, uint32_t* 
     pose->centerY = (-position_y + 1) / 2 * m_fullHeight;
 
     pose->zoomFactor = m_zoomFactor;
+    pose->yaw = 0.0f;
+    pose->pitch = 0.0f;
 
     if (!m_needMotionTest)
     {

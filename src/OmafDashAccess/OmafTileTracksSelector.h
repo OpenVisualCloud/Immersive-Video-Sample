@@ -100,6 +100,8 @@ private:
 
     TracksMap SelectTileTracks(OmafMediaStream* pStream, HeadPose* pose);
 
+    bool IsPoseChanged(HeadPose* pose1, HeadPose* pose2);
+
 private:
     TracksMap                 m_currentTracks;
     std::mutex                mExtractorsMutex;
