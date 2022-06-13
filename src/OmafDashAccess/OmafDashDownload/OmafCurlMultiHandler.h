@@ -232,7 +232,7 @@ class OmafDownloadTask : public VCD::NonCopyable {
     string track_file;
     size_t pos = url.find_last_of('_');
     if (pos != string::npos) track_file = url.substr(pos);
-    sscanf(track_file.c_str(), "_track%d.%d.mp4", &track_id_, &seg_id_);
+    sscanf(track_file.c_str(), "_track%u.%u.mp4", &track_id_, &seg_id_);
  }
 
  private:

@@ -63,6 +63,10 @@ public:
     ViewportProperty* GetViewport() { return m_viewport; }
 
 private:
+    ViewportElement& operator=(const ViewportElement& other) { return *this; };
+    ViewportElement(const ViewportElement& other) { /* do not create copies */ };
+
+private:
     ViewportProperty *m_viewport;
 };
 
