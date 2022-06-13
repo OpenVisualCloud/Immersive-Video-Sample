@@ -65,6 +65,7 @@ RenderManager::RenderManager(struct RenderConfig config) {
   this->m_framerateNum = 0;
   this->m_framerateDen = 0;
   this->m_autoSelector = nullptr;
+  this->m_segmentDuration = 0;
 }
 
 RenderManager::~RenderManager() {

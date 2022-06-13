@@ -57,6 +57,7 @@ public:
         frames_in_each_view_ = 0;
         stop_frames_ = 0;
         move_frames_ = 0;
+        samples_in_seg_ = 0;
     }
     virtual ~AutoViewSelector() {
         SAFE_DELETE(pose_);
@@ -83,6 +84,7 @@ public:
             // LOG(ERROR) << "selector mode is not supported!" << endl;
             return nullptr;
         }
+        return nullptr;
     }
 
 private:
@@ -153,6 +155,11 @@ private:
         // TBD
         return pose_;
     }
+
+private:
+    AutoViewSelector& operator=(const AutoViewSelector& other) { return *this; };
+    AutoViewSelector(const AutoViewSelector& other) { /* do not create copies */ };
+
 
 private:
     SelectorMode mode_;

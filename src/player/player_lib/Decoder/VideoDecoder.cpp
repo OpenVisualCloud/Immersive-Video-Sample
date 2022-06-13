@@ -617,6 +617,7 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts, int64_t *corr_pts, HeadPose
             SAFE_DELETE(frame->rwpk);
             SAFE_DELETE_ARRAY(frame->qtyResolution);
             SAFE_DELETE(frame);
+            SAFE_DELETE(buf_info);
             return RENDER_NO_FRAME;
         }
     }
