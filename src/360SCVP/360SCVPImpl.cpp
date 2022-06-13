@@ -1560,46 +1560,104 @@ int32_t TstitchStream::xmlParsing(const char* fileName, uint32_t cameraID_x, uin
         printf(" XML parse failed! ");
         return -1;
     }
-    uint32_t maxNumberHorz = (uint32_t)atoi(cameraPara->FirstChildElement("maxNumberHorz")->GetText());
+
+    uint32_t maxNumberHorz = 0;
+    if (cameraPara->FirstChildElement("maxNumberHorz"))
+    {
+        maxNumberHorz = (uint32_t)atoi(cameraPara->FirstChildElement("maxNumberHorz")->GetText());
+    }
     if (cameraID_x >= maxNumberHorz) {
         printf("cameraID_x Error!");
         return -1;
     }
-    uint32_t maxNumberVert = (uint32_t)atoi(cameraPara->FirstChildElement("maxNumberVert")->GetText());
+
+    uint32_t maxNumberVert = 0;
+    if (cameraPara->FirstChildElement("maxNumberVert"))
+    {
+        maxNumberVert = (uint32_t)atoi(cameraPara->FirstChildElement("maxNumberVert")->GetText());
+    }
     if (cameraID_y >= maxNumberVert) {
         printf("cameraID_y Error!");
         return -1;
     }
-    char cam[20];
-    sprintf(cam, "Camera_%d_%d", cameraID_x, cameraID_y);
+
+    char cam[256] = { 0 };
+    snprintf(cam, 256, "Camera_%d_%d", cameraID_x, cameraID_y);
     XMLElement* CameraID = cameraPara->FirstChildElement(cam);
-    novelViewSEI->cameraID_x = atoi(CameraID->FirstChildElement("cameraID_x")->GetText());
-    novelViewSEI->cameraID_y = atoi(CameraID->FirstChildElement("cameraID_y")->GetText());
+    if (!CameraID)
+    {
+        SCVP_LOG(LOG_ERROR, "NULL CameraID !\n");
+        return -1;
+    }
 
-    novelViewSEI->focal_x = atof(CameraID->FirstChildElement("focal_x")->GetText());
-    novelViewSEI->focal_y = atof(CameraID->FirstChildElement("focal_y")->GetText());
-    novelViewSEI->center_x = atof(CameraID->FirstChildElement("center_x")->GetText());
-    novelViewSEI->center_y = atof(CameraID->FirstChildElement("center_y")->GetText());
+    if (CameraID->FirstChildElement("cameraID_x"))
+        novelViewSEI->cameraID_x = atoi(CameraID->FirstChildElement("cameraID_x")->GetText());
 
-    novelViewSEI->codx = atof(CameraID->FirstChildElement("codx")->GetText());
-    novelViewSEI->cody = atof(CameraID->FirstChildElement("cody")->GetText());
+    if (CameraID->FirstChildElement("cameraID_y"))
+        novelViewSEI->cameraID_y = atoi(CameraID->FirstChildElement("cameraID_y")->GetText());
 
-    novelViewSEI->roll = atof(CameraID->FirstChildElement("roll")->GetText());
-    novelViewSEI->pitch = atof(CameraID->FirstChildElement("pitch")->GetText());
-    novelViewSEI->yaw = atof(CameraID->FirstChildElement("yaw")->GetText());
-    novelViewSEI->trans_x = atof(CameraID->FirstChildElement("trans_x")->GetText());
-    novelViewSEI->trans_y = atof(CameraID->FirstChildElement("trans_y")->GetText());
-    novelViewSEI->trans_z = atof(CameraID->FirstChildElement("trans_z")->GetText());
+    if (CameraID->FirstChildElement("focal_x"))
+        novelViewSEI->focal_x = atof(CameraID->FirstChildElement("focal_x")->GetText());
 
-    novelViewSEI->k1 = atof(CameraID->FirstChildElement("k1")->GetText());
-    novelViewSEI->k2 = atof(CameraID->FirstChildElement("k2")->GetText());
-    novelViewSEI->k3 = atof(CameraID->FirstChildElement("k3")->GetText());
-    novelViewSEI->k4 = atof(CameraID->FirstChildElement("k4")->GetText());
-    novelViewSEI->k5 = atof(CameraID->FirstChildElement("k5")->GetText());
-    novelViewSEI->k6 = atof(CameraID->FirstChildElement("k6")->GetText());
-    novelViewSEI->p1 = atof(CameraID->FirstChildElement("p1")->GetText());
-    novelViewSEI->p2 = atof(CameraID->FirstChildElement("p2")->GetText());
-    novelViewSEI->metric_radius = atof(CameraID->FirstChildElement("metric_radius")->GetText());
+    if (CameraID->FirstChildElement("focal_y"))
+        novelViewSEI->focal_y = atof(CameraID->FirstChildElement("focal_y")->GetText());
+
+    if (CameraID->FirstChildElement("center_x"))
+        novelViewSEI->center_x = atof(CameraID->FirstChildElement("center_x")->GetText());
+
+    if (CameraID->FirstChildElement("center_y"))
+        novelViewSEI->center_y = atof(CameraID->FirstChildElement("center_y")->GetText());
+
+    if (CameraID->FirstChildElement("codx"))
+        novelViewSEI->codx = atof(CameraID->FirstChildElement("codx")->GetText());
+
+    if (CameraID->FirstChildElement("cody"))
+        novelViewSEI->cody = atof(CameraID->FirstChildElement("cody")->GetText());
+
+    if (CameraID->FirstChildElement("roll"))
+        novelViewSEI->roll = atof(CameraID->FirstChildElement("roll")->GetText());
+
+    if (CameraID->FirstChildElement("pitch"))
+        novelViewSEI->pitch = atof(CameraID->FirstChildElement("pitch")->GetText());
+
+    if (CameraID->FirstChildElement("yaw"))
+        novelViewSEI->yaw = atof(CameraID->FirstChildElement("yaw")->GetText());
+
+    if (CameraID->FirstChildElement("trans_x"))
+        novelViewSEI->trans_x = atof(CameraID->FirstChildElement("trans_x")->GetText());
+
+    if (CameraID->FirstChildElement("trans_y"))
+        novelViewSEI->trans_y = atof(CameraID->FirstChildElement("trans_y")->GetText());
+
+    if (CameraID->FirstChildElement("trans_z"))
+        novelViewSEI->trans_z = atof(CameraID->FirstChildElement("trans_z")->GetText());
+
+    if (CameraID->FirstChildElement("k1"))
+        novelViewSEI->k1 = atof(CameraID->FirstChildElement("k1")->GetText());
+
+    if (CameraID->FirstChildElement("k2"))
+        novelViewSEI->k2 = atof(CameraID->FirstChildElement("k2")->GetText());
+
+    if (CameraID->FirstChildElement("k3"))
+        novelViewSEI->k3 = atof(CameraID->FirstChildElement("k3")->GetText());
+
+    if (CameraID->FirstChildElement("k4"))
+        novelViewSEI->k4 = atof(CameraID->FirstChildElement("k4")->GetText());
+
+    if (CameraID->FirstChildElement("k5"))
+        novelViewSEI->k5 = atof(CameraID->FirstChildElement("k5")->GetText());
+
+    if (CameraID->FirstChildElement("k6"))
+        novelViewSEI->k6 = atof(CameraID->FirstChildElement("k6")->GetText());
+
+    if (CameraID->FirstChildElement("p1"))
+        novelViewSEI->p1 = atof(CameraID->FirstChildElement("p1")->GetText());
+
+    if (CameraID->FirstChildElement("p2"))
+        novelViewSEI->p2 = atof(CameraID->FirstChildElement("p2")->GetText());
+
+    if (CameraID->FirstChildElement("metric_radius"))
+        novelViewSEI->metric_radius = atof(CameraID->FirstChildElement("metric_radius")->GetText());
 
     return 0;
 }

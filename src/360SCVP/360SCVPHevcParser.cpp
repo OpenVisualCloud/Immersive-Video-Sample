@@ -2284,6 +2284,7 @@ int32_t hevc_read_novelViewSEI(NovelViewSEI* sei_out, uint8_t* pSEIBits, uint32_
 {
     int32_t ret = -1;
     SEI_Structure_Impl seiImpl;
+    memset_s(&seiImpl, sizeof(SEI_Structure_Impl), 0);
 
     GTS_BitStream* bs = NULL;
     int8_t* data_without_emulation_bytes = NULL;
