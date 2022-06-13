@@ -556,10 +556,14 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
     HeadPose *predictPose = new HeadPose[poseCandicateNum];
     if (!predictPose)
         return predictedTracks;
-    for (uint32_t i = 0; i < poseCandicateNum; i++)
+    uint32_t i = 0;
+    for (auto pred_angle : predict_angles)
     {
-        predictPose[i].yaw = predict_angles[ptsInterval[i] + first_predict_pts]->yaw;
-        predictPose[i].pitch = predict_angles[ptsInterval[i] + first_predict_pts]->pitch;
+        if (nullptr == pred_angle.second) return predictedTracks;
+        OMAF_LOG(LOG_INFO, "pred_angle.PTS %ld \n", pred_angle.first);
+        predictPose[i].yaw = pred_angle.second->yaw;
+        predictPose[i].pitch = pred_angle.second->pitch;
+
         OMAF_LOG(LOG_INFO, "Start to select tile tracks!\n");
 #ifndef _ANDROID_NDK_OPTION_
 #ifdef _USE_TRACE_
@@ -570,7 +574,7 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
         TracksMap selectedTracks = SelectTileTracks(pStream, &predictPose[i]);
         if (selectedTracks.size() && previousPose)
         {
-            predictedTracks.push_back(make_pair(predict_angles[ptsInterval[i] + first_predict_pts]->priority, selectedTracks));
+            predictedTracks.push_back(make_pair(pred_angle.second->priority, selectedTracks));
             OMAF_LOG(LOG_INFO,"pose has changed from yaw %f, pitch %f\n", previousPose->yaw, previousPose->pitch);
             OMAF_LOG(LOG_INFO,"to yaw %f, pitch %f\n", mPose->yaw, mPose->pitch);
 
@@ -581,6 +585,7 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
 #endif
 #endif
         }
+        i++;
     }
     // SAFE_DELETE(previousPose);
     SAFE_DELARRAY(predictPose);

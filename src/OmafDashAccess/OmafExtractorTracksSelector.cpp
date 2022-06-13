@@ -437,7 +437,10 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   }
   // to select extractor, only support SingleViewport mode in prediction.
   HeadPose* predictPose = new HeadPose;
-  ViewportAngle *angle = predict_angles[first_predict_pts];
+  auto iter = predict_angles.begin();
+  if (iter == predict_angles.end()) return extractors;
+
+  ViewportAngle *angle = iter->second;
   predictPose->yaw = angle->yaw;
   predictPose->pitch = angle->pitch;
   OMAF_LOG(LOG_INFO, "Start to select extractor tracks by prediction!\n");
@@ -460,10 +463,10 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
 #endif
 #endif
   }
-  for (auto pre_angle : predict_angles)
-  {
-    SAFE_DELETE(pre_angle.second);
-  }
+//   for (auto pre_angle : predict_angles) // will be deleted in viewport predict plugin
+//   {
+//     SAFE_DELETE(pre_angle.second);
+//   }
   // SAFE_DELETE(previousPose);
   SAFE_DELETE(predictPose);
   predict_angles.clear();
