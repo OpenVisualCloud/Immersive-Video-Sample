@@ -1381,15 +1381,21 @@ int32_t  TgenViewport::ERPSelectRegion(short inputWidth, short inputHeight, shor
         tileIdx = row * m_tileNumCol + (int32_t)col;
         m_srd[tileIdx].isOccupy = 1;
         if (centerCol - col >= 0) {
-            if (centerCol - col > distanceLeftToCenter[row]) {
-                leftCol[row] = col;
-                distanceLeftToCenter[row] = centerCol - col;
+            if ((row >= 0)&& ((uint32_t)row < m_tileNumRow))
+            {
+                if (centerCol - col > distanceLeftToCenter[row]) {
+                    leftCol[row] = col;
+                    distanceLeftToCenter[row] = centerCol - col;
+                }
             }
         }
         else if (centerCol - col < 0) {
-            if (centerCol - col + m_tileNumCol > distanceLeftToCenter[row]) {
-                leftCol[row] = col;
-                distanceLeftToCenter[row] = centerCol - leftCol[row] + m_tileNumCol;
+            if ((row >= 0) && ((uint32_t)row < m_tileNumRow))
+            {
+                if (centerCol - col + m_tileNumCol > distanceLeftToCenter[row]) {
+                    leftCol[row] = col;
+                    distanceLeftToCenter[row] = centerCol - leftCol[row] + m_tileNumCol;
+                }
             }
         }
         pVertBoundaryPoint++;
@@ -1402,15 +1408,21 @@ int32_t  TgenViewport::ERPSelectRegion(short inputWidth, short inputHeight, shor
         tileIdx = row * m_tileNumCol + (int32_t)col;
         m_srd[tileIdx].isOccupy = 1;
         if (col - centerCol >= 0) {
-            if (col - centerCol > distanceRightToCenter[row]) {
-                rightCol[row] = col;
-                distanceRightToCenter[row] = col - centerCol;
+            if ((row >= 0) && ((uint32_t)row < m_tileNumRow))
+            {
+                if (col - centerCol > distanceRightToCenter[row]) {
+                    rightCol[row] = col;
+                    distanceRightToCenter[row] = col - centerCol;
+                }
             }
         }
         else {
-            if (col - centerCol + m_tileNumCol > distanceRightToCenter[row]) {
-                rightCol[row] = col;
-                distanceRightToCenter[row] = rightCol[row] - centerCol + m_tileNumCol;
+            if ((row >= 0) && ((uint32_t)row < m_tileNumRow))
+            {
+                if (col - centerCol + m_tileNumCol > distanceRightToCenter[row]) {
+                    rightCol[row] = col;
+                    distanceRightToCenter[row] = rightCol[row] - centerCol + m_tileNumCol;
+                }
             }
         }
         pVertBoundaryPoint++;
