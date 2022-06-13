@@ -61,6 +61,11 @@ public:
     RenderStatus SetViewPort(HeadPose *pose);
 
 private:
+    ViewPortManager& operator=(const ViewPortManager& other) { return *this; };
+    ViewPortManager(const ViewPortManager& other) { /* do not create copies */ };
+
+
+private:
     HeadPose *m_pose;
 
 };

@@ -437,8 +437,13 @@ ListExtractor OmafExtractorTracksSelector::GetExtractorByPosePrediction(OmafMedi
   }
   // to select extractor, only support SingleViewport mode in prediction.
   HeadPose* predictPose = new HeadPose;
+  if (!predictPose) return extractors;
+
   auto iter = predict_angles.begin();
-  if (iter == predict_angles.end()) return extractors;
+  if (iter == predict_angles.end()) {
+    SAFE_DELETE(predictPose);
+    return extractors;
+  }
 
   ViewportAngle *angle = iter->second;
   predictPose->yaw = angle->yaw;

@@ -559,7 +559,10 @@ std::vector<std::pair<ViewportPriority, TracksMap>> OmafTileTracksSelector::GetT
     uint32_t i = 0;
     for (auto pred_angle : predict_angles)
     {
-        if (nullptr == pred_angle.second) return predictedTracks;
+        if (nullptr == pred_angle.second) {
+            SAFE_DELARRAY(predictPose);
+            return predictedTracks;
+        }
         OMAF_LOG(LOG_INFO, "pred_angle.PTS %ld \n", pred_angle.first);
         predictPose[i].yaw = pred_angle.second->yaw;
         predictPose[i].pitch = pred_angle.second->pitch;
