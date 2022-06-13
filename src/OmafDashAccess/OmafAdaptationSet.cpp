@@ -81,6 +81,7 @@ OmafAdaptationSet::OmafAdaptationSet() {
   mGopSize = 0;
   mViewID.first = -1;
   mViewID.second = -1;
+  mMode = OmafDashMode::LATER_BINDING;
   memset(&mVideoInfo, 0, sizeof(VideoInfo));
   memset(&mAudioInfo, 0, sizeof(AudioInfo));
 }

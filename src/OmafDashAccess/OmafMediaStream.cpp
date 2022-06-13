@@ -572,6 +572,7 @@ void OmafMediaStream::GetChunkInfoType() {
   // parse chunk info type from the first segment
   string try_segment_url;
   auto iter = mMediaAdaptationSet.begin();
+  if (iter == mMediaAdaptationSet.end()) return;
   OmafAdaptationSet* oneAS = (OmafAdaptationSet*)(iter->second);
   try_segment_url = oneAS->GetFirstUrl();
 
@@ -652,6 +653,7 @@ ChunkInfoType OmafMediaStream::ParseChunkInfoType(string url) {
       } else {
         OMAF_LOG(LOG_ERROR, "Failed to check cloc, err=%d\n", ret);
       }
+      SAFE_DELETE(reader_);
     }
   }
   if (hasSidx && hasCloc) chunkInfoType = ChunkInfoType::CHUNKINFO_SIDX_AND_CLOC;

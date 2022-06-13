@@ -431,7 +431,7 @@ int OmafDashSource::GetPacket(int streamID, std::list<MediaPacket*>* pkts, bool 
     vector<uint32_t> fetchTracks;
     for (auto tk : currentTracks) {
       fetchTracks.push_back(tk.first);
-      if (mPreTracksID.size() < size_t(id + 1) || mPreTracksID[id++] != uint32_t(tk.first)) {
+      if (mPreTracksID.size() < size_t(id) + 1 || mPreTracksID[id++] != uint32_t(tk.first)) {
         isTracksChanged = true;
       }
     }
