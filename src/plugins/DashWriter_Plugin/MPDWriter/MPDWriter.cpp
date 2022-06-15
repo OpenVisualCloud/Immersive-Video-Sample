@@ -140,23 +140,29 @@ int32_t MPDWriter::Initialize()
     if (!m_segInfo)
         return OMAF_ERROR_NULL_PTR;
 
-    int32_t modeU = 7;
-    int32_t modeG = 7;
-    int32_t modeO = 7;
+    int32_t modeU = 6;
+    int32_t modeG = 0;
+    int32_t modeO = 0;
     int32_t modeFile = modeU * 64 + modeG * 8 + modeO;
-    if (access(&(m_segInfo->dirName[0]), 0) == 0)
+    char buf[PATH_MAX] = { 0 };
+    char *res = realpath(&(m_segInfo->dirName[0]), buf);
+    if (res)
     {
-        if (access(&(m_segInfo->dirName[0]), modeFile) != 0)
+        if (access(buf, 0) == 0)
         {
-            if (chmod(&(m_segInfo->dirName[0]), modeFile) != 0)
+            if (access(buf, modeFile) != 0)
             {
-                OMAF_LOG(LOG_ERROR, "Failed to change write mode for folder %s\n", m_segInfo->dirName);
-                return OMAF_ERROR_CHANGE_FOLDERMODE_FAILED;
+                if (chmod(buf, modeFile) != 0)
+                {
+                    OMAF_LOG(LOG_ERROR, "Failed to change write mode for folder %s\n", m_segInfo->dirName);
+                    return OMAF_ERROR_CHANGE_FOLDERMODE_FAILED;
+                }
             }
         }
     }
     else
     {
+
         if (mkdir(&(m_segInfo->dirName[0]), modeFile) != 0)
         {
             OMAF_LOG(LOG_ERROR, "Failed to create folder %s\n", m_segInfo->dirName);
@@ -903,15 +909,26 @@ int32_t MPDWriter::UpdateMpd(uint64_t segNumber, uint64_t framesNumber)
     {
         if (segNumber % m_segInfo->windowSize == 1)
         {
-            if (0 == access(m_mpdFileName, R_OK | W_OK))
+            char buf[PATH_MAX] = { 0 };
+            char *res = realpath(m_mpdFileName, buf);
+            if (res)
             {
-                remove(m_mpdFileName);
-                DELETE_MEMORY(m_xmlDoc);
+                if (0 == access(buf, R_OK | W_OK))
+                {
+                    remove(buf);
+                    DELETE_MEMORY(m_xmlDoc);
 
-                m_xmlDoc = new XMLDocument;
-                if (!m_xmlDoc)
-                    return OMAF_ERROR_CREATE_XMLFILE_FAILED;
+                    m_xmlDoc = new XMLDocument;
+                    if (!m_xmlDoc)
+                        return OMAF_ERROR_CREATE_XMLFILE_FAILED;
+                }
             }
+            else
+            {
+                perror("realpath");
+                return OMAF_ERROR_REALPATH_FAILED;
+            }
+
             int32_t ret = WriteMpd(framesNumber);
             return ret;
         }
@@ -920,15 +937,26 @@ int32_t MPDWriter::UpdateMpd(uint64_t segNumber, uint64_t framesNumber)
     {
         if (framesNumber % (m_segInfo->segDuration * (uint16_t)((double)(m_frameRate.num / m_frameRate.den) + 0.5)) == 0)
         {
-            if (0 == access(m_mpdFileName, R_OK | W_OK))
+            char buf[PATH_MAX] = { 0 };
+            char *res = realpath(m_mpdFileName, buf);
+            if (res)
             {
-                remove(m_mpdFileName);
-                DELETE_MEMORY(m_xmlDoc);
+                if (0 == access(buf, R_OK | W_OK))
+                {
+                    remove(buf);
+                    DELETE_MEMORY(m_xmlDoc);
 
-                m_xmlDoc = new XMLDocument;
-                if (!m_xmlDoc)
-                    return OMAF_ERROR_CREATE_XMLFILE_FAILED;
+                    m_xmlDoc = new XMLDocument;
+                    if (!m_xmlDoc)
+                        return OMAF_ERROR_CREATE_XMLFILE_FAILED;
+                }
             }
+            else
+            {
+                perror("realpath");
+                return OMAF_ERROR_REALPATH_FAILED;
+            }
+
             int32_t ret = WriteMpd(framesNumber);
             return ret;
         }

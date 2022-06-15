@@ -227,17 +227,17 @@ int32_t DashInitSegmenter::GenerateInitSegment(
                 m_segWriter->WriteInitSegment(frameStream, m_config.fragmented);
 
                 string frameString(frameStream.str());
-                FILE *fp = fopen(trackSegCtx->dashInitCfg.initSegName, "wb+");
-                if (!fp)
+                m_fp = fopen(trackSegCtx->dashInitCfg.initSegName, "wb+");
+                if (!m_fp)
                 {
                     OMAF_LOG(LOG_ERROR, "Failed to open %s\n", trackSegCtx->dashInitCfg.initSegName);
                     return OMAF_ERROR_NULL_PTR;
                 }
 
                 m_initSegSize = frameString.size();
-                fwrite(frameString.c_str(), 1, frameString.size(), fp);
-                fclose(fp);
-                fp = NULL;
+                fwrite(frameString.c_str(), 1, frameString.size(), m_fp);
+                fclose(m_fp);
+                m_fp = NULL;
             }
         }
     }
