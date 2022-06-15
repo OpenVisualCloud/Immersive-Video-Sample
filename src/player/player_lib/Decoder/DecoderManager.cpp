@@ -373,7 +373,12 @@ RenderStatus DecoderManager::UpdateVideoFrames( uint64_t pts, int64_t *corr_pts,
 }
 
 RenderStatus DecoderManager::CheckViewIdAvailability(HeadPose *pose) {
+#ifdef _LINUX_OS_
     if (pose == nullptr) return RENDER_ERROR;
+#endif
+#ifdef _ANDROID_OS_
+    if (pose == nullptr) return RENDER_STATUS_OK; // pose in android is default(nullptr)
+#endif
 
     if (pose->hViewId < 0 && pose->vViewId < 0) {//Omni
         return RENDER_STATUS_OK;
