@@ -148,21 +148,10 @@ int32_t MPDWriter::Initialize()
     char *res = realpath(&(m_segInfo->dirName[0]), buf);
     if (res)
     {
-        if (access(buf, 0) == 0)
-        {
-            if (access(buf, modeFile) != 0)
-            {
-                if (chmod(buf, modeFile) != 0)
-                {
-                    OMAF_LOG(LOG_ERROR, "Failed to change write mode for folder %s\n", m_segInfo->dirName);
-                    return OMAF_ERROR_CHANGE_FOLDERMODE_FAILED;
-                }
-            }
-        }
+        OMAF_LOG(LOG_INFO, "Folder %s has already existed\n", m_segInfo->dirName);
     }
     else
     {
-
         if (mkdir(&(m_segInfo->dirName[0]), modeFile) != 0)
         {
             OMAF_LOG(LOG_ERROR, "Failed to create folder %s\n", m_segInfo->dirName);
@@ -913,15 +902,12 @@ int32_t MPDWriter::UpdateMpd(uint64_t segNumber, uint64_t framesNumber)
             char *res = realpath(m_mpdFileName, buf);
             if (res)
             {
-                if (0 == access(buf, R_OK | W_OK))
-                {
-                    remove(buf);
-                    DELETE_MEMORY(m_xmlDoc);
+                remove(buf);
+                DELETE_MEMORY(m_xmlDoc);
 
-                    m_xmlDoc = new XMLDocument;
-                    if (!m_xmlDoc)
-                        return OMAF_ERROR_CREATE_XMLFILE_FAILED;
-                }
+                m_xmlDoc = new XMLDocument;
+                if (!m_xmlDoc)
+                    return OMAF_ERROR_CREATE_XMLFILE_FAILED;
             }
             else
             {
@@ -941,15 +927,12 @@ int32_t MPDWriter::UpdateMpd(uint64_t segNumber, uint64_t framesNumber)
             char *res = realpath(m_mpdFileName, buf);
             if (res)
             {
-                if (0 == access(buf, R_OK | W_OK))
-                {
-                    remove(buf);
-                    DELETE_MEMORY(m_xmlDoc);
+                remove(buf);
+                DELETE_MEMORY(m_xmlDoc);
 
-                    m_xmlDoc = new XMLDocument;
-                    if (!m_xmlDoc)
-                        return OMAF_ERROR_CREATE_XMLFILE_FAILED;
-                }
+                m_xmlDoc = new XMLDocument;
+                if (!m_xmlDoc)
+                    return OMAF_ERROR_CREATE_XMLFILE_FAILED;
             }
             else
             {
