@@ -241,6 +241,7 @@ private:
 
     VCD::MP4::SegmentWriterBase                   *m_segWriter = NULL;
 
+    FILE                                          *m_fp = NULL;                 //!< file handler for init segment
 private:
 
     //!

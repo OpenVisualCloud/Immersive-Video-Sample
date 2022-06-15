@@ -115,4 +115,5 @@ typedef int OMAF_STATUS;
 #define OMAF_ERROR_TIMED_OUT                     -108
 #define OMAF_ERROR_NO_PLUGIN_SET                 -109
 #define SCVP_ERROR_PLUGIN_NOEXIST                -200
+#define OMAF_ERROR_REALPATH_FAILED               -201
 #endif /* ERROR_H */
