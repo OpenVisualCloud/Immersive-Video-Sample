@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 //!
 //! \brief  safe file open function to open file after removing symbolic link for the file name
@@ -54,5 +55,21 @@
 //!         ERROR_NONE if success, else failed reason
 //!
 int32_t SafeFileOpen(char *fileName, const char *openMode, FILE **pFileHandler);
+
+//!
+//! \brief  Fork and execute the command
+//!
+//! \param  [in] path
+//!         Path of executable binary file
+//! \param  [in] argv
+//!         List of strings splitted from the command
+//! \param  [in] envp
+//!         List of environment variable to set
+//! \param  [in] message
+//!         The message to display
+//!
+//! \return void
+//!
+void SafeExecute(char* path, char* argv[], char* envp[], char* message);
 
 #endif /* _SAFESYSRESOURCEHANDLE_H_ */

@@ -58,3 +58,29 @@ int32_t SafeFileOpen(char *fileName, const char *openMode, FILE **pFileHandler)
 
     return ret;
 }
+
+void SafeExecute(char* path, char* argv[], char* envp[], char* message)
+{
+    pid_t pid = fork();
+    if(pid == 0)
+    {
+        errno = 0;
+        if(execve(path, argv, envp) < 0)
+        {
+            fprintf(stderr, "Failed execute %s ! \n", message);
+            fprintf(stderr, "errno: %d! \n", errno);
+        } else {
+            fprintf(stdout, "Forked to execute %s \n", message);
+        }
+
+        exit(EXIT_FAILURE);
+    }
+    else if(pid < 0)
+    {
+        fprintf(stderr, "Failed to fork() ! \n");
+    }
+    else
+    {
+        fprintf(stdout, "Fork a process to execute %s \n", message);
+    }
+}
