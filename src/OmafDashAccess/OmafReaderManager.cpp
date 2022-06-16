@@ -563,7 +563,9 @@ OMAF_STATUS OmafReaderManager::GetNextPacket(uint32_t trackID, MediaPacket *&pPa
             if (ret == ERROR_NONE) {
               bpacket_readed = true;
             }
-            timeline_point_ = node->getTimelinePoint();
+            if (!node->isCatchup()) {
+              timeline_point_ = node->getTimelinePoint();
+            }
             //OMAF_LOG(LOG_INFO, "timeline_point_ is %ld in GetNextPacket, bpacket_readed %d\n", timeline_point_, bpacket_readed);
             if (0 == node->packetQueueSize()) {
               //OMAF_LOG(LOG_INFO, "Node count=%d. %s\n", node.use_count(), node->to_string().c_str());
@@ -633,7 +635,9 @@ OMAF_STATUS OmafReaderManager::GetNextPacketWithPTS(uint32_t trackID, uint64_t p
             if (ret == ERROR_NONE) {
               // OMAF_LOG(LOG_INFO, "PACKET Get correct packet with pts %lld, track id %d\n", pts, trackID);
               bpacket_readed = true;
-              timeline_point_ = node->getTimelinePoint();
+              if (!node->isCatchup()) {
+                timeline_point_ = node->getTimelinePoint();
+              }
               if (0 == node->packetQueueSize()) {
                 OMAF_LOG(LOG_INFO, "Erase Parsed Node count=%d. %s\n", node.use_count(), node->to_string().c_str());
                 it = nodeset.segment_nodes_.erase(it);
