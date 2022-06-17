@@ -140,9 +140,9 @@ int32_t MPDWriter::Initialize()
     if (!m_segInfo)
         return OMAF_ERROR_NULL_PTR;
 
-    int32_t modeU = 6;
-    int32_t modeG = 0;
-    int32_t modeO = 0;
+    int32_t modeU = 7;
+    int32_t modeG = 7;
+    int32_t modeO = 7;
     int32_t modeFile = modeU * 64 + modeG * 8 + modeO;
     char buf[PATH_MAX] = { 0 };
     char *res = realpath(&(m_segInfo->dirName[0]), buf);
@@ -911,8 +911,11 @@ int32_t MPDWriter::UpdateMpd(uint64_t segNumber, uint64_t framesNumber)
             }
             else
             {
-                perror("realpath");
-                return OMAF_ERROR_REALPATH_FAILED;
+                if (segNumber > 1)
+                {
+                    perror("realpath");
+                    return OMAF_ERROR_REALPATH_FAILED;
+                }
             }
 
             int32_t ret = WriteMpd(framesNumber);
