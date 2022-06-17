@@ -625,7 +625,12 @@ RenderStatus VideoDecoder::UpdateFrame(uint64_t pts, int64_t *corr_pts, HeadPose
     if (mVideoId >= OFFSET_VIDEO_ID_FOR_CATCHUP) LOG(INFO) << "Get frame video id " << mVideoId << ", pts " << pts << endl;
     if( 0 >= frame->av_frame->linesize[0]){
         av_free(frame->av_frame);
+        if (frame->rwpk)
+            SAFE_DELETE_ARRAY(frame->rwpk->rectRegionPacking);
+        SAFE_DELETE(frame->rwpk);
+        SAFE_DELETE_ARRAY(frame->qtyResolution);
         SAFE_DELETE(frame);
+        SAFE_DELETE(buf_info);
         return RENDER_DECODER_INVALID_FRAME;
     }
 

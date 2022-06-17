@@ -95,6 +95,11 @@ RenderStatus RenderManager::Render(int64_t pts, int64_t *corr_pts) {
   bool isAutoMode = m_renderConfig.enableAutoView;
   HeadPose *curr_pose = GetViewport(pts, isAutoMode);
 
+  if (nullptr == curr_pose) {
+    LOG(WARNING) << "Get viewport pose is invalid!" << endl;
+    return RENDER_ERROR;
+  }
+
   //2. update frame according to current pose
   RenderStatus ret = m_mediaSource->UpdateFrames(pts, corr_pts, curr_pose);
   if (RENDER_STATUS_OK != ret) {
