@@ -42,7 +42,12 @@
 extern "C" {
 #endif
 
+#ifdef _LINUX_OS_
 #define OFFSET_VIDEO_ID_FOR_CATCHUP 10
+#endif
+#ifdef _ANDROID_OS_
+#define OFFSET_VIDEO_ID_FOR_CATCHUP 5
+#endif
 #define MAX_CAMERA_H_NUM 12
 #define MAX_CAMERA_V_NUM 1
 
