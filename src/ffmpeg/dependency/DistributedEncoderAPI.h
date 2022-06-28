@@ -191,7 +191,7 @@ typedef struct ENCODERPARAM{
     uint32_t profile;                   //!< the profile to create bitstream, 1 is Main with 8 bit depth,
                                         //!< 2 is Main 10 with 8-10 bit depth
     uint32_t base_layer_switch_mode;    //!< decide use P or B frame in base layer, 0 is B frame, 1 is P frame
-    uint32_t intra_refresh_type;        //!< the type of intra frame refresh, 1 is CRA, 2 is IDR intra refresh type
+    uint32_t intra_refresh_type;        //!< the type of intra frame refresh, 0 is CRA, 1 is IDR intra refresh type
     uint32_t tier;                      //!< limitation for max bitrate and max buffer size
     uint32_t level;                     //!< limitation for max bitrate and max buffer size
     uint32_t aud;                       //!< access unit delimiter flag
@@ -210,6 +210,7 @@ typedef struct ENCODERPARAM{
     int32_t  gpu_node;                  //!< GPU node to encode frames
     bool     in_parallel;               //!< multiple tiles encoding in parallel
     bool     native_mode;               //!< flag of native mode for encoder
+    uint32_t gpucopy;                   //!< GPU copy trigger for MSDK
 }EncoderParam;
 
 typedef struct INPUTFRAME{
