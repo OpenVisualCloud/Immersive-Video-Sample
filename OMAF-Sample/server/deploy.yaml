@@ -17,7 +17,7 @@ spec:
       enableServiceLinks: false
       containers:
         - name: immersive-server
-          image: immersive_server:v1.8
+          image: immersive_server:v1.10
           command: [ "/bin/sh","-c" ]
           args:
             - cd /usr/local/nginx/conf/ &&

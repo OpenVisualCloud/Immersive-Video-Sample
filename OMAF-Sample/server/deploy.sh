@@ -8,7 +8,7 @@ parameters_usage(){
 REPOPATH=`echo $1 | awk -F "OMAF-Sample" '{print $1}'`
 SRCPATH="${REPOPATH}src/"
 DSTPATH="${REPOPATH}OMAF-Sample/server/src/"
-VERSION="v1.8"
+VERSION="v1.10"
 IMAGEPREFIX="immersive-server"
 BASETAG="${IMAGEPREFIX}-base:${VERSION}"
 RUNTIMETAG="${IMAGEPREFIX}:${VERSION}"

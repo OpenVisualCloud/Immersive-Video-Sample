@@ -33,8 +33,8 @@
     make build -j $(nproc)
     docker image ls
     # REPOSITORY                                  TAG
-    # immersive-server                            v1.8
-    # immersive-server-base                       v1.8
+    # immersive-server                            v1.10
+    # immersive-server-base                       v1.10
 ```
 
 - Client :
@@ -46,7 +46,7 @@
 
 - Server :
 ```bash
-    docker run --privileged -p 30001:443 -p 30002:8080 -it immersive-server:v1.8 bash  # Map the port.
+    docker run --privileged -p 30001:443 -p 30002:8080 -it immersive-server:v1.10 bash  # Map the port.
     cd /usr/local/nginx/conf/
     ./configure.sh CN Shanghai A B C D E@F.com                                     # './configure.sh -h' for details.
     /usr/local/nginx/sbin/nginx                                                    # Start nginx.
