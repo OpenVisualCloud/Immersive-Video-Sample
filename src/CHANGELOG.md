@@ -1,6 +1,48 @@
 # **Changelog**
 
 ---
+## [1.10.0] - 2022-06-27
+**Features & bug fix:**
+- OMAF Packing Library
+   + Support DASH MPD writer plugin mechanism
+   + Support DASH packing for multi-view streams
+   + Support Chunk Location Box in customized CMAF segment writer plugin according to configuration
+   + Fix incorrect segment duration setting for float type frame rate
+   + Fix unsecure file handling
+
+- OMAF Dash Access Library
+   + Support MPD parsing, view selection, segment downloading/parsing, and parsed packets synchronization for multi-view streaming.
+   + Support client simulator tool to trace the downloading and do the analysis.
+   + Support Chunk Location Box downloading and parsing, chunk downloading according to Chunk Location Box parsing result.
+   + Support CMAF chunk info type parsing according to segment
+   + Fix memory leak, null-ptr, un-initialization issues
+
+- 360SCVP (Stream Concatenation and Viewport Processing) Library
+   + Support NovelViewSEI generation and parsing
+   + Support rotation conversion
+   + Support novel view info parsing from XML file
+   + Fix incorrect HEVC short_term_ref_pic_set parsing and multiple AUD NAL units parsing
+   + Fix uninitialized variable issue and pointer check issue
+
+- Reference OMAF Player
+   + Support multi-view source mode, auto view selector, multi-view decoding for multi-view source rendering
+   + Fix Android build issues
+   + Fix memory leak, un-initialization and double free issues.
+
+- FFmpeg Plugins & Encoder Library
+   + Encoder Library: Support single reference frame for B frame in hardware accelerated encoding
+   + Encoder Library: Support forced IDR frame setting in hardware accelerated encoding
+   + Encoder Library: Support GPU copy in hardware accelerated encoding
+   + Encoder Library: Fix encode & decode frame sync issue
+   + FFmpeg Plugins:  Add option for CMAF chunk info type setting in DASH packing
+   + FFmpeg Tool:     Add DASH packing sample application based on DASH packing muxer
+
+- Deployment
+   + Support two docker containers built using docker build kit, one providing build environment and access for more operation, and the other only containing the must-have files and dependencies.
+   + Support non-root for security benefit in runtime deployment
+   + Support high and static UID to avoid host conflict
+
+---
 ## [1.8.0] - 2021-12-7
 **Features & bug fix:**
 - OMAF Packing Library
