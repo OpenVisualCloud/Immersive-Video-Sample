@@ -58,7 +58,7 @@ For details in FFmpeg plugins' parameters, refer to the [FFmpeg usage doc](../sr
 - Client :
 ```bash
     sudo su
-    cd path_to/Immersive-Video-Sample/src/build/client/player
+    cd path_to/Immersive-Video-Sample/src/build/client/player/app
     export LD_LIBRARY_PATH=/usr/local/lib/:$LD_LIBRARY_PATH
     vim config.xml  # Set up configuration, details in table at bottom.
     ./render        # Press 'q' button to quit.
@@ -94,7 +94,7 @@ For details in FFmpeg plugins' parameters, refer to the [FFmpeg usage doc](../sr
 - Client :
 ```bash
     sudo su
-    cd path_to/Immersive-Video-Sample/src/build/client/player
+    cd path_to/Immersive-Video-Sample/src/build/client/player/app
     export LD_LIBRARY_PATH=/usr/local/lib/:$LD_LIBRARY_PATH
     vim config.xml  # Set up configuration, details in table at bottom.
     ./render        # Press 'q' button to quit.
