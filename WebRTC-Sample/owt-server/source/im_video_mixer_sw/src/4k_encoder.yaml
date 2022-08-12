@@ -1,0 +1,85 @@
+# Refer to https://github.com/OpenVisualCloud/SVT-HEVC/blob/master/Docs/svt-hevc_encoder_user_guide.md for parameter explain
+high:
+  # Encoding preset
+  encMode: 10 # The preset for quality and performance balance, [0-12], 0 is best quality, 12 is best performance
+  # tune: 1 # Specific encoder tuning, 0 is visually optimized mode, 2 is VMAF optimized mode
+  # asmType: 1 # 0: C only, 1: Auto select highest assembly instruction set supported)
+
+  # GOP Structure
+  # intraPeriodLength: 4 # The distance between two adjacent intra frame
+  # intraRefreshType: 0 # -1: CRA (Open GOP) >=0: IDR
+  # hierarchicalLevels: 0 # The hierarchical level to construct GOP
+  # predStructure: 0 # [0-2], 0 is IPPP..., 1 is IBBB...(B is low-delay B), and 2 is IBBB...(B is normal bi-directional B)
+
+  # Input Info
+  sourceWidth: 3840
+  sourceHeight: 2048
+  frameRate: 30
+  # encoderBitDepth: 8
+  # encoderColorFormat: 1 # 1: 420, 2: 422, 3: 444
+
+  # Rate Control
+  # rateControlMode: 1 # 0: CQP, 1: VBR
+  # sceneChangeDetection: 1
+  # lookAheadDistance: 0 # The number of frames that used for look ahead
+  targetBitRate: 20000000
+  # maxQpAllowed: 26 # [0 - 51]
+  # minQpAllowed: 20 # [0 - 50]
+
+  # Bitstream options
+  # profile: 2 # 1: Main, 2: Main 10
+  # tier: 0 # 0: Main,  1: High
+  # level: 0 # 0 to 6.2 [0 for auto determine Level]
+
+  # Deblock filter
+  # disableDlfFlag: 0
+
+  # SAO
+  # enableSaoFlag: 1
+
+  # targetSocket: 1 # -1: Both Sockets, 0: Socket 0, 1: Socket 1.
+  tileColumnCount: 10 # Tile count in the Row
+  tileRowCount: 8 # Tile count in the column
+
+low:
+  # Encoding preset
+  encMode: 9 # The preset for quality and performance balance, [0-12], 0 is best quality, 12 is best performance
+  # tune: 1 # Specific encoder tuning, 0 is visually optimized mode, 2 is VMAF optimized mode
+  # asmType: 1 # 0: C only, 1: Auto select highest assembly instruction set supported)
+
+  # GOP Structure
+  # intraPeriodLength: 4 # The distance between two adjacent intra frame
+  # intraRefreshType: 0 # -1: CRA (Open GOP) >=0: IDR
+  # hierarchicalLevels: 0 # The hierarchical level to construct GOP
+  # predStructure: 0 # [0-2], 0 is IPPP..., 1 is IBBB...(B is low-delay B), and 2 is IBBB...(B is normal bi-directional B)
+
+  # Input Info
+  sourceWidth: 1280
+  sourceHeight: 768
+  frameRate: 30
+  # encoderBitDepth: 8
+  # encoderColorFormat: 1 # 1: 420, 2: 422, 3: 444
+
+  # Rate Control
+  # rateControlMode: 1 # 0: CQP, 1: VBR
+  # sceneChangeDetection: 1
+  # lookAheadDistance: 0 # The number of frames that used for look ahead
+  targetBitRate: 1736000
+  # maxQpAllowed: 26 # [0 - 51]
+  # minQpAllowed: 20 # [0 - 50]
+
+  # Bitstream options
+  # profile: 2 # 1: Main, 2: Main 10
+  # tier: 0 # 0: Main,  1: High
+  # level: 0 # 0 to 6.2 [0 for auto determine Level]
+
+  # Deblock filter
+  # disableDlfFlag: 0
+
+  # SAO
+  # enableSaoFlag: 1
+
+  # targetSocket: 1 # -1: Both Sockets, 0: Socket 0, 1: Socket 1.
+  tileColumnCount: 5 # Tile count in the Row
+  tileRowCount: 3 # Tile count in the column
+

@@ -44,38 +44,10 @@ The OWT-SERVER is provided as CentOS 7.6 dockerfile in this sample.
 |VP8|
 |VP9|
 
-## Install docker engine:
+## Build owt-server components:
 
-(1) Install [docker engine](https://docs.docker.com/install).
+View `owt-server/README.md` for more details.
 
-(2) Install [docker compose](https://docs.docker.com/compose/install).
-
-## Build docker images:
-
-```bash
-cd WebRTC-Sample/owt-server
-mkdir build
-cd build
-cmake ..
-make
-```
-
-## Start/stop services:
-
-Use the following commands to start or stop services via docker compose:
-
-```bash
-cd WebRTC-Sample/owt-server/build
-
-# start 4k service
-make start_owt_immersive_4k
-
-# start 8k service
-make start_owt_immersive_8k
-
-# stop service
-make stop
-```
 
 # OWT-LINUX-PLAYER
 The OWT-LINIX-PLAYER is an immersive 360 video player on linux, with WebRTC backend. It supports HEVC tile decoding, ERP video rendering, and FoV feedback.
