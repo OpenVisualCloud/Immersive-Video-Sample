@@ -1,0 +1,16 @@
+{
+  "all" : {
+    "include" : [
+      "im_video_mixer_sw",
+      "rtc_frame"
+    ]
+  },
+  "im_video_mixer_sw" : {
+    "path" : "source/im_video_mixer_sw/src",
+    "gyp" : "binding.gyp"
+  },
+  "rtc_frame" : {
+    "path" : "source/rtc_frame/src",
+    "gyp" : "binding.gyp"
+  }
+}
