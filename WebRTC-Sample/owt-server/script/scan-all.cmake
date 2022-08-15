@@ -1,6 +1,0 @@
-file(GLOB dirs "*")
-foreach (dir ${dirs})
-    if(EXISTS ${dir}/CMakeLists.txt)
-        add_subdirectory(${dir})
-    endif()
-endforeach()
