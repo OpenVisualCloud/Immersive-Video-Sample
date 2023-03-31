@@ -2,12 +2,14 @@
 
 TARGET=$1
 PREBUILD_FLAG=$2
+HARDWARE=$3
 EX_PATH=${PWD}
 SRC_PATH=${PWD}/..
 
 parameters_usage(){
     echo 'Usage: 1. <target>:           [ server, client, test ]'
     echo '       2. <prebuild_flag>:    [ y, n ]'
+    echo '       3. <hardware>:         [ SG1, ATSM ]'
 }
 
 build_server(){
@@ -22,7 +24,13 @@ build_server(){
         thrift -r --gen cpp shared.thrift
         patch gen-cpp/shared_types.h Implement_operator_RegionInformation.patch
         cd -
-        cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server -DDE_FLAG=true -DUSE_SAFE_MEM_LIB=OFF -DENABLE_MSDK=OFF ../..
+        if [ -z "${HARDWARE}" ]; then
+             cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server -DDE_FLAG=true -DUSE_SAFE_MEM_LIB=OFF ../..
+        elif [ "${HARDWARE}" == "SG1" ]; then
+            cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server -DDE_FLAG=true -DUSE_SAFE_MEM_LIB=OFF -DENABLE_SG1=ON ../..
+        elif [ "${HARDWARE}" == "ATSM" ]; then
+            cmake -DCMAKE_BUILD_TYPE=Release -DTARGET=server -DDE_FLAG=true -DUSE_SAFE_MEM_LIB=OFF -DENABLE_ATSM=ON ../..
+        fi
     else
         sudo cp ../../ffmpeg/dependency/*.so /usr/local/lib/
         sudo cp ../../ffmpeg/dependency/*.pc /usr/local/lib/pkgconfig/
@@ -177,6 +185,24 @@ build_test(){
             g++ testSubEncoderManager.o ${DE_SHARED_CONFIG} -o testSubEncoderManager
     fi
 }
+
+if [ $# == 3 ] ; then
+    if [ "${HARDWARE}" != "SG1" ] && [ "${HARDWARE}" != "ATSM" ] ; then
+        echo "${HARDWARE} not supported! [SG1, ATSM] only."
+        exit 1
+    fi
+
+    if [ "${TARGET}" == "server" ] ; then
+        if [ "${PREBUILD_FLAG}" != "y" ] && [ "${PREBUILD_FLAG}" != "n" ] ; then
+            parameters_usage
+            exit 1
+        else
+            build_server oss
+        fi
+    else
+        echo "Hardware support is only for server"
+    fi
+fi
 
 if [ $# == 2 ] ; then
 
