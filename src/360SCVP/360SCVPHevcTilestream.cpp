@@ -31,6 +31,7 @@
 #include "360SCVPHevcEncHdr.h"
 #include "360SCVPTiledstreamAPI.h"
 #include "360SCVPLog.h"
+#define ALIGN64(X) ((uint32_t)(((uint32_t)(X))+63) & (uint32_t)(~ (uint32_t)63))
 
 int32_t hevc_import_ffextradata(hevc_specialInfo* pSpecialInfo, HEVCState* hevc, uint32_t *pSize, int32_t *spsCnt, int32_t *audCnt, int32_t bParse)
 {
@@ -281,8 +282,8 @@ int32_t parse_tiles_info(hevc_gen_tiledstream* pGenTilesStream)
             if(nalsize[SEQ_PARAM_SET])
             {
                 HEVC_SPS *sps = &pSliceCur->hevcSlice->sps[pSliceCur->hevcSlice->last_parsed_sps_id];
-                pSliceCur->width = sps->width;
-                pSliceCur->height = sps->height;
+                pSliceCur->width = ALIGN64(sps->width);
+                pSliceCur->height = ALIGN64(sps->height);
             }
 /*
             if(pSliceCur->width != (pGenTilesStream->frameWidth / tilesWidthCount)
