@@ -1,6 +1,18 @@
 # **Changelog**
 
 ---
+## [1.12.0] - 2023-06-28
+**Features & bug fix:**
+- 360SCVP (Stream Concatenation and Viewport Processing) Library
+   + Support HEVC bitstream stitching for video with non 64-aligned resolution.
+
+- FFmpeg Tool & Encoder Library
+   + Encoder Library: Optimize scaling process to improve performance.
+   + Encoder Library: Support HEVC 10bit encoding on SG1 with P010 and V210 sources.
+   + Encoder Library: Support HEVC encoding for video with non 64-aligned resolution on SG1.
+   + FFmpeg Tool:     Add 1:N multi-thread transcoding sample based on ffmpeg API and encoder library.
+
+---
 ## [1.10.0] - 2022-06-27
 **Features & bug fix:**
 - OMAF Packing Library
