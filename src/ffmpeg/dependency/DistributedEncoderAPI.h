@@ -42,6 +42,7 @@
 #define IP_ADDRESS_LEN 16
 #define MAX_SESSION_COUNT 32
 #define MAX_REGION_COUNT 512
+#define ALIGN64(X) ((uint32_t)(((uint32_t)(X))+63) & (uint32_t)(~ (uint32_t)63))
 
 //!
 //! \enum   DispatchType
@@ -99,6 +100,13 @@ typedef enum
     PixelColor_YUV422,
     PixelColor_YUV444
 }PixelColorFormat;
+
+typedef enum
+{
+    InputYUVFormat_NONE = 0,
+    InputYUVFormat_P010,
+    InputYUVFormat_V210,
+}InputYUVFormat;
 
 //!
 //! \enum:  ParamType
@@ -210,6 +218,7 @@ typedef struct ENCODERPARAM{
     int32_t  gpu_node;                  //!< GPU node to encode frames
     bool     in_parallel;               //!< multiple tiles encoding in parallel
     bool     native_mode;               //!< flag of native mode for encoder
+    InputYUVFormat input_yuv_format;    //!< Input YUV format,
     uint32_t gpucopy;                   //!< GPU copy trigger for MSDK
 }EncoderParam;
 
@@ -222,6 +231,8 @@ typedef struct INPUTFRAME{
     PixelColorFormat    format;             //!< pixel color format
     PictureType         picType;            //!< picture type,e.g. I/P/B/...
     bool                useSharedMem;       //!< if the data is using shared memory or not
+    uint8_t             hScaleFactor;       //!< horizontal scaling factor of encode frame to input frame
+    uint8_t             vScaleFactor;       //!< vertical scaling factor of encode frame to input frame
 }InputFrame;
 
 // SEI related structures
