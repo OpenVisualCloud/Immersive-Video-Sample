@@ -69,6 +69,7 @@ if [ "${REPO}" = "oss" ] ; then
     cp ../../../distributed_encoder/test/*264 .
     cp ../../../distributed_encoder/test/*yuv .
     cp ../../../distributed_encoder/test/*bin .
+    cp ../../../distributed_encoder/test/*txt .
 
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
     export LD_LIBRARY_PATH=/usr/local/lib64:$LD_LIBRARY_PATH
