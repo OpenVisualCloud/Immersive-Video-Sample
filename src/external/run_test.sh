@@ -9,9 +9,7 @@ cd ../build/test
 cd 360SCVP
 cp ../../../360SCVP/test/*265 .
 
-./testI360SCVP_common
-./testI360SCVP_erp
-./testI360SCVP_cubemap
+./testI360SCVP
 
 cd -
 
